@@ -5169,3 +5169,140 @@ func TestActivityReadsTheConversationsOnce(t *testing.T) {
 		t.Errorf("with no conversations, %s is not held", sharedID)
 	}
 }
+
+// t3213KindsLab is an agent lab whose project runs kindsWorkflow: a
+// launcher the lab makes after it, lab.launcher(), runs that workflow.
+func t3213KindsLab(t *testing.T) *agentLab {
+	t.Helper()
+	lab := newAgentLab(t)
+	wf := kindsWorkflow(t)
+	lab.repo.Workflow, lab.o.Workflow = wf, wf
+	return lab
+}
+
+// t3213Limits sets the WIP limits of the kinds board's two states of the
+// active kind, doing and testing. A story's move writes board.md again with
+// the baseline's limited columns alone, so it is set after the moves it is
+// to hold for.
+func (lab *agentLab) t3213Limits(doingLimit, testingLimit int) {
+	lab.t.Helper()
+	board := fmt.Sprintf("---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  doing: %d\n  testing: %d\n  awaiting: 3\n---\n\n# Board\n", doingLimit, testingLimit)
+	if err := os.WriteFile(filepath.Join(lab.root, "wip/kanban/board.md"), []byte(board), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// t3213To moves a story in ready along the kinds board's transitions,
+// ready, doing, testing, awaiting, until it is in state.
+func (lab *agentLab) t3213To(id, state string) {
+	lab.t.Helper()
+	for _, s := range []string{"doing", "testing", "awaiting"} {
+		lab.move(id, s)
+		if s == state {
+			return
+		}
+	}
+	lab.t.Fatalf("%s is no state the kinds board moves a story to from ready", state)
+}
+
+// t3213PutEnded makes a story in state on the kinds board whose agent's run
+// ended as run says, as putEnded does one in progress.
+func (lab *agentLab) t3213PutEnded(title, state string, run AgentRun) string {
+	lab.t.Helper()
+	id := lab.ready(title)
+	lab.t3213To(id, state)
+	now := time.Now().UTC().Format(time.RFC3339)
+	run.Story, run.Agent, run.Started, run.Ended, run.Session = id, "builder-"+id, now, now, "earlier"
+	if run.Why == "" && run.Outcome == OutcomeFailed {
+		run.Why = "ended (exit 0) with " + id + " in " + state
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
+	return id
+}
+
+// S-0742, ADR-0043: under a workflow with in-progress renamed doing and
+// testing, of the active kind, added after it, a story in ready, the state
+// the pull takes from, gets its agent while the limits of doing and testing
+// together leave room, counting the stories in both, and once a story leaves
+// them for awaiting, of the waiting kind.
+func TestAReadyStoryStartsWithinTheRoomOfEveryActiveState(t *testing.T) {
+	lab := t3213KindsLab(t)
+	l := lab.launcher()
+	ctx := context.Background()
+	lab.hold()
+	doing := lab.ready("In doing")
+	l.look(ctx, false)
+	waitFor(t, "the first story's agent runs", func() bool { return lab.run(doing).live() })
+	lab.t3213To(doing, "doing")
+	tested := lab.ready("In testing")
+	l.look(ctx, false)
+	waitFor(t, "the second story's agent runs, one of two places taken", func() bool { return lab.run(tested).live() })
+	lab.t3213To(tested, "testing")
+	waiting := lab.ready("Waits")
+	lab.t3213Limits(1, 1)
+	l.look(ctx, false)
+	if lab.run(waiting) != nil || !strings.Contains(lab.state().Waiting, "limit leaves no room for "+waiting) {
+		t.Fatalf("started with doing and testing full: %+v", lab.state())
+	}
+	// the story in testing goes on to awaiting: a place is free
+	lab.move(tested, "awaiting")
+	lab.t3213Limits(1, 1)
+	l.look(ctx, false)
+	waitFor(t, "the waiting story's agent runs", func() bool { return lab.run(waiting).live() })
+	for _, id := range []string{doing, tested, waiting} {
+		lab.release(id)
+	}
+	waitFor(t, "every agent ends", func() bool {
+		return !lab.run(doing).live() && !lab.run(tested).live() && !lab.run(waiting).live()
+	})
+}
+
+// S-0742, ADR-0108: under the kinds board, a story's agent that ended failed
+// is restarted on its own while its story is in a state of the active kind,
+// doing or testing, as one in in-progress is under the baseline, and not
+// once its story is in awaiting, of the waiting kind.
+func TestAnAgentIsRestartedWhileItsStoryIsInAStateOfTheActiveKind(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		state     string
+		restarted bool
+	}{{"doing", true}, {"testing", true}, {"awaiting", false}} {
+		t.Run(c.state, func(t *testing.T) {
+			lab := t3213KindsLab(t)
+			l := lab.launcher()
+			lab.cfg.AutoRestarts = 2
+			id := lab.t3213PutEnded("Ended in "+c.state, c.state, AgentRun{Outcome: OutcomeFailed})
+			l.look(ctx, false)
+			if !c.restarted {
+				if r := lab.run(id); r.Session != "earlier" || r.live() || len(lab.entries()) != 0 || len(lab.limitThreads(id)) != 0 {
+					t.Fatalf("restarted in %s: %+v, journal %+v", c.state, r, lab.entries())
+				}
+				return
+			}
+			waitFor(t, "another agent is started", func() bool { return lab.run(id).Session != "earlier" })
+			if r := lab.run(id); r.AutoRestarts != 1 {
+				t.Errorf("restart 1 of 2 in %s: %+v", c.state, r)
+			}
+			waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		})
+	}
+}
+
+// S-0742: a run that ended is judged by the kind of the state its story is
+// in: worked once the story left the active and queue kinds forward, for
+// awaiting, of the waiting kind, and failed in ready, doing, or testing.
+func TestARunIsJudgedByTheKindOfItsStorysState(t *testing.T) {
+	lab := t3213KindsLab(t)
+	for _, c := range []struct{ state, want string }{
+		{"ready", OutcomeFailed}, {"doing", OutcomeFailed}, {"testing", OutcomeFailed}, {"awaiting", OutcomeWorked},
+	} {
+		id := lab.ready("Judged in " + c.state)
+		if c.state != "ready" {
+			lab.t3213To(id, c.state)
+		}
+		run := AgentRun{Story: id, Agent: "builder-" + id, Started: time.Now().UTC().Format(time.RFC3339)}
+		if judgeIn(lab.repo, nil, &run, new(int)); run.Outcome != c.want {
+			t.Errorf("a run that ended with its story in %s was judged %s (%s), want %s", c.state, run.Outcome, run.Why, c.want)
+		}
+	}
+}

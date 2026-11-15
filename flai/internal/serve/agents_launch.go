@@ -224,11 +224,12 @@ func withTrial(repo *workitem.Repo, git execx.Runner) {
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
-// stories they are held by, how many more stories the in-progress limit
-// leaves room for, -1 when there is none, why review being full holds every
-// one back, "" when it does not (S-0243), and the items read, by ID. Each
-// story's agent is the one it starts with: the project's default under it
-// when it names no harness (ADR-0251).
+// stories they are held by, how many more stories the WIP limits of the
+// active-work states leave room for, counting the stories in every state of
+// that kind (activeRoom, ADR-0043), -1 when there is none, why review being
+// full holds every one back, "" when it does not (S-0243), and the items
+// read, by ID. Each story's agent is the one it starts with: the project's
+// default under it when it names no harness (ADR-0251).
 func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, byID map[string]*workitem.Item, err error) {
 	items, err := repo.List(false)
 	if err != nil {
@@ -251,10 +252,7 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 			ready = append(ready, readyStory{ID: c.ID, Agent: repo.AgentOf(it), Entered: it.EnteredAt(), item: it})
 		}
 	}
-	free = -1
-	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
-		free = max(0, limit-view.Counts[workitem.InProgress])
-	}
+	free, _ = activeRoom(repo.Flow(), view.WIPLimits, view.Counts)
 	return ready, holds, free, view.ReviewHold(), byID, nil
 }
 
@@ -279,9 +277,18 @@ func (l *launcher) readyChecked(repo *workitem.Repo) (ready []readyStory, holds 
 // started: it claims its paths from then, not once its agent pulls it.
 const agentStarted = "its agent started"
 
-// judgeRun records on run, a story's agent's run that has ended with exit,
-// how it left its story: worked, asked, or failed, with why, and what an
-// asked run waits on. It ended asking when a question of its own on the
+// judgeRun is judgeIn on the project at root, as workitem.Open opens it.
+func judgeRun(root string, run *AgentRun, exit *int) {
+	repo, err := workitem.Open(root)
+	judgeIn(repo, err, run, exit)
+}
+
+// judgeIn records on run, a story's agent's run that has ended with exit,
+// how it left its story in repo, which err says could not be opened when it
+// is not nil: worked, asked, or failed, with why, and what an asked run waits
+// on. It worked when the story left the active and queue kinds forward, into
+// a state of the waiting or the accepted kind (review or done in the
+// baseline). It ended asking when a question of its own on the
 // story is open and unanswered, when a conversation of its story awaits
 // another story's agent's reply (S-0335), or when a message to its story came
 // on a conversation after the run started and has had no reply: a reply that
@@ -289,13 +296,12 @@ const agentStarted = "its agent started"
 // waiting on what has come, so that it is started again at once to read it.
 // So, too, when the question it wrote on a thread of the story after the run
 // started was answered before the end was judged (I-0095).
-func judgeRun(root string, run *AgentRun, exit *int) {
+func judgeIn(repo *workitem.Repo, err error, run *AgentRun, exit *int) {
 	run.Outcome, run.Why, run.Thread, run.Conversations, run.WaitsOn = OutcomeFailed, "", "", nil, nil
 	code := "an exit code nobody saw"
 	if exit != nil {
 		code = fmt.Sprintf("exit %d", *exit)
 	}
-	repo, err := workitem.Open(root)
 	if err != nil {
 		run.Why = fmt.Sprintf("ended (%s); the project could not be read: %v", code, err)
 		return
@@ -305,8 +311,7 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 		run.Why = fmt.Sprintf("ended (%s); %s could not be read: %v", code, run.Story, err)
 		return
 	}
-	switch it.Status {
-	case workitem.Review, workitem.Done:
+	if wf := repo.Flow(); isWaiting(wf, it.Status) || isAccepted(wf, it.Status) {
 		run.Outcome = OutcomeWorked
 		return
 	}
@@ -353,7 +358,8 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 // recorded as the run's, which a start that resumes it goes on in; a log that
 // names none leaves the one flai made, which the adapter refuses to resume.
 func (l *launcher) endRun(run *AgentRun, exit *int) {
-	judgeRun(l.entry.Root, run, exit)
+	repo, err := l.open(l.entry.Root)
+	judgeIn(repo, err, run, exit)
 	if r, ok := harness.Adapters[run.Harness].(harness.SessionReader); ok && run.Log != "" {
 		log, err := os.ReadFile(run.Log)
 		if err != nil {
@@ -403,13 +409,14 @@ func askedOn(it *workitem.Item) string {
 // I-0151). It leaves alone a run that ended any other way or asked on
 // conversations alone, a story not in progress, one blocked already, and a
 // question answered before the block, which resume starts again at once.
+// In progress is any state of the active kind.
 // A failure is warned of: the run is started again on its answer as before.
 func (l *launcher) blockAsked(run *AgentRun) {
 	if run.Outcome != OutcomeAsked || run.Thread == "" {
 		return
 	}
 	err := func() error {
-		repo, err := workitem.Open(l.entry.Root)
+		repo, err := l.open(l.entry.Root)
 		if err != nil {
 			return err
 		}
@@ -420,7 +427,7 @@ func (l *launcher) blockAsked(run *AgentRun) {
 		if err != nil {
 			return err
 		}
-		if it.Status != workitem.InProgress || it.IsBlocked() {
+		if !isActive(repo.Flow(), it.Status) || it.IsBlocked() {
 			return nil
 		}
 		if err := workitem.BlockItem(it, awaitingOperator(run.Thread), l.now()); err != nil {
@@ -460,7 +467,7 @@ func (l *launcher) unblockAsked(repo *workitem.Repo, story, thread string) (bool
 
 // releaseAsked closes the interval blockAsked opened on each story, of
 // items, the ones the look read, whose agent no longer waits on the thread
-// it names: the story left in progress, sent back to ready or backlog,
+// it names: the story left the active kind, sent back to ready or backlog,
 // moved to review, or cancelled, or its last run is not the one that asked,
 // its agent having been started again otherwise than on the answer, by the
 // operator. A blocked story in ready is never started, so one sent back with
@@ -474,7 +481,7 @@ func (l *launcher) releaseAsked(repo *workitem.Repo, items map[string]*workitem.
 			continue
 		}
 		thread := askedOn(it)
-		if thread == "" || (it.Status == workitem.InProgress && asked(run) && run.Thread == thread) {
+		if thread == "" || (isActive(repo.Flow(), it.Status) && asked(run) && run.Thread == thread) {
 			continue
 		}
 		ok, err := l.unblockAsked(repo, id, thread)
@@ -646,7 +653,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if l.config == nil {
 		return
 	}
-	repo, err := workitem.Open(l.entry.Root)
+	repo, err := l.open(l.entry.Root)
 	if err != nil {
 		return
 	}
@@ -786,9 +793,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 }
 
-// askHolds asks the agent of each story in progress that holds a ready story
-// on overlap alone about the hold, in the two stories' conversation, with the
-// paths it is held on (ADR-0134). It asks whether or not the agent action is
+// askHolds asks the agent of each story in a state of the active kind that
+// holds a ready story on overlap alone about the hold, in the two stories'
+// conversation, with the paths it is held on (ADR-0134). It asks whether or not the agent action is
 // on, the in-progress limit has room, or review is full: a held story is never
 // started, so the ask matters most when the board is busy. messages.AskHold
 // asks once per pair while the held story stays in ready, so a look that finds
@@ -804,7 +811,7 @@ func (l *launcher) askHolds(repo *workitem.Repo, stories []readyStory, holds *wo
 			continue
 		}
 		for _, o := range holds.OverlapsBy(s.item) {
-			if h := items[o.By]; h == nil || h.Status != workitem.InProgress {
+			if h := items[o.By]; h == nil || !isActive(repo.Flow(), h.Status) {
 				continue
 			}
 			c, wrote, err := messages.AskHold(repo, messages.AskOptions{Held: s.ID, Holder: o.By, Paths: o.Paths, Now: now})

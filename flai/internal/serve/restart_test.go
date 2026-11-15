@@ -302,3 +302,29 @@ func TestAStoryWhoseAgentRunsElsewhereIsNotRestarted(t *testing.T) {
 		t.Errorf("a refused restart journalled a start: %+v", j[before:])
 	}
 }
+
+// S-0742: under the kinds board, the operator's restart starts a new agent
+// for a story in testing, of the active kind, as for one in in-progress
+// under the baseline, and refuses one in awaiting, naming the states it
+// restarts in; their start refuses a story in doing, pointing at restart.
+func TestTheOperatorsRestartAndStartReadTheKindOfTheStorysState(t *testing.T) {
+	ctx := context.Background()
+	lab := t3213KindsLab(t)
+	e := Entry{Key: "t", Name: "t", Root: lab.root}
+	awaited := lab.t3213PutEnded("Awaited", "awaiting", AgentRun{Outcome: OutcomeFailed})
+	_, err := Restart(ctx, lab.o, e, awaited)
+	var no *Refused
+	if !errors.As(err, &no) || !strings.Contains(no.Why, "is in awaiting; only a story in ready, doing, or testing is restarted") {
+		t.Errorf("restart in awaiting: %v, want refused naming ready, doing, and testing", err)
+	}
+	busy := lab.ready("Busy")
+	lab.t3213To(busy, "doing")
+	if _, err := Start(ctx, lab.o, e, busy); !errors.As(err, &no) || !strings.Contains(no.Why, "is in doing; only a story in ready is started; flai serve agent restart starts a new agent for one in progress") {
+		t.Errorf("start in doing: %v, want refused pointing at restart", err)
+	}
+	tested := lab.t3213PutEnded("Tested", "testing", AgentRun{Outcome: OutcomeFailed})
+	run, err := Restart(ctx, lab.o, e, tested)
+	if err != nil || run.Session == "earlier" || run.PID == 0 {
+		t.Fatalf("restart in testing: %+v, %v", run, err)
+	}
+}

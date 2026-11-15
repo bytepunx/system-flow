@@ -21,7 +21,8 @@ import (
 
 // resume starts again each agent that ended waiting for an answer or a
 // reply, once what answers it is there (answered), in the session it had,
-// when its story is open: in progress or in review. Such a story is counted
+// when its story is underway: in a state of the active or the waiting kind,
+// in progress or in review in the baseline. Such a story is counted
 // in the limit already, and it holds others rather than being held
 // (ADR-0046), so neither holds it back. A story in ready is started again by
 // the look, once nothing holds it and the limit has room, like any other;
@@ -45,7 +46,7 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 			continue
 		}
 		it, err := repo.Get(id)
-		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) || harness.Elsewhere(repo.AgentOf(it)) {
+		if err != nil || !isUnderway(repo.Flow(), it.Status) || harness.Elsewhere(repo.AgentOf(it)) {
 			continue
 		}
 		own := run.Thread != "" && askedOn(it) == run.Thread
@@ -65,13 +66,13 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 	}
 }
 
-// startSentBack starts the agent of each story in progress and not blocked
-// that flai sent back from review on a failing required check or a requested
-// change, while the thread flai serve opened for it is open (ADR-0167): in
-// its last run's session, told the thread, or, when that run has no session,
-// in a new one, told to take the story up. It starts once per send back: only
-// when the story's newest run started before flai sent it back and has ended.
-// A story flai serve never ran an agent for is worked from a session of its
+// startSentBack starts the agent of each story in a state of the active kind
+// and not blocked that flai sent back from review on a failing required check
+// or a requested change, while the thread flai serve opened for it is open
+// (ADR-0167): in its last run's session, told the thread, or, when that run
+// has no session, in a new one, told to take the story up. It starts once per
+// send back: only when the story's newest run started before flai sent it
+// back and has ended. A story flai serve never ran an agent for is worked from a session of its
 // own, whose inbox lists the thread, so nothing is started beside it. Like
 // resume, it spends no automatic restart and does not wait for room under
 // the in-progress limit, whose place the story kept, and it leaves alone a
@@ -83,7 +84,7 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 	files, _ := filepath.Glob(forge.StatusPath(repo.CacheDir(), "*"))
 	for _, f := range files {
 		it, err := repo.Get(strings.TrimSuffix(filepath.Base(f), ".json"))
-		if err != nil || it.Type != workitem.Story || it.Status != workitem.InProgress || it.IsBlocked() {
+		if err != nil || it.Type != workitem.Story || !isActive(repo.Flow(), it.Status) || it.IsBlocked() {
 			continue
 		}
 		run := st.Stories[it.ID]
@@ -166,7 +167,7 @@ func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo
 			continue
 		}
 		it, err := repo.Get(o.Story)
-		if err != nil || it.Type != workitem.Story || it.Status != workitem.InProgress || it.IsBlocked() {
+		if err != nil || it.Type != workitem.Story || !isActive(repo.Flow(), it.Status) || it.IsBlocked() {
 			continue
 		}
 		run := st.Stories[it.ID]
@@ -215,7 +216,7 @@ func queueSendBackThread(repo *workitem.Repo, story string) (string, bool) {
 func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo, st AgentState) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
-		if err != nil || it.Type != workitem.Story || it.Status != workitem.InProgress || it.IsBlocked() {
+		if err != nil || it.Type != workitem.Story || !isActive(repo.Flow(), it.Status) || it.IsBlocked() {
 			continue
 		}
 		at, err := time.Parse(time.RFC3339, th.Created)
@@ -244,13 +245,13 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 
 // resolveAcceptSentBack resolves, as flai serve, each open thread flai
 // accept opened on a story it sent back (ADR-0248) once the story is back in
-// review, moved there after the thread was opened, so that the thread holds
-// the next acceptance of it no longer. One that cannot be resolved is warned
-// of and tried again at the next look.
+// review, a state of the waiting kind, moved there after the thread was
+// opened, so that the thread holds the next acceptance of it no longer. One
+// that cannot be resolved is warned of and tried again at the next look.
 func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
-		if err != nil || it.Status != workitem.Review {
+		if err != nil || !isWaiting(repo.Flow(), it.Status) {
 			continue
 		}
 		at, err := time.Parse(time.RFC3339, th.Created)
@@ -308,10 +309,10 @@ func sentBackFor(repo *workitem.Repo, story string) (forge.SendBack, string, boo
 }
 
 // restartEnded starts again, as flai serve agent restart does, the agent of
-// each story in progress and not blocked whose newest run started and ended
-// failed, neither asking nor stopped by the operator: in a new session, told
-// how the last one ended and that flai serve started it on its own. It does
-// so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
+// each story in a state of the active kind (ADR-0108) and not blocked whose
+// newest run started and ended failed, neither asking nor stopped by the
+// operator: in a new session, told how the last one ended and that flai serve
+// started it on its own. It does so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
 // one thread to the operator instead (S-0294, ADR-0108). A story that nothing
 // can start, or whose agent runs elsewhere (ADR-0242), which flai serve agent
 // restart refuses, is left alone, with no thread at the limit. One
@@ -330,7 +331,7 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 			continue
 		}
 		it, err := repo.Get(id)
-		if err != nil || it.Status != workitem.InProgress || it.IsBlocked() {
+		if err != nil || !isActive(repo.Flow(), it.Status) || it.IsBlocked() {
 			continue
 		}
 		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261

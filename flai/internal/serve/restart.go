@@ -54,7 +54,7 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 	if !StoryID.MatchString(want.ID) {
 		return nil, refused("%q is not a story's ID", want.ID)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,9 @@ func heldRefusal(story string, b Budget, now time.Time) error {
 }
 
 // Restart starts a new agent, in a new session, for a story in ready or in
-// progress whose last agent flai serve started has ended or dropped, or that
-// this host has had no agent for (S-0177, ADR-0064): a story in progress
+// progress, a state the pull takes from or one of the active kind
+// (ADR-0108), whose last agent flai serve started has ended or dropped, or
+// that this host has had no agent for (S-0177, ADR-0064): a story in progress
 // that was begun elsewhere gets an agent told where, when, and by whom. For
 // a story in ready while the in-progress limit is full, review is full
 // (S-0243), or a claim holds it (S-0128), it queues one instead
@@ -124,11 +125,12 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return nil, err
 	}
 	withTrial(repo, gitOf(o))
+	wf := repo.Flow()
 	it, err := repo.Get(story)
 	if err != nil {
 		return nil, err
@@ -136,8 +138,9 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	if it.Type != workitem.Story {
 		return nil, refused("%s is %s; only a story has an agent", it.ID, it.Type)
 	}
-	if it.Status != workitem.Ready && it.Status != workitem.InProgress {
-		return nil, refused("%s is in %s; only a story in ready or in-progress is restarted", it.ID, it.Status)
+	pullable, active := isPullable(wf, it.Status), isActive(wf, it.Status)
+	if !pullable && !active {
+		return nil, refused("%s is in %s; only a story in %s is restarted", it.ID, it.Status, orStates(restartStates(wf)))
 	}
 	st := o.Dir.AgentStates()[e.Root]
 	run := st.Stories[it.ID]
@@ -149,7 +152,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	case run.imageHeld():
 		return nil, refused("%s's agent's start waits for the image job %s, which makes its agent images, its log %s: flai serve starts the agent once the job passes; stop it with flai serve agent stop %s to start it otherwise", it.ID, run.ImageJob, filepath.Join(o.Dir.imageJobsDir(), run.ImageJob+imageJobLogSuffix), it.ID)
-	case run.Queued != "" && it.Status == workitem.Ready:
+	case run.Queued != "" && pullable:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}
 	// the project's default when the story's agent names no harness
@@ -161,7 +164,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	if err := heldStart(o, e, cfg, it.ID, agent); err != nil {
 		return nil, err
 	}
-	if it.Status == workitem.Ready {
+	if pullable {
 		// held, like no room, queues it: flai serve starts it once it is clear (S-0128)
 		if ok, hold, err := roomFor(repo, st, it.ID); err != nil {
 			return nil, err
@@ -175,7 +178,7 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	switch {
 	case run != nil && run.Started != "":
 		return StartNow(ctx, o, e, it.ID, restartWhy(run))
-	case it.Status == workitem.InProgress:
+	case active:
 		return startNow(ctx, o, e, readyStory{ID: it.ID, Begun: begun(repo, it)})
 	}
 	return startNow(ctx, o, e, readyStory{ID: it.ID, Started: true})
@@ -207,12 +210,14 @@ func begun(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
 	return b
 }
 
-// begunBy is begun without the threads: who last moved it to in-progress
-// and when, and the agent and host its narrative names.
+// begunBy is begun without the threads: who last moved it to in-progress,
+// the state the pull moves a story into, and when, and the agent and host its
+// narrative names.
 func begunBy(repo *workitem.Repo, it *workitem.Item) *harness.Begun {
 	b := &harness.Begun{}
+	wf := repo.Flow()
 	for _, t := range it.Transitions {
-		if t.To == workitem.InProgress {
+		if isPulledInto(wf, t.To) {
 			b.By, b.At = t.By, t.At
 		}
 	}

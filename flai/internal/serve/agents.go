@@ -11,6 +11,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -28,6 +29,14 @@ import (
 // the operator batches acceptance. Each ready story it does not start, and
 // has no agent running, is named in the state's waiting with the reason, and
 // logged when its reason changes.
+//
+// Every state here is read from the project's workflow by its kind or a
+// transition's effect, never by its name (ADR-0301, S-0742): ready is a state
+// the pull transition takes from, in progress any state of the active kind,
+// whose WIP limits together are the in-progress limit, and review any state
+// of the waiting kind. So a story's agent starts for a story the pull would
+// take, restarts while its story is in a state of the active kind, and is
+// left to end, as before, once its story leaves that kind.
 //
 // The story says which harness works it, with which model and options (its
 // agent, S-0103); package harness turns that into a command, with the
@@ -451,3 +460,40 @@ func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == 
 // running is a run that has not ended whose process is still the one
 // started for it.
 func (r *AgentRun) running() bool { return r.live() && Owns(r.PID, r.Start) }
+
+// pullStates are the states the pull takes from, in board order: those a
+// story's agent is started from, ready in the baseline.
+func pullStates(wf workflow.Workflow) []string {
+	var out []string
+	for _, s := range wf.States {
+		if isPullable(wf, s.Name) {
+			out = append(out, s.Name)
+		}
+	}
+	return out
+}
+
+// restartStates are the states flai serve agent restart starts a story's
+// agent in: those the pull takes from, then those of the active kind, in
+// board order; ready and in-progress in the baseline.
+func restartStates(wf workflow.Workflow) []string {
+	out := pullStates(wf)
+	for _, s := range wf.OfKind(workflow.KindActive) {
+		out = append(out, s.Name)
+	}
+	return out
+}
+
+// orStates lists names as a refusal says them: "ready", "ready or
+// in-progress", "ready, doing, or testing".
+func orStates(names []string) string {
+	switch len(names) {
+	case 0:
+		return "no state"
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " or " + names[1]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + ", or " + names[len(names)-1]
+}

@@ -38,7 +38,7 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return nil, err
 	}

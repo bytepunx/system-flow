@@ -154,8 +154,8 @@ func timedTrial(ctx context.Context, judge workitem.TrialJudge) workitem.TrialJu
 // finished (S-0611): each story's activity whose run is live or whose state
 // is working or waiting, and the newest planner run of each item that is
 // live, with the newest run of each other story or planned item kept only
-// while that item is open: listed outside the archive, neither done nor
-// cancelled. So the board's failed dot and a story's agent panel keep their
+// while that item is open: listed outside the archive, in no state of the
+// accepted or the cancelled kind. So the board's failed dot and a story's agent panel keep their
 // run, and the runs of finished work, which only the pages that list past
 // runs show, are left out. A project whose items cannot be read keeps only
 // the live and waiting ones.
@@ -164,7 +164,7 @@ func Unfinished(root string, stories map[string]StoryActivity, plans map[string]
 	if repo, err := workitem.Open(root); err == nil {
 		if items, err := repo.List(false); err == nil {
 			for _, it := range items {
-				if it.Status != workitem.Done && it.Status != workitem.Cancelled {
+				if !isClosed(repo.Flow(), it.Status) {
 					open[it.ID] = true
 				}
 			}
@@ -203,8 +203,8 @@ func standIn(repo *workitem.Repo, st AgentState, story, agent string, commandSet
 	return run
 }
 
-// elsewhere are the stories in progress that this host has had no agent
-// for, none started or only one queued (ADR-0064), with where each was
+// elsewhere are the stories in a state of the active kind that this host
+// has had no agent for, none started or only one queued (ADR-0064), with where each was
 // begun.
 func elsewhere(repo *workitem.Repo, st AgentState) map[string]*Elsewhere {
 	items, err := repo.List(false)
@@ -214,7 +214,7 @@ func elsewhere(repo *workitem.Repo, st AgentState) map[string]*Elsewhere {
 	here := workitem.ThisHost()
 	out := map[string]*Elsewhere{}
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status != workitem.InProgress {
+		if it.Type != workitem.Story || !isActive(repo.Flow(), it.Status) {
 			continue
 		}
 		if run := st.Stories[it.ID]; run != nil && run.Started != "" {
@@ -287,8 +287,9 @@ func runActivity(repo *workitem.Repo, st AgentState, convs *conversations) map[s
 	return out
 }
 
-// held are the stories in ready with no agent running that a claim holds,
-// counting the claim of each story in ready whose agent runs, and judging an
+// held are the stories in ready, a state the pull takes from, with no agent
+// running that a claim holds, counting the claim of each such story whose
+// agent runs, and judging an
 // overlap by a trial merge when repo has a judge, as the launcher does. One
 // whose agent ended asking is left out until the question or its
 // conversation is answered: it waits for the answer, and then for its hold
@@ -302,7 +303,7 @@ func held(repo *workitem.Repo, st AgentState, convs *conversations) map[string]*
 	holds := repo.HoldsFrom(items, convs.shares, convs.asks)
 	var ready []*workitem.Item
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status != workitem.Ready {
+		if it.Type != workitem.Story || !isPullable(repo.Flow(), it.Status) {
 			continue
 		}
 		switch run := st.Stories[it.ID]; {
@@ -321,11 +322,11 @@ func held(repo *workitem.Repo, st AgentState, convs *conversations) map[string]*
 	return out
 }
 
-// inReady says whether story is in ready: a retry queued for it waits only
-// while it is.
+// inReady says whether story is in ready, a state the pull takes from: a
+// retry queued for it waits only while it is.
 func inReady(repo *workitem.Repo, story string) bool {
 	it, err := repo.Get(story)
-	return err == nil && it.Status == workitem.Ready
+	return err == nil && isPullable(repo.Flow(), it.Status)
 }
 
 // asking is the open thread on story that awaits an answer to agent's

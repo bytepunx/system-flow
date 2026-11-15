@@ -14,9 +14,9 @@ import (
 // rules about when: whether the story was ready before flai serve began,
 // whether it had an agent since it entered ready, and whoever is attending.
 // It is refused while the agent action is off for the project, when the
-// story is not in ready, while its agent runs or waits for an answer, when
-// its agent runs elsewhere (harness none, ADR-0242), when nothing can start
-// it, and while the host's budget state holds its provider, with nothing
+// story is not in ready, a state the pull takes from, while its agent runs or
+// waits for an answer, when its agent runs elsewhere (harness none,
+// ADR-0242), when nothing can start it, and while the host's budget state holds its provider, with nothing
 // recorded (S-0534). A full in-progress limit does not refuse it,
 // nor a full review (S-0243), nor a hold (S-0128): the operator's word goes
 // past each, as a move does, with a warning, and the agent and the journal
@@ -30,7 +30,7 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +42,9 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if it.Type != workitem.Story {
 		return nil, refused("%s is %s; only a story has an agent", it.ID, it.Type)
 	}
-	if it.Status != workitem.Ready {
-		why := "only a story in ready is started"
-		if it.Status == workitem.InProgress {
+	if wf := repo.Flow(); !isPullable(wf, it.Status) {
+		why := "only a story in " + orStates(pullStates(wf)) + " is started"
+		if isActive(wf, it.Status) {
 			why += "; flai serve agent restart starts a new agent for one in progress whose agent dropped or failed, or that this host has had no agent for"
 		}
 		return nil, refused("%s is in %s; %s", it.ID, it.Status, why)
