@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -114,7 +115,7 @@ func TestQueueTimeLeavesOutABackToBacklog(t *testing.T) {
 			tr(workitem.Ready, "2026-10-07T10:00:00Z"),
 			tr(workitem.InProgress, "2026-10-07T11:00:00Z"),
 		}}
-	m := Derive(it, time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC))
+	m := Derive(baselineFlow, it, time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC))
 	if m.Committed != "2026-10-03T20:33:57Z" || m.Started != "2026-10-07T09:18:27Z" {
 		t.Errorf("committed %s started %s", m.Committed, m.Started)
 	}
@@ -126,6 +127,73 @@ func TestQueueTimeLeavesOutABackToBacklog(t *testing.T) {
 	}
 	if m.InState[workitem.Backlog] != 2037+269281 {
 		t.Errorf("backlog %v", m.InState[workitem.Backlog])
+	}
+}
+
+// testingFlow is the baseline with testing, of the active kind, added
+// between in-progress and review, and the baseline's timers.
+const testingFlow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit], rules: [criteria-present, not-draft, after-done]}
+  - {from: ready, to: in-progress, effects: [pull], rules: [not-blocked, not-held, task-after]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: review}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept], rules: [children-closed, criteria-ticked]}
+  - {from: review, to: done, types: [task], rules: [children-closed]}
+  - {from: review, to: in-progress, effects: [send-back], rules: [reason-given, not-blocked, task-after]}
+  - {from: [in-progress, testing], to: ready, rules: [criteria-present, not-draft, after-done]}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel], rules: [reason-given]}
+  - {from: review, to: cancelled, by: [cascade], effects: [cancel], rules: [reason-given]}
+  - {from: cancelled, to: backlog, effects: [reopen], rules: [parent-open]}
+timers:
+  - {name: lead, title: Lead time, from: created, to: completed}
+  - {name: cycle, title: Cycle time, from: {first: in-progress}, to: completed}
+  - {name: queue, title: Queue time, sum: [ready], until: {first: in-progress}}
+  - {name: review, title: Review time, sum: [review]}
+---
+`
+
+// S-0750 criterion 5, ADR-0305: on a workflow with testing added between
+// in-progress and review, Derive's cycle time spans the time in testing and
+// its time in state has a testing key.
+func TestDeriveOnAnAddedStateSpansItInCycleTime(t *testing.T) {
+	flow, p := workflow.Parse("design/workflows/board.md", testingFlow)
+	if p != nil {
+		t.Fatalf("Parse: %s", p)
+	}
+	tr := func(to, at string) workitem.Transition { return workitem.Transition{To: to, At: at} }
+	it := &workitem.Item{ID: "S-0001", Type: workitem.Story, Status: workitem.Done, Created: "2026-08-01T00:00:00Z",
+		Transitions: []workitem.Transition{
+			tr(workitem.Ready, "2026-08-01T01:00:00Z"),
+			tr(workitem.InProgress, "2026-08-01T02:00:00Z"),
+			tr("testing", "2026-08-01T05:00:00Z"),
+			tr(workitem.Review, "2026-08-01T09:00:00Z"),
+			tr(workitem.Done, "2026-08-01T10:00:00Z"),
+		}}
+	m := Derive(flow, it, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	if m.CycleTime == nil || *m.CycleTime != 28800 {
+		t.Errorf("cycle time %v, want 28800: from the first in-progress to done, testing's 14400 inside", m.CycleTime)
+	}
+	if m.InState["testing"] != 14400 || m.InState[workitem.InProgress] != 10800 {
+		t.Errorf("time in state %v, want testing 14400 and in-progress 10800", m.InState)
+	}
+	if m.LeadTime == nil || *m.LeadTime != 36000 || m.QueueTime == nil || *m.QueueTime != 3600 || m.WaitReview == nil || *m.WaitReview != 3600 {
+		t.Errorf("lead %v queue %v review %v, want 36000, 3600, and 3600", m.LeadTime, m.QueueTime, m.WaitReview)
+	}
+	if m.Started != "2026-08-01T02:00:00Z" || m.Completed != "2026-08-01T10:00:00Z" {
+		t.Errorf("started %s completed %s", m.Started, m.Completed)
 	}
 }
 

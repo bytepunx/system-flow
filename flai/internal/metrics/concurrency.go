@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -32,15 +33,16 @@ type ReadyWait struct {
 }
 
 // concurrency counts, over the window from start to now in whole seconds, the
-// seconds with exactly n of the items in in-progress, from each item's
-// in-progress intervals cut to the window. An interval runs from its
-// transition up to, not including, the next.
-func concurrency(items []*workitem.Item, start, now time.Time, limit int) Concurrency {
+// seconds with exactly n of the items in a state of flow's active kind,
+// in-progress on the baseline, from each item's intervals in one cut to the
+// window. An interval runs from its transition up to, not including, the
+// next.
+func concurrency(flow workflow.Workflow, items []*workitem.Item, start, now time.Time, limit int) Concurrency {
 	from, to := start.Truncate(time.Second), now.Truncate(time.Second)
 	window := int(to.Unix() - from.Unix())
 	delta := map[int64]int{}
 	for _, it := range items {
-		for _, s := range inProgress(it, now) {
+		for _, s := range activeSpans(flow, it, now) {
 			s = inWindow(s, from, to)
 			if !s.to.After(s.from) {
 				continue

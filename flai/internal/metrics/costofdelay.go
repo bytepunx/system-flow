@@ -51,14 +51,19 @@ func costColumns(flow workflow.Workflow) []string {
 }
 
 // deriveCostOfDelay sets the item's cost of delay and what it incurred over
-// the time in backlog and ready already derived.
-func deriveCostOfDelay(m *ItemMetrics, it *workitem.Item) {
+// the time in state already derived in flow's states of the queue kind,
+// backlog and ready on the baseline, summed in board order.
+func deriveCostOfDelay(flow workflow.Workflow, m *ItemMetrics, it *workitem.Item) {
 	v := costValue(it)
 	if v == nil {
 		return
 	}
 	value := *v
-	cost := round2(value * (m.InState[workitem.Backlog] + m.InState[workitem.Ready]) / secondsPerWeek)
+	var queued float64
+	for _, s := range flow.OfKind(workflow.KindQueue) {
+		queued += m.InState[s.Name]
+	}
+	cost := round2(value * queued / secondsPerWeek)
 	m.CostOfDelay, m.CostIncurred = &value, &cost
 }
 

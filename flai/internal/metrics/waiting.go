@@ -135,16 +135,6 @@ type wait struct {
 	open    bool
 }
 
-// deriveWaitReview sets the seconds the item spent in review, from the time
-// in state already derived, when it was ever there.
-func deriveWaitReview(m *ItemMetrics, it *workitem.Item) {
-	if it.FirstAt(workitem.Review).IsZero() {
-		return
-	}
-	r := m.InState[workitem.Review]
-	m.WaitReview = &r
-}
-
 // threadWaits is the waits of the threads anchored to each item, or to one of
 // its tasks, by the item's canonical ID.
 func threadWaits(all []*workitem.Item, ths []*threads.Thread, now time.Time) map[string][]wait {
@@ -287,12 +277,6 @@ func union(spans []span) []span {
 		out = append(out, s)
 	}
 	return out
-}
-
-// inProgress is activeSpans on the baseline workflow, as concurrency reads
-// the item's in-progress intervals.
-func inProgress(it *workitem.Item, now time.Time) []span {
-	return activeSpans(baselineFlow, it, now)
 }
 
 // activeSpans is each interval from a transition to a state of the active

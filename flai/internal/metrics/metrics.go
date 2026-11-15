@@ -4,6 +4,7 @@ package metrics
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -148,7 +149,8 @@ type ItemMetrics struct {
 	// are grouped under in Forecasts (ADR-0111).
 	Model string `json:"model"`
 	// CostOfDelay is its value per week, and CostIncurred what its time in
-	// backlog and ready cost at that value (S-0205).
+	// the states of the queue kind, backlog and ready, cost at that value
+	// (S-0205).
 	CostOfDelay  *float64 `json:"cost_of_delay,omitempty"`
 	CostIncurred *float64 `json:"cost_of_delay_incurred,omitempty"`
 	// WaitThreads is the time its agent waited on its threads while it was in
@@ -351,7 +353,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	})
 	sections.Go(func() { cod = costOfDelay(flow, items, tl, start, opt.Now) })
 	sections.Go(func() { order = costOrder(all, opt) })
-	sections.Go(func() { rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit) })
+	sections.Go(func() { rep.Concurrency = concurrency(flow, items, start, opt.Now, opt.WIPLimit) })
 	sections.Go(func() { rep.Turns = turns(all, start, opt.Now) })
 	sections.Go(func() {
 		rep.Coordination = coordination(flow, all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
@@ -385,7 +387,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	perItem := map[string]ItemMetrics{}
 	held := replay.seconds
 	for _, it := range items {
-		m := Derive(it, opt.Now)
+		m := Derive(flow, it, opt.Now)
 		m.ExpectedCost = ExpectedCostOf(it, rate)
 		deriveWaitThreads(flow, &m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
 		deriveWaitForge(flow, &m, it, pulls, opt.Now)
@@ -474,13 +476,17 @@ func burnupsByParent(flow workflow.Workflow, items []*workitem.Item, tl timeline
 	return out
 }
 
-// Derive computes the per-item values for one item.
-func Derive(it *workitem.Item, now time.Time) ItemMetrics {
-	m := ItemMetrics{ID: it.ID, Type: it.Type, Nature: it.Nature, Title: it.Title, Status: it.Status, Parent: it.Parent, Created: it.Created, InState: map[string]float64{}}
-	created, _ := time.Parse(workitem.TimeFormat, it.Created)
-	committed := it.FirstAt(workitem.Ready)
-	started := it.FirstAt(workitem.InProgress)
-	completed := it.CompletedAt()
+// Derive computes the per-item values for one item, its lead, cycle, queue,
+// and review time and its time in state read from flow's timers over its
+// history (ADR-0305).
+func Derive(flow workflow.Workflow, it *workitem.Item, now time.Time) ItemMetrics {
+	m := ItemMetrics{ID: it.ID, Type: it.Type, Nature: it.Nature, Title: it.Title, Status: it.Status, Parent: it.Parent, Created: it.Created}
+	h := history(it)
+	first := func(effect string) time.Time {
+		return pointAt(flow, workflow.Point{Edge: workflow.EdgeFirst, State: entered(flow, effect)}, h)
+	}
+	committed, started := first(workflow.EffectCommit), first(workflow.EffectPull)
+	completed := pointAt(flow, workflow.Point{At: workflow.PointCompleted}, h)
 	set := func(t time.Time) string {
 		if t.IsZero() {
 			return ""
@@ -488,22 +494,11 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 		return t.Format(workitem.TimeFormat)
 	}
 	m.Committed, m.Started, m.Completed = set(committed), set(started), set(completed)
-
-	// state intervals: backlog from created, then each transition to the next or now;
-	// queue time is the ready intervals that end at or before started (ADR-0190)
-	prevState, prevAt := workitem.Backlog, created
-	var queued time.Duration
-	for _, tr := range it.Transitions {
-		at, _ := time.Parse(workitem.TimeFormat, tr.At)
-		m.InState[prevState] += at.Sub(prevAt).Seconds()
-		if prevState == workitem.Ready && !started.IsZero() && !at.After(started) {
-			queued += at.Sub(prevAt)
-		}
-		prevState, prevAt = tr.To, at
-	}
-	if !it.Closed() {
-		m.InState[prevState] += now.Sub(prevAt).Seconds()
-	}
+	m.InState = flow.InState(h, now)
+	m.LeadTime = timed(flow, "lead", h, now)
+	m.CycleTime = timed(flow, "cycle", h, now)
+	m.QueueTime = timed(flow, "queue", h, now)
+	m.WaitReview = timed(flow, "review", h, now)
 	for _, b := range it.Blocked {
 		from, _ := time.Parse(workitem.TimeFormat, b.From)
 		until := now
@@ -514,15 +509,6 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 			m.Blocked += until.Sub(from).Seconds()
 		}
 	}
-	if !completed.IsZero() {
-		m.LeadTime = secs(completed.Sub(created))
-		if !started.IsZero() {
-			m.CycleTime = secs(completed.Sub(started))
-		}
-	}
-	if !started.IsZero() && !committed.IsZero() && !started.Before(committed) {
-		m.QueueTime = secs(queued)
-	}
 	if it.Estimate != "" {
 		if d, err := time.ParseDuration(it.Estimate); err == nil && d > 0 {
 			m.Estimate = secs(d)
@@ -532,14 +518,44 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 			}
 		}
 	}
-	if !it.Closed() && !started.IsZero() {
+	if !closed(flow, it.Status) && !started.IsZero() {
 		m.Age = secs(now.Sub(started))
 	}
 	deriveForecast(&m, it, completed)
-	deriveCostOfDelay(&m, it)
-	deriveWaitReview(&m, it)
+	deriveCostOfDelay(flow, &m, it)
 	m.Usage = itemUsage(it.Usage)
 	return m
+}
+
+// history is the item's created and its transitions, as a timer reads them
+// (ADR-0305 §1); a time that does not parse is the zero time.
+func history(it *workitem.Item) workflow.History {
+	h := workflow.History{Type: it.Type, Created: parseTime(it.Created), Steps: make([]workflow.Step, len(it.Transitions))}
+	for i, tr := range it.Transitions {
+		h.Steps[i] = workflow.Step{To: tr.To, At: parseTime(tr.At)}
+	}
+	return h
+}
+
+// pointAt is the moment of h the point names, zero when h has none.
+func pointAt(flow workflow.Workflow, p workflow.Point, h workflow.History) time.Time {
+	t, _ := flow.PointAt(p, h)
+	return t
+}
+
+// timed is the value in seconds of flow's timer named name over h: nil when
+// flow has no such timer, it does not take the item's type, or it has no
+// value for h.
+func timed(flow workflow.Workflow, name string, h workflow.History, now time.Time) *float64 {
+	t, ok := flow.Timer(name)
+	if !ok || !slices.Contains(t.Types, h.Type) {
+		return nil
+	}
+	v, ok := flow.Measure(t, h, now)
+	if !ok {
+		return nil
+	}
+	return &v
 }
 
 func summarise(group string, items []*workitem.Item, per map[string]ItemMetrics, inWindow func(*workitem.Item) bool, opt Options) Summary {

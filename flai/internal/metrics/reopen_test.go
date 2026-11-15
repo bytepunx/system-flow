@@ -23,7 +23,7 @@ func TestReopenedItemIsNotCompleted(t *testing.T) {
 		},
 	}
 	now := t0.Add(10 * time.Hour)
-	m := Derive(it, now)
+	m := Derive(baselineFlow, it, now)
 	if m.Completed != "" || m.LeadTime != nil || m.CycleTime != nil {
 		t.Errorf("reopened: completed %q lead %v cycle %v", m.Completed, m.LeadTime, m.CycleTime)
 	}
@@ -37,7 +37,7 @@ func TestReopenedItemIsNotCompleted(t *testing.T) {
 
 	it.Transitions = append(it.Transitions, workitem.Transition{To: workitem.Cancelled, At: at(6)})
 	it.Status = workitem.Cancelled
-	m = Derive(it, now)
+	m = Derive(baselineFlow, it, now)
 	if m.Completed != at(6) || m.LeadTime == nil || *m.LeadTime != (6*time.Hour).Seconds() {
 		t.Errorf("closed again: completed %q lead %v", m.Completed, m.LeadTime)
 	}
