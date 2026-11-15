@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-13
+updated: 2026-11-15
 status: active
 ---
 
@@ -3360,11 +3360,13 @@ A story whose branch changes a protected path ([Writes to protected paths](#writ
 
 While the merge queue batches and is not held, your acceptance lands nothing: it enqueues the story, and the queue lands it once its batch passes. While the queue is held, or with `--without-queue-tiers` or `--keep-removal`, your acceptance lands the story by hand, and then waits for the tiers the close-out left to the queue to run at the story's head. It is refused with the blocker `queue_tiers` until `flai verify S-0031 --all` has run them, and `--without-queue-tiers` lands the story without them, recorded in its Notes ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)).
 
-Every acceptance that lands a story by hand also waits for a `flai verify` over what main brought in since the story's last one: yours, from the board and the dashboard, and the orchestrator's, with the merge queue on or off (S-0683, [ADR-0291](../../design/adrs/0291-every-acceptance-but-the-merge-queue-s-landing-waits-for-a-flai-verify-over.md)). An acceptance runs no tier, so without it a story whose test still expects what another story changed could land and leave main red. When the paths main changed since that verify, outside `wip/`, select a tier the verify ran, the acceptance is refused before anything is merged, with the blocker `verify_behind_main`:
+Every acceptance that lands a story by hand also waits for a `flai verify` over what main brought in since the story's last one: yours, from the board and the dashboard, and the orchestrator's, with the merge queue on or off (S-0683, [ADR-0291](../../design/adrs/0291-every-acceptance-but-the-merge-queue-s-landing-waits-for-a-flai-verify-over.md)). An acceptance runs no tier, so without it a story whose test still expects what another story changed could land and leave main red. Only what main changed since that verify, outside `wip/`, that meets the story's own change counts (S-0792, [ADR-0303](../../design/adrs/0303-an-acceptance-s-verify-behind-main-sends-back-only-the-tiers-selected-by-the.md)): a file the story changes, a file in the same Go package as one, a Go file that imports a package the story changes, or a file in a package that a Go file the story changes imports. When those files select a tier the verify ran, the acceptance is refused before anything is merged, with the blocker `verify_behind_main`:
 
 ```text
-S-0031's verify does not cover the main branch it would land on: its last flai verify, at 6c25aad, ran over main at 1dfa57c, and the 4 paths main brought in since send back go-test, integration, smoke, which that verify ran: design/system/strategic-agents.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, and 1 more; ask for its close-out again, with the MCP tool verify or flai verify S-0031 --job, which syncs story/S-0031 onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291)
+S-0031's verify does not cover the main branch it would land on: its last flai verify, at 6c25aad, ran over main at 1dfa57c, and 1 of the 4 paths main brought in since overlap its change set and send back go-test, integration, which that verify ran: flai/internal/roles/conditions.go; ask for its close-out again, with the MCP tool verify or flai verify S-0031 --job, which syncs story/S-0031 onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291, ADR-0303)
 ```
+
+So an acceptance that changes another part of flai no longer holds a story in review, nor one that changes only documents, the digest, or another sub-project. Two stories that change the same Go package still hold each other. A story whose last verify ran before flai recorded the files it changes counts everything main changed, as before.
 
 To clear it, ask for the story's close-out again: `flai verify S-0031 --job` on the host, or the MCP tool `verify` ([The close-out job](#the-close-out-job)). It syncs the branch onto main and runs again only the tiers named; then accept again. The story stays in review meanwhile. There is no flag past it. `flai accept --dry-run` and the dashboard's Accept dialog list it, and with `--json` it is in `verify_behind_main_blocker`, with the tiers in `stale_tiers`. A story with no verify report, or whose last one failed, is not held by it, and a main that moved only under `wip/` holds nothing. While the queue batches, your acceptance that enqueues the story is not held either: the batch runs every tier over the main it lands on.
 

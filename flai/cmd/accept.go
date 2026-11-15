@@ -281,9 +281,13 @@ land on (ADR-0291, I-0229): every acceptance of a story with a branch but the
 merge queue's landing, by hand, from the dashboard, and --by orchestrator
 alike, is refused, before anything is merged, while the paths the main branch
 brought in since the story's last passing flai verify, but for the wip paths
-its branch does not change, select a tier that verify ran. The refusal is the
-blocker verify_behind_main, naming the tiers, where that verify ran over main, and
-the paths; --dry-run lists it, with --json under verify_behind_main_blocker, and
+its branch does not change, overlap the story's change set and select a tier
+that verify ran (ADR-0303). A path overlaps when the story changes it, when it
+is in a Go package the story changes, when it is a Go file that imports one,
+or when a Go file the story changes imports its package; a verify that
+recorded no changed paths counts every path. The refusal is the blocker
+verify_behind_main, naming the tiers, how many of main's paths overlap, and
+the first of them; --dry-run lists it, with --json under verify_behind_main_blocker, and
 stale_tiers names the tiers. Ask for the story's close-out again, with the
 MCP tool verify or flai verify <id> --job, which syncs the branch onto the
 main branch and runs again only the tiers its new paths send back, and
