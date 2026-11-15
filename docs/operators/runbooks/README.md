@@ -12,3 +12,4 @@ Step by step, for an operator at a shell on the host. Each runbook has a section
 | [delete.md](delete.md) | Taking flai or the dashboard off a machine |
 | [release-key.md](release-key.md) | The release signing key is generated, rotated, or compromised; or a release is to be checked by hand |
 | [agent-container.md](agent-container.md) | Building the agent images, or running a story's agent in a container by hand |
+| [change-the-board.md](change-the-board.md) | Adding, renaming, or removing a board state, a rule on a move, or a timer, in a story you accept |

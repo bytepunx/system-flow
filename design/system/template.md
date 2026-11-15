@@ -1,6 +1,6 @@
 ---
 title: Template repository
-updated: 2026-11-09
+updated: 2026-11-15
 status: active
 topics: [template]
 ---
@@ -28,6 +28,7 @@ Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. 
 │   ├── Makefile
 │   ├── .github/workflows/system-flow-check.yml
 │   ├── design/ ...         # includes conventions/, the baseline agent norms, see conventions.md
+│   │   └── workflows/board.md # the baseline workflow, byte for byte the one flai carries (ADR-0301)
 │   ├── docs/ ...
 │   └── wip/ ...
 ├── items/                 # rendered by flai at item creation time, not at project creation
@@ -135,6 +136,8 @@ Semantic versions in `template.yaml`. Each release is tagged `v<version>` by `fl
 With no `--ref`, it asks the operator which version to apply when `system-flow.yaml` names a different `template.ref` or `template.version` than the lock recorded, because the operator edited it, and that differs from the newest tag. A changed version names the tag `v<version>`. The choices are the version the manifest names, the newest tag, and changing nothing. An edit that equals the newest tag is applied without asking. A recorded tag equal to the lock's is not a pin: the next upgrade takes the newest tag without asking. Without a terminal, or with `--yes`, a run that would ask changes nothing and exits non-zero, naming the choices and the `flai upgrade --ref <tag>` to run. `--dry-run` says which version it would apply and whether it would ask. The version applied, chosen or not, is written to `template.ref` and `template.version` and to the lock.
 
 `system-flow.lock.yaml`, written by `flai new`, `flai import`, and `flai upgrade`, records a sha256 per rendered path, the `topics` the template gave each marker file, and under `vars` the value of every template variable the project was last rendered with. On upgrade each template path is classified: added when absent, merged when both sides carry the baseline marker (template above, project below, except that a project's own `topics` on the file stay: [conventions.md](conventions.md#topics)), replaced when the project file still matches the lock, skipped when identical, otherwise a conflict. In a terminal each conflict offers keep, replace, or a diff; non-interactive runs need `--keep-all` or `--replace-all` and otherwise change nothing. The manifest's `template.version` and `template.applied` and the lock are updated only when no conflict is unresolved. A dirty git tree is refused unless `--force`, so the upgrade is reviewable as one diff. Upgrade never prompts for a variable. It renders with each variable the template defines, taken from `--var`, then, for the five standard variables, from `system-flow.yaml` (`name`, `key`, `description`, `owner`, `repo`; `--var` refuses these), then from the values the lock recorded (a required variable recorded empty is passed over), then from the variable's default, naming each variable that took it; a required variable left empty is named and nothing is changed (S-0185, I-0040). `--var` on a project already at the template's version re-applies it. See [Variables](#variables). `system-flow.yaml` itself is never re-rendered; only its `template` fields are updated. A file removed from the template stays in projects. `--relock` writes the lock at the current version for projects assembled by hand.
+
+The board's workflow file, `design/workflows/board.md`, is the one rendered path upgrade adds and never writes after ([ADR-0307](../adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md)). The template ships it as the baseline flai carries, byte for byte, which a test holds. Upgrade adds it to a project that lacks it. Once the project has one, upgrade never writes it, whatever its content or the lock: it is the project's board, and a merge would replace its front matter, which is the whole workflow. When the template's file differs from the hash the lock recorded, the plan classes it `keep` and the summary says the template's baseline changed and that the operator carries the change over in a story; the new lock records the new hash, so it says so once per change.
 
 ## Publishing a template
 

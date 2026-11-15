@@ -1,0 +1,142 @@
+---
+title: "Runbook: change the board"
+updated: 2026-11-15
+status: active
+---
+
+# Change the board
+
+The board's states, the moves between them, the rules each move passes, and the timers are one file, `design/workflows/board.md` ([ADR-0301](../../../design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)). It is code you run: change it in a story, and accept that story yourself. flai reads the file of the checkout it runs in, so the story's worktree runs the new board before main does ([ADR-0307](../../../design/adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md)).
+
+## Before you start
+
+1. Open a story for the change, and name `design/workflows/board.md` in its touches. Work in its worktree.
+2. Find the file. A project with no `design/workflows/board.md` runs the baseline flai carries, which is the template's file byte for byte. To change it, add the file first, in the story's worktree:
+   - copy `root/design/workflows/board.md` from the template repository, or
+   - let `flai upgrade` add it, which it does for a project that lacks it.
+3. Edit the front matter only. It is the whole workflow, and it replaces the baseline whole: flai merges nothing into it. The body is prose for people; flai reads none of it. Every field and its allowed values are in ADR-0301 §1.
+
+## Add a state
+
+1. Add it to `states`, in board order, left to right. Give it a `kind`, which tells flai what it means:
+
+   | Kind | The state is |
+   |------|--------------|
+   | `queue` | Waiting to be worked; nobody is on it |
+   | `active` | Being worked; the story's agent runs |
+   | `waiting` | Waiting on someone else; the agent's work is done |
+   | `accepted` | Closed and delivered; nothing leaves it |
+   | `cancelled` | Closed and not delivered |
+
+   A `qa` state between `in-progress` and `review`:
+
+   ```yaml
+   states:
+     - {name: backlog, kind: queue, initial: true, order: true}
+     - {name: ready, kind: queue, order: true, limit: true}
+     - {name: in-progress, kind: active, limit: true}
+     - {name: qa, kind: waiting}
+     - {name: review, kind: waiting, limit: true}
+     - {name: done, kind: accepted}
+     - {name: cancelled, kind: cancelled}
+   ```
+
+   `types` limits the state to some item types; it takes all three by default.
+
+2. Add the moves into it and out of it. Every state must be reachable from the initial one, and must lead to the accepted or the cancelled state. Here the move to `review` becomes the move to `qa`:
+
+   ```yaml
+   transitions:
+     # in place of the baseline's in-progress -> review
+     - from: in-progress
+       to: qa
+       rules: [has-task, no-open-question, clean-worktree, {rule: criteria-ticked, severity: warn}]
+     - {from: qa, to: review, rules: [kluster-verified]}
+     - {from: qa, to: in-progress, effects: [send-back], rules: [reason-given]}
+     - {from: qa, to: cancelled, by: [cascade], effects: [cancel], rules: [reason-given]}
+   ```
+
+   `by` says who may make the move: `anyone` (the default), `operator`, `agent`, `flai`, `acceptance`, or `cascade`. `effects` says what flai does at the move: `commit`, `pull`, `accept`, `send-back`, `cancel`, or `reopen`. Stories keep exactly one `pull` move and one `accept` move. No two moves share a `from`, a `to`, and a type. The effects are in ADR-0301 §3.
+
+3. For a WIP limit, give the state `limit: true`. The value is not in the workflow file: it stays in `wip/kanban/board.md`, which `flai board limit` and the board's lane menu set. A state with `limit: true` and no value there has no limit. Today `flai board limit` takes only `ready`, `in-progress`, and `review`, so a state you add or rename has no limit yet.
+
+## Add a rule to a move
+
+Add the rule's name to the move's `rules`. A rule is a check flai implements; the file names one and cannot define one. The rules, what each checks, the item types it applies to, and its default severity are in ADR-0301 §4. `flai check` lists the names when the file gives one it does not know.
+
+Each rule refuses or warns by default. Set `severity` to change it for one move: `refuse` stops the move, `warn` lets it through and says why.
+
+```yaml
+  # the pull refuses a held story, where the baseline only warns
+  - {from: ready, to: in-progress, effects: [pull], rules: [not-blocked, {rule: not-held, severity: refuse}, task-after]}
+```
+
+A rule applies only to the item types it names, and a move's `types` narrows it further. For a rule flai lacks, ask for a story that adds it.
+
+## Add a timer
+
+A timer reads the moves every item already records, so it covers past items too. It is the time between two points, or the sum of the time spent in some states:
+
+```yaml
+timers:
+  - {name: lead, title: Lead time, from: created, to: completed}
+  # ... the baseline's other timers
+  - {name: acceptance-wait, title: Acceptance wait, from: {first: review}, to: completed}
+  - {name: qa-time, title: QA time, sum: [qa]}
+```
+
+A point is `created`, `completed`, `{first: <state>}`, `{last: <state>}`, or `{first: {kind: <kind>}}` and `{last: {kind: <kind>}}`. `until: <point>` bounds a sum. The fields are in ADR-0301 §5. `flai stats` reports the baseline's four timers; it reports a workflow's own timers once S-0752 lands.
+
+## Rename a state
+
+flai never rewrites an item's `status` or its history. Give the state its new name and list the old one in its `aliases`, then rename it in every move and timer:
+
+```yaml
+states:
+  - {name: doing, kind: active, limit: true, aliases: [in-progress]}
+transitions:
+  - {from: ready, to: doing, effects: [pull], rules: [not-blocked, not-held, task-after]}
+```
+
+flai reads an item that names `in-progress` as being in `doing`, counts its time there, and writes `doing` from then on. Keep the alias while any item, archived ones included, names it.
+
+## Remove a state with items in it
+
+Take the state and its moves out, and list its name in the `aliases` of the state its items go to:
+
+```yaml
+states:
+  - {name: review, kind: waiting, limit: true, aliases: [qa]}
+```
+
+Its items read as being in `review`, and the time they spent in `qa` counts as time in `review`, in every figure and timer.
+
+Changing a state's `kind` changes how flai reads all of the state's time, past time included.
+
+## Before the story is accepted
+
+1. In the story's worktree, run `flai check --strict`. It checks the branch's file, and the items against it. The codes are `workflow.file`, `workflow.rule`, `workflow.timer`, `workflow.state`, `workflow.unreachable`, `workflow.dead-end`, `workflow.no-pull`, `workflow.no-accept`, and `workflow.item`; what each means and what clears it is under [Check the repository](../../users/flai.md#check-the-repository).
+2. Fix every error. While the file has one, every command run in that checkout and `flai serve` refuse to open the project, and the MCP server refuses each tool call, naming the finding:
+
+   ```text
+   open the project at <root>: its workflow file cannot be run: <path>:<line>: <code>: <message>; fix the file, or remove it to run the baseline workflow flai carries
+   ```
+
+   Only `flai check` still runs. A warning, `workflow.unreachable`, stops nothing. Neither does `workflow.item`, an item naming a state the file lacks: add that name to an `aliases`.
+3. Look at the board in the worktree: `flai board` there shows the branch's columns. A move made there follows the branch's file, but writes the item in the main checkout, where the old board still runs: an item moved into a new state is a `workflow.item` finding on main until the story is accepted. To try moves freely, copy the file into a scratch project made with `flai new`.
+4. Commit, and move the story to review. Accept it yourself. A story that changes the file is the operator's to accept, never the orchestrator's or the merge queue's (ADR-0301 §7). The dashboard's saves refuse the file on main, and take it only on a story's branch.
+5. Once it is accepted, main runs the new board: the main checkout's commands, `flai serve` at its next look, the MCP server at its next call (it reads the file again when it changed), and the dashboard through `flai serve`. A story's worktree runs its own branch's file until it takes main in.
+
+## If main's file cannot be run
+
+Every command on main refuses, and `flai serve` logs the finding once. Run `flai check` in the main checkout for the finding. Revert the commit that brought it (`git revert <commit>`), fix the field the finding names, or remove the file to run the baseline, and commit. Then make the change again in a story.
+
+## When the template's baseline changes
+
+`flai upgrade` adds the file only to a project that lacks it, and never writes it after. When the template's baseline changed since the last upgrade, `flai upgrade` lists the file as `keep` and says so, as `--dry-run` does. The lock then records the new baseline, so the next upgrade is silent until it changes again.
+
+```text
+the template's baseline design/workflows/board.md changed: the project's file is kept, carry the change over to it in a story
+```
+
+Compare the template's file with yours, and carry over what you want in a story, as above.

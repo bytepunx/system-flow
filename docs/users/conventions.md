@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-23
+updated: 2026-11-15
 status: active
 ---
 
@@ -26,7 +26,8 @@ my-project/
 │   ├── issues/             # recurring friction, with counts and cost
 │   ├── experiments/        # what each experiment story found
 │   ├── analysis/           # what the analyzer found, one report per run
-│   └── digest/             # what past stories learned, one fact per file
+│   ├── digest/             # what past stories learned, one fact per file
+│   └── workflows/          # what flai runs as data: board.md, roles/, formulas/
 ├── docs/                   # outward-facing: one folder per audience
 │   ├── users/
 │   ├── operators/
@@ -114,6 +115,8 @@ stateDiagram-v2
 | `review` | Finished by whoever worked it, waiting for someone to accept it |
 | `done` | Accepted |
 | `cancelled` | Will not be done. Reachable from any open state; an item in review is cancelled only with its parent, and cancelling a parent cancels what is open under it |
+
+These are the states of the baseline board flai carries. A project's board is its workflow file, `design/workflows/board.md`, whose front matter names the states, each with a kind, the moves between them with the rules each passes, and the timers ([ADR-0301](../../design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)). The template ships the baseline as that file; a project without one runs the baseline. flai reads the file of the checkout it runs in, a story's worktree its branch's and the main checkout main's, and refuses to run on a file it cannot run, save for `flai check`, which says what to fix ([ADR-0307](../../design/adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md)). The file changes only through a story the operator accepts: [change the board](../operators/runbooks/change-the-board.md).
 
 Blocked is not a state. A blocked item keeps its column and carries a timestamped interval with a reason, so blocked time is measured apart from the time the item spends in its column.
 
