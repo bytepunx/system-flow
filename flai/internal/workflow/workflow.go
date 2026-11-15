@@ -605,6 +605,11 @@ func (p *reader) transitions(w *Workflow) *Problem {
 			if !kebab.MatchString(r.Rule) {
 				return p.fail(field, "rule %q is not kebab-case; name a rule flai implements (ADR-0301 §4)", r.Rule)
 			}
+			if _, ok := LookupRule(r.Rule); !ok {
+				prob := p.fail(field, "transitions[%d] (%s to %s) names rule %s, which flai does not implement; name one of %s (ADR-0301 §4), or ask for a story that adds it", i, strings.Join(t.From, ", "), t.To, r.Rule, strings.Join(RuleNames(), ", "))
+				prob.Code = CodeRule
+				return prob
+			}
 			if r.Severity != "" && !slices.Contains(Severities, r.Severity) {
 				return p.fail(field+".severity", "rule %s's severity %q is not one of %s", r.Rule, r.Severity, strings.Join(Severities, ", "))
 			}
