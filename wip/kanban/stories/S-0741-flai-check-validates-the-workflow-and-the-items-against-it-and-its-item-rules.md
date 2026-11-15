@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-15T19:41:57Z
+updated: 2026-11-15T20:04:08Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:34Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0741
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/check/concurrent_test.go, flai/internal/check/itemwrite.go]
 after: [S-0738]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1447
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 2
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 114
+      output: 675
+      cache_read: 7907473
+      cache_write: 395222
+      cost: 3.1371
   strategic:
     - kind: orchestrator
       seconds: 32

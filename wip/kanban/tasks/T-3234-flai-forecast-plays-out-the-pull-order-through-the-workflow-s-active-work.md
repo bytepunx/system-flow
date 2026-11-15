@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/cmd/forecast.go]
 usage:
   source: log
-  seconds: 706
+  seconds: 728
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 228
-      cache_read: 1619059
-      cache_write: 171684
-      cost: 0.6766
+      input: 35
+      output: 11078
+      cache_read: 1861897
+      cache_write: 96868
+      cost: 1.1559
 ---
 # T-3234 flai forecast plays out the pull order through the workflow's active-work states and their WIP limit
 

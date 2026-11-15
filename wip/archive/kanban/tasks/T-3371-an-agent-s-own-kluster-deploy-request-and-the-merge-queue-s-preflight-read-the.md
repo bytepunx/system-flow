@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 7582
-      cache_read: 2964265
-      cache_write: 79723
-      cost: 1.1978
+      input: 23
+      output: 5692
+      cache_read: 2966299
+      cache_write: 72399
+      cost: 1.152
 ---
 # T-3371 An agent's own kluster deploy request and the merge queue's preflight read the workflow, not a state's name
 

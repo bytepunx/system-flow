@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go]
 usage:
   source: log
-  seconds: 707
+  seconds: 724
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 247
-      cache_read: 1701037
-      cache_write: 87548
-      cost: 0.6758
+      input: 32
+      output: 10321
+      cache_read: 1734630
+      cache_write: 90247
+      cost: 1.0769
 ---
 # T-3233 A conversation between two stories closes when either reaches an accepted or cancelled state, and a share lasts while both are open
 

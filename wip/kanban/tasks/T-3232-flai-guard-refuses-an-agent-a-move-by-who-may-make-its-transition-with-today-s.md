@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 707
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 446
-      cache_read: 3041584
-      cache_write: 211015
-      cost: 1.229
+      input: 59
+      output: 18769
+      cache_read: 3154475
+      cache_write: 164117
+      cost: 1.9583
 ---
 # T-3232 flai guard refuses an agent a move by who may make its transition, with today's refusals on the baseline
 

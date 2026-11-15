@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 26277
-      cache_read: 10273390
-      cache_write: 276300
-      cost: 4.1514
+      input: 79
+      output: 19727
+      cache_read: 10280441
+      cache_write: 250917
+      cost: 3.9924
 ---
 # T-3220 The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
 

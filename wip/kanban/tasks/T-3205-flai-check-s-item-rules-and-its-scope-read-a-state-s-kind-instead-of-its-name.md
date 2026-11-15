@@ -3,12 +3,18 @@ id: T-3205
 type: task
 nature: feature
 title: flai check's item rules and its scope read a state's kind instead of its name
-status: backlog
+status: in-progress
 parent: S-0741
 owner: alex
 created: 2026-11-12T16:06:30Z
-updated: 2026-11-15T19:41:57Z
-transitions: []
+updated: 2026-11-15T20:04:28Z
+transitions:
+  - to: ready
+    at: 2026-11-15T20:04:28Z
+    by: agent-S-0741
+  - to: in-progress
+    at: 2026-11-15T20:04:28Z
+    by: agent-S-0741
 stream: S-0741
 tags: [cli]
 touches: [flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go]

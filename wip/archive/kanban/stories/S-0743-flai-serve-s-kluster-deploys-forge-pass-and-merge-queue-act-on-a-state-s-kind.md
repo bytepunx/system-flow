@@ -3,11 +3,11 @@ id: S-0743
 type: story
 nature: feature
 title: flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-15T19:39:56Z
+updated: 2026-11-15T20:29:08Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:55Z
@@ -21,6 +21,12 @@ transitions:
   - to: in-progress
     at: 2026-11-15T19:39:56Z
     by: flai
+  - to: review
+    at: 2026-11-15T20:12:16Z
+    by: agent-S-0743
+  - to: done
+    at: 2026-11-15T20:29:08Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, kluster]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/forge/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, flai/internal/serve/serve.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/kluster/kluster.go, flai/internal/mergequeue/preflight.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, design/system/workflow.md]
@@ -32,36 +38,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5378
+  seconds: 7313
   priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 2
-      work: 150
+      ceremony: 4
+      work: 204
   models:
     - model: claude-opus-5-5
-      input: 632
-      output: 180127
-      cache_read: 70423663
-      cache_write: 1894025
-      cost: 28.458
+      input: 748
+      output: 185627
+      cache_read: 96736853
+      cache_write: 2361077
+      cost: 37.5675
   strategic:
     - kind: orchestrator
-      seconds: 105
+      seconds: 182
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 244
-          cache_read: 1021868
-          cache_write: 192095
-          cost: 0.3617
+          input: 40
+          output: 383
+          cache_read: 1421949
+          cache_write: 271588
+          cost: 0.5063
         - model: claude-sonnet-5-5
-          input: 6
-          output: 54
-          cache_read: 48368
-          cache_write: 36531
-          cost: 0.0666
+          input: 16
+          output: 107
+          cache_read: 174210
+          cache_write: 79529
+          cost: 0.1998
 cost_of_delay:
   value: 80.17
   by: system-flow
@@ -114,3 +120,17 @@ What flai serve does around review follows the workflow. A story is deployed int
 - Forecast 45m, `flai forecast`'s rate for size 25, up from its 40m for the first draft's 22 once the co-change tests were added.
 - Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
 - 2026-11-15T19:39:56Z: moved to in-progress: alex asked its agent to rebase story/S-0743 onto main and resolve what holds its acceptance, 1 blocker: S-0743's verify does not cover the main branch it would land on: its last flai verify, at 8dd5578, ran over main at 721f679, and 12 of the 30 paths main brought...; its agent syncs it with flai stream sync S-0743, takes each blocker's recommended action, closes out again, and moves it to review
+
+### Accepted by the orchestrator
+
+- Verified: d4c1520ced6b3397baba1c64b29ff63e82077d92
+- Batch: 20261115-201711
+- Enqueued verified: d4c1520ced6b3397baba1c64b29ff63e82077d92
+- At: 2026-11-15T20:29:08Z
+
+Verdict: meets all five acceptance criteria at d4c1520; close-out passed every step at that commit over main a6ab4ec.
+- 1: flai/internal/serve/kluster.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forge.go, flai/internal/serve/forgemerge.go, flai/internal/serve/mergequeue.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/state.go, flai/internal/kluster/deploy.go, flai/internal/forge/state.go, flai/internal/workflow/review.go
+- 2: flai/internal/serve/kluster.go, flai/internal/kluster/deploy.go, flai/internal/kluster/kluster.go, flai/internal/serve/forge.go, flai/internal/serve/forgestatus.go, flai/internal/mergequeue/eligible.go, flai/internal/serve/mergequeue.go, flai/internal/serve/kluster_requests.go, flai/internal/mergequeue/preflight.go
+- 3: flai/internal/serve/forgestatus.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch.go, flai/internal/serve/kluster.go, flai/internal/workflow/review.go
+- 4: flai/internal/serve/kluster_test.go, flai/internal/serve/forgestatus_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/batch_test.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/mergequeue_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/flow_test.go
+- 5: flai/internal/serve/forge_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/serve/mergequeue_test.go, flai/internal/workflow/review_test.go

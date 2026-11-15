@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/statsread/statsread.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go]
 usage:
   source: log
-  seconds: 706
+  seconds: 734
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 555
-      cache_read: 3650192
-      cache_write: 217152
-      cost: 1.4613
+      input: 77
+      output: 24566
+      cache_read: 4128826
+      cache_write: 214809
+      cost: 2.5632
 ---
 # T-3235 Prime packs, the release evaluation, the digest's sources, turn counts, and statsread read a state's kind
 

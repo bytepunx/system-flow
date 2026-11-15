@@ -3,11 +3,11 @@ id: S-0749
 type: story
 nature: feature
 title: The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:56Z
-updated: 2026-11-15T19:57:41Z
+updated: 2026-11-15T20:14:37Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:15Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-15T19:44:10Z
     by: agent-S-0749
+  - to: review
+    at: 2026-11-15T20:14:37Z
+    by: agent-S-0749
 tags: [cli]
 topics: [cli, planning]
-touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go, flai/cmd/forecast.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go]
+touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go, flai/cmd/forecast.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -26,31 +29,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 797
-  estimated: true
-  priced_by: estimate
+  seconds: 1851
+  priced_by: harness
   turns:
     - day: 2026-11-15
       ceremony: 3
-      work: 23
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 304
-      output: 1711
-      cache_read: 12389929
-      cache_write: 902893
-      cost: 5.0227
+      input: 364
+      output: 116637
+      cache_read: 19603297
+      cache_write: 1019893
+      cost: 12.1698
   strategic:
     - kind: orchestrator
-      seconds: 26
+      seconds: 84
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 18
+          output: 117
+          cache_read: 583665
+          cache_write: 111182
+          cost: 0.207
+        - model: claude-sonnet-5-5
           input: 8
-          output: 49
-          cache_read: 293079
-          cache_write: 37917
-          cost: 0.0973
+          output: 64
+          cache_read: 86225
+          cache_write: 28718
+          cost: 0.0907
 cost_of_delay:
   value: 74.82
   by: system-flow
@@ -73,11 +81,11 @@ The rest of flai's packages that name a state follow the workflow. The guard tel
 
 ## Acceptance criteria
 
-- [ ] `flai/internal/guard`, `messages`, `planning/forecast.go`, `context`, `release/evaluate.go`, `digest/sources.go`, `usage/turns.go`, and `statsread/statsread.go` name no state: each reads a state's kind, a transition's effect, or who may make it from the workflow
-- [ ] `flai guard` refuses an agent a move by who may make its transition, with today's refusals word for word with the baseline
-- [ ] A conversation closes when either story reaches an accepted or a cancelled state, and `flai forecast` plays out the pull order through the active-work states with their WIP limit
-- [ ] Tests run the guard's move refusals, a conversation's close, and a forecast against a workflow with a state renamed and one added between `in-progress` and `review`
-- [ ] With the baseline, every existing test of these packages passes unchanged
+- [x] `flai/internal/guard`, `messages`, `planning/forecast.go`, `context`, `release/evaluate.go`, `digest/sources.go`, `usage/turns.go`, and `statsread/statsread.go` name no state: each reads a state's kind, a transition's effect, or who may make it from the workflow
+- [x] `flai guard` refuses an agent a move by who may make its transition, with today's refusals word for word with the baseline
+- [x] A conversation closes when either story reaches an accepted or a cancelled state, and `flai forecast` plays out the pull order through the active-work states with their WIP limit
+- [x] Tests run the guard's move refusals, a conversation's close, and a forecast against a workflow with a state renamed and one added between `in-progress` and `review`
+- [x] With the baseline, every existing test of these packages passes unchanged
 
 ## Tasks
 

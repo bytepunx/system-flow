@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 16030
-      cache_read: 6267339
-      cache_write: 168558
-      cost: 2.5326
+      input: 48
+      output: 12035
+      cache_read: 6271640
+      cache_write: 153073
+      cost: 2.4356
 ---
 # T-3218 A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
 

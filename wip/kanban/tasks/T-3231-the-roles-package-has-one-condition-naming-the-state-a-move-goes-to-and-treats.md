@@ -3,15 +3,21 @@ id: T-3231
 type: task
 nature: feature
 title: The roles package has one condition naming the state a move goes to, and treats to-review and to-backlog as the ADR decides
-status: backlog
+status: in-progress
 parent: S-0748
 owner: alex
 created: 2026-11-12T16:08:17Z
-updated: 2026-11-12T16:08:17Z
-transitions: []
+updated: 2026-11-15T20:16:33Z
+transitions:
+  - to: ready
+    at: 2026-11-15T20:16:33Z
+    by: agent-S-0748
+  - to: in-progress
+    at: 2026-11-15T20:16:33Z
+    by: agent-S-0748
 stream: S-0748
 tags: [cli]
-touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/start.go, flai/internal/check/check_roles.go, flai/internal/check/roles_test.go]
+touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/start.go, flai/internal/check/check_roles.go, flai/internal/check/roles_test.go, flai/internal/roles/roles_test.go]
 ---
 # T-3231 The roles package has one condition naming the state a move goes to, and treats to-review and to-backlog as the ADR decides
 
