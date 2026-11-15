@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 22031
-      cache_read: 5671314
-      cache_write: 139833
-      cost: 2.4643
+      input: 58
+      output: 18101
+      cache_read: 5634766
+      cache_write: 165488
+      cost: 2.6293
 ---
 # T-3221 flai move refuses a transition the mover may not make, naming it and who may, and cancels along the workflow's transitions
 

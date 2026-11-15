@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 37004
-      cache_read: 9525744
-      cache_write: 234868
-      cost: 4.1391
+      input: 98
+      output: 30404
+      cache_read: 9464356
+      cache_write: 277960
+      cost: 4.4162
 ---
 # T-3227 flai accept makes the transition with the acceptance effect, and the acceptance preview lists the blockers its rules give
 

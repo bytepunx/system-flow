@@ -3,11 +3,11 @@ id: S-0744
 type: story
 nature: feature
 title: flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:04Z
-updated: 2026-11-15T01:47:19Z
+updated: 2026-11-15T19:43:52Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:59Z
@@ -18,6 +18,15 @@ transitions:
   - to: review
     at: 2026-11-15T01:47:19Z
     by: agent-S-0744
+  - to: in-progress
+    at: 2026-11-15T19:29:34Z
+    by: flai
+  - to: review
+    at: 2026-11-15T19:42:20Z
+    by: agent-S-0744
+  - to: done
+    at: 2026-11-15T19:43:52Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
 touches: [flai/cmd/move.go, flai/cmd/move_cancel.go, flai/internal/workitem/transition.go, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/cancel.go, flai/cmd/formula_stop.go, flai/cmd/formula.go, flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/forge.go, flai/cmd/kluster.go, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/move_workflow_test.go, flai/cmd/project.go, flai/cmd/formula_stop_workflow_test.go, flai/cmd/commands_workflow_test.go, design/system/workflow.md, flai/cmd/accept_workflow_test.go, flai/internal/preview/accept_workflow_test.go, design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md, design/issues/summary.md]
@@ -29,32 +38,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3045
+  seconds: 3791
   priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 3
-      test_runs: 2
+      ceremony: 4
+      test_runs: 3
       hand_edits: 1
-      work: 79
+      work: 97
   models:
     - model: claude-opus-5-5
-      input: 400
-      output: 134097
-      cache_read: 34519633
-      cache_write: 851121
-      cost: 14.9994
+      input: 444
+      output: 137554
+      cache_read: 42819012
+      cache_write: 1257557
+      cost: 19.9801
   strategic:
     - kind: orchestrator
-      seconds: 83
+      seconds: 101
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 32
-          output: 284
-          cache_read: 1178992
-          cache_write: 139181
-          cost: 0.3925
+          input: 38
+          output: 340
+          cache_read: 1299402
+          cache_write: 180678
+          cost: 0.4413
         - model: claude-sonnet-5-5
           input: 10
           output: 910
@@ -114,3 +123,18 @@ The command line follows the workflow. `flai move` refuses a move its transition
 - Tasks: T-3221 (move), T-3222 (formula stop), and T-3223 (the other commands) in the first layer; T-3227 (accept and the preview) after T-3221, whose helper in `transition.go` it calls.
 - Forecast 1h, as `flai forecast` gives it for size 33; 34 with `move_cancel_test.go` added rounds the same.
 - Cost of delay: 106.89 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 1h over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+- 2026-11-15T19:29:34Z: moved to in-progress: alex asked its agent to rebase story/S-0744 onto main and resolve what holds its acceptance, 1 blocker: S-0744's verify does not cover the main branch it would land on: its last flai verify, at 18bbb55, ran over main at 449ee65, and 44 of the 67 paths main brought...; its agent syncs it with flai stream sync S-0744, takes each blocker's recommended action, closes out again, and moves it to review
+
+### Accepted by the orchestrator
+
+- Verified: b21e28ecde7feaa061a327317a10443237347442
+- At: 2026-11-15T19:43:52Z
+
+Verdict: meets all 7 criteria at b21e28ecde7feaa061a327317a10443237347442; close-out passed every step over main e20b6d42f.
+- 1: flai/cmd/move.go, flai/cmd/move_cancel.go, flai/cmd/accept.go, flai/cmd/formula_stop.go, flai/cmd/formula.go, flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/forge.go, flai/cmd/kluster.go, flai/internal/preview/accept.go, flai/internal/preview/cancel.go, flai/internal/preview/orchestrator.go, flai/internal/workitem/transition.go
+- 2: flai/cmd/move.go, flai/internal/workitem/transition.go, flai/cmd/move_workflow_test.go
+- 3: flai/cmd/accept.go, flai/internal/workitem/transition.go, flai/cmd/accept_workflow_test.go
+- 4: flai/cmd/formula_stop.go, flai/cmd/formula.go, flai/cmd/formula_stop_workflow_test.go
+- 5: flai/internal/preview/accept.go, flai/internal/preview/accept_workflow_test.go
+- 6: flai/cmd/move_workflow_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/formula_stop_workflow_test.go, flai/internal/preview/accept_workflow_test.go, flai/cmd/commands_workflow_test.go
+- 7: flai/cmd/move_workflow_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/formula_stop_workflow_test.go, flai/cmd/commands_workflow_test.go, flai/internal/preview/accept_workflow_test.go

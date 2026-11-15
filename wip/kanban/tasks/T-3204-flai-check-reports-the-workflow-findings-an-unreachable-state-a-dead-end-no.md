@@ -3,15 +3,21 @@ id: T-3204
 type: task
 nature: feature
 title: "flai check reports the workflow findings: an unreachable state, a dead end, no pull, no acceptance, a bad timer, an unknown rule, and an item in a missing state"
-status: backlog
+status: in-progress
 parent: S-0741
 owner: alex
 created: 2026-11-12T16:06:27Z
-updated: 2026-11-12T16:06:27Z
-transitions: []
+updated: 2026-11-15T19:41:58Z
+transitions:
+  - to: ready
+    at: 2026-11-15T19:41:58Z
+    by: agent-S-0741
+  - to: in-progress
+    at: 2026-11-15T19:41:58Z
+    by: agent-S-0741
 stream: S-0741
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go]
 ---
 # T-3204 flai check reports the workflow findings: an unreachable state, a dead end, no pull, no acceptance, a bad timer, an unknown rule, and an item in a missing state
 

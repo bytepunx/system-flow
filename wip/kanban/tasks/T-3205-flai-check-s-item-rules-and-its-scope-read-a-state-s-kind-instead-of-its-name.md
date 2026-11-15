@@ -7,11 +7,12 @@ status: backlog
 parent: S-0741
 owner: alex
 created: 2026-11-12T16:06:30Z
-updated: 2026-11-12T16:06:30Z
+updated: 2026-11-15T19:41:57Z
 transitions: []
 stream: S-0741
 tags: [cli]
 touches: [flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go]
+after: [T-3204]
 ---
 # T-3205 flai check's item rules and its scope read a state's kind instead of its name
 

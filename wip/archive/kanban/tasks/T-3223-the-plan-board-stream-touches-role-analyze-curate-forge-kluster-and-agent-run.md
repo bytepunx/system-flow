@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 11481
-      cache_read: 2955507
-      cache_write: 72871
-      cost: 1.2842
+      input: 30
+      output: 9433
+      cache_read: 2936461
+      cache_write: 86241
+      cost: 1.3702
 ---
 # T-3223 The plan, board, stream, touches, role, analyze, curate, forge, kluster, and agent-run commands read a state's kind
 

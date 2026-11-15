@@ -4,10 +4,10 @@ title: T-3372 of S-0742 changed paths S-0744's claim covers
 from: S-0742
 to: S-0744
 about: [design/system/workflow.md]
-status: open
-participants: [agent-S-0742]
+status: closed
+participants: [agent-S-0742, orchestrator]
 created: 2026-11-15T01:55:52Z
-updated: 2026-11-15T01:55:52Z
+updated: 2026-11-15T19:43:52Z
 ---
 
 # MS-0572 T-3372 of S-0742 changed paths S-0744's claim covers
@@ -20,3 +20,6 @@ Between S-0742 and S-0744, about `design/system/workflow.md`.
 T-3372 of S-0742 changed paths S-0744's claim covers.
 
 T-3372, workflow.md says how flai serve reads the workflow's kinds and the pull, committed b698d6a on story/S-0742, `docs: [S-0742] workflow.md says how flai serve reads the workflow's kinds and the pull`, changing `design/system/workflow.md`. It reaches the main branch when S-0742 is accepted; `git show b698d6a` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-15T19:43:52Z orchestrator
+Closed: S-0744 was accepted

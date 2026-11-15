@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 8289
-      cache_read: 2133741
-      cache_write: 52610
-      cost: 0.9272
+      input: 22
+      output: 6810
+      cache_read: 2119991
+      cache_write: 62262
+      cost: 0.9892
 ---
 # T-3222 flai formula stop closes the stopped step and cancels the steps after it along the workflow's transitions
 

@@ -3,18 +3,21 @@ id: S-0741
 type: story
 nature: feature
 title: flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-15T18:51:50Z
+updated: 2026-11-15T19:41:57Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:34Z
     by: alex
+  - to: in-progress
+    at: 2026-11-15T19:40:03Z
+    by: agent-S-0741
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go, design/system/flai-cli.md, docs/users/flai.md]
+touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go]
 after: [S-0738]
 agent:
   harness: claude-code
