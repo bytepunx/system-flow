@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -41,6 +42,14 @@ WIP limit; any other move to ready it makes is refused with the reason
 An item also moves back one column: ready to backlog, in-progress to ready,
 review to in-progress, cancelled to backlog, the last only while its parent
 is not cancelled (ADR-0055). Done is final.
+
+The project's workflow says what a move is (ADR-0301): a story's move along
+the transition with the accept effect is its acceptance, a move to a state of
+the cancelled kind is a cancellation, and the transition's by says who may
+make it. A move its by does not let the mover make is refused, naming the
+transition, who may make it, and the command that does. The mover is a role
+when FLAI_ROLE is set, a story's agent when FLAI_STORY is set or flai serve
+started the session, and the operator otherwise.
 
 Cancelling an epic cancels every open story under it and their open tasks;
 cancelling a story cancels its open tasks (ADR-0028). The items are listed
@@ -92,7 +101,10 @@ word and records it in its Notes (ADR-0254).`,
 			if err != nil {
 				return err
 			}
-			if it.Type == workitem.Story && args[1] == workitem.Done && it.Status == workitem.Review {
+			wf := repo.Flow()
+			// a story's move along the transition with the accept effect is
+			// its acceptance (ADR-0301 §3): on the baseline, review to done
+			if it.Type == workitem.Story && workitem.Accepts(wf, it.Type, it.Status, args[1]) {
 				accept.by = by
 				accept.dryRun = accept.dryRun || dryRun
 				res, err := a.acceptItem(repo, it, accept)
@@ -102,14 +114,21 @@ word and records it in its Notes (ADR-0254).`,
 				}
 				return a.printAccept(res)
 			}
-			if args[1] == workitem.Cancelled {
+			// the workflow's by says who may make the move (ADR-0301 §3); an
+			// epic's move with the accept effect is its acceptance, as today
+			m := workflow.Mover{Who: mover(), Acceptance: workitem.Accepts(wf, it.Type, it.Status, args[1])}
+			if err := workitem.PermitMove(wf, it, args[1], m); err != nil {
+				return err
+			}
+			if workitem.IsKind(wf, args[1], workflow.KindCancelled) {
 				return a.cancelItem(repo, it, a.movedBy(by), reason, dryRun)
 			}
 			if dryRun {
 				return fmt.Errorf("--dry-run previews a cancellation or an acceptance; other moves have nothing to preview")
 			}
-			// the orchestrator promotes a candidate alone, while ready has room (S-0219)
-			if args[1] == workitem.Ready && os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+			// the orchestrator promotes a candidate alone, while ready has
+			// room (S-0219): the move with the commit effect
+			if commits(wf, it, args[1]) && os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
 				if err := repo.Promotable(it); err != nil {
 					return fmt.Errorf("rule: %w", err)
 				}
@@ -138,7 +157,7 @@ word and records it in its Notes (ADR-0254).`,
 			if draft && !it.Draft {
 				fmt.Fprintf(a.out, "  %s is finalized: no longer a draft\n", it.ID)
 			}
-			if it.Status == workitem.Done && it.Type == workitem.Epic {
+			if it.Type == workitem.Epic && workitem.IsKind(wf, it.Status, workflow.KindAccepted) {
 				a.logger().Info("epic closed without an archive or a commit; flai accept does move, archive, and commit in one step", "component", "workitem", "item", it.ID)
 			}
 			return nil
@@ -156,6 +175,26 @@ func (a *app) printFollowed(f *workitem.Followed) {
 	if f != nil {
 		fmt.Fprintf(a.out, "  %s → %s, following %s\n", f.ID, f.To, f.Story)
 	}
+}
+
+// mover is who this flai's caller is to a transition's by (ADR-0301 §3): a
+// strategic role when FLAI_ROLE names one, a story's agent in a session flai
+// serve started or one that names its story, else the operator.
+func mover() string {
+	switch {
+	case os.Getenv("FLAI_ROLE") != "":
+		return workflow.MoverRole
+	case os.Getenv(guard.StartedByEnv) == guard.StartedByServe, os.Getenv("FLAI_STORY") != "":
+		return workflow.MoverAgent
+	}
+	return workflow.MoverOperator
+}
+
+// commits reports whether moving it to the state to takes it along a
+// transition with the commit effect in wf: on the baseline, backlog to ready.
+func commits(wf workflow.Workflow, it *workitem.Item, to string) bool {
+	t, ok := wf.Find(it.Type, it.Status, to)
+	return ok && t.HasEffect(workflow.EffectCommit)
 }
 
 // movedBy is who a transition is recorded as made by: --by, else FLAI_AGENT

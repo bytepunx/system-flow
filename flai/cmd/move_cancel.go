@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -30,8 +31,9 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 			if c.Type == workitem.Task && it.Type == workitem.Epic {
 				indent = "    "
 			}
-			if c.From == workitem.Review {
-				note = "  (in review: its work stays on its branch, unmerged)"
+			// an item waiting for its acceptance has work on its branch
+			if workitem.IsKind(repo.Flow(), c.From, workflow.KindWaiting) {
+				note = fmt.Sprintf("  (in %s: its work stays on its branch, unmerged)", c.From)
 			}
 			fmt.Fprintf(a.out, "%s%-5s %s  %-11s %s%s\n", indent, c.Type, c.ID, c.From, c.Title, note)
 		}
@@ -58,7 +60,7 @@ func (a *app) cancelItem(repo *workitem.Repo, it *workitem.Item, by, reason stri
 			return fmt.Errorf("nothing was cancelled")
 		}
 	}
-	done, err := repo.TransitionAll(it, workitem.Cancelled, by, reason, a.now(), false)
+	done, err := repo.TransitionAll(it, workitem.CancelledState(repo.Flow()), by, reason, a.now(), false)
 	if err != nil {
 		return err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -42,6 +43,11 @@ func (a *app) projectOrNone() (*workitem.Repo, error) {
 // project opens the conforming repo above the working directory and points
 // it at the cached template for item bodies when one is available. It never
 // fetches.
+// testWorkflow, when a test sets it, is the workflow every project the
+// commands open runs in place of the baseline (ADR-0301), so that the
+// commands are tried against a board with renamed and added states.
+var testWorkflow *workflow.Workflow
+
 func (a *app) project() (*workitem.Repo, error) {
 	start := a.cwd
 	if start == "" {
@@ -55,6 +61,9 @@ func (a *app) project() (*workitem.Repo, error) {
 		return nil, fmt.Errorf("%w (run flai new or flai import first)", err)
 	}
 	repo.Git = a.runner
+	if testWorkflow != nil {
+		repo.Workflow = testWorkflow
+	}
 	// an overlap holds a ready story only when a trial merge conflicts, as
 	// flai story start, flai board, and the promotion candidates judge it
 	// (ADR-0230); outside a git checkout NewTrialJudge gives none

@@ -41,10 +41,10 @@ type Cancellation struct {
 	Followed *workitem.Followed `json:"followed,omitempty"`
 }
 
-// Cancel is what moving it to cancelled would do: the item's own rules,
-// tried on a copy so that a refusal is an error before anything changes,
-// everything open under it that would go with it, and what would be left
-// on disk and in git.
+// Cancel is what moving it to the workflow's cancelled state would do: the
+// item's own rules, tried on a copy so that a refusal is an error before
+// anything changes, everything open under it that would go with it, and what
+// would be left on disk and in git.
 func Cancel(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by, reason string, now time.Time) (*Cancellation, error) {
 	items, err := repo.List(false)
 	if err != nil {
@@ -52,7 +52,7 @@ func Cancel(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by, reason s
 	}
 	probe := *it
 	probe.Transitions = append([]workitem.Transition(nil), it.Transitions...)
-	if _, err := repo.Move(&probe, workitem.Cancelled, workitem.MoveOptions{By: by, Reason: reason, Now: now, Items: items}); err != nil {
+	if _, err := repo.Move(&probe, workitem.CancelledState(repo.Flow()), workitem.MoveOptions{By: by, Reason: reason, Now: now, Items: items}); err != nil {
 		return nil, err
 	}
 	res := &Cancellation{ID: it.ID, Status: it.Status, DryRun: true, Cancelled: []workitem.Cascaded{}, Warnings: []string{}}
