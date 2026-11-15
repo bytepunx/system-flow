@@ -3,11 +3,11 @@ id: S-0749
 type: story
 nature: feature
 title: The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:56Z
-updated: 2026-11-15T20:14:37Z
+updated: 2026-11-15T20:29:15Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:15Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T20:14:37Z
     by: agent-S-0749
+  - to: done
+    at: 2026-11-15T20:29:15Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, planning]
 touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go, flai/cmd/forecast.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md]
@@ -108,3 +111,17 @@ The rest of flai's packages that name a state follow the workflow. The guard tel
 - Tasks: T-3232 (guard), T-3233 (messages), T-3234 (forecast), and T-3235 (the rest), one layer: no two share a path.
 - Forecast 42m, `flai forecast`'s rate for size 23, up from its 40m for the first draft's 22.
 - Cost of delay: 74.82 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 42m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: 0dbdd80b5f9f1b3c773e382d93e91792efdcf960
+- Batch: 20261115-201711
+- Enqueued verified: a13f2de655deaa66f0b1f21f11b203d204b770a2
+- At: 2026-11-15T20:29:15Z
+
+Verdict: meets all five acceptance criteria at a13f2de; close-out passed every step at that commit over main a6ab4ec.
+- 1: flai/internal/guard/guard.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/planning/forecast.go, flai/cmd/forecast.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/statsread/statsread.go
+- 2: flai/internal/guard/guard.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go
+- 3: flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/planning/forecast.go, flai/cmd/forecast.go
+- 4: flai/internal/guard/guard_test.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast_test.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go
+- 5: flai/internal/guard/guard_test.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast_test.go
