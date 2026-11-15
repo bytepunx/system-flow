@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -54,9 +55,10 @@ type OrderPoint struct {
 // test replaces it to count the builds.
 var newPuller = planning.NewPuller
 
-// costOrder projects the cost of delay of the ready stories in all that have
-// a value and a forecast duration, played out on the board's lanes from the
-// report's now under each order.
+// costOrder projects the cost of delay of the ready stories in all, those in
+// the state the commit moves a story to, that have a value and a forecast
+// duration, played out on the board's lanes from the report's now under each
+// order.
 func costOrder(all []*workitem.Item, opt Options) CostOrder {
 	at := opt.Now.Truncate(time.Second)
 	byID := map[string]*workitem.Item{}
@@ -67,7 +69,7 @@ func costOrder(all []*workitem.Item, opt Options) CostOrder {
 	}
 	var placed []*workitem.Item
 	out := CostOrder{At: at.Format(workitem.TimeFormat), LeftOut: []string{}}
-	for _, id := range workitem.PullSequence(opt.Order, all, workitem.Ready) {
+	for _, id := range workitem.PullSequence(opt.Order, all, entered(opt.flow(), workflow.EffectCommit)) {
 		if it := byID[id]; costValue(it) != nil && hasForecastDuration(it) {
 			placed = append(placed, it)
 		} else {

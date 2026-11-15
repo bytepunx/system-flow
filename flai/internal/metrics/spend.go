@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -210,10 +211,10 @@ type completion struct {
 
 // spent lists the items done in the window whose usage carries what keep
 // asks for, oldest first, then by ID.
-func spent(items []*workitem.Item, start, now time.Time, keep func(*usage.Usage) bool) []completion {
+func spent(flow workflow.Workflow, items []*workitem.Item, start, now time.Time, keep func(*usage.Usage) bool) []completion {
 	var list []completion
 	for _, it := range items {
-		at := it.FirstAt(workitem.Done)
+		at := firstOfKind(flow, it, workflow.KindAccepted)
 		if at.IsZero() || at.Before(start) || at.After(now) || !keep(it.Usage) {
 			continue
 		}
@@ -231,7 +232,7 @@ func spent(items []*workitem.Item, start, now time.Time, keep func(*usage.Usage)
 // spendOverTime lays out what was spent on each type's items, whatever type
 // the report is about. An item on which only strategic agents spent counts
 // in its bucket's strategic figures, and may start the series.
-func spendOverTime(all []*workitem.Item, start, now time.Time, bucket string) map[string]*TypeSpend {
+func spendOverTime(flow workflow.Workflow, all []*workitem.Item, start, now time.Time, bucket string) map[string]*TypeSpend {
 	out := map[string]*TypeSpend{}
 	for _, typ := range []string{workitem.Epic, workitem.Story, workitem.Task} {
 		var items []*workitem.Item
@@ -240,7 +241,7 @@ func spendOverTime(all []*workitem.Item, start, now time.Time, bucket string) ma
 				items = append(items, it)
 			}
 		}
-		out[typ] = typeSpend(spent(items, start, now, spentAny), now, bucket)
+		out[typ] = typeSpend(spent(flow, items, start, now, spentAny), now, bucket)
 	}
 	return out
 }

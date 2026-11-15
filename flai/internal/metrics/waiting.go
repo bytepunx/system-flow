@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -215,7 +216,7 @@ func threadWait(th *threads.Thread, now time.Time) (wait, bool) {
 // deriveWaitThreads sets the seconds the item's agent waited on its threads
 // while it was in progress, and the part of them the orchestrator ended,
 // both absent without threads.
-func deriveWaitThreads(m *ItemMetrics, it *workitem.Item, waits []wait, now time.Time) {
+func deriveWaitThreads(flow workflow.Workflow, m *ItemMetrics, it *workitem.Item, waits []wait, now time.Time) {
 	if waits == nil {
 		return
 	}
@@ -223,8 +224,8 @@ func deriveWaitThreads(m *ItemMetrics, it *workitem.Item, waits []wait, now time
 	for i, w := range waits {
 		all[i] = w.span
 	}
-	total := inProgressSeconds(it, all, now)
-	orchestrator := inProgressSeconds(it, endedBy(waits, byOrchestrator), now)
+	total := inProgressSeconds(flow, it, all, now)
+	orchestrator := inProgressSeconds(flow, it, endedBy(waits, byOrchestrator), now)
 	m.WaitThreads, m.WaitThreadsOrchestrator = &total, &orchestrator
 }
 
@@ -241,8 +242,8 @@ func endedBy(waits []wait, by ender) []span {
 
 // inProgressSeconds is the seconds of the union of the spans that fall in
 // the item's in-progress intervals.
-func inProgressSeconds(it *workitem.Item, spans []span, now time.Time) float64 {
-	return within(spans, inProgress(it, now))
+func inProgressSeconds(flow workflow.Workflow, it *workitem.Item, spans []span, now time.Time) float64 {
+	return within(spans, activeSpans(flow, it, now))
 }
 
 // within is the seconds of the union of the spans that fall in the
@@ -263,14 +264,14 @@ func within(spans, intervals []span) float64 {
 // add counts the item's waits by ended that have a part in its in-progress
 // intervals, and adds the seconds of the union of those waits that fall in
 // them.
-func (c *WaitCount) add(it *workitem.Item, waits []wait, by ender, now time.Time) {
+func (c *WaitCount) add(flow workflow.Workflow, it *workitem.Item, waits []wait, by ender, now time.Time) {
 	spans := endedBy(waits, by)
 	for _, s := range spans {
-		if inProgressSeconds(it, []span{s}, now) > 0 {
+		if inProgressSeconds(flow, it, []span{s}, now) > 0 {
 			c.Count++
 		}
 	}
-	c.Total += inProgressSeconds(it, spans, now)
+	c.Total += inProgressSeconds(flow, it, spans, now)
 }
 
 // union merges overlapping spans into disjoint ones, in order.
@@ -288,12 +289,19 @@ func union(spans []span) []span {
 	return out
 }
 
-// inProgress is each interval from a transition to in-progress to the next
-// transition, or to now while it is the current state.
+// inProgress is activeSpans on the baseline workflow, as concurrency reads
+// the item's in-progress intervals.
 func inProgress(it *workitem.Item, now time.Time) []span {
+	return activeSpans(baselineFlow, it, now)
+}
+
+// activeSpans is each interval from a transition to a state of the active
+// kind, in-progress, to the next transition, or to now while it is the
+// current state.
+func activeSpans(flow workflow.Workflow, it *workitem.Item, now time.Time) []span {
 	var out []span
 	for i, tr := range it.Transitions {
-		if tr.To != workitem.InProgress {
+		if flow.Kind(tr.To) != workflow.KindActive {
 			continue
 		}
 		from, _ := time.Parse(workitem.TimeFormat, tr.At)
@@ -311,7 +319,7 @@ func inProgress(it *workitem.Item, now time.Time) []span {
 // one, with the thread waits and the pull request waits of each item by its
 // canonical ID; sums their empty wakes, over the window and per week; and
 // lists the longest waits.
-func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) Waiting {
+func waiting(flow workflow.Workflow, items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) Waiting {
 	out := Waiting{Weeks: []WaitWeek{}}
 	measured := 0 // the items that carry agents' usage
 	at := map[string]int{}
@@ -321,8 +329,8 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		out.Weeks = append(out.Weeks, WaitWeek{Week: weekKey(y, w), Start: m.Format("2006-01-02")})
 	}
 	for _, it := range items {
-		done := it.CompletedAt()
-		if it.Status != workitem.Done || done.Before(start) || done.After(now) {
+		done := completedAt(flow, it)
+		if flow.Kind(it.Status) != workflow.KindAccepted || done.Before(start) || done.After(now) {
 			continue
 		}
 		y, w := done.ISOWeek()
@@ -340,9 +348,9 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		b.Checks.Total += orZero(m.WaitChecks)
 		b.Reviewers.Total += orZero(m.WaitReviewers)
 		ws := waits[workitem.CanonicalID(it.ID)]
-		b.Threads.Orchestrator.add(it, ws, byOrchestrator, now)
-		b.Threads.Confirmed.add(it, ws, byConfirmation, now)
-		b.Threads.Timeout.add(it, ws, byTimeout, now)
+		b.Threads.Orchestrator.add(flow, it, ws, byOrchestrator, now)
+		b.Threads.Confirmed.add(flow, it, ws, byConfirmation, now)
+		b.Threads.Timeout.add(flow, it, ws, byTimeout, now)
 	}
 	for i := range out.Weeks {
 		b := &out.Weeks[i]
@@ -354,7 +362,7 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		out.EmptyWakes.Count += b.EmptyWakes
 	}
 	out.EmptyWakes.Mean = over(float64(out.EmptyWakes.Count), float64(measured))
-	out.Longest = longest(items, waits, pulls, start, now)
+	out.Longest = longest(flow, items, waits, pulls, start, now)
 	return out
 }
 
@@ -363,7 +371,7 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 // in the window, the most seconds first, at most longestWaits of them
 // (ADR-0114, ADR-0168). The window's ends are taken to the whole second, as
 // the report prints them, so that the seconds are whole.
-func longest(items []*workitem.Item, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) []LongWait {
+func longest(flow workflow.Workflow, items []*workitem.Item, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) []LongWait {
 	start, now = start.Truncate(time.Second), now.Truncate(time.Second)
 	out := []LongWait{}
 	add := func(lw LongWait, s span, open bool) {
@@ -377,15 +385,15 @@ func longest(items []*workitem.Item, waits map[string][]wait, pulls map[string]f
 		out = append(out, lw)
 	}
 	for _, it := range items {
-		if it.Status == workitem.Cancelled {
+		if flow.Kind(it.Status) == workflow.KindCancelled {
 			continue
 		}
 		for _, w := range waits[workitem.CanonicalID(it.ID)] {
 			in := inWindow(w.span, start, now)
 			add(LongWait{Item: it.ID, Kind: waitOnThread, Thread: w.thread, Awaited: w.awaited,
-				Seconds: inProgressSeconds(it, []span{in}, now)}, w.span, w.open)
+				Seconds: inProgressSeconds(flow, it, []span{in}, now)}, w.span, w.open)
 		}
-		reviews := inReview(it, now)
+		reviews := inReview(flow, it, now)
 		for _, r := range reviews {
 			in := inWindow(r.span, start, now)
 			add(LongWait{Item: it.ID, Kind: waitInReview, Awaited: r.awaited,
@@ -436,13 +444,13 @@ func inWindow(s span, start, now time.Time) span {
 	return span{laterOf(s.from, start), earlierOf(s.to, now)}
 }
 
-// inReview is each interval from a transition to review to the next
-// transition, ended by that transition's by, or open to now while review is
-// the current state.
-func inReview(it *workitem.Item, now time.Time) []wait {
+// inReview is each interval from a transition to a state of the waiting
+// kind, review, to the next transition, ended by that transition's by, or
+// open to now while it is the current state.
+func inReview(flow workflow.Workflow, it *workitem.Item, now time.Time) []wait {
 	var out []wait
 	for i, tr := range it.Transitions {
-		if tr.To != workitem.Review {
+		if flow.Kind(tr.To) != workflow.KindWaiting {
 			continue
 		}
 		from, _ := time.Parse(workitem.TimeFormat, tr.At)
@@ -482,12 +490,12 @@ func forgeWaits(events map[string][]forge.StatusEvent, now time.Time) map[string
 
 // deriveWaitForge sets the seconds of the item's checks waits and reviewers
 // waits that fall in its review intervals, when it has kept forge state.
-func deriveWaitForge(m *ItemMetrics, it *workitem.Item, pulls map[string]forgeWait, now time.Time) {
+func deriveWaitForge(flow workflow.Workflow, m *ItemMetrics, it *workitem.Item, pulls map[string]forgeWait, now time.Time) {
 	pull, ok := pulls[workitem.CanonicalID(it.ID)]
 	if !ok {
 		return
 	}
-	review := spansOf(inReview(it, now))
+	review := spansOf(inReview(flow, it, now))
 	checks, reviewers := within(spansOf(pull.checks), review), within(spansOf(pull.reviewers), review)
 	m.WaitChecks, m.WaitReviewers = &checks, &reviewers
 }

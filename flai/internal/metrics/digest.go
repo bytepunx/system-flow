@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -64,7 +65,7 @@ var flaiAuthors = map[string]bool{"flai": true, "flai serve": true}
 // the entries of its activity document among docs, each in the week that
 // holds its end. owner is the manifest's owner, whose threads, like flai's,
 // are not opened to the operator.
-func digestSection(all []*workitem.Item, ths []*threads.Thread, entries []digest.Entry, docs []*workitem.Activity, owner string, start, now time.Time) *Digest {
+func digestSection(flow workflow.Workflow, all []*workitem.Item, ths []*threads.Thread, entries []digest.Entry, docs []*workitem.Activity, owner string, start, now time.Time) *Digest {
 	out := &Digest{Weeks: []DigestWeek{}}
 	at := map[string]int{}
 	var mondays []time.Time
@@ -86,10 +87,10 @@ func digestSection(all []*workitem.Item, ths []*threads.Thread, entries []digest
 		return -1
 	}
 	for _, it := range all {
-		if it.Type != workitem.Story || it.Status != workitem.Done {
+		if it.Type != workitem.Story || flow.Kind(it.Status) != workflow.KindAccepted {
 			continue
 		}
-		if i := week(it.CompletedAt()); i >= 0 {
+		if i := week(completedAt(flow, it)); i >= 0 {
 			out.Weeks[i].StoriesCompleted++
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -63,10 +64,10 @@ func deriveForecast(m *ItemMetrics, it *workitem.Item, completed time.Time) {
 }
 
 // forecasts spreads each error over the items done in the window that have it.
-func forecasts(items []*workitem.Item, per map[string]ItemMetrics, inWindow func(*workitem.Item) bool) Forecasts {
+func forecasts(flow workflow.Workflow, items []*workitem.Item, per map[string]ItemMetrics, inWindow func(*workitem.Item) bool) Forecasts {
 	var forecast, delivery, estimate errorSet
 	for _, it := range items {
-		if it.Status != workitem.Done || !inWindow(it) {
+		if flow.Kind(it.Status) != workflow.KindAccepted || !inWindow(it) {
 			continue
 		}
 		m := per[it.ID]

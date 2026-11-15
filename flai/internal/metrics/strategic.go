@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -78,7 +79,7 @@ type StrategicUse struct {
 // strategicDays lays out, by the day from the one that holds the window's
 // start to today, the activities that ended each day, not after now, and the
 // items done each day with their usage cost and cycle time.
-func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[string]ItemMetrics, start, now time.Time) []StrategicDay {
+func strategicDays(flow workflow.Workflow, docs []*workitem.Activity, items []*workitem.Item, per map[string]ItemMetrics, start, now time.Time) []StrategicDay {
 	out := []StrategicDay{}
 	at := map[string]int{}
 	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
@@ -107,9 +108,9 @@ func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[st
 	}
 	done := make([]delivery, len(out))
 	for _, it := range items {
-		c := it.CompletedAt()
+		c := completedAt(flow, it)
 		i, ok := at[c.Format("2006-01-02")]
-		if it.Status != workitem.Done || !ok || c.After(now) {
+		if flow.Kind(it.Status) != workflow.KindAccepted || !ok || c.After(now) {
 			continue
 		}
 		out[i].Completed++

@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -99,6 +100,21 @@ type Options struct {
 	Root            string
 	ItemsGeneration uint64
 	CommitsKey      string
+	// Workflow is the workflow whose kinds and timers the metrics read; nil
+	// is the baseline (ADR-0301).
+	Workflow *workflow.Workflow
+}
+
+// baselineFlow is the baseline workflow, read once and never changed: every
+// Options without a Workflow of its own reads it.
+var baselineFlow = workflow.Baseline()
+
+// flow is the workflow the metrics read: Workflow, else the baseline.
+func (o Options) flow() workflow.Workflow {
+	if o.Workflow != nil {
+		return *o.Workflow
+	}
+	return baselineFlow
 }
 
 // ItemMetrics are the per-item derived values.
@@ -287,6 +303,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		opt.Bucket = DefaultBucket
 	}
 	start := opt.Now.Add(-opt.Since)
+	flow := opt.flow()
 
 	var items []*workitem.Item
 	for _, it := range all {
@@ -318,30 +335,30 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	// Each item's transitions are parsed once, for every section laid out by
 	// the day (S-0608).
 	tl := newTimelines(items)
-	sections.Go(func() { throughputs = throughput(items, start, opt.Now) })
-	sections.Go(func() { burnups = burnupsByParent(items, tl, start, opt.Now) })
-	sections.Go(func() { cfds = cfd(items, tl, start, opt.Now) })
+	sections.Go(func() { throughputs = throughput(flow, items, start, opt.Now) })
+	sections.Go(func() { burnups = burnupsByParent(flow, items, tl, start, opt.Now) })
+	sections.Go(func() { cfds = cfd(flow, items, tl, start, opt.Now) })
 	sections.Go(func() {
-		spend = spendReport(items, start, opt.Now)
+		spend = spendReport(flow, items, start, opt.Now)
 		spend.Bucket = opt.Bucket
-		spend.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
-		spend.Strategic = strategicTotals(items, start, opt.Now)
+		spend.Spend = spendOverTime(flow, all, start, opt.Now, opt.Bucket)
+		spend.Strategic = strategicTotals(flow, items, start, opt.Now)
 	})
 	sections.Go(func() {
 		var onIssues map[string]StrategicAmount
 		rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
 		rep.Strategic = strategic(opt.Activities, opt.Roles, all, onIssues, start, opt.Now)
 	})
-	sections.Go(func() { cod = costOfDelay(items, tl, start, opt.Now) })
+	sections.Go(func() { cod = costOfDelay(flow, items, tl, start, opt.Now) })
 	sections.Go(func() { order = costOrder(all, opt) })
 	sections.Go(func() { rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit) })
 	sections.Go(func() { rep.Turns = turns(all, start, opt.Now) })
 	sections.Go(func() {
-		rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
+		rep.Coordination = coordination(flow, all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
 	})
 	if !opt.DigestUnreadable {
 		sections.Go(func() {
-			rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
+			rep.Digest = digestSection(flow, all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
 		})
 	}
 	if opt.CloseOuts != nil {
@@ -370,29 +387,29 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	for _, it := range items {
 		m := Derive(it, opt.Now)
 		m.ExpectedCost = ExpectedCostOf(it, rate)
-		deriveWaitThreads(&m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
-		deriveWaitForge(&m, it, pulls, opt.Now)
+		deriveWaitThreads(flow, &m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
+		deriveWaitForge(flow, &m, it, pulls, opt.Now)
 		m.HeldSeconds = held[it.ID]
 		deriveQueueWait(&m, queued)
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
 	}
 	inWindow := func(it *workitem.Item) bool {
-		c := it.CompletedAt()
+		c := completedAt(flow, it)
 		return !c.IsZero() && !c.Before(start) && !c.After(opt.Now)
 	}
 	var after sync.WaitGroup
 	after.Go(func() {
 		rep.Summary = summarise("", items, perItem, inWindow, opt)
-		after.Go(func() { rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85) })
+		after.Go(func() { rep.Aging = aging(flow, items, perItem, rep.Summary.CycleTime.P85) })
 		after.Go(func() { rep.ReadyWait = readyWait(rep.Summary.QueueTime) })
 	})
 	if opt.By != "" {
 		after.Go(func() { rep.Groups = groups(items, perItem, inWindow, opt) })
 	}
-	after.Go(func() { rep.Forecasts = forecasts(items, perItem, inWindow) })
-	after.Go(func() { rep.Waiting = waiting(items, perItem, waits, pulls, start, opt.Now) })
-	after.Go(func() { rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now) })
+	after.Go(func() { rep.Forecasts = forecasts(flow, items, perItem, inWindow) })
+	after.Go(func() { rep.Waiting = waiting(flow, items, perItem, waits, pulls, start, opt.Now) })
+	after.Go(func() { rep.StrategicDays = strategicDays(flow, opt.Activities, items, perItem, start, opt.Now) })
 	after.Wait()
 	sections.Wait()
 	rep.Throughput, rep.CFD, rep.Burnup = throughputs, cfds, burnups
@@ -438,8 +455,8 @@ func groups(items []*workitem.Item, perItem map[string]ItemMetrics, inWindow fun
 
 // burnupsByParent is the burn-up of all the items, under all, and of each
 // parent's, under the parent's ID.
-func burnupsByParent(items []*workitem.Item, tl timelines, start, now time.Time) map[string][]DayPoint {
-	out := map[string][]DayPoint{"all": burnup(items, tl, start, now)}
+func burnupsByParent(flow workflow.Workflow, items []*workitem.Item, tl timelines, start, now time.Time) map[string][]DayPoint {
+	out := map[string][]DayPoint{"all": burnup(flow, items, tl, start, now)}
 	parents := map[string]bool{}
 	for _, it := range items {
 		if it.Parent == "" || parents[it.Parent] {
@@ -452,7 +469,7 @@ func burnupsByParent(items []*workitem.Item, tl timelines, start, now time.Time)
 				sub = append(sub, x)
 			}
 		}
-		out[it.Parent] = burnup(sub, tl, start, now)
+		out[it.Parent] = burnup(flow, sub, tl, start, now)
 	}
 	return out
 }
@@ -527,18 +544,19 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 
 func summarise(group string, items []*workitem.Item, per map[string]ItemMetrics, inWindow func(*workitem.Item) bool, opt Options) Summary {
 	s := Summary{Group: group, InStateShare: map[string]float64{}}
+	flow := opt.flow()
 	var cycle, lead, queue []float64
 	var eff []float64
 	inState := map[string]float64{}
 	var leadTotal float64
 	for _, it := range items {
-		if it.Status == workitem.InProgress || it.Status == workitem.Review {
+		if inWork(flow, it.Status) {
 			s.WIP++
 		}
 		if !inWindow(it) {
 			continue
 		}
-		if it.Status == workitem.Cancelled {
+		if flow.Kind(it.Status) == workflow.KindCancelled {
 			s.Cancelled++
 			continue
 		}
@@ -625,7 +643,7 @@ func groupKey(it *workitem.Item, by string) string {
 
 // throughput has one bucket per ISO week from the one that holds the window's
 // start to the one that holds now, a week with nothing done among them (S-0166).
-func throughput(items []*workitem.Item, start, now time.Time) []WeekBucket {
+func throughput(flow workflow.Workflow, items []*workitem.Item, start, now time.Time) []WeekBucket {
 	var out []WeekBucket
 	at := map[string]int{}
 	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
@@ -634,7 +652,7 @@ func throughput(items []*workitem.Item, start, now time.Time) []WeekBucket {
 		out = append(out, WeekBucket{Week: weekKey(y, w), Start: m.Format("2006-01-02"), ByKey: map[string]int{}})
 	}
 	for _, it := range items {
-		done := it.FirstAt(workitem.Done)
+		done := firstOfKind(flow, it, workflow.KindAccepted)
 		if done.IsZero() || done.Before(start) || done.After(now) {
 			continue
 		}
@@ -686,13 +704,14 @@ func dayRange(items []*workitem.Item, tl timelines, start, now time.Time) (time.
 	return first, last
 }
 
-// stateAt returns the item's state at the end of day t, or "" if not yet created.
-func stateAt(it *workitem.Item, endOfDay time.Time) string {
+// stateAt returns the item's state at the end of day t, the workflow's
+// initial state before any transition, or "" if not yet created.
+func stateAt(flow workflow.Workflow, it *workitem.Item, endOfDay time.Time) string {
 	created, _ := time.Parse(workitem.TimeFormat, it.Created)
 	if created.After(endOfDay) {
 		return ""
 	}
-	state := workitem.Backlog
+	state := initial(flow)
 	for _, tr := range it.Transitions {
 		at, _ := time.Parse(workitem.TimeFormat, tr.At)
 		if at.After(endOfDay) {
@@ -757,18 +776,20 @@ func (tl timelines) of(it *workitem.Item) *timeline {
 // another, the days given in order, so that a section laid out by the day
 // reads each transition once rather than once a day (S-0608). It reads as
 // stateAt does: the state entered by the last of the transitions up to the
-// first one after the day's end, backlog before any, and "" before the item
-// was created.
+// first one after the day's end, the workflow's initial state before any, and
+// "" before the item was created.
 type dayStates struct {
 	lines []*timeline
 	next  []int // each item's first transition not yet passed
 	// first is the earliest time any of the items records, zero with none.
 	first time.Time
+	// initial is the workflow's initial state.
+	initial string
 }
 
 // newDayStates starts the items' states before their first day.
-func newDayStates(items []*workitem.Item, tl timelines) *dayStates {
-	s := &dayStates{lines: make([]*timeline, len(items)), next: make([]int, len(items))}
+func newDayStates(flow workflow.Workflow, items []*workitem.Item, tl timelines) *dayStates {
+	s := &dayStates{lines: make([]*timeline, len(items)), next: make([]int, len(items)), initial: initial(flow)}
 	for i, it := range items {
 		s.lines[i] = tl.of(it)
 		if f := s.lines[i].first; i == 0 || f.Before(s.first) {
@@ -797,28 +818,28 @@ func (s *dayStates) at(i int, end time.Time) string {
 	case tl.created.After(end):
 		return ""
 	case k == 0:
-		return workitem.Backlog
+		return s.initial
 	}
 	return tl.to[k-1]
 }
 
-func burnup(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
+func burnup(flow workflow.Workflow, items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
 	first, last := dayRange(items, tl, start, now)
 	if first.IsZero() {
 		return nil
 	}
-	states := newDayStates(items, tl)
+	states := newDayStates(flow, items, tl)
 	var out []DayPoint
 	for d := first; !d.After(last); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := DayPoint{Date: d.Format("2006-01-02")}
 		for i := range items {
 			st := states.at(i, end)
-			if st == "" || st == workitem.Cancelled {
+			if st == "" || flow.Kind(st) == workflow.KindCancelled {
 				continue
 			}
 			p.Scope++
-			if st == workitem.Done {
+			if flow.Kind(st) == workflow.KindAccepted {
 				p.Done++
 			}
 		}
@@ -827,17 +848,18 @@ func burnup(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoi
 	return out
 }
 
-func cfd(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
+func cfd(flow workflow.Workflow, items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
 	first, last := dayRange(items, tl, start, now)
 	if first.IsZero() {
 		return nil
 	}
-	states := newDayStates(items, tl)
+	states := newDayStates(flow, items, tl)
+	columns := flow.Names()
 	var out []DayPoint
 	for d := first; !d.After(last); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := DayPoint{Date: d.Format("2006-01-02"), Counts: map[string]int{}}
-		for _, st := range workitem.States {
+		for _, st := range columns {
 			p.Counts[st] = 0
 		}
 		for i := range items {
@@ -850,10 +872,10 @@ func cfd(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint 
 	return out
 }
 
-func aging(items []*workitem.Item, per map[string]ItemMetrics, p85 float64) []AgingItem {
+func aging(flow workflow.Workflow, items []*workitem.Item, per map[string]ItemMetrics, p85 float64) []AgingItem {
 	var out []AgingItem
 	for _, it := range items {
-		if it.Status != workitem.InProgress && it.Status != workitem.Review {
+		if !inWork(flow, it.Status) {
 			continue
 		}
 		m := per[it.ID]
@@ -866,6 +888,74 @@ func aging(items []*workitem.Item, per map[string]ItemMetrics, p85 float64) []Ag
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Age > out[j].Age })
 	return out
+}
+
+// initial is the name of the workflow's initial state, the one items are
+// created in.
+func initial(flow workflow.Workflow) string {
+	s, _ := flow.Initial()
+	return s.Name
+}
+
+// entered is the state the first transition of a story that gives effect
+// moves it to, empty with none: for the commit effect, the state a story is
+// committed to, ready; for the pull effect, the one it is started in,
+// in-progress.
+func entered(flow workflow.Workflow, effect string) string {
+	t, _ := flow.WithEffect(workflow.TypeStory, effect)
+	return t.To
+}
+
+// sameState reports whether name is state, or an alias of it.
+func sameState(flow workflow.Workflow, name, state string) bool {
+	s, ok := flow.State(name)
+	return ok && s.Name == state
+}
+
+// inWork reports whether state is of the active or the waiting kind: the
+// item is in progress or in review.
+func inWork(flow workflow.Workflow, state string) bool {
+	k := flow.Kind(state)
+	return k == workflow.KindActive || k == workflow.KindWaiting
+}
+
+// closed reports whether state is of the accepted or the cancelled kind.
+func closed(flow workflow.Workflow, state string) bool {
+	k := flow.Kind(state)
+	return k == workflow.KindAccepted || k == workflow.KindCancelled
+}
+
+// completedAt is when the item closed: its last transition while its state
+// is closed, zero while it is open, so an item moved back out of a closed
+// state is not completed (ADR-0055).
+func completedAt(flow workflow.Workflow, it *workitem.Item) time.Time {
+	if !closed(flow, it.Status) || len(it.Transitions) == 0 {
+		return time.Time{}
+	}
+	return parseTime(it.Transitions[len(it.Transitions)-1].At)
+}
+
+// firstInto is the time of the item's first move into a state match reports
+// true for, zero when it has none.
+func firstInto(it *workitem.Item, match func(state string) bool) time.Time {
+	for _, tr := range it.Transitions {
+		if match(tr.To) {
+			return parseTime(tr.At)
+		}
+	}
+	return time.Time{}
+}
+
+// firstOfKind is the time of the item's first move into a state of kind,
+// zero when it has none.
+func firstOfKind(flow workflow.Workflow, it *workitem.Item, kind string) time.Time {
+	return firstInto(it, func(s string) bool { return flow.Kind(s) == kind })
+}
+
+// firstIn is the time of the item's first move into state, zero when it has
+// none.
+func firstIn(flow workflow.Workflow, it *workitem.Item, state string) time.Time {
+	return firstInto(it, func(s string) bool { return sameState(flow, s, state) })
 }
 
 // Human renders seconds as a short duration: 45m, 3h, 2d5h.

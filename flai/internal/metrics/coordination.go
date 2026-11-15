@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -74,7 +75,7 @@ var (
 // one that holds now, the events of convs, of the conflict log's lines when
 // logged, and of the stories among all started on a share, each in the week
 // that holds it and only from start to now.
-func coordination(all []*workitem.Item, convs []*messages.Conversation, conflicts []storygit.Conflict, logged bool, start, now time.Time) Coordination {
+func coordination(flow workflow.Workflow, all []*workitem.Item, convs []*messages.Conversation, conflicts []storygit.Conflict, logged bool, start, now time.Time) Coordination {
 	out := Coordination{Logged: logged, Weeks: []CoordinationWeek{}}
 	at := map[string]int{}
 	for i, m := 0, monday(start); !m.After(now); i, m = i+1, m.AddDate(0, 0, 7) {
@@ -104,7 +105,7 @@ func coordination(all []*workitem.Item, convs []*messages.Conversation, conflict
 		}
 	}
 	for _, c := range convs {
-		ev := conversationEvents(c, stories)
+		ev := conversationEvents(flow, c, stories)
 		if wk := week(ev.opened); wk != nil {
 			wk.Conversations.Opened++
 		}
@@ -137,7 +138,7 @@ func coordination(all []*workitem.Item, convs []*messages.Conversation, conflict
 			}
 		}
 	}
-	for _, s := range startedOnShare(stories, convs, now) {
+	for _, s := range startedOnShare(flow, stories, convs, now) {
 		if wk := week(s.started); wk != nil {
 			wk.Shares.Started++
 			wk.Shares.HeldSeconds += s.held
@@ -155,8 +156,8 @@ type convEvents struct {
 
 // conversationEvents reads c's events from its entries and shares. A
 // conversation that reads as closed, with no closing entry, is closed with
-// its story at the first done or cancelled transition of either story.
-func conversationEvents(c *messages.Conversation, stories map[string]*workitem.Item) convEvents {
+// its story at the first transition of either story to a closed state.
+func conversationEvents(flow workflow.Workflow, c *messages.Conversation, stories map[string]*workitem.Item) convEvents {
 	var ev convEvents
 	entries := c.Entries()
 	if len(entries) > 0 {
@@ -182,57 +183,55 @@ func conversationEvents(c *messages.Conversation, stories map[string]*workitem.I
 			ev.closedWithStory = parseTime(e.At)
 		}
 	}
-	if closing || !readsClosed(c, stories) {
+	if closing || !readsClosed(flow, c, stories) {
 		return ev
 	}
 	for _, id := range []string{c.From, c.To} {
 		if it := stories[workitem.CanonicalID(id)]; it != nil {
-			ev.closedWithStory = earliest(ev.closedWithStory, firstLeft(it))
+			ev.closedWithStory = earliest(ev.closedWithStory, firstLeft(flow, it))
 		}
 	}
 	return ev
 }
 
 // readsClosed reports whether c reads as closed, as messages.Closed reads it
-// from the items: its status is closed, or either story is done, cancelled,
+// from the items: its status is closed, or either story is in a closed state,
 // archived, or not among them.
-func readsClosed(c *messages.Conversation, stories map[string]*workitem.Item) bool {
+func readsClosed(flow workflow.Workflow, c *messages.Conversation, stories map[string]*workitem.Item) bool {
 	if c.Status == messages.StatusClosed {
 		return true
 	}
 	for _, id := range []string{c.From, c.To} {
 		it := stories[workitem.CanonicalID(id)]
-		if it == nil || it.Archived || it.Status == workitem.Done || it.Status == workitem.Cancelled {
+		if it == nil || it.Archived || closed(flow, it.Status) {
 			return true
 		}
 	}
 	return false
 }
 
-// firstLeft is the time of the story's first move to done or cancelled, zero
+// firstLeft is the time of the story's first move to a closed state, zero
 // when it has none.
-func firstLeft(it *workitem.Item) time.Time {
-	for _, tr := range it.Transitions {
-		if tr.To == workitem.Done || tr.To == workitem.Cancelled {
-			return parseTime(tr.At)
-		}
-	}
-	return time.Time{}
+func firstLeft(flow workflow.Workflow, it *workitem.Item) time.Time {
+	return firstInto(it, func(s string) bool { return closed(flow, s) })
 }
 
-// shareStart is a story started on a share: its first move to in-progress
-// and the seconds it would have waited without the share.
+// shareStart is a story started on a share: its first move to the state the
+// pull starts it in, in-progress, and the seconds it would have waited
+// without the share.
 type shareStart struct {
 	started time.Time
 	held    float64
 }
 
-// startedOnShare is every story whose first move to in-progress fell while a
-// share named it as held: the share made at or before the move, by a holder
-// in progress at it. Its hold runs from the move to the holder's first move
-// to review, done, or cancelled after it, or to now when there is none; with
-// two such shares, the longer.
-func startedOnShare(stories map[string]*workitem.Item, convs []*messages.Conversation, now time.Time) []shareStart {
+// startedOnShare is every story whose first move to the state the pull starts
+// it in fell while a share named it as held: the share made at or before the
+// move, by a holder in a state of the active kind at it. Its hold runs from
+// the move to the holder's first move to a state of the waiting kind or a
+// closed one after it, or to now when there is none; with two such shares,
+// the longer.
+func startedOnShare(flow workflow.Workflow, stories map[string]*workitem.Item, convs []*messages.Conversation, now time.Time) []shareStart {
+	pulled := entered(flow, workflow.EffectPull)
 	byHeld := map[string][]workitem.Share{}
 	for _, c := range convs {
 		for _, sh := range c.Shares {
@@ -246,17 +245,17 @@ func startedOnShare(stories map[string]*workitem.Item, convs []*messages.Convers
 		if it == nil {
 			continue
 		}
-		moved := it.FirstAt(workitem.InProgress)
+		moved := firstIn(flow, it, pulled)
 		if moved.IsZero() {
 			continue
 		}
 		var s *shareStart
 		for _, sh := range shares {
 			shared, holder := parseTime(sh.At), stories[workitem.CanonicalID(sh.Holder)]
-			if shared.IsZero() || shared.After(moved) || holder == nil || stateAt(holder, moved) != workitem.InProgress {
+			if shared.IsZero() || shared.After(moved) || holder == nil || flow.Kind(stateAt(flow, holder, moved)) != workflow.KindActive {
 				continue
 			}
-			held := math.Round(holdEnd(holder, moved, now).Sub(moved).Seconds())
+			held := math.Round(holdEnd(flow, holder, moved, now).Sub(moved).Seconds())
 			if s == nil {
 				s = &shareStart{started: moved}
 			}
@@ -269,12 +268,12 @@ func startedOnShare(stories map[string]*workitem.Item, convs []*messages.Convers
 	return out
 }
 
-// holdEnd is the holder's first move to review, done, or cancelled after
-// from, or now when it has none.
-func holdEnd(holder *workitem.Item, from, now time.Time) time.Time {
+// holdEnd is the holder's first move to a state of the waiting kind or a
+// closed one after from, or now when it has none.
+func holdEnd(flow workflow.Workflow, holder *workitem.Item, from, now time.Time) time.Time {
 	for _, tr := range holder.Transitions {
 		t := parseTime(tr.At)
-		if t.After(from) && (tr.To == workitem.Review || tr.To == workitem.Done || tr.To == workitem.Cancelled) {
+		if t.After(from) && (flow.Kind(tr.To) == workflow.KindWaiting || closed(flow, tr.To)) {
 			return t
 		}
 	}

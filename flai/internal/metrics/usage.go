@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -221,12 +222,12 @@ func strategicSpent(u *usage.Usage) bool { return u != nil && len(u.Strategic) >
 
 // strategicTotals sums what strategic agents spent on the items done in the
 // window, in all and per kind.
-func strategicTotals(items []*workitem.Item, start, now time.Time) StrategicTotals {
+func strategicTotals(flow workflow.Workflow, items []*workitem.Item, start, now time.Time) StrategicTotals {
 	var all StrategicSpend
 	kinds := map[string]*StrategicSpend{}
 	var names []string
 	estimated := false
-	for _, c := range spent(items, start, now, strategicSpent) {
+	for _, c := range spent(flow, items, start, now, strategicSpent) {
 		u := c.it.Usage
 		all.add(u)
 		for _, s := range u.Strategic {
@@ -330,9 +331,9 @@ func ExpectedCostOf(it *workitem.Item, rate *float64) *ExpectedCost {
 // spendReport totals the usage of the items done in the window, and lays
 // them out against time and cost. An item on which only strategic agents
 // spent is left out.
-func spendReport(items []*workitem.Item, start, now time.Time) UsageReport {
+func spendReport(flow workflow.Workflow, items []*workitem.Item, start, now time.Time) UsageReport {
 	rep := UsageReport{Models: []ModelSpend{}, Done: []SpendPoint{}, ByModel: map[string][]SpendPoint{}}
-	list := spent(items, start, now, agentsSpent)
+	list := spent(flow, items, start, now, agentsSpent)
 	models := map[string]*ModelSpend{}
 	seconds := map[string]int64{}
 	for _, d := range list {

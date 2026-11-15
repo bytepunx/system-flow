@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -37,8 +38,17 @@ type CostWeek struct {
 // secondsPerWeek is what a cost of delay, given per week, is spread over.
 const secondsPerWeek = 7 * 24 * 60 * 60
 
-// costColumns are the columns the cost of delay outstanding is laid out in.
-var costColumns = []string{workitem.Backlog, workitem.Ready, workitem.InProgress, workitem.Review}
+// costColumns are the columns the cost of delay outstanding is laid out in:
+// the open states, of the queue, active, and waiting kinds, in board order.
+func costColumns(flow workflow.Workflow) []string {
+	var out []string
+	for _, s := range flow.States {
+		if !closed(flow, s.Name) {
+			out = append(out, s.Name)
+		}
+	}
+	return out
+}
 
 // deriveCostOfDelay sets the item's cost of delay and what it incurred over
 // the time in backlog and ready already derived.
@@ -59,7 +69,7 @@ func deriveCostOfDelay(m *ItemMetrics, it *workitem.Item) {
 // days are swept once, each item's state moved on as the days pass its
 // transitions, and a day before every item is answered without reading them
 // (S-0608).
-func costOfDelay(items []*workitem.Item, tl timelines, start, now time.Time) CostOfDelay {
+func costOfDelay(flow workflow.Workflow, items []*workitem.Item, tl timelines, start, now time.Time) CostOfDelay {
 	var valued, unvalued []*workitem.Item
 	for _, it := range items {
 		switch {
@@ -71,19 +81,20 @@ func costOfDelay(items []*workitem.Item, tl timelines, start, now time.Time) Cos
 	}
 	waits := make([]waitedItem, len(valued))
 	for i, it := range valued {
-		waits[i] = waitedItem{value: *costValue(it), spans: waitSpans(it, tl.of(it), now)}
+		waits[i] = waitedItem{value: *costValue(it), spans: waitSpans(flow, it, tl.of(it), now)}
 	}
-	worth, without := newDayStates(valued, tl), newDayStates(unvalued, tl)
+	worth, without := newDayStates(flow, valued, tl), newDayStates(flow, unvalued, tl)
+	columns := costColumns(flow)
 	out := CostOfDelay{Days: []CostDay{}, Weeks: []CostWeek{}}
 	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
 		end, next := d.Add(24*time.Hour-time.Second), d.AddDate(0, 0, 1)
 		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}, WithoutValue: map[string]int{}}
-		for _, col := range costColumns {
+		for _, col := range columns {
 			p.Outstanding[col], p.WithoutValue[col] = 0, 0
 		}
 		if !worth.before(next) {
 			for i := range valued {
-				if st := worth.at(i, end); slices.Contains(costColumns, st) {
+				if st := worth.at(i, end); slices.Contains(columns, st) {
 					p.Outstanding[st] += waits[i].value
 				}
 			}
@@ -94,7 +105,7 @@ func costOfDelay(items []*workitem.Item, tl timelines, start, now time.Time) Cos
 		}
 		if !without.before(next) {
 			for i := range unvalued {
-				if st := without.at(i, end); slices.Contains(costColumns, st) {
+				if st := without.at(i, end); slices.Contains(columns, st) {
 					p.WithoutValue[st]++
 				}
 			}
@@ -109,8 +120,8 @@ func costOfDelay(items []*workitem.Item, tl timelines, start, now time.Time) Cos
 	return out
 }
 
-// waitedItem is an item's cost of delay per week and its spans in backlog or
-// ready.
+// waitedItem is an item's cost of delay per week and its spans in states of
+// the queue kind, backlog and ready.
 type waitedItem struct {
 	value float64
 	spans []span
@@ -125,23 +136,23 @@ func incurred(items []waitedItem, a, b, now time.Time) float64 {
 	return round2(total / secondsPerWeek)
 }
 
-// waitSpans is the item's spans in backlog or ready, in the order of its
-// transitions: backlog from created, and the last state up to now while it
-// is open. A span may run backwards where the transitions are out of order;
-// waited counts nothing of it.
-func waitSpans(it *workitem.Item, tl *timeline, now time.Time) []span {
+// waitSpans is the item's spans in states of the queue kind, backlog and
+// ready, in the order of its transitions: the initial state from created, and
+// the last state up to now while it is open. A span may run backwards where
+// the transitions are out of order; waited counts nothing of it.
+func waitSpans(flow workflow.Workflow, it *workitem.Item, tl *timeline, now time.Time) []span {
 	var out []span
 	add := func(state string, from, to time.Time) {
-		if state == workitem.Backlog || state == workitem.Ready {
+		if flow.Kind(state) == workflow.KindQueue {
 			out = append(out, span{from, to})
 		}
 	}
-	state, at := workitem.Backlog, tl.created
+	state, at := initial(flow), tl.created
 	for i, next := range tl.at {
 		add(state, at, next)
 		state, at = tl.to[i], next
 	}
-	if !it.Closed() {
+	if !closed(flow, it.Status) {
 		add(state, at, now)
 	}
 	return out

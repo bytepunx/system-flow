@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -85,13 +86,14 @@ type TouchDrift struct {
 // reading them (S-0608).
 func claims(items, all []*workitem.Item, tl timelines, start time.Time, opt Options, replay holdReplay) Claims {
 	out := Claims{Limit: opt.WIPLimit, Days: []ClaimDay{}, Weeks: []ClaimWeek{}}
-	states := newDayStates(items, tl)
+	flow := opt.flow()
+	states := newDayStates(flow, items, tl)
 	for i, d := 0, firstDay(start); !d.After(opt.Now); i, d = i+1, d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := ClaimDay{Date: d.Format("2006-01-02"), Held: replay.days[i]}
 		if !states.before(d.AddDate(0, 0, 1)) {
 			for k := range items {
-				if states.at(k, end) == workitem.InProgress {
+				if flow.Kind(states.at(k, end)) == workflow.KindActive {
 					p.InProgress++
 				}
 			}
@@ -116,8 +118,8 @@ func claims(items, all []*workitem.Item, tl timelines, start time.Time, opt Opti
 	}
 	for _, d := range drift {
 		it := byID[d.ID]
-		done := it.CompletedAt()
-		if it.Status != workitem.Done || done.Before(start) || done.After(opt.Now) {
+		done := completedAt(flow, it)
+		if flow.Kind(it.Status) != workflow.KindAccepted || done.Before(start) || done.After(opt.Now) {
 			continue
 		}
 		y, w := done.ISOWeek()
@@ -151,10 +153,10 @@ func firstDay(t time.Time) time.Time {
 // on both sides, since flai writes them (ADR-0284): a story with no committed
 // file outside them has no entry.
 func touchDrift(items, all []*workitem.Item, opt Options) []TouchDrift {
-	commits, folders := opt.Commits, opt.FlaiFolders
+	commits, folders, flow := opt.Commits, opt.FlaiFolders, opt.flow()
 	tasks := map[string][]*workitem.Item{}
 	for _, it := range all {
-		if it.Type == workitem.Task && it.Status != workitem.Cancelled {
+		if it.Type == workitem.Task && flow.Kind(it.Status) != workflow.KindCancelled {
 			p := workitem.CanonicalID(it.Parent)
 			tasks[p] = append(tasks[p], it)
 		}
@@ -219,7 +221,7 @@ type holdReplay struct {
 // Nothing is kept; holdsFor keeps the replay between requests (S-0608).
 func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
 	now := opt.Now.Truncate(time.Second)
-	out := newHoldReplay(items, start, now)
+	out := newHoldReplay(opt.flow(), items, start, now)
 	if len(out.seconds) == 0 {
 		return out
 	}
@@ -232,7 +234,7 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 // again. Without a root or a generation, as in flai stats, nothing is kept.
 func holdsFor(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
 	now := opt.Now.Truncate(time.Second)
-	out := newHoldReplay(items, start, now)
+	out := newHoldReplay(opt.flow(), items, start, now)
 	if len(out.seconds) == 0 {
 		return out
 	}
@@ -241,10 +243,11 @@ func holdsFor(items, all []*workitem.Item, start time.Time, opt Options) holdRep
 }
 
 // newHoldReplay is the replay's answer before any hold is counted: a zero for
-// each story among items that was ever in ready, and for each day from the one
-// that holds start to now and each ISO week from the one that holds start to
-// this one.
-func newHoldReplay(items []*workitem.Item, start, now time.Time) holdReplay {
+// each story among items that was ever committed, in ready, and for each day
+// from the one that holds start to now and each ISO week from the one that
+// holds start to this one.
+func newHoldReplay(flow workflow.Workflow, items []*workitem.Item, start, now time.Time) holdReplay {
+	committed := entered(flow, workflow.EffectCommit)
 	out := holdReplay{seconds: map[string]*float64{}}
 	for d := firstDay(start); !d.After(now); d = d.AddDate(0, 0, 1) {
 		out.days = append(out.days, 0)
@@ -253,7 +256,7 @@ func newHoldReplay(items []*workitem.Item, start, now time.Time) holdReplay {
 		out.weeks = append(out.weeks, HeldByCode{})
 	}
 	for _, it := range items {
-		if it.Type == workitem.Story && !it.FirstAt(workitem.Ready).IsZero() {
+		if it.Type == workitem.Story && !firstIn(flow, it, committed).IsZero() {
 			out.seconds[it.ID] = new(float64)
 		}
 	}
@@ -302,9 +305,11 @@ func (t *holdTimeline) answers(now time.Time) bool {
 // stories are tracked, so a request's stories are the timeline's filtered.
 func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimeline {
 	out := &holdTimeline{}
+	flow := opt.flow()
+	committed := entered(flow, workflow.EffectCommit)
 	tracked := map[string]bool{}
 	for _, it := range all {
-		if it.Type == workitem.Story && !it.FirstAt(workitem.Ready).IsZero() {
+		if it.Type == workitem.Story && !firstIn(flow, it, committed).IsZero() {
 			tracked[it.ID] = true
 		}
 	}
@@ -320,7 +325,7 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 			continue
 		}
 		c := *it
-		c.Status, c.Archived = workitem.Backlog, false
+		c.Status, c.Archived = initial(flow), false
 		i := len(copies)
 		copies = append(copies, c)
 		created, _ := time.Parse(workitem.TimeFormat, it.Created)
@@ -334,18 +339,21 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 	// What a hold reads, kept as the events apply: the stories created, in
 	// creation order and by ID, the last created of each; the tasks created, by
 	// parent as written, as NewHolds keys them; and how many stories of each ID
-	// are in ready or in progress.
+	// are in ready or in progress: committed, or in a state of the active
+	// kind.
 	var stories []*workitem.Item
 	byID := map[string]*workitem.Item{}
 	tasks := map[string][]*workitem.Item{}
 	active := map[string]int{}
-	isActive := func(status string) bool { return status == workitem.Ready || status == workitem.InProgress }
+	isActive := func(status string) bool {
+		return sameState(flow, status, committed) || flow.Kind(status) == workflow.KindActive
+	}
 	// A story's move changes a hold only into or out of a state a hold reads,
-	// and a task's only into or out of done or cancelled, the states Claim and
-	// NewHolds read.
-	reads := func(status string) bool { return isActive(status) || status == workitem.Done }
+	// and a task's only into or out of done or cancelled, the closed states
+	// Claim and NewHolds read.
+	reads := func(status string) bool { return isActive(status) || flow.Kind(status) == workflow.KindAccepted }
 	closing := func(status string) string {
-		if status == workitem.Done || status == workitem.Cancelled {
+		if closed(flow, status) {
 			return status
 		}
 		return ""
@@ -397,7 +405,7 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 		var found []heldEntry
 		var ready, in []*workitem.Item
 		for _, s := range stories {
-			if s.Status == workitem.Ready && tracked[s.ID] {
+			if sameState(flow, s.Status, committed) && tracked[s.ID] {
 				ready = append(ready, s)
 			}
 		}
@@ -413,7 +421,7 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 				if !withTasks[s.ID] {
 					withTasks[s.ID] = true
 					for _, t := range tasks[s.ID] {
-						if t.Status != workitem.Cancelled {
+						if flow.Kind(t.Status) != workflow.KindCancelled {
 							in = append(in, t)
 						}
 					}
@@ -536,13 +544,15 @@ type keptDrift struct {
 }
 
 // configKey is the manifest's projects and shared paths as the replay and the
-// drift read them, and flai's folders the drift leaves out, "" when they cannot be written down, which keeps nothing.
+// drift read them, flai's folders the drift leaves out, and the workflow whose
+// kinds they read, "" when they cannot be written down, which keeps nothing.
 func configKey(opt Options) string {
 	b, err := json.Marshal(struct {
 		Projects    []manifest.Project
 		Shared      manifest.Claims
 		FlaiFolders []string
-	}{opt.Projects, opt.Shared, opt.FlaiFolders})
+		Workflow    workflow.Workflow
+	}{opt.Projects, opt.Shared, opt.FlaiFolders, opt.flow()})
 	if err != nil {
 		return ""
 	}
