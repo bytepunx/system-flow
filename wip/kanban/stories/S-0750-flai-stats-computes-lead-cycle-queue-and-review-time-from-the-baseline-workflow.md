@@ -3,12 +3,15 @@ id: S-0750
 type: story
 nature: feature
 title: flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-15T01:56:42Z
-transitions: []
+updated: 2026-11-15T07:18:01Z
+transitions:
+  - to: ready
+    at: 2026-11-15T02:00:20Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, analysis]
 touches: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 5
-          output: 25
-          cache_read: 191799
-          cache_write: 31841
-          cost: 0.0648
+          output: 31
+          cache_read: 219655
+          cache_write: 32346
+          cost: 0.0733
 cost_of_delay:
   value: 106.89
   by: system-flow
   at: 2026-11-14T17:44:11Z
 forecast:
   duration: 1h
-  delivery: 2026-11-15T04:37:00Z
-  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0742, S-0743, S-0741, S-0789, S-0241, S-0747, S-0748 and S-0749."
+  delivery: 2026-11-15T08:56:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0741, S-0749 and S-0748."
   by: flai
-  at: 2026-11-15T01:56:42Z
+  at: 2026-11-15T07:18:01Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:56Z

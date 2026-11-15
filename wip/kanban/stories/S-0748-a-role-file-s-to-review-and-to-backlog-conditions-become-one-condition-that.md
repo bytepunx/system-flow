@@ -3,12 +3,15 @@ id: S-0748
 type: story
 nature: feature
 title: A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-15T01:56:42Z
-transitions: []
+updated: 2026-11-15T07:18:01Z
+transitions:
+  - to: ready
+    at: 2026-11-15T02:00:18Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
 touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/start.go, flai/internal/check/check_roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/replan.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 16
+      seconds: 19
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 4
-          output: 23
-          cache_read: 178731
-          cache_write: 29352
-          cost: 0.0604
+          output: 29
+          cache_read: 206587
+          cache_write: 29857
+          cost: 0.0689
 cost_of_delay:
   value: 94.42
   by: system-flow
   at: 2026-11-14T17:44:09Z
 forecast:
   duration: 53m
-  delivery: 2026-11-15T03:36:00Z
-  basis: "Its own forecast of 53m; 5th in the pull order with an in-progress limit of 3, behind S-0742, S-0743, S-0741, S-0789, S-0241 and S-0747."
+  delivery: 2026-11-15T08:19:00Z
+  basis: "Its own forecast of 53m; 3rd in the pull order with an in-progress limit of 3, behind S-0741 and S-0749."
   by: flai
-  at: 2026-11-15T01:56:42Z
+  at: 2026-11-15T07:18:01Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:55Z
