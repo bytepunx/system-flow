@@ -38,7 +38,7 @@ type Status struct {
 	RequiredApprovals int `json:"required_approvals"`
 	// Events are each change, oldest first, appended and never rewritten.
 	Events []StatusEvent `json:"events,omitempty"`
-	// SentBack are the failures flai sent the story back to in-progress for.
+	// SentBack are the failures flai sent the story back for.
 	SentBack []SendBack `json:"sent_back,omitempty"`
 }
 
@@ -93,7 +93,7 @@ type StatusEvent struct {
 	Commit string `json:"commit"`
 }
 
-// SendBack is a failure flai sent the story back to in-progress for.
+// SendBack is a failure flai sent the story back for.
 type SendBack struct {
 	// Key is the failure's CheckKey or ReviewKey.
 	Key string `json:"key"`

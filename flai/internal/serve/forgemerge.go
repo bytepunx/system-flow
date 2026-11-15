@@ -162,8 +162,12 @@ func (m ForgeMerge) merge(ctx context.Context, a *MergeAnswer, now time.Time) er
 	case pr.State == forge.PullRequestMerged:
 		a.Outcome = MergeAlready
 	case pr.State == forge.PullRequestClosed:
-		return fmt.Errorf("%s's pull request #%d on %s %s was closed without merging, so flai merges nothing: reopen it on the forge and accept again, or send %s back to in-progress",
-			it.ID, pr.Number, f.Name(), f.Repository(), it.ID)
+		back := "send " + it.ID + " back"
+		if t, ok := m.Repo.Flow().SendBack(it.Type, it.Status); ok {
+			back += " to " + t.To
+		}
+		return fmt.Errorf("%s's pull request #%d on %s %s was closed without merging, so flai merges nothing: reopen it on the forge and accept again, or %s",
+			it.ID, pr.Number, f.Name(), f.Repository(), back)
 	case m.Head != "" && pr.HeadSHA != m.Head:
 		return fmt.Errorf("%s's pull request #%d on %s %s is at %s, not at %s where its checks and reviews passed, so flai merges nothing: flai serve reads its checks and reviews again at its next look; accept once they pass at the new head",
 			it.ID, pr.Number, f.Name(), f.Repository(), short(pr.HeadSHA), short(m.Head))
@@ -242,8 +246,8 @@ func (m ForgeMerge) find(ctx context.Context, f forge.Forge, story string) (forg
 	case pr.Head == branch:
 		return pr, nil // closed, with none opened after it
 	}
-	return forge.PullRequest{}, fmt.Errorf("%s has no pull request on %s %s from %s, so flai merges nothing: flai serve pushes the branch and opens it while the story is in review, behind the forge host action (flai serve enable forge); accept once it has",
-		story, f.Name(), f.Repository(), branch)
+	return forge.PullRequest{}, fmt.Errorf("%s has no pull request on %s %s from %s, so flai merges nothing: flai serve pushes the branch and opens it while the story is in %s, behind the forge host action (flai serve enable forge); accept once it has",
+		story, f.Name(), f.Repository(), branch, acceptanceStates(m.Repo.Flow()))
 }
 
 // mergeReason says why the forge did not merge, or could not be asked to
@@ -459,7 +463,7 @@ func (p *mergePass) look(ctx context.Context) {
 	if len(requests) == 0 {
 		return
 	}
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		p.o.Logger.Warn("merge requests not taken", "component", "serve", "root", p.e.Root, "err", err.Error())
 		return

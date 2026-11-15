@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -26,12 +27,13 @@ import (
 // that failed at the head, or a reviewer whose latest deciding review
 // requests changes, sends the story back: one thread on the story for
 // everything new at that read, a SendBack kept for each failure so that it
-// never sends the story back twice, and a move from review to in-progress
-// by flai. The thread is resolved once the story is back in review at
-// another commit, or is done or cancelled.
+// never sends the story back twice, and a move by flai along the workflow's
+// transition with the send-back effect, from review to in-progress with the
+// baseline (ADR-0301). The thread is resolved once the story is back in
+// review at another commit, or is in a state that closes it.
 
 const (
-	// sendBackBy moves a story back from review to in-progress.
+	// sendBackBy moves a story back along the send-back transition.
 	sendBackBy = "flai"
 	// quoteLimit is how many characters of a review's comment, or a check's
 	// summary, a send-back thread quotes.
@@ -52,7 +54,7 @@ func (r *readLook) log(logger *slog.Logger, root string) {
 			"failed", strings.Join(r.failed, ","), "err", strings.Join(r.errs, "; "))
 	}
 	if len(r.sentBack) > 0 {
-		logger.Info("stories sent back to in-progress", "component", "serve", "root", root, "stories", strings.Join(r.sentBack, ","))
+		logger.Info("stories sent back", "component", "serve", "root", root, "stories", strings.Join(r.sentBack, ","))
 	}
 }
 
@@ -69,7 +71,7 @@ func (p *forgePass) readBack(ctx context.Context, repo *workitem.Repo, it *worki
 	if st.State == forge.PullRequestMerged {
 		return // merged: nothing on it sends the story back
 	}
-	why := fmt.Sprintf("%s is back in review at %s, so flai serve reads its checks and reviews again.", it.ID, short(st.HeadSHA))
+	why := fmt.Sprintf("%s is back in %s at %s, so flai serve reads its checks and reviews again.", it.ID, it.Status, short(st.HeadSHA))
 	p.resolveSendBacks(repo, st, func(b forge.SendBack) bool { return b.Commit != st.HeadSHA }, why)
 	if p.sendBack(repo, st) {
 		look.sentBack = append(look.sentBack, it.ID)
@@ -169,18 +171,25 @@ func failures(st forge.Status) []failure {
 }
 
 // sendBack opens one thread for the failures at st's head not sent back
-// for before, records them, and moves the story to in-progress; with none,
-// it moves again a story whose move after an earlier send back at this head
-// failed. It answers whether the story was moved.
+// for before, records them, and moves the story along the workflow's
+// send-back transition out of the state it awaits its acceptance in; with
+// none, it moves again a story whose move after an earlier send back at this
+// head failed. It answers whether the story was moved.
 func (p *forgePass) sendBack(repo *workitem.Repo, st forge.Status) bool {
 	it, err := repo.Get(st.Story)
-	if err != nil || it.Status != workitem.Review {
+	flow := repo.Flow()
+	if err != nil || !flow.AwaitsAcceptance(it.Type, it.Status) {
+		return false
+	}
+	to, err := sendBackTo(flow, it.Type, it.Status)
+	if err != nil {
+		p.o.Logger.Warn("story not sent back", "component", "serve", "root", p.e.Root, "story", st.Story, "err", err.Error())
 		return false
 	}
 	now := p.o.Now()
 	backs := unmoved(repo, it, st)
 	if fresh := failures(st); len(fresh) > 0 {
-		th, err := p.openSendBack(repo, st, fresh, now)
+		th, err := p.openSendBack(repo, st, fresh, it.Status, to, now)
 		if err != nil {
 			p.o.Logger.Warn("pull request failure thread not opened", "component", "serve", "root", p.e.Root, "story", st.Story, "err", err.Error())
 			return false
@@ -200,38 +209,49 @@ func (p *forgePass) sendBack(repo *workitem.Repo, st forge.Status) bool {
 		return false
 	}
 	reason := sendBackReason(st.PullRequest, backs)
-	if _, err := repo.Transition(it, workitem.InProgress, sendBackBy, reason, now); err != nil {
-		p.o.Logger.Warn("story not sent back to in-progress", "component", "serve", "root", p.e.Root, "story", st.Story, "err", err.Error())
+	if _, err := repo.Transition(it, to, sendBackBy, reason, now); err != nil {
+		p.o.Logger.Warn("story not sent back", "component", "serve", "root", p.e.Root, "story", st.Story, "to", to, "err", err.Error())
 		return false
 	}
 	if p.o.Host.Record != nil {
 		p.o.Host.Record(hostapi.Entry{At: now.UTC().Format(time.RFC3339), Action: hostapi.ActionForge, Method: "serve.forge", Project: p.e.Key, Root: p.e.Root, By: forgeAuthor,
-			Outcome: "done", Detail: fmt.Sprintf("sent %s back to in-progress: %s", st.Story, reason)})
+			Outcome: "done", Detail: fmt.Sprintf("sent %s back to %s: %s", st.Story, to, reason)})
 	}
 	return true
 }
 
+// sendBackTo is the state flow sends an item of type typ in state from back
+// to: the one its transition with the send-back effect out of from names.
+func sendBackTo(flow workflow.Workflow, typ, from string) (string, error) {
+	t, ok := flow.SendBack(typ, from)
+	if !ok {
+		return "", fmt.Errorf("the workflow has no transition with the send-back effect out of %s for a %s, so flai serve cannot send it back: add one to the project's workflow", from, typ)
+	}
+	return t.To, nil
+}
+
 // unmoved are the send backs at st's head whose thread is open and after
-// which it never moved to in-progress: its move failed after the thread
-// was opened.
+// which it never moved along a send-back transition: its move failed after
+// the thread was opened.
 func unmoved(repo *workitem.Repo, it *workitem.Item, st forge.Status) []forge.SendBack {
 	var out []forge.SendBack
 	for _, b := range st.SentBack {
-		if b.Commit == st.HeadSHA && openThread(repo, b.Thread) && !movedSince(it, b.At) {
+		if b.Commit == st.HeadSHA && openThread(repo, b.Thread) && !movedSince(repo.Flow(), it, b.At) {
 			out = append(out, b)
 		}
 	}
 	return out
 }
 
-// movedSince is whether it moved to in-progress at or after at.
-func movedSince(it *workitem.Item, at string) bool {
+// movedSince is whether it moved along a transition with the send-back
+// effect at or after at: from the state its move before entered.
+func movedSince(flow workflow.Workflow, it *workitem.Item, at string) bool {
 	since, err := time.Parse(time.RFC3339, at)
 	if err != nil {
 		return true
 	}
-	for _, tr := range it.Transitions {
-		if tr.To != workitem.InProgress {
+	for i, tr := range it.Transitions {
+		if i == 0 || !flow.Gives(it.Type, it.Transitions[i-1].To, tr.To, workflow.EffectSendBack) {
 			continue
 		}
 		if t, err := time.Parse(time.RFC3339, tr.At); err == nil && !t.Before(since) {
@@ -250,14 +270,17 @@ func openThread(repo *workitem.Repo, id string) bool {
 	return err == nil && th.Open() && th.Opener() == forgeAuthor
 }
 
-// openSendBack opens the one thread on st's story for its fresh failures.
-// A review's comment or a check's summary is the forge's text, not flai's:
-// when the project's lint refuses it quoted, it is opened with each in a
-// code block instead. An open thread flai serve opened on the story with the
+// openSendBack opens the one thread on st's story for its fresh failures,
+// saying that it moved from review back to to. A review's comment or a
+// check's summary is the forge's text, not flai's: when the project's lint
+// refuses it quoted, it is opened with each in a code block instead. An open thread flai serve opened on the story with the
 // same title is the one a look before opened for the same failures and could
 // not record: it is used again rather than a second one opened.
-func (p *forgePass) openSendBack(repo *workitem.Repo, st forge.Status, fresh []failure, now time.Time) (*threads.Thread, error) {
-	opt := threads.NewOptions{Title: sendBackTitle(st, fresh), On: st.Story, Author: forgeAuthor, Text: sendBackText(st, fresh, false), Now: now}
+func (p *forgePass) openSendBack(repo *workitem.Repo, st forge.Status, fresh []failure, review, to string, now time.Time) (*threads.Thread, error) {
+	text := func(fenced bool) string {
+		return sendBackText(st, fresh, fenced) + "\n\n" + sendBackNext(st.Story, review, to)
+	}
+	opt := threads.NewOptions{Title: sendBackTitle(st, fresh), On: st.Story, Author: forgeAuthor, Text: text(false), Now: now}
 	if all, err := threads.For(repo, st.Story); err == nil {
 		title := workitem.CleanTitle(opt.Title)
 		for _, th := range all {
@@ -269,7 +292,7 @@ func (p *forgePass) openSendBack(repo *workitem.Repo, st forge.Status, fresh []f
 	th, err := threads.New(repo, opt)
 	var lint *mdlint.Error
 	if errors.As(err, &lint) {
-		opt.Text = sendBackText(st, fresh, true)
+		opt.Text = text(true)
 		return threads.New(repo, opt)
 	}
 	return th, err
@@ -290,9 +313,10 @@ func (p *forgePass) resolveSendBacks(repo *workitem.Repo, st forge.Status, pick 
 	}
 }
 
-// closedSendBacks resolves the open send-back threads of each story that is
-// done or cancelled, archived or not: flai serve reads its pull request no
-// more. A story in progress keeps its thread, which its agent is working.
+// closedSendBacks resolves the open send-back threads of each story in a
+// state that closes it, of the accepted or the cancelled kind, archived or
+// not: flai serve reads its pull request no more. A story in progress keeps
+// its thread, which its agent is working.
 func (p *forgePass) closedSendBacks(repo *workitem.Repo, items []*workitem.Item) {
 	status := map[string]string{}
 	for _, it := range items {
@@ -315,16 +339,16 @@ func (p *forgePass) closedSendBacks(repo *workitem.Repo, items []*workitem.Item)
 			}
 			s = it.Status
 		}
-		if s == workitem.Done || s == workitem.Cancelled {
+		if repo.Flow().Closed(s) {
 			why := fmt.Sprintf("%s is %s, so flai serve reads its pull request no more.", id, s)
 			p.resolveSendBacks(repo, st, func(forge.SendBack) bool { return true }, why)
 		}
 	}
 }
 
-// OpenSendBack is the latest failure flai sent story back to in-progress
-// for, when the thread flai serve opened for it is still open; false when
-// there is none, or its thread is resolved.
+// OpenSendBack is the latest failure flai sent story back for, when the
+// thread flai serve opened for it is still open; false when there is none,
+// or its thread is resolved.
 func OpenSendBack(repo *workitem.Repo, story string) (forge.SendBack, bool, error) {
 	st, ok, err := forge.ReadStatus(repo.CacheDir(), story)
 	if err != nil || !ok || len(st.SentBack) == 0 {
@@ -372,8 +396,8 @@ func count(n int, thing string) string {
 }
 
 // sendBackText names each failure, with a link to its log or its review and
-// a brief quote of what the forge said, and what happens now; fenced puts
-// each quote in a code block.
+// a brief quote of what the forge said; fenced puts each quote in a code
+// block. sendBackNext says what happens now.
 func sendBackText(st forge.Status, fresh []failure, fenced bool) string {
 	var b strings.Builder
 	pr := fmt.Sprintf("pull request #%d", st.PullRequest)
@@ -400,8 +424,13 @@ func sendBackText(st forge.Status, fresh []failure, fenced bool) string {
 			fmt.Fprintf(&b, "%s.\n\n", head)
 		}
 	}
-	fmt.Fprintf(&b, "flai moved %[1]s back to in-progress. Fix the branch, close out, and move the story to review: flai serve pushes the fix, and resolves this thread once the story is back in review at a new commit.", st.Story)
-	return b.String()
+	return strings.TrimSuffix(b.String(), "\n\n")
+}
+
+// sendBackNext says what happens now to story, moved from review, the state
+// it awaits its acceptance in, back to to.
+func sendBackNext(story, review, to string) string {
+	return fmt.Sprintf("flai moved %[1]s back to %[2]s. Fix the branch, close out, and move the story to %[3]s: flai serve pushes the fix, and resolves this thread once the story is back in %[3]s at a new commit.", story, to, review)
 }
 
 // sendBackReason names each failure the story is sent back for, for its move

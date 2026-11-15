@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -444,5 +445,174 @@ func TestSendBackReasonQuotesWhatTheForgeNamed(t *testing.T) {
 	}
 	if strings.ContainsFunc(got, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) }) {
 		t.Errorf("the reason keeps a control or format character: %q", got)
+	}
+}
+
+// fgRenamedLab is a forge lab whose project and pass run renamedFlow and
+// whose project lints its markdown, with its story in awaiting and that
+// story's pull request, number 1, at headA.
+func fgRenamedLab(t *testing.T) (*forgeLab, *fakeGit) {
+	t.Helper()
+	git := &fakeGit{local: headA}
+	lab := fgForgeLab(t, "pull-request", git, renamedWorkflow(t))
+	if err := os.WriteFile(filepath.Join(lab.root, ".markdownlint.yaml"), []byte(projectLint), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.story = lab.fgAt("Awaiting", "awaiting")
+	lab.forge.set(lab.branch(), headA, nil, nil)
+	return lab, git
+}
+
+// fgAt makes a story with two criteria and moves it along renamedFlow's
+// path, ready, doing, testing, awaiting, as far as state.
+func (lab *forgeLab) fgAt(title, state string) string {
+	lab.t.Helper()
+	epic, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Epic " + title, Owner: "alex", Now: time.Now()})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: epic.ID, Owner: "alex", Touches: []string{"docs/" + strings.ToLower(title)}, Now: time.Now()})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	data, _ := os.ReadFile(st.Path)
+	if err := os.WriteFile(st.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n- [ ] pushes\n", 1)), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	for _, to := range []string{"ready", "doing", "testing", "awaiting"} {
+		lab.move(st.ID, to)
+		if to == state {
+			return st.ID
+		}
+	}
+	lab.t.Fatalf("%s is not on renamedFlow's path to awaiting", state)
+	return ""
+}
+
+// fgSentBackBy is how many moves to doing flai made, as renamedFlow's
+// send back from awaiting does.
+func (lab *forgeLab) fgSentBackBy() int {
+	n := 0
+	for _, tr := range lab.item().Transitions {
+		if tr.To == "doing" && tr.By == sendBackBy {
+			n++
+		}
+	}
+	return n
+}
+
+// S-0743 criteria 2 and 4: under a workflow whose review is awaiting, with
+// testing, of the active kind, before it, a story in testing is not pushed
+// and its pull request not read, and a story in awaiting is pushed and its
+// pull request opened.
+func TestTheForgePassPushesAStoryInTheStateTheAcceptanceLeavesFrom(t *testing.T) {
+	lab, _ := fgRenamedLab(t)
+	tested := lab.fgAt("Testing", "testing")
+	lab.forge.set("story/"+tested, headA, []forge.Check{buildFailed("")}, nil)
+	st := lab.look()
+	if st.Outcome != ForgePushed || st.Request != RequestOpened || st.PullRequest != 1 {
+		t.Fatalf("the story in awaiting: %+v", st)
+	}
+	if pr, ok := lab.forge.pr(lab.branch()); !ok || pr.Number != 1 {
+		t.Fatalf("the pull request of the story in awaiting: %+v, %v", pr, ok)
+	}
+	if got := lab.status(); got.PullRequest != 1 || got.HeadSHA != headA {
+		t.Fatalf("the pull request of the story in awaiting was not read: %+v", got)
+	}
+	if _, ok := lab.forge.pr("story/" + tested); ok {
+		t.Error("the pull request of the story in testing was opened")
+	}
+	if _, ok, err := ReadForgeState(lab.repo, tested); ok || err != nil {
+		t.Errorf("the story in testing has a push record: %v, %v", ok, err)
+	}
+	if _, ok, err := forge.ReadStatus(lab.repo.CacheDir(), tested); ok || err != nil {
+		t.Errorf("the pull request of the story in testing was read: %v, %v", ok, err)
+	}
+	if it, err := lab.repo.Get(tested); err != nil || it.Status != "testing" {
+		t.Fatalf("the story in testing: %+v, %v", it, err)
+	}
+	pushed, err := PushStory(context.Background(), ForgePush{Repo: lab.repo, Story: tested})
+	if err != nil || pushed.Outcome != ForgeSkipped || !strings.Contains(pushed.Reason, tested+" is testing, not in awaiting: ") || !strings.HasSuffix(pushed.Reason, "once the story is in awaiting") {
+		t.Errorf("PushStory of the story in testing = %+v, %v", pushed, err)
+	}
+}
+
+// S-0743 criteria 3 and 4: under the same workflow a failing required check
+// and a requested change send the story from awaiting back to doing, along
+// the send-back transition, with today's reason and thread; back in awaiting
+// at the same commit it is not sent back again, at a new head the thread
+// before is resolved, and a cancelled story has its thread resolved.
+func TestTheForgePassSendsAStoryBackAlongTheSendBackTransition(t *testing.T) {
+	lab, git := fgRenamedLab(t)
+	lab.forge.set(lab.branch(), headA, []forge.Check{buildFailed("")}, nil)
+	lab.look()
+	ths := lab.threadsOn()
+	if len(ths) != 1 || !ths[0].Open() || ths[0].Title != "Pull request #1 of "+lab.story+": the required check build failed" {
+		t.Fatalf("threads after a failing check: %+v", ths)
+	}
+	if want := "flai moved " + lab.story + " back to doing. Fix the branch, close out, and move the story to awaiting: flai serve pushes the fix, and resolves this thread once the story is back in awaiting at a new commit."; !strings.Contains(ths[0].Body, want) {
+		t.Errorf("the thread does not say %q:\n%s", want, ths[0].Body)
+	}
+	reason := "the required check `build` failed on aaaaaaaaaaaa of pull request #1"
+	if it := lab.item(); it.Status != "doing" || lab.fgSentBackBy() != 1 || !strings.Contains(it.Body, reason) {
+		t.Fatalf("the story after a failing check: %s, moves by flai %d, body:\n%s", it.Status, lab.fgSentBackBy(), it.Body)
+	}
+	if n := len(lab.journal); n == 0 || lab.journal[n-1].Detail != "sent "+lab.story+" back to doing: "+reason || lab.journal[n-1].Outcome != "done" {
+		t.Fatalf("journal %+v", lab.journal)
+	}
+
+	// in doing, then testing: not read, and its thread stays open
+	lab.look()
+	lab.move(lab.story, "testing")
+	lab.look()
+	if ths = lab.threadsOn(); len(ths) != 1 || !ths[0].Open() || lab.fgSentBackBy() != 1 {
+		t.Fatalf("the thread of a story in doing or testing: %+v", ths)
+	}
+
+	// back in awaiting at the same commit, the same check failing: nothing new
+	lab.move(lab.story, "awaiting")
+	lab.look()
+	if ths = lab.threadsOn(); len(ths) != 1 || !ths[0].Open() || lab.item().Status != "awaiting" || lab.fgSentBackBy() != 1 {
+		t.Fatalf("the same failure on the same commit: threads %+v, status %s", ths, lab.item().Status)
+	}
+
+	// a new head with a requested change: sent back again, the old thread resolved
+	git.local = headB
+	review := "https://github.com/o/r/pull/1#pullrequestreview-9"
+	lab.forge.set(lab.branch(), headB, nil, []forge.Review{{Author: "alice", State: forge.ReviewChangesRequested, Body: "Rename it.", URL: review}})
+	lab.look()
+	ths = lab.threadsOn()
+	if len(ths) != 2 || ths[0].Open() || !strings.Contains(ths[0].Body, lab.story+" is back in awaiting at bbbbbbbbbbbb") || !ths[1].Open() || ths[1].Title != "Pull request #1 of "+lab.story+": alice requested changes" {
+		t.Fatalf("threads after a requested change at a new head: %+v", ths)
+	}
+	if it := lab.item(); it.Status != "doing" || lab.fgSentBackBy() != 2 || !strings.Contains(it.Body, "`alice` requested changes on pull request #1") {
+		t.Fatalf("the story after a requested change: %s, moves by flai %d", it.Status, lab.fgSentBackBy())
+	}
+
+	lab.move(lab.story, "cancelled")
+	lab.look()
+	if ths = lab.threadsOn(); ths[1].Open() || !strings.Contains(ths[1].Body, lab.story+" is cancelled") {
+		t.Fatalf("the thread of a cancelled story: %+v", ths[1])
+	}
+}
+
+// S-0743 criterion 3: a workflow with no send-back transition out of the
+// state a story awaits its acceptance in sends it nowhere, and opens no
+// thread, rather than guess where it goes.
+func TestTheForgePassSendsNothingBackWithoutASendBackTransition(t *testing.T) {
+	flow := strings.Replace(renamedFlow, "  - {from: awaiting, to: doing, effects: [send-back]}\n", "", 1)
+	w, p := workflow.Parse("design/workflows/board.md", flow)
+	if p != nil {
+		t.Fatal(p)
+	}
+	lab, _ := fgRenamedLab(t)
+	lab.repo.Workflow, lab.pass.o.Workflow = &w, &w
+	lab.forge.set(lab.branch(), headA, []forge.Check{buildFailed("")}, nil)
+	lab.look()
+	if ths := lab.threadsOn(); len(ths) != 0 || lab.item().Status != "awaiting" {
+		t.Fatalf("with no send-back transition: threads %+v, status %s", ths, lab.item().Status)
+	}
+	if _, err := sendBackTo(w, workflow.TypeStory, "awaiting"); err == nil || !strings.Contains(err.Error(), "no transition with the send-back effect out of awaiting for a story") {
+		t.Errorf("sendBackTo = %v", err)
 	}
 }

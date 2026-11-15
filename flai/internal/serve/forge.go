@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -216,12 +217,13 @@ func PushStory(ctx context.Context, p ForgePush) (ForgeState, error) {
 func (p ForgePush) skip(it *workitem.Item) string {
 	switch {
 	case !p.Repo.Manifest.Acceptance.PullRequest():
-		return fmt.Sprintf("acceptance.mode is %s, so %s is accepted on this machine and flai pushes nothing: set acceptance.mode: pull-request in system-flow.yaml to have stories in review pushed and their pull requests opened",
-			p.Repo.Manifest.Acceptance.ModeOrDefault(), it.ID)
+		return fmt.Sprintf("acceptance.mode is %s, so %s is accepted on this machine and flai pushes nothing: set acceptance.mode: pull-request in system-flow.yaml to have stories in %s pushed and their pull requests opened",
+			p.Repo.Manifest.Acceptance.ModeOrDefault(), it.ID, acceptanceStates(p.Repo.Flow()))
 	case p.HostAction != nil && !p.HostAction():
 		return fmt.Sprintf("the forge host action is off for this project, so flai serve pushes nothing: turn it on with flai serve enable forge, or push one story with flai forge push %s", it.ID)
-	case it.Status != workitem.Review:
-		return fmt.Sprintf("%s is %s, not in review: flai pushes a story's branch and opens its pull request once the story is in review", it.ID, it.Status)
+	case !p.Repo.Flow().AwaitsAcceptance(it.Type, it.Status):
+		review := acceptanceStates(p.Repo.Flow())
+		return fmt.Sprintf("%s is %s, not in %s: flai pushes a story's branch and opens its pull request once the story is in %s", it.ID, it.Status, review, review)
 	}
 	return ""
 }
@@ -586,16 +588,17 @@ func (p *forgePass) token(name string) ForgeToken {
 	return p.o.ForgeToken(name)
 }
 
-// look pushes each story in review, when the project accepts through pull
-// requests and the forge host action is on, and settles each one's failure
-// thread; it resolves the failure thread of a story that left review. It
-// then reads each pushed story's pull request back, and sends the story to
-// in-progress on a failure there (forgestatus.go).
+// look pushes each story in review, a state the workflow's acceptance
+// leaves from, when the project accepts through pull requests and the forge
+// host action is on, and settles each one's failure thread; it resolves the
+// failure thread of a story that left review. It then reads each pushed
+// story's pull request back, and sends the story back along the workflow's
+// send-back transition on a failure there (forgestatus.go).
 func (p *forgePass) look(ctx context.Context) {
 	if !p.enabled() {
 		return
 	}
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil || !repo.Manifest.Acceptance.PullRequest() {
 		return
 	}
@@ -609,7 +612,7 @@ func (p *forgePass) look(ctx context.Context) {
 	var reads readLook
 	var pushed, opened, updated, failed []string
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status != workitem.Review {
+		if it.Type != workitem.Story || !repo.Flow().AwaitsAcceptance(it.Type, it.Status) {
 			continue
 		}
 		if ctx.Err() != nil {
@@ -712,7 +715,7 @@ func (p *forgePass) leftReview(repo *workitem.Repo, inReview map[string]bool) {
 			continue
 		}
 		if th := failureThread(repo, id); th != nil {
-			why := fmt.Sprintf("%s is no longer in review, so flai serve pushes it no more.", id)
+			why := fmt.Sprintf("%s is no longer in %s, so flai serve pushes it no more.", id, acceptanceStates(repo.Flow()))
 			if _, err := threads.Resolve(repo, th.ID, forgeAuthor, why, p.o.Now()); err != nil {
 				p.o.Logger.Warn("forge failure thread not resolved", "component", "serve", "root", p.e.Root, "story", id, "thread", th.ID, "err", err.Error())
 				continue
@@ -744,6 +747,12 @@ func (p *forgePass) journal(was, st ForgeState) {
 		return
 	}
 	p.o.Host.Record(entry)
+}
+
+// acceptanceStates names the states a story waits for its acceptance in, as
+// flow gives them: review with the baseline.
+func acceptanceStates(flow workflow.Workflow) string {
+	return strings.Join(flow.AcceptFrom(workflow.TypeStory), " or ")
 }
 
 // failureThread is the open thread flai serve opened on story for a failure, or nil.

@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -239,6 +240,15 @@ type forgeLab struct {
 
 func newForgeLab(t *testing.T, mode string, git *fakeGit) *forgeLab {
 	t.Helper()
+	lab := fgForgeLab(t, mode, git, nil)
+	lab.story = lab.inReview("Pushed")
+	return lab
+}
+
+// fgForgeLab is a forgeLab with no story yet, whose project and pass run
+// flow, the baseline when nil.
+func fgForgeLab(t *testing.T, mode string, git *fakeGit, flow *workflow.Workflow) *forgeLab {
+	t.Helper()
 	root := t.TempDir()
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nacceptance:\n  mode: " + mode + "\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
@@ -253,9 +263,9 @@ func newForgeLab(t *testing.T, mode string, git *fakeGit) *forgeLab {
 	if err != nil {
 		t.Fatal(err)
 	}
+	repo.Workflow = flow
 	lab := &forgeLab{t: t, root: root, repo: repo, forge: newFakeForge(), on: true, token: "secret", clock: time.Now()}
-	lab.story = lab.inReview("Pushed")
-	o := Options{Logger: slog.New(slog.DiscardHandler), Now: func() time.Time { return lab.clock },
+	o := Options{Workflow: flow, Logger: slog.New(slog.DiscardHandler), Now: func() time.Time { return lab.clock },
 		Host: hostapi.Host{
 			Enabled: func(action, r string) bool { return lab.on && action == hostapi.ActionForge && r == root },
 			Record:  func(e hostapi.Entry) { lab.journal = append(lab.journal, e) },
