@@ -31,18 +31,45 @@ type Board struct {
 
 	Body string `yaml:"-"`
 	Path string `yaml:"-"`
+	// Workflow is the workflow the board's repository runs (ADR-0301), which
+	// says which columns take a limit. Nil is the baseline.
+	Workflow *workflow.Workflow `yaml:"-"`
 }
 
-// DefaultWIPLimits are the workflow.md defaults.
-var DefaultWIPLimits = map[string]int{Ready: 5, InProgress: 2, Review: 3}
+// Flow is the workflow the board lays out: its Workflow, else the baseline.
+func (b *Board) Flow() workflow.Workflow {
+	if b.Workflow != nil {
+		return *b.Workflow
+	}
+	return baselineFlow
+}
 
-// LoadBoard reads board.md, returning defaults when it does not exist.
+// defaultLimitByKind is the WIP limit a state that takes one starts with, by
+// its kind (workflow.md): a queue 5, an active state 2, a waiting state 3.
+var defaultLimitByKind = map[string]int{workflow.KindQueue: 5, workflow.KindActive: 2, workflow.KindWaiting: 3}
+
+// defaultLimits are the WIP limits w's limited states start with, by their
+// kind; a limited state of a kind with no default starts with none.
+func defaultLimits(w workflow.Workflow) map[string]int {
+	out := map[string]int{}
+	for _, s := range limitedStates(w) {
+		if n, ok := defaultLimitByKind[s.Kind]; ok {
+			out[s.Name] = n
+		}
+	}
+	return out
+}
+
+// DefaultWIPLimits are the workflow.md defaults for the baseline's limited
+// states.
+var DefaultWIPLimits = defaultLimits(baselineFlow)
+
+// LoadBoard reads board.md, returning defaults when it does not exist: the
+// default limits of the repository's workflow's limited states.
 func (r *Repo) LoadBoard() (*Board, error) {
 	path := filepath.Join(r.KanbanDir(), BoardFile)
-	b := &Board{Path: path, Title: "Board", Status: "active", WIPLimits: map[string]int{}}
-	for k, v := range DefaultWIPLimits {
-		b.WIPLimits[k] = v
-	}
+	flow := r.Flow()
+	b := &Board{Path: path, Title: "Board", Status: "active", WIPLimits: defaultLimits(flow), Workflow: &flow}
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		b.Body = "\n# Board\n"
@@ -172,7 +199,7 @@ func (b *Board) Save(today string) error {
 	fmt.Fprintf(&sb, "updated: %s\n", today)
 	fmt.Fprintf(&sb, "status: %s\n", orDefault(b.Status, "active"))
 	sb.WriteString("wip_limits:\n")
-	for _, k := range LimitedColumns {
+	for _, k := range stateNames(limitedStates(b.Flow())) {
 		if v, ok := b.WIPLimits[k]; ok {
 			fmt.Fprintf(&sb, "  %s: %d\n", k, v)
 		}
@@ -205,13 +232,15 @@ func (b *Board) Save(today string) error {
 	return atomicfile.WriteFile(b.Path, []byte(sb.String()), 0o644)
 }
 
-// LimitedColumns are the columns that carry a WIP limit (workflow.md).
-var LimitedColumns = []string{Ready, InProgress, Review}
+// LimitedColumns are the columns of the baseline that carry a WIP limit
+// (workflow.md), in board order.
+var LimitedColumns = stateNames(limitedStates(baselineFlow))
 
-// SetLimit sets a column's WIP limit; 0 means none (S-0167).
+// SetLimit sets a column's WIP limit; 0 means none (S-0167). Only a state
+// of the board's workflow that takes a limit has one.
 func (b *Board) SetLimit(column string, n int) error {
-	if !contains(LimitedColumns, column) {
-		return fmt.Errorf("%s has no WIP limit; only %s do", column, strings.Join(LimitedColumns, ", "))
+	if limited := stateNames(limitedStates(b.Flow())); !contains(limited, column) {
+		return fmt.Errorf("%s has no WIP limit; only %s do", column, strings.Join(limited, ", "))
 	}
 	if n < 0 {
 		return fmt.Errorf("a WIP limit is a whole number, 0 for none; got %d", n)

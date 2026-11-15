@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // BoardCard is one item on the board as flai board --json and the MCP board
@@ -24,16 +26,19 @@ type BoardCard struct {
 	Age         string   `json:"age_in_column"`
 	AgeSecs     int64    `json:"age_in_column_seconds"`
 	Touches     []string `json:"touches,omitempty"`
-	// Archived marks a done card shown only because its release is pending
-	// (S-0087): the dashboard leaves it out while the clone's release tags
-	// lag the remote's, when pending cannot be told from published (S-0174).
+	// Archived marks an accepted card shown only because its release is
+	// pending (S-0087): the dashboard leaves it out while the clone's release
+	// tags lag the remote's, when pending cannot be told from published
+	// (S-0174).
 	Archived bool `json:"archived,omitempty"`
-	// Held is why a ready story is not started or offered (S-0128), and on a
-	// hold on overlap alone, whose agent flai asked about it (S-0338).
+	// Held is why a story in the pull's source is not started or offered
+	// (S-0128), and on a hold on overlap alone, whose agent flai asked about
+	// it (S-0338).
 	Held *Hold `json:"held,omitempty"`
-	// Shared is, for a story ready, in progress, or in review, each share in
-	// force on which it is the held story: the paths the story that held it
-	// shared, the split, and the conversation (S-0338).
+	// Shared is, for a story in the pull's source or pulled and not yet
+	// closed, each share in force on which it is the held story: the paths
+	// the story that held it shared, the split, and the conversation
+	// (S-0338).
 	Shared []Share `json:"shared,omitempty"`
 	// Tasks is a story's task plan in counts, when it has tasks (S-0176).
 	Tasks *TaskSummary `json:"tasks,omitempty"`
@@ -46,9 +51,28 @@ type BoardCard struct {
 	UndoesMain []string `json:"undoes_main,omitempty"`
 }
 
+// Lane is one column of the board as its workflow defines it (ADR-0301 §2):
+// what a reader of the view needs to draw it and judge it without a list of
+// states of its own.
+type Lane struct {
+	Name string `json:"name"`
+	// Title is the state's heading, its name when the workflow gives none.
+	Title string `json:"title,omitempty"`
+	Kind  string `json:"kind"`
+	// WIPLimit is the column's limit on stories, 0 for none.
+	WIPLimit int `json:"wip_limit,omitempty"`
+	// TakesLimit says the column may carry a WIP limit, so one may be set.
+	TakesLimit bool `json:"takes_limit,omitempty"`
+	// Ordered says the column reads in the pull order.
+	Ordered bool `json:"ordered,omitempty"`
+}
+
 // BoardView is the board with its cards: one reading of the repository for
 // the command line and for agents over MCP (S-0058).
 type BoardView struct {
+	// Lanes are the board's columns in the workflow's order, each with its
+	// kind and WIP limit (ADR-0301 §2).
+	Lanes     []Lane                 `json:"lanes"`
 	Columns   map[string][]BoardCard `json:"columns"`
 	WIPLimits map[string]int         `json:"wip_limits"`
 	Order     []string               `json:"order"`
@@ -59,24 +83,46 @@ type BoardView struct {
 	Unpublished []string `json:"unpublished,omitempty"`
 	// Counts are stories per column, which is what the limits apply to.
 	Counts map[string]int `json:"-"`
+	// flow is the workflow the view was laid out by; the zero value, as in
+	// a view built by hand, reads as the baseline.
+	flow workflow.Workflow
 }
 
-// NewBoardView lays the active items out by column. Stories only unless all.
-// A ready story that holds judges held is marked so (S-0128): Repo.Holds of
-// the same items, which reads the manifest's sub-projects and shared paths
-// (ADR-0096), the shares in force, the asks about a hold (S-0338), and the
-// repository's trial merge, by which an overlap with a story in progress
-// holds only when it conflicts (Repo.Trial, ADR-0230); nil judges with none
-// of them. A story ready, in progress, or in review carries
-// the shares in force on which it is the held story (S-0338).
-// A story with tasks carries its task plan in counts (S-0176).
-// Acceptance archives a story the moment it merges (S-0087); pendingPublish
-// names the stories a release has not yet covered, so a done, archived story
-// still on the done column until it is published, instead of vanishing the
-// instant it is accepted, before anyone has had the chance to see it there;
-// the view lists them as unpublished too.
+// boardFlow is the workflow the view was laid out by, the baseline when none
+// was given.
+func (v BoardView) boardFlow() workflow.Workflow {
+	if len(v.flow.States) == 0 {
+		return baselineFlow
+	}
+	return v.flow
+}
+
+// NewBoardView lays the active items out by column, the columns and their
+// kinds, limits, and orders the board's workflow's (ADR-0301 §2). Stories
+// only unless all. A story in the pull's source that holds judges held is
+// marked so (S-0128): Repo.Holds of the same items, which reads the
+// manifest's sub-projects and shared paths (ADR-0096), the shares in force,
+// the asks about a hold (S-0338), and the repository's trial merge, by which
+// an overlap with a started story holds only when it conflicts (Repo.Trial,
+// ADR-0230); nil judges with none of them. A story in the pull's source, or
+// in an active or waiting state, carries the shares in force on which it is
+// the held story (S-0338). A story with tasks carries its task plan in
+// counts (S-0176). Acceptance archives a story the moment it merges
+// (S-0087); pendingPublish names the stories a release has not yet covered,
+// so an accepted, archived story stays on its column until it is published,
+// instead of vanishing the instant it is accepted, before anyone has had the
+// chance to see it there; the view lists them as unpublished too.
 func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingPublish map[string]bool, holds *Holds) BoardView {
-	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}}
+	w := board.Flow()
+	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}, flow: w}
+	for _, s := range w.States {
+		lane := Lane{Name: s.Name, Title: s.Title, Kind: s.Kind, TakesLimit: s.Limit, Ordered: s.Order}
+		if s.Limit {
+			lane.WIPLimit = board.WIPLimits[s.Name]
+		}
+		v.Lanes = append(v.Lanes, lane)
+	}
+	source := pullSource(w)
 	if holds == nil {
 		holds = NewHolds(items, nil)
 	}
@@ -96,7 +142,8 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 		}
 	}
 	for _, it := range items {
-		archivedButPending := it.Archived && it.Status == Done && pendingPublish[it.ID]
+		kind := w.Kind(it.Status)
+		archivedButPending := it.Archived && kind == workflow.KindAccepted && pendingPublish[it.ID]
 		if (it.Archived && !archivedButPending) || (!all && it.Type != Story) {
 			continue
 		}
@@ -107,10 +154,10 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			Blocked: it.IsBlocked(), Age: HumanDuration(age), AgeSecs: int64(age.Seconds()),
 			Touches: it.Touches, Archived: it.Archived, Draft: it.Type == Story && it.Draft,
 		}
-		if it.Type == Story && it.Status == Ready && !it.Archived {
+		if it.Type == Story && it.Status == source && !it.Archived {
 			card.Held = holds.Of(it)
 		}
-		if it.Type == Story && !it.Archived && (it.Status == Ready || it.Status == InProgress || it.Status == Review) {
+		if it.Type == Story && !it.Archived && (it.Status == source || underwayKind(kind)) {
 			card.Shared = holds.SharesWith(it.ID)
 		}
 		if it.Type == Story {
@@ -123,9 +170,9 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			v.Counts[it.Status]++
 		}
 	}
-	// Backlog and ready read in pull order: the stories take the sequence, in
+	// The ordered states read in pull order: the stories take the sequence, in
 	// the places stories already hold, and epics and tasks stay where they are.
-	for _, st := range []string{Backlog, Ready} {
+	for _, st := range orderedStates(w) {
 		rank := map[string]int{}
 		for i, id := range PullSequence(board.Order, items, st) {
 			rank[id] = i
@@ -144,7 +191,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			cards[slot] = stories[i]
 		}
 	}
-	for _, st := range States {
+	for _, st := range stateNames(limitedStates(w)) {
 		if limit, ok := board.WIPLimits[st]; ok && limit > 0 && v.Counts[st] > limit {
 			v.Breaches = append(v.Breaches, fmt.Sprintf("%s has %d stories, limit %d", st, v.Counts[st], limit))
 		}
@@ -152,12 +199,12 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 	return v
 }
 
-// ReadyInPullOrder returns the ready stories, those named in the pull order
-// first and in that order, the rest after them by ID. The view's columns are
-// already in that sequence.
+// ReadyInPullOrder returns the stories in the pull's source, those named in
+// the pull order first and in that order, the rest after them by ID. The
+// view's columns are already in that sequence.
 func (v BoardView) ReadyInPullOrder() []BoardCard {
 	var out []BoardCard
-	for _, c := range v.Columns[Ready] {
+	for _, c := range v.Columns[pullSource(v.boardFlow())] {
 		if c.Type == Story {
 			out = append(out, c)
 		}
@@ -165,8 +212,8 @@ func (v BoardView) ReadyInPullOrder() []BoardCard {
 	return out
 }
 
-// FirstPullable is the first ready story in pull order that is not held, or
-// nil when every one is (S-0128).
+// FirstPullable is the first story in the pull's source, in pull order,
+// that is not held, or nil when every one is (S-0128).
 func (v BoardView) FirstPullable() *BoardCard { return FirstClear(v.ReadyInPullOrder()) }
 
 // FirstClear is the first of cards that is not held, or nil.
@@ -179,30 +226,47 @@ func FirstClear(cards []BoardCard) *BoardCard {
 	return nil
 }
 
-// CanPull reports whether a story may be pulled now: the in-progress limit
-// leaves room for one more, and review is under its limit (S-0243).
+// CanPull reports whether a story may be pulled now: every active state's
+// limit leaves room for one more, and every waiting state is under its limit
+// (S-0243, ADR-0301 §2).
 func (v BoardView) CanPull() bool { return v.PullHold() == "" }
 
-// PullHold says why no story may be pulled now, or "" when one may: the
-// in-progress limit is full, or review is full and waits on the operator's
-// acceptance (S-0243, I-0007), in-progress first when both are. Stories
-// already in progress still finish; only the pull stops.
+// PullHold says why no story may be pulled now, or "" when one may: an
+// active state's limit is full, or a waiting state is full and waits on the
+// operator's acceptance (S-0243, I-0007, ADR-0301 §2), a full active state
+// first, the first in board order. Stories already started still finish;
+// only the pull stops.
 func (v BoardView) PullHold() string {
-	if limit, ok := v.WIPLimits[InProgress]; ok && limit > 0 && v.Counts[InProgress] >= limit {
-		return fmt.Sprintf("the in-progress limit is full (%d of %d)", v.Counts[InProgress], limit)
+	if st, n, limit, full := v.fullOfKind(workflow.KindActive); full {
+		return fmt.Sprintf("the %s limit is full (%d of %d)", st, n, limit)
 	}
 	return v.ReviewHold()
 }
 
-// ReviewHold says that review is at or over its limit, so that no story is
-// pulled until one is accepted or sent back, or "" when review has room or
-// no limit (S-0243). flai serve, which counts the agents it started against
-// the in-progress limit itself, asks it on its own.
+// ReviewHold says that a waiting state is at or over its limit, so that no
+// story is pulled until one is accepted or sent back, or "" when every
+// waiting state has room or no limit (S-0243). flai serve, which counts the
+// agents it started against the active limit itself, asks it on its own.
 func (v BoardView) ReviewHold() string {
-	if limit, ok := v.WIPLimits[Review]; ok && limit > 0 && v.Counts[Review] >= limit {
-		return fmt.Sprintf("review is full (%d of %d): accept or send back a story", v.Counts[Review], limit)
+	if st, n, limit, full := v.fullOfKind(workflow.KindWaiting); full {
+		return fmt.Sprintf("%s is full (%d of %d): accept or send back a story", st, n, limit)
 	}
 	return ""
+}
+
+// fullOfKind is the first state of kind, in board order, that takes a limit
+// and holds at least as many stories as it allows: its name, its count, and
+// its limit.
+func (v BoardView) fullOfKind(kind string) (state string, n, limit int, full bool) {
+	for _, s := range limitedStates(v.boardFlow()) {
+		if s.Kind != kind {
+			continue
+		}
+		if l, ok := v.WIPLimits[s.Name]; ok && l > 0 && v.Counts[s.Name] >= l {
+			return s.Name, v.Counts[s.Name], l, true
+		}
+	}
+	return "", 0, 0, false
 }
 
 // HumanDuration is an age for people: now, 12m, 5h, 3d.
