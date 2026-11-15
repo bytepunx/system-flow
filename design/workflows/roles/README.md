@@ -94,9 +94,8 @@ A condition narrows a trigger to the events it holds for. flai implements each o
 | `stale-figures` | `edited` | Someone other than a planner or the story's own agent edited a backlog or ready story's goal, criteria, or touches when its forecast or cost of delay value is older than the edit, or its cost of delay's inputs after its value |
 | `replan-agent` | `accepted`, `cancelled`, `reordered` | `planning.replan` is `agent`; for each story whose delivery moved, in the order the replay moved them |
 | `each-ready-story` | a schedule | Once for every ready story, in pull order |
-| `to-review` | `moved` | The item moved to review |
-| `to-backlog` | `moved` | The item moved to backlog; on a call, `item_move` and `flai move`, it allows only a move to backlog |
+| `to`, written `{to: <state>}` | `moved` | The item moved to `<state>`, any state the workflow has; on a call, `item_move` and `flai move`, it allows only a move to `<state>`, which must be the workflow's initial state, `backlog` in the baseline |
 | `draft-changed` | `edited` | The item edited is a story that is a draft after the edit |
 | `awaits-orchestrator` | `thread` | The thread awaits the orchestrator or the operator |
 
-ADR-0211 adds the last four.
+ADR-0211 adds `draft-changed`, `awaits-orchestrator`, and the two conditions `to-review` and `to-backlog`, which [ADR-0304](../../adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md) makes one, `to`. An entry reads `{event: moved, when: {to: review}}` or `{call: item_move, when: {to: backlog}}`. A state the workflow lacks is `roles.file`, and on a call a state other than the initial state is `roles.grant`. `when: to-review` and `when: to-backlog` still work, with no finding: flai reads them as `{to: review}` and `{to: backlog}`, which a file writes instead.

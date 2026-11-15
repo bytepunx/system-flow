@@ -804,7 +804,7 @@ flai serve disable review                 # no more runs; works after the role's
 | To start it | Its file lists | And you |
 |-------------|----------------|---------|
 | When you ask | `asked` | Run `flai role run`, or ask through `role_run` or `role.run` ([above](#the-host-action-a-role-names-running-a-role-you-define-s-0417)) |
-| When something happens | `{event: <event>, when?: <condition>}`, such as `{event: moved, when: to-review}` | Enable its action |
+| When something happens | `{event: <event>, when?: <condition>}`, such as `{event: moved, when: {to: review}}` | Enable its action |
 | On a schedule | `{schedule: roles.<name>.schedule}`, or a built-in role's schedule to share it, such as `analysis.schedule` | Set the schedule, and enable its action |
 
 A role file changes only through a story you accept ([Defining a role](#defining-a-role-s-0414)). The schedule is a setting ([`roles.<name>.schedule`](settings.md#project-manifest)):

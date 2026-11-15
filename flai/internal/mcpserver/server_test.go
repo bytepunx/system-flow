@@ -1600,7 +1600,7 @@ func TestTheNewEventKindsAreDescribed(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
-	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "kind agent", "started, ended", "failed", "or stopped", "type role", "fields role", "and why", "without reading the serve journal", "not told of your own runs", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread"}
+	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "kind agent", "started, ended", "failed", "or stopped", "type role", "fields role", "and why", "without reading the serve journal", "not told of your own runs", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the condition to, written {to: <state>}, qualifies moved", "to-review and to-backlog are its aliases (ADR-0304)", "draft-changed qualifies edited, and awaits-orchestrator thread"}
 	for name, cs := range map[string]*mcp.ClientSession{"project": setup(t).cs, "folder": folderSetup(t, root).cs} {
 		texts := map[string]string{"instructions": cs.InitializeResult().Instructions}
 		res, err := cs.ListTools(context.Background(), nil)
