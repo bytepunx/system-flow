@@ -2,7 +2,7 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741]
 topics: [planning, go, code, flai]
 paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver]
 date: 2026-11-03
@@ -94,4 +94,12 @@ Layer 2 ran T-3218, T-3219, and T-3220 at once, each in a task worktree of its o
 
 So tasks of one layer that each add tests to one package give their test helpers a prefix of their own, so that the copied-back files do not declare one helper twice, and check each copied file with `cmp` against the task's commit before closing it.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743.
+S-0741 met it inside `flai/internal/check`. Its planner put T-3204 (the workflow check) and T-3205 (the item rules on a state's kind) in one layer, and its agent made T-3205 wait for T-3204 with `after` (`wip/archive/agents/S-0741.md`):
+
+```text
+The planner put T-3204 and T-3205 in one layer, but both change and test package flai/internal/check, so a half-done edit in one breaks the other's build (memory: parallel tasks in one Go package collide); T-3205 now waits for T-3204.
+```
+
+So a planner that splits a change to `check` into two tasks puts them in two layers, or the story's agent gives the second its own task worktree.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741.

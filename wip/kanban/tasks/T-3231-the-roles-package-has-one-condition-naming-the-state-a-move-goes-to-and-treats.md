@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1433
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 389
-      cache_read: 5679342
-      cache_write: 472409
-      cost: 2.3262
+      input: 67
+      output: 20032
+      cache_read: 6007510
+      cache_write: 208888
+      cost: 2.8195
 ---
 # T-3231 The roles package has one condition naming the state a move goes to, and treats to-review and to-backlog as the ADR decides
 

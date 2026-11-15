@@ -24,16 +24,16 @@ touches: [design/system/strategic-agents.md, design/workflows/roles/README.md, t
 after: [T-3231]
 usage:
   source: log
-  seconds: 1393
+  seconds: 1427
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 155
-      cache_read: 1286856
-      cache_write: 118316
-      cost: 0.5314
+      input: 26
+      output: 7806
+      cache_read: 2340893
+      cache_write: 81396
+      cost: 1.0987
 ---
 # T-3240 strategic-agents.md, the roles READMEs, and the operators' and users' guides list the move condition in place of to-review and to-backlog
 

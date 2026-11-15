@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/system/metrics.md]
 usage:
   source: log
-  seconds: 5
+  seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 12
-      cache_read: 155204
-      cache_write: 227
-      cost: 0.0588
+      input: 2
+      output: 618
+      cache_read: 152060
+      cache_write: 5127
+      cost: 0.0727
 ---
 # T-3242 metrics.md defines lead, cycle, queue, and review time and time in state from their timers and links the ADR
 

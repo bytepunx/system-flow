@@ -3,12 +3,21 @@ id: T-3380
 type: task
 nature: improvement
 title: Decide in an ADR that board.md is written under a lock, reloaded inside it, and normalised on every write
-status: backlog
+status: done
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:30Z
-updated: 2026-11-15T21:12:07Z
-transitions: []
+updated: 2026-11-15T21:20:04Z
+transitions:
+  - to: ready
+    at: 2026-11-15T21:18:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-15T21:18:47Z
+    by: system-flow
+  - to: done
+    at: 2026-11-15T21:20:04Z
+    by: agent-S-0790
 stream: S-0790
 tags: [design]
 touches: [design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md]

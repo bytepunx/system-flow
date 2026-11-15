@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2207.5937
-accrued_seconds: 1568134
-tasks_completed: 3632
-last_run: 2026-11-15T21:14:47Z
+accrued_cost: 2208.6091
+accrued_seconds: 1568289
+tasks_completed: 3638
+last_run: 2026-11-15T21:32:46Z
 ---
 
 # Orchestrator activity
@@ -25459,6 +25459,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 22
 - Cost: 0.2373 USD, estimated
+
+### 2026-11-15T21:17:25Z
+
+- Summary: Release due after S-0741's acceptance: release_evaluate met under threshold (count 1 at or over 1; value 51.66 USD/week, threshold 1000). Ran flai formula run publish --ready --autocommit: instance S-0793 (tasks T-3384..T-3386) is in ready, committed 2fd4f33d4.
+- Items: S-0741, S-0793
+- Seconds: 19
+- Cost: 0.0831 USD, estimated
+
+### 2026-11-15T21:17:44Z
+
+- Summary: Ordered the ready column by throughput after S-0793 entered it: S-0793 is first and alone (no forecast duration).
+- Items: S-0793
+- Seconds: 19
+- Cost: 0.0478 USD, estimated
+
+### 2026-11-15T21:18:05Z
+
+- Summary: S-0741 is being released. The release policy (threshold) was met, so I started the publish formula, which created the release story S-0793.
+- Items: none
+- Seconds: 21
+- Cost: 0.1582 USD, estimated
+
+### 2026-11-15T21:31:30Z
+
+- Summary: Enqueued S-0748 in the merge queue, 1st of 1, at b38c55b under accept_reviews: close-out passed at the branch head over main 2fd4f33, accept dry run showed no blockers, verifier matched all 5 criteria to changed files within touches; policy throughput, forecast 53m, value 94.42 USD/week.
+- Items: S-0748
+- Seconds: 54
+- Cost: 0.2154 USD, estimated
+
+### 2026-11-15T21:31:51Z
+
+- Summary: S-0748 is in the merge queue, first in line at commit b38c55b; the queue will land it.
+- Items: none
+- Seconds: 21
+- Cost: 0.3800 USD, estimated
+
+### 2026-11-15T21:32:46Z
+
+- Summary: Answered TH-1230, citing design/digest/D-0603-a-publish-step-that-exits-1-because-another-git-process-briefly-held-the-main.md
+- Items: S-0793
+- Seconds: 21
+- Cost: 0.1309 USD, estimated
 
 ## Refusals
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1394
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 456
-      cache_read: 2985352
-      cache_write: 243438
-      cost: 1.221
+      input: 35
+      output: 10514
+      cache_read: 3153117
+      cache_write: 109638
+      cost: 1.4799
 ---
 # T-3238 flai guard and flai serve's triggers read the new move condition, and a role starts on a move into a state of the workflow's own
 

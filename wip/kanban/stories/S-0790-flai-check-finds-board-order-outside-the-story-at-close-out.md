@@ -3,16 +3,19 @@ id: S-0790
 type: story
 nature: improvement
 title: "flai check finds `board.order` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-15T01:56:43Z
-updated: 2026-11-15T21:16:20Z
+updated: 2026-11-15T21:19:30Z
 transitions:
   - to: ready
     at: 2026-11-15T21:11:49Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-15T21:16:43Z
+    by: agent-S-0790
 tags: [cli]
-touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, design/system/workflow.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, design/system/workflow.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md, design/adrs/0306-every-write-of-board-md-takes-one-board-lock-reads-the-board-again-inside-it.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

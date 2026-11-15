@@ -24,16 +24,16 @@ touches: [template/root/design/workflows/roles/orchestrator.md, template/root/de
 after: [T-3231]
 usage:
   source: log
-  seconds: 1393
+  seconds: 1414
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 92
-      cache_read: 750605
-      cache_write: 77031
-      cost: 0.313
+      input: 16
+      output: 4840
+      cache_read: 1451639
+      cache_write: 50475
+      cost: 0.6813
 ---
 # T-3239 The baseline orchestrator and planner role files use the new move condition in the template, in flai's embedded copies, and in this project
 

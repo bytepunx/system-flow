@@ -3,17 +3,20 @@ id: S-0748
 type: story
 nature: feature
 title: A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-15T21:11:42Z
+updated: 2026-11-15T21:30:00Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:18Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-15T20:12:33Z
+    by: agent-S-0748
+  - to: review
+    at: 2026-11-15T21:30:00Z
     by: agent-S-0748
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
@@ -26,32 +29,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3098
-  estimated: true
-  priced_by: estimate
+  seconds: 4663
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 3
+      ceremony: 5
       test_runs: 1
-      work: 32
+      work: 88
   models:
     - model: claude-opus-5-5
-      input: 274
-      output: 1367
-      cache_read: 15360462
-      cache_write: 1173920
-      cost: 6.2523
+      input: 402
+      output: 121095
+      cache_read: 36315811
+      cache_write: 1262743
+      cost: 17.0443
   strategic:
     - kind: orchestrator
-      seconds: 25
+      seconds: 79
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 47
-          cache_read: 293079
-          cache_write: 37917
-          cost: 0.0973
+          input: 19
+          output: 183
+          cache_read: 689669
+          cache_write: 116376
+          cost: 0.241
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 51
+          cache_read: 48543
+          cache_write: 42109
+          cost: 0.0717
 cost_of_delay:
   value: 94.42
   by: system-flow

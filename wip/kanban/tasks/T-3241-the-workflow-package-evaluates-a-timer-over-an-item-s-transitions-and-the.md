@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1418
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 249
-      cache_read: 2091259
-      cache_write: 184848
-      cost: 0.8608
+      input: 26
+      output: 9048
+      cache_read: 2226787
+      cache_write: 75073
+      cost: 1.0646
 ---
 # T-3241 The workflow package evaluates a timer over an item's transitions, and the baseline names lead, cycle, queue, and review time
 

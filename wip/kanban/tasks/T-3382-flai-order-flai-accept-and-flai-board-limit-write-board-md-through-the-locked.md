@@ -3,12 +3,15 @@ id: T-3382
 type: task
 nature: improvement
 title: flai order, flai accept, and flai board limit write board.md through the locked update
-status: backlog
+status: ready
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:50Z
-updated: 2026-11-15T21:11:50Z
-transitions: []
+updated: 2026-11-15T21:18:46Z
+transitions:
+  - to: ready
+    at: 2026-11-15T21:18:46Z
+    by: system-flow
 stream: S-0790
 tags: [cli]
 touches: [flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go]

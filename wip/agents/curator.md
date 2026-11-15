@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 321.2853
-accrued_seconds: 34719
-tasks_completed: 216
-last_run: 2026-11-15T20:34:08Z
+accrued_cost: 323.1704
+accrued_seconds: 35103
+tasks_completed: 217
+last_run: 2026-11-15T21:22:51Z
 ---
 
 # Curator activity
@@ -1739,3 +1739,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 52
 - Cost: 1.1539 USD, estimated
+
+### 2026-11-15T21:22:51Z
+
+- Summary: This run wrote one new digest entry and merged two candidates into existing entries. Nothing was absorbed or compacted.
+- Trigger: accepted S-0741
+- Items: D-0470, D-0628, D-0643
+- Seconds: 384
+- Cost: 1.8851 USD, estimated

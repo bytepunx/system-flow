@@ -3,12 +3,18 @@ id: T-3381
 type: task
 nature: improvement
 title: workitem writes board.md under a lock, reloaded and normalised inside it, with a test that reproduces I-0375's lost update
-status: backlog
+status: in-progress
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:42Z
-updated: 2026-11-15T21:11:42Z
-transitions: []
+updated: 2026-11-15T21:20:22Z
+transitions:
+  - to: ready
+    at: 2026-11-15T21:18:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-15T21:20:22Z
+    by: agent-S-0790
 stream: S-0790
 tags: [cli]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go]
