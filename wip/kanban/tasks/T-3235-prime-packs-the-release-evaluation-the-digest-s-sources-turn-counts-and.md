@@ -3,15 +3,36 @@ id: T-3235
 type: task
 nature: feature
 title: Prime packs, the release evaluation, the digest's sources, turn counts, and statsread read a state's kind
-status: backlog
+status: done
 parent: S-0749
 owner: alex
 created: 2026-11-12T16:08:29Z
-updated: 2026-11-12T16:08:29Z
-transitions: []
+updated: 2026-11-15T19:57:41Z
+transitions:
+  - to: ready
+    at: 2026-11-15T19:45:27Z
+    by: agent-S-0749
+  - to: in-progress
+    at: 2026-11-15T19:45:27Z
+    by: agent-S-0749
+  - to: done
+    at: 2026-11-15T19:57:41Z
+    by: agent-S-0749
 stream: S-0749
 tags: [cli]
-touches: [flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go]
+touches: [flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/statsread/statsread.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go]
+usage:
+  source: log
+  seconds: 706
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 555
+      cache_read: 3650192
+      cache_write: 217152
+      cost: 1.4613
 ---
 # T-3235 Prime packs, the release evaluation, the digest's sources, turn counts, and statsread read a state's kind
 

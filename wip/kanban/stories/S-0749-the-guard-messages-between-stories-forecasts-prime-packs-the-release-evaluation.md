@@ -3,18 +3,21 @@ id: S-0749
 type: story
 nature: feature
 title: The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:56Z
-updated: 2026-11-15T19:43:53Z
+updated: 2026-11-15T19:57:41Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:15Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-15T19:44:10Z
+    by: agent-S-0749
 tags: [cli]
 topics: [cli, planning]
-touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go]
+touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go, flai/internal/messages/messages.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go, flai/internal/messages/share_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_figures.go, flai/internal/context/story.go, flai/internal/release/evaluate.go, flai/internal/digest/sources.go, flai/internal/usage/turns.go, flai/internal/statsread/statsread.go, flai/cmd/forecast.go, flai/internal/context/context_workflow_test.go, flai/internal/release/evaluate_workflow_test.go, flai/internal/statsread/statsread_workflow_test.go]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 797
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 304
+      output: 1711
+      cache_read: 12389929
+      cache_write: 902893
+      cost: 5.0227
   strategic:
     - kind: orchestrator
       seconds: 26

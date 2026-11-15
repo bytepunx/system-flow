@@ -3,10 +3,10 @@ id: S-0789
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-14T23:49:29Z
-updated: 2026-11-15T01:59:04Z
+updated: 2026-11-15T20:01:53Z
 transitions:
   - to: ready
     at: 2026-11-14T23:49:30Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-15T01:59:04Z
     by: agent-S-0789
+  - to: done
+    at: 2026-11-15T20:01:53Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0789-publish-what-is-accepted-and-not-yet-released.md]
 agent:

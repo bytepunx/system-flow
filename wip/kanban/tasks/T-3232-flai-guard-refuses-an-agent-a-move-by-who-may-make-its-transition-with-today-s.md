@@ -3,15 +3,36 @@ id: T-3232
 type: task
 nature: feature
 title: flai guard refuses an agent a move by who may make its transition, with today's refusals on the baseline
-status: backlog
+status: done
 parent: S-0749
 owner: alex
 created: 2026-11-12T16:08:20Z
-updated: 2026-11-12T16:08:20Z
-transitions: []
+updated: 2026-11-15T19:57:13Z
+transitions:
+  - to: ready
+    at: 2026-11-15T19:45:26Z
+    by: agent-S-0749
+  - to: in-progress
+    at: 2026-11-15T19:45:26Z
+    by: agent-S-0749
+  - to: done
+    at: 2026-11-15T19:57:13Z
+    by: agent-S-0749
 stream: S-0749
 tags: [cli]
 touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/guard/guard_test.go]
+usage:
+  source: log
+  seconds: 707
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 446
+      cache_read: 3041584
+      cache_write: 211015
+      cost: 1.229
 ---
 # T-3232 flai guard refuses an agent a move by who may make its transition, with today's refusals on the baseline
 
