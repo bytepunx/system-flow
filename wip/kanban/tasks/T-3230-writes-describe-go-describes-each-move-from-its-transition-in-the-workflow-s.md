@@ -3,16 +3,37 @@ id: T-3230
 type: task
 nature: feature
 title: writes_describe.go describes each move from its transition, in the workflow's names and with the reason it asks for
-status: backlog
+status: done
 parent: S-0747
 owner: alex
 created: 2026-11-12T16:08:13Z
-updated: 2026-11-12T16:08:13Z
-transitions: []
+updated: 2026-11-15T02:27:24Z
+transitions:
+  - to: ready
+    at: 2026-11-15T02:13:25Z
+    by: agent-S-0747
+  - to: in-progress
+    at: 2026-11-15T02:13:25Z
+    by: agent-S-0747
+  - to: done
+    at: 2026-11-15T02:27:24Z
+    by: agent-S-0747
 stream: S-0747
 tags: [cli]
-touches: [flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go]
 after: [T-3228]
+usage:
+  source: log
+  seconds: 839
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 11804
+      cache_read: 2742038
+      cache_write: 82131
+      cost: 1.3092
 ---
 # T-3230 writes_describe.go describes each move from its transition, in the workflow's names and with the reason it asks for
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2204
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 161
-      output: 895
-      cache_read: 9996758
-      cache_write: 485302
-      cost: 3.9515
+      input: 92
+      output: 26277
+      cache_read: 10273390
+      cache_write: 276300
+      cost: 4.1514
 ---
 # T-3220 The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
 

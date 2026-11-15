@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1684
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 127
-      output: 586
-      cache_read: 7371920
-      cache_write: 302699
-      cost: 2.8931
+      input: 78
+      output: 22322
+      cache_read: 7570494
+      cache_write: 173971
+      cost: 2.9646
 ---
 # T-3215 The ready-empty event, the starved-board thread, the replanner, and the planner's starts count by kind and WIP limit
 

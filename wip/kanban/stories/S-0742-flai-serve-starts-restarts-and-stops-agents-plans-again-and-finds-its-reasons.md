@@ -3,17 +3,20 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-15T01:55:53Z
+updated: 2026-11-15T02:21:10Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:40Z
     by: alex
   - to: in-progress
     at: 2026-11-15T01:15:51Z
+    by: agent-S-0742
+  - to: review
+    at: 2026-11-15T02:21:10Z
     by: agent-S-0742
 tags: [cli]
 topics: [cli, orchestration, planning]
@@ -26,32 +29,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2402
-  estimated: true
-  priced_by: estimate
+  seconds: 3936
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 3
+      ceremony: 5
       test_runs: 4
-      work: 75
+      work: 135
   models:
     - model: claude-opus-5-5
-      input: 542
-      output: 3069
-      cache_read: 40774991
-      cache_write: 1461183
-      cost: 15.9217
+      input: 676
+      output: 193226
+      cache_read: 65532154
+      cache_write: 1505936
+      cost: 25.6622
   strategic:
     - kind: orchestrator
-      seconds: 29
+      seconds: 96
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 43
-          cache_read: 330386
-          cache_write: 51750
-          cost: 0.1122
+          input: 25
+          output: 280
+          cache_read: 962056
+          cache_write: 123908
+          cost: 0.323
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 56
+          cache_read: 52795
+          cache_write: 30841
+          cost: 0.0657
 cost_of_delay:
   value: 142.52
   by: system-flow
@@ -74,11 +82,11 @@ flai serve runs a story's agent when the story makes the transition whose effect
 
 ## Acceptance criteria
 
-- [ ] The files in `flai/internal/serve` that start, restart, stop, and measure a story's agent, start the strategic roles, find the orchestrator's reasons, open the starved-board thread, plan again, and remind name no state: each reads a state's kind or a transition's effect from the workflow
-- [ ] A story's agent starts on the transition with the pull effect, restarts while its story is in a state of the active-work kind, and is stopped or left to end as today when it leaves that kind
-- [ ] The starved-board thread (ADR-0285) and the `ready-empty` event count the stories in the queue state the pull takes from and the WIP limit of the active-work states
-- [ ] Tests run the starts, the restarts, the ready-empty count, and the orchestrator's reasons against a workflow with a state renamed and one added between `in-progress` and `review`, with the outcome the kinds give
-- [ ] With the baseline, every existing `serve` test passes unchanged
+- [x] The files in `flai/internal/serve` that start, restart, stop, and measure a story's agent, start the strategic roles, find the orchestrator's reasons, open the starved-board thread, plan again, and remind name no state: each reads a state's kind or a transition's effect from the workflow
+- [x] A story's agent starts on the transition with the pull effect, restarts while its story is in a state of the active-work kind, and is stopped or left to end as today when it leaves that kind
+- [x] The starved-board thread (ADR-0285) and the `ready-empty` event count the stories in the queue state the pull takes from and the WIP limit of the active-work states
+- [x] Tests run the starts, the restarts, the ready-empty count, and the orchestrator's reasons against a workflow with a state renamed and one added between `in-progress` and `review`, with the outcome the kinds give
+- [x] With the baseline, every existing `serve` test passes unchanged
 
 ## Tasks
 

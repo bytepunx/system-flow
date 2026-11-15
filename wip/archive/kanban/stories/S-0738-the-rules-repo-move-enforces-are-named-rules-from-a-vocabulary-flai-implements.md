@@ -3,11 +3,11 @@ id: S-0738
 type: story
 nature: feature
 title: The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:55Z
-updated: 2026-11-15T00:50:57Z
+updated: 2026-11-15T07:18:00Z
 transitions:
   - to: ready
     at: 2026-11-14T17:41:18Z
@@ -18,9 +18,24 @@ transitions:
   - to: review
     at: 2026-11-15T00:50:57Z
     by: agent-S-0738
+  - to: in-progress
+    at: 2026-11-15T06:51:13Z
+    by: flai
+  - to: review
+    at: 2026-11-15T07:02:18Z
+    by: agent-S-0738
+  - to: in-progress
+    at: 2026-11-15T07:05:35Z
+    by: flai
+  - to: review
+    at: 2026-11-15T07:16:13Z
+    by: agent-S-0738
+  - to: done
+    at: 2026-11-15T07:18:00Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, design/system/workflow.md, design/issues/I-0374-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]
+touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, design/system/workflow.md, design/issues/I-0374-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/I-0378-an-acceptance-sends-a-story-back-for-a-verify-that-missed-one-main-commit.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -29,38 +44,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3738
+  seconds: 5041
   priced_by: harness
   turns:
     - day: 2026-11-14
       work: 18
     - day: 2026-11-15
-      ceremony: 2
-      work: 37
+      ceremony: 5
+      work: 67
   models:
     - model: claude-opus-5-5
-      input: 206
-      output: 71015
-      cache_read: 17243500
-      cache_write: 539567
-      cost: 8.3755
+      input: 278
+      output: 77766
+      cache_read: 28999579
+      cache_write: 886195
+      cost: 13.635
   strategic:
     - kind: orchestrator
-      seconds: 121
+      seconds: 331
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 202
-          cache_read: 1350316
-          cache_write: 184804
-          cost: 0.4557
+          input: 102
+          output: 629
+          cache_read: 3585576
+          cache_write: 478950
+          cost: 1.2143
         - model: claude-sonnet-5-5
-          input: 6
-          output: 46
-          cache_read: 46716
-          cache_write: 42844
-          cost: 0.0702
+          input: 12
+          output: 83
+          cache_read: 93558
+          cache_write: 85876
+          cost: 0.1408
 cost_of_delay:
   value: 51.66
   by: system-flow
@@ -112,3 +127,18 @@ The checks `Repo.Move` makes in code today become named rules that the workflow'
 - Tasks: T-3189 (the vocabulary); then T-3197 (the baseline lists the rules) and T-3199 (`workflow.md`) together; then T-3202 (`Repo.Move` runs them). T-3199 shares no path with T-3197.
 - Forecast 29m, as `flai forecast` gives it for size 16. The rules keep their code and their words; only how they are chosen changes.
 - Cost of delay: 51.66 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 29m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+- 2026-11-15T06:51:13Z: moved to in-progress: alex asked its agent to rebase story/S-0738 onto main and resolve what holds its acceptance, 1 blocker: S-0738's verify does not cover the main branch it would land on: its last flai verify, at 66323bb, ran over main at 449ee65, and the 47 paths main brought in si...; its agent syncs it with flai stream sync S-0738, takes each blocker's recommended action, closes out again, and moves it to review
+- 2026-11-15T07:05:35Z: moved to in-progress: alex asked its agent to rebase story/S-0738 onto main and resolve what holds its acceptance, 1 blocker: S-0738's verify does not cover the main branch it would land on: its last flai verify, at ee0e8a5, ran over main at 721f679, and the 1 path main brought in sinc...; its agent syncs it with flai stream sync S-0738, takes each blocker's recommended action, closes out again, and moves it to review
+
+### Accepted by the orchestrator
+
+- Verified: 443eb76dc63f36f9951b3466a2832643efbe6413
+- At: 2026-11-15T07:18:00Z
+
+Verdict: met. All six criteria are met, and the close-out passed at 443eb76 over main 18a62099c.
+- 1: flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go
+- 2: flai/internal/workflow/baseline_test.go
+- 3: flai/internal/workitem/rules.go
+- 4: flai/internal/workflow/workflow.go, flai/internal/workflow/rules_test.go
+- 5: flai/internal/workitem/rules_test.go
+- 6: design/system/workflow.md

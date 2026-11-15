@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 770
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 131
-      cache_read: 3084858
-      cache_write: 15540
-      cost: 1.1687
+      input: 27
+      output: 7772
+      cache_read: 3038653
+      cache_write: 81724
+      cost: 1.2279
 ---
 # T-3369 The workflow names the states the acceptance leaves from, the send-back out of a state, and the closed kinds, and flai serve opens its repositories with the workflow its options give
 

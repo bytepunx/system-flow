@@ -3,15 +3,24 @@ id: S-0747
 type: story
 nature: feature
 title: The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name
-status: backlog
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:29Z
-updated: 2026-11-15T01:56:42Z
-transitions: []
+updated: 2026-11-15T02:43:17Z
+transitions:
+  - to: ready
+    at: 2026-11-15T02:00:13Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-15T02:00:20Z
+    by: agent-S-0747
+  - to: review
+    at: 2026-11-15T02:43:17Z
+    by: agent-S-0747
 tags: [cli]
 topics: [cli, dashboard]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_forward.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/people.go, flai/internal/hostapi/people_test.go, flai/internal/hostapi/import.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/settings.go]
+touches: [flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/people.go, flai/internal/hostapi/people_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -19,20 +28,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2590
+  priced_by: harness
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      hand_edits: 1
+      work: 56
+  models:
+    - model: claude-opus-5-5
+      input: 344
+      output: 96135
+      cache_read: 22331046
+      cache_write: 668873
+      cost: 10.662
   strategic:
     - kind: orchestrator
-      seconds: 16
+      seconds: 86
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 24
-          cache_read: 178732
-          cache_write: 29353
-          cost: 0.0604
+          input: 23
+          output: 158
+          cache_read: 849545
+          cache_write: 103364
+          cost: 0.2836
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 68
+          cache_read: 124262
+          cache_write: 49439
+          cost: 0.1364
 cost_of_delay:
   value: 67.7
   by: system-flow
@@ -55,11 +82,11 @@ What the dashboard asks of flai on the host follows the workflow. A move from th
 
 ## Acceptance criteria
 
-- [ ] The host API's files in `flai/internal/hostapi` name no state: each reads a state's kind, a transition's effect, or who may make it from the workflow
-- [ ] `item.move` from the dashboard refuses a transition the operator may not make there, naming the transition and who may make it, and makes the acceptance transition through acceptance as today
-- [ ] `writes_describe.go` describes each move in the workflow's names and the reason it asks for, from the transition, not from a list of states
-- [ ] Tests run the move, the acceptance, the descriptions, and the kluster and people reads against a workflow with a state renamed and one added between `in-progress` and `review`
-- [ ] With the baseline, every existing `hostapi` test and flaiover's tests of the built flai pass unchanged
+- [x] The host API's files in `flai/internal/hostapi` name no state: each reads a state's kind, a transition's effect, or who may make it from the workflow
+- [x] `item.move` from the dashboard refuses a transition the operator may not make there, naming the transition and who may make it, and makes the acceptance transition through acceptance as today
+- [x] `writes_describe.go` describes each move in the workflow's names and the reason it asks for, from the transition, not from a list of states
+- [x] Tests run the move, the acceptance, the descriptions, and the kluster and people reads against a workflow with a state renamed and one added between `in-progress` and `review`
+- [x] With the baseline, every existing `hostapi` test and flaiover's tests of the built flai pass unchanged
 
 ## Tasks
 
@@ -83,3 +110,8 @@ What the dashboard asks of flai on the host follows the workflow. A move from th
 - Tasks: T-3228 (moves and acceptance) and T-3229 (the reads) together; T-3230 (descriptions) after T-3228, since both change `writes_test.go` and the descriptions name the moves T-3228 allows.
 - Forecast 38m, `flai forecast`'s rate for size 21, up from its 37m for the first draft's 20.
 - Cost of delay: 67.70 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 38m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### As built
+
+- Criterion 1: no file of `flai/internal/hostapi` compares a status with a state's name. Three words that look like one stay, because no answer's shape changes: the designer inbox's entry kind and count key `review`, and the Deployments answer's JSON field `review`.
+- Two checks outside `hostapi` still read names, so a workflow that renames states is not followed end to end yet: `flai move` asks a reason by the names cancelled and review to in-progress, not by the `reason-given` rule (`flai/internal/workitem/rules.go`, S-0738's), and `kluster.DeployBy` deploys only a story in `in-progress` or `review` (`flai/internal/kluster/deploy.go`, S-0743's). The host API's own checks read the kind.

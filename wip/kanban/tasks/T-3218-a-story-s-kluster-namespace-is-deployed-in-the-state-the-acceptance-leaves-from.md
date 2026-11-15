@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2178
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 100
-      output: 525
-      cache_read: 5785999
-      cache_write: 608638
-      cost: 2.4106
+      input: 56
+      output: 16030
+      cache_read: 6267339
+      cache_write: 168558
+      cost: 2.5326
 ---
 # T-3218 A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
 

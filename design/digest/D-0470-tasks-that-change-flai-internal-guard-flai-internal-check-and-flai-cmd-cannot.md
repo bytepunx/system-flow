@@ -2,14 +2,14 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver]
 date: 2026-11-03
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0601]
+cited: [S-0601, S-0744]
 ---
 
 # D-0470 Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
@@ -78,4 +78,12 @@ Layer 2 and 3 tasks ran in task worktrees (task/T-nnnn from story/S-0662) since 
 
 So tasks of one layer that change files of one package, `cmd` or `preview`, each run in a task worktree from the story branch, and their files are copied back and built and vetted together before each close.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662.
+S-0746 met it inside `flai/internal/mcpserver`. Its agent kept T-3224 and T-3226 in one layer, as they share no path or package, and made T-3225 wait for T-3224 with `after` (`wip/archive/agents/S-0746.md`):
+
+```text
+T-3225 waits for T-3224 (after), because both change flai/internal/mcpserver: sub-agents editing one package in the same worktree at once break each other's builds and collide on test helper names.
+```
+
+So two tasks that change one package, even with no file in common, either wait one for the other or each run in a task worktree (D-0396). Run together in the story's worktree, each breaks the other's build, and two test helpers of the same name collide.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746.

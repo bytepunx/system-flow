@@ -3,17 +3,20 @@ id: S-0743
 type: story
 nature: feature
 title: flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-15T01:51:11Z
+updated: 2026-11-15T02:20:31Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:55Z
     by: alex
   - to: in-progress
     at: 2026-11-15T00:51:05Z
+    by: agent-S-0743
+  - to: review
+    at: 2026-11-15T02:20:31Z
     by: agent-S-0743
 tags: [cli]
 topics: [cli, kluster]
@@ -26,31 +29,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3565
-  estimated: true
-  priced_by: estimate
+  seconds: 5378
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 1
-      work: 67
+      ceremony: 2
+      work: 150
   models:
     - model: claude-opus-5-5
-      input: 454
-      output: 2622
-      cache_read: 34292156
-      cache_write: 1661731
-      cost: 13.5535
+      input: 632
+      output: 180127
+      cache_read: 70423663
+      cache_write: 1894025
+      cost: 28.458
   strategic:
     - kind: orchestrator
-      seconds: 29
+      seconds: 87
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 20
+          output: 178
+          cache_read: 846627
+          cache_write: 142095
+          cost: 0.2938
+        - model: claude-sonnet-5-5
           input: 6
-          output: 45
-          cache_read: 330385
-          cache_write: 51750
-          cost: 0.1122
+          output: 54
+          cache_read: 48368
+          cache_write: 36531
+          cost: 0.0666
 cost_of_delay:
   value: 80.17
   by: system-flow
@@ -73,11 +81,11 @@ What flai serve does around review follows the workflow. A story is deployed int
 
 ## Acceptance criteria
 
-- [ ] `flai/internal/serve/kluster.go`, `forgestatus.go`, `forge.go`, `forgemerge.go`, and `mergequeue.go`, `flai/internal/mergequeue`, `flai/internal/kluster/deploy.go`, and `flai/internal/forge/state.go` name no state: each reads a state's kind or a transition's effect from the workflow
-- [ ] A story is deployed, pushed with its pull request, and eligible for the merge queue in the state the acceptance transition leaves from, and torn down on the transitions with the acceptance or the cancellation effect, as in `review`, `done`, and `cancelled` today
-- [ ] A failing required check, a requested change, a bisected batch, and a failed deploy send the story back along the transition with the send-back effect, with today's reason and thread
-- [ ] Tests run the deploy, the forge pass, eligibility, and the send back against a workflow with a state renamed and one added between `in-progress` and `review`, with the outcome the kinds and effects give
-- [ ] With the baseline, every existing `serve`, `mergequeue`, `kluster`, and `forge` test passes unchanged
+- [x] `flai/internal/serve/kluster.go`, `forgestatus.go`, `forge.go`, `forgemerge.go`, and `mergequeue.go`, `flai/internal/mergequeue`, `flai/internal/kluster/deploy.go`, and `flai/internal/forge/state.go` name no state: each reads a state's kind or a transition's effect from the workflow
+- [x] A story is deployed, pushed with its pull request, and eligible for the merge queue in the state the acceptance transition leaves from, and torn down on the transitions with the acceptance or the cancellation effect, as in `review`, `done`, and `cancelled` today
+- [x] A failing required check, a requested change, a bisected batch, and a failed deploy send the story back along the transition with the send-back effect, with today's reason and thread
+- [x] Tests run the deploy, the forge pass, eligibility, and the send back against a workflow with a state renamed and one added between `in-progress` and `review`, with the outcome the kinds and effects give
+- [x] With the baseline, every existing `serve`, `mergequeue`, `kluster`, and `forge` test passes unchanged
 
 ## Tasks
 

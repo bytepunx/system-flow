@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2193.6485
-accrued_seconds: 1565423
-tasks_completed: 3549
-last_run: 2026-11-15T01:49:04Z
+accrued_cost: 2197.5362
+accrued_seconds: 1566099
+tasks_completed: 3569
+last_run: 2026-11-15T07:08:41Z
 ---
 
 # Orchestrator activity
@@ -24878,6 +24878,146 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.0950 USD, estimated
+
+### 2026-11-15T01:57:32Z
+
+- Summary: Release due after S-0746 and S-0788 (threshold: count 3 >= 1, value 133.61 USD/week < 1000): started no new publish formula, since its instance S-0789 is already in progress (agent-S-0789 since 01:56:58Z) and publishes everything accepted and unreleased, S-0737, S-0746, and S-0788 included.
+- Items: S-0746, S-0788, S-0789
+- Seconds: 14
+- Cost: 0.0711 USD, estimated
+
+### 2026-11-15T01:57:52Z
+
+- Summary: I started no new release. The publish formula's instance, S-0789, is already in progress, so a second one would duplicate it.
+- Items: none
+- Seconds: 20
+- Cost: 0.1064 USD, estimated
+
+### 2026-11-15T02:00:38Z
+
+- Summary: S-0789 (publish formula instance) verified passing at 721f679 with no dry-run blocker, but accept refused on the main checkout's uncommitted D-0627 lint (MD028); left in review and opened TH-1209, same cause as TH-1206/1207/1208
+- Items: S-0789
+- Seconds: 59
+- Cost: 0.4359 USD, estimated
+
+### 2026-11-15T02:00:49Z
+
+- Summary: ready-empty: promoted promote_candidates' four by throughput rank to ready, S-0747 (rank 1, 38m), S-0749 (2, 42m), S-0748 (3, 53m), S-0750 (4, 1h); applied flai order --by throughput (S-0747 pulled at once by its agent)
+- Items: S-0747, S-0749, S-0748, S-0750
+- Seconds: 11
+- Cost: 0.0340 USD, estimated
+
+### 2026-11-15T02:01:10Z
+
+- Summary: S-0789 is still in review: flai refused its acceptance. The ready column now holds four stories again, and one more is already in progress.
+- Items: none
+- Seconds: 21
+- Cost: 0.1476 USD, estimated
+
+### 2026-11-15T02:22:07Z
+
+- Summary: S-0743 verified under accept_reviews: close-out passed at head 8dd5578, verifier found all 5 criteria met, dry run had no blocker. flai accept refused on MD028 in uncommitted D-0627 line 20 on main, the same cause as TH-1206 to TH-1209. Left S-0743 in review and opened TH-1210 asking the operator to fix the file.
+- Items: S-0743, TH-1210
+- Seconds: 58
+- Cost: 0.2482 USD, estimated
+
+### 2026-11-15T02:22:25Z
+
+- Summary: S-0743 is still in review: flai refused the acceptance because of a markdown lint error in an uncommitted file on main that S-0743 doesn't touch.
+- Items: none
+- Seconds: 18
+- Cost: 0.2733 USD, estimated
+
+### 2026-11-15T02:23:47Z
+
+- Summary: S-0742 verified at 7a2dfc7: close-out passed, verifier found all 5 criteria met, accept dry run had no blocker; accept refused on the main checkout's uncommitted D-0627 failing MD028 at line 20 (same as TH-1206..TH-1210). Opened a thread on S-0742 for the operator; left it in review. Value 142.52 USD/week.
+- Items: S-0742
+- Seconds: 67
+- Cost: 0.2765 USD, estimated
+
+### 2026-11-15T02:24:06Z
+
+- Summary: I couldn't accept S-0742. flai refused it for the same lint error in the main checkout that has held five other stories.
+- Items: none
+- Seconds: 19
+- Cost: 0.1906 USD, estimated
+
+### 2026-11-15T02:44:59Z
+
+- Summary: S-0747 left in review: close-out passed at be8fafb, verifier met all 5 criteria, dry run had no blocker, but accept refused on main's uncommitted D-0627 MD028 lint (same cause as TH-1206..TH-1211); opened TH-1212 to the operator. No acceptance, so no release evaluation.
+- Items: S-0747, TH-1212
+- Seconds: 67
+- Cost: 0.3511 USD, estimated
+
+### 2026-11-15T02:45:16Z
+
+- Summary: I couldn't accept S-0747, so it stays in review. The story itself is fine; flai refused the acceptance because of a lint error in an uncommitted file on main.
+- Items: none
+- Seconds: 17
+- Cost: 0.1010 USD, estimated
+
+### 2026-11-15T06:52:30Z
+
+- Summary: TH-1213 (S-0738 sent back by alex's acceptance): left it alone, a flai notice for S-0738's agent that flai serve resolves; resolved my TH-1206 on S-0738, its D-0627 lint concern fixed on main (f01a053e7), so it no longer holds S-0738's next acceptance as own_thread_open.
+- Items: S-0738
+- Seconds: 41
+- Cost: 0.1245 USD, estimated
+
+### 2026-11-15T06:52:51Z
+
+- Summary: I didn't answer TH-1213, because it isn't mine to answer: flai wrote it for S-0738's own agent, not for the operator. That agent has already started again to rebase `story/S-0738` onto main and rerun its close-out. flai serve closes the thread once S-0738 is back in review.
+- Items: none
+- Seconds: 21
+- Cost: 0.2667 USD, estimated
+
+### 2026-11-15T07:04:21Z
+
+- Summary: S-0738 verified at ee0e8a5 (close-out passed over main 721f679; verifier: all 6 criteria met; dry run no blocker), but accept refused: D-0627 line 20 on main still fails MD028 after f01a053e7 left two spaces there. Left in review; opened TH-1214 for the operator. Value 51.66 USD/week, forecast 29m.
+- Items: S-0738
+- Seconds: 88
+- Cost: 0.3717 USD, estimated
+
+### 2026-11-15T07:04:43Z
+
+- Summary: I couldn't accept S-0738. It passed every check, but flai refused the acceptance because a file on main fails markdown lint. The story stays in review.
+- Items: none
+- Seconds: 22
+- Cost: 0.1687 USD, estimated
+
+### 2026-11-15T07:06:29Z
+
+- Summary: TH-1215 needed no action: it is flai's notice sending S-0738 back to in-progress for its agent to rebase and close out again. Its last entry is by flai, so answer_threads leaves it alone, and agent-S-0738 is already running on it. TH-1214 stays open: line 20 of D-0627 is committed on main (18a62099c) but still blank between two blockquotes.
+- Items: S-0738
+- Seconds: 18
+- Cost: 0.0980 USD, estimated
+
+### 2026-11-15T07:06:48Z
+
+- Summary: I took no action on TH-1215, and none was needed.
+- Items: none
+- Seconds: 19
+- Cost: 0.2197 USD, estimated
+
+### 2026-11-15T07:08:08Z
+
+- Summary: Answered TH-1214, citing no source
+- Items: S-0738
+- Seconds: 63
+- Cost: 0.2350 USD, estimated
+
+### 2026-11-15T07:08:22Z
+
+- Summary: TH-1214: S-0738 is in progress again (rebase, close-out job running), so nothing to accept. Linted D-0627 at main 18a62099c: line 20, now empty, still fails MD028. Told the operator to put '>' on it; until then S-0738 and the six stories on TH-1207 to TH-1212 stay held.
+- Items: S-0738
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-15T07:08:41Z
+
+- Summary: S-0738 can't be accepted yet: the operator's fix to D-0627 still fails markdown lint.
+- Items: none
+- Seconds: 19
+- Cost: 0.1677 USD, estimated
 
 ## Refusals
 

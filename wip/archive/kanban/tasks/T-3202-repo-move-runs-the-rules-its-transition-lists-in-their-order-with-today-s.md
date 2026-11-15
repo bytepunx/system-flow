@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 55
-      output: 18874
-      cache_read: 4582862
-      cache_write: 143403
-      cost: 2.226
+      input: 44
+      output: 12270
+      cache_read: 4575605
+      cache_write: 139825
+      cost: 2.1514
 ---
 # T-3202 Repo.Move runs the rules its transition lists, in their order, with today's refusals and warnings word for word, and each rule is tested
 

@@ -3,15 +3,36 @@ id: T-3228
 type: task
 nature: feature
 title: The dashboard's item.move refuses a transition the operator may not make there, and an acceptance from the board makes the acceptance transition
-status: backlog
+status: done
 parent: S-0747
 owner: alex
 created: 2026-11-12T16:08:01Z
-updated: 2026-11-12T16:08:01Z
-transitions: []
+updated: 2026-11-15T02:13:14Z
+transitions:
+  - to: ready
+    at: 2026-11-15T02:02:58Z
+    by: agent-S-0747
+  - to: in-progress
+    at: 2026-11-15T02:02:58Z
+    by: agent-S-0747
+  - to: done
+    at: 2026-11-15T02:13:14Z
+    by: agent-S-0747
 stream: S-0747
 tags: [cli]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/flow.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/hostapi.go]
+usage:
+  source: log
+  seconds: 616
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 14426
+      cache_read: 3351081
+      cache_write: 100374
+      cost: 1.6
 ---
 # T-3228 The dashboard's item.move refuses a transition the operator may not make there, and an acceptance from the board makes the acceptance transition
 

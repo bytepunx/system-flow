@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 3849
-      cache_read: 934689
-      cache_write: 29247
-      cost: 0.454
+      input: 9
+      output: 2503
+      cache_read: 933209
+      cache_write: 28518
+      cost: 0.4388
 ---
 # T-3199 workflow.md lists the baseline's rules by name on each transition
 

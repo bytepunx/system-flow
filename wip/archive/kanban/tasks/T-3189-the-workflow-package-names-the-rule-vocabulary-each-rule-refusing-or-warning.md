@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 1013
-      cache_read: 245961
-      cache_write: 7696
-      cost: 0.1195
+      input: 2
+      output: 659
+      cache_read: 245572
+      cache_write: 7504
+      cost: 0.1155
 ---
 # T-3189 The workflow package names the rule vocabulary, each rule refusing or warning, and refuses a transition naming a rule it lacks
 

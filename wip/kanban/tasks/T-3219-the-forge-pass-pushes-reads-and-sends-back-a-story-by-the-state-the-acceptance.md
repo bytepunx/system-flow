@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2201
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 97
-      output: 490
-      cache_read: 5452629
-      cache_write: 271755
-      cost: 2.1579
+      input: 50
+      output: 14350
+      cache_read: 5610434
+      cache_write: 150891
+      cost: 2.2672
 ---
 # T-3219 The forge pass pushes, reads, and sends back a story by the state the acceptance leaves from and the send-back effect
 

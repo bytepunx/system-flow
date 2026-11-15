@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 13
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 40
-      cache_read: 574416
-      cache_write: 1365
-      cost: 0.217
+      input: 6
+      output: 1675
+      cache_read: 567965
+      cache_write: 13052
+      cost: 0.2224
 ---
 # T-3370 flai serve carries the workflow its passes read, and names the pull, the active-work room, and the kinds they read it by
 

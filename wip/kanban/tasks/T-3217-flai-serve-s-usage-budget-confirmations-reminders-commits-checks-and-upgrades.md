@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1690
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 103
-      output: 479
-      cache_read: 5372548
-      cache_write: 237026
-      cost: 2.1147
+      input: 57
+      output: 16316
+      cache_read: 5533473
+      cache_write: 127160
+      cost: 2.1669
 ---
 # T-3217 flai serve's usage, budget, confirmations, reminders, commits, checks, and upgrades read a state's kind
 

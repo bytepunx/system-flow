@@ -24,16 +24,16 @@ touches: [design/system/workflow.md]
 after: [T-3213, T-3215, T-3216, T-3217]
 usage:
   source: log
-  seconds: 5
+  seconds: 8
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 362518
-      cache_write: 720
-      cost: 0.1369
+      input: 4
+      output: 1056
+      cache_read: 358307
+      cache_write: 8234
+      cost: 0.1403
 ---
 # T-3372 workflow.md says how flai serve reads the workflow's kinds and the pull
 

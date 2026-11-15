@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1687
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 360
-      cache_read: 4183118
-      cache_write: 268841
-      cost: 1.6783
+      input: 45
+      output: 12949
+      cache_read: 4391561
+      cache_write: 100919
+      cost: 1.7197
 ---
 # T-3216 The strategic roles' starts and the orchestrator's reasons and hold read a state's kind and a transition's effect
 

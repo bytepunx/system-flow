@@ -9,7 +9,7 @@ date: 2026-11-14
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1206]
 ---
 
 # D-0628 Item.Validate still checks a status against the baseline workflow, aliases included, not the repository's workflow, and Repo.Save does not validate

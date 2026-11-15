@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1679
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 144
-      output: 697
-      cache_read: 9218142
-      cache_write: 363609
-      cost: 3.612
+      input: 97
+      output: 27869
+      cache_read: 9451742
+      cache_write: 217202
+      cost: 3.7013
 ---
 # T-3213 A story's agent starts on the pull transition, restarts while its story is in active work, and stops as today when it leaves that kind
 
