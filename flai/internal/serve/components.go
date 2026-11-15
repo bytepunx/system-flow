@@ -482,18 +482,22 @@ func (c *Components) stopLeft() {
 
 // StoryLeft says whether the dev server of the worktree of the story it,
 // started at since, is to stop: it is, when the story is no longer on the
-// board (it nil, or archived), is neither in progress nor in review, or moved
-// out of review, to done, cancelled, or back to in progress, at or after
-// since; a story that moved from in progress to review keeps it. A
-// transition's time has whole seconds, so since is taken to its second.
+// board (it nil, or archived), is in no state of the active or the waiting
+// kind (in progress or in review, in the baseline), or moved out of the
+// waiting kind, to done, cancelled, or back to active work, at or after
+// since; a story that moved from active work to waiting keeps it. A
+// transition's time has whole seconds, so since is taken to its second. The
+// kinds are the baseline workflow's: the story is all a look reads of the
+// project (ComponentsOptions.Story).
 func StoryLeft(it *workitem.Item, since time.Time) bool {
-	if it == nil || it.Archived || it.Status != workitem.InProgress && it.Status != workitem.Review {
+	wf := baselineFlow
+	if it == nil || it.Archived || !isUnderway(wf, it.Status) {
 		return true
 	}
 	from := since.Truncate(time.Second)
 	prev := ""
 	for _, t := range it.Transitions {
-		if prev == workitem.Review && t.To != workitem.Review {
+		if isWaiting(wf, prev) && !isWaiting(wf, t.To) {
 			if at, err := time.Parse(time.RFC3339, t.At); err == nil && !at.Before(from) {
 				return true
 			}

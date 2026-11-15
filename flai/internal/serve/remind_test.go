@@ -301,6 +301,28 @@ func TestOnlyThreadsAwaitingTheOperatorOnOpenWorkPastTheThresholdAreReminded(t *
 	}
 }
 
+// S-0742: the reminder reads which states close an item from the workflow
+// the project runs, not from their names: on a board with in-progress
+// renamed and testing, of the active kind, added after it, a thread on a
+// done or a cancelled story is not reminded, and one on a story in testing
+// is.
+func TestTheReminderReadsWhichStatesCloseAnItemFromTheWorkflow(t *testing.T) {
+	lab := newRemindLab(t, "4h")
+	wf := kindsWorkflow(t)
+	lab.repo.Workflow, lab.r.flow = wf, wf
+	done, cancelled, beacon := lab.newStory("Lighthouse"), lab.newStory("Buoy"), lab.newStory("Beacon")
+	lab.finish(done, "done")
+	lab.finish(cancelled, "cancelled")
+	lab.finish(beacon, "testing")
+	onDone := lab.ask(done, "builder-"+done, "Which lamp?")
+	onCancelled := lab.ask(cancelled, "builder-"+cancelled, "Which bell?")
+	onTesting := lab.ask(beacon, "builder-"+beacon, "Which colour?")
+	lab.after(4 * time.Hour)
+	if got := lab.look(); !sameThreads(got, onTesting) {
+		t.Fatalf("reminded of %v, want %s on the story in testing alone (not %s on a done story, %s on a cancelled one)", got, onTesting, onDone, onCancelled)
+	}
+}
+
 // (4) With threads.remind_after unset nothing is sent.
 func TestUnsetRemindAfterSendsNothing(t *testing.T) {
 	lab := newRemindLab(t, "")

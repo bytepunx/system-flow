@@ -3,21 +3,24 @@ package serve
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Commit starts a story's agent, in a new session, to commit what its
 // worktree holds and nothing else, on the operator's word (S-0140): flai
 // serve agent commit, or the story page's button when the acceptance preview
-// finds the worktree uncommitted. It is for a story in review: its agent has
-// ended, and the work it left uncommitted stops the acceptance. It is refused
-// while the agent action is off for the project, when the story is not in
-// review, while its agent runs or waits for an answer, when it has no
-// worktree or the worktree holds nothing uncommitted, when its agent runs
-// elsewhere (harness none, ADR-0242), and when nothing can start it. The
-// in-progress limit does not apply: the story is past it.
+// finds the worktree uncommitted. It is for a story in a state of the waiting
+// kind, review in the baseline: its agent has ended, and the work it left
+// uncommitted stops the acceptance. It is refused while the agent action is
+// off for the project, when the story is in a state of another kind, while
+// its agent runs or waits for an answer, when it has no worktree or the
+// worktree holds nothing uncommitted, when its agent runs elsewhere (harness
+// none, ADR-0242), and when nothing can start it. The limit of the
+// active-work states does not apply: the story is past them.
 func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -26,7 +29,7 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +40,12 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 	if it.Type != workitem.Story {
 		return nil, refused("%s is %s; only a story has an agent", it.ID, it.Type)
 	}
-	if it.Status != workitem.Review {
-		return nil, refused("%s is in %s; only a story in review has its worktree committed this way, and one in progress commits its own", it.ID, it.Status)
+	if wf := repo.Flow(); !isWaiting(wf, it.Status) {
+		var waits []string
+		for _, s := range wf.OfKind(workflow.KindWaiting) {
+			waits = append(waits, s.Name)
+		}
+		return nil, refused("%s is in %s; only a story in %s has its worktree committed this way, and one in progress commits its own", it.ID, it.Status, strings.Join(waits, " or "))
 	}
 	switch run := o.Dir.AgentStates()[e.Root].Stories[it.ID]; {
 	case run.running():

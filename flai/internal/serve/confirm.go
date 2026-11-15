@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -22,9 +23,9 @@ import (
 // as flai serve (threads.ConfirmByTimeout), the pending recommendation of the
 // orchestrator's on each open thread that a story's agent or a planner
 // opened, that is no permission prompt's, on a document or on a work item
-// that is not done or cancelled, when the recommendation is not marked for
-// the operator alone, has waited confirm_after, and has no entry by the
-// operator after it. The thread is then answered, and the launcher, which
+// in no state that closes it, done or cancelled in the baseline, when the
+// recommendation is not marked for the operator alone, has waited
+// confirm_after, and has no entry by the operator after it. The thread is then answered, and the launcher, which
 // sees the change under threads, starts the asking agent again as on the
 // operator's confirmation.
 //
@@ -49,6 +50,9 @@ type confirmer struct {
 	// orchestrating says whether the orchestrate host action is on for the
 	// project, read at each look.
 	orchestrating func() bool
+	// flow is the workflow the project runs, Options.Workflow: nil runs the
+	// baseline. Which states close an item is read from it.
+	flow *workflow.Workflow
 
 	mu   sync.Mutex
 	said map[string]bool // the problems warned of, so each is warned once
@@ -57,7 +61,7 @@ type confirmer struct {
 // newConfirmer is the confirmer for project e. The orchestrate host action
 // is read as the orchestrator's look reads it, from o.Agent.
 func newConfirmer(o Options, e Entry) *confirmer {
-	return &confirmer{e: e, now: o.Now, log: o.Logger,
+	return &confirmer{e: e, now: o.Now, log: o.Logger, flow: o.Workflow,
 		orchestrating: func() bool { return o.Agent != nil && o.Agent(e.Root).Orchestrate }}
 }
 
@@ -76,6 +80,7 @@ func (c *confirmer) look(ctx context.Context) {
 		c.warnOnce("recommendations not confirmed: the project could not be read", err)
 		return
 	}
+	repo.Workflow = c.flow
 	after, err := repo.Manifest.Orchestration.Permissions.ConfirmAfterDuration()
 	if err != nil {
 		c.warnOnce("recommendations not confirmed for a setting not valid", err)
@@ -122,7 +127,7 @@ func dueConfirmation(repo *workitem.Repo, th *threads.Thread, after time.Duratio
 	}
 	if item := th.Anchor.Item; item != "" {
 		// an item flai cannot read is not known to be finished
-		if it, err := repo.Get(item); err == nil && (it.Status == workitem.Done || it.Status == workitem.Cancelled) {
+		if it, err := repo.Get(item); err == nil && isClosed(repo.Flow(), it.Status) {
 			return nil, at, false
 		}
 	}

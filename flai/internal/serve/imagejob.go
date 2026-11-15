@@ -819,8 +819,9 @@ func (h *imageJobsHost) Ensure(key, root string) (hostapi.ImageStarted, error) {
 
 // judgeProjectImages tells of the agent images of the project at root what
 // flai image status does: every image needed by the agents its manifest
-// starts and those of its stories ready, in progress, or in review, as flai
-// serve starts them, on the container harness agent says for it; and their
+// starts and those of its stories waiting to be pulled or pulled and not
+// closed, ready, in progress, or in review in the baseline, as flai serve
+// starts them, on the container harness agent says for it; and their
 // state through the docker client docker runs, against the flai version the
 // project's flai.command prints, else this flai's. It fails when the
 // project's stories cannot be read; docker not saying is unjudged.
@@ -838,8 +839,9 @@ func judgeProjectImages(root string, agent func(root string) AgentConfig, docker
 		cfg = agent(root)
 	}
 	agents := agentimage.Agents(repo.Manifest)
+	wf := repo.Flow()
 	for _, it := range items {
-		if it.Type == workitem.Story && (it.Status == workitem.Ready || it.Status == workitem.InProgress || it.Status == workitem.Review) {
+		if it.Type == workitem.Story && (isPullable(wf, it.Status) || isUnderway(wf, it.Status)) {
 			agents = append(agents, cfg.storyAgent(repo, it))
 		}
 	}

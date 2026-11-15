@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -121,7 +122,7 @@ type Unread struct {
 // Measure measures story in the project at root, named key, from the logs
 // of the agents flai serve started for it: the story from all of them, each
 // task from its sub-agents' calls and its share of the rest over the
-// intervals it was in progress. A run through a provider is priced by its
+// intervals it was in a state of the active kind. A run through a provider is priced by its
 // gateway's spend log, read with the key of the host's entry in providers,
 // as price says (ADR-0132). With write, it records what differs from what
 // the items say, and sums the story's epic again. A task that has been done
@@ -170,10 +171,11 @@ func Measure(d Dir, root, key, story string, providers map[string]manifest.Provi
 	if err != nil {
 		return nil, err
 	}
+	wf := repo.Flow()
 	tasks := workitem.Children(items, story)
 	spans := map[string][]usage.Span{}
 	for _, t := range tasks {
-		spans[t.ID] = inProgress(t)
+		spans[t.ID] = activeSpans(wf, t)
 	}
 	measured := rec.Tasks(spans, rates)
 	for _, u := range measured {
@@ -181,7 +183,7 @@ func Measure(d Dir, root, key, story string, providers map[string]manifest.Provi
 	}
 	for _, t := range tasks {
 		u := measured[t.ID]
-		if u == nil && t.Status == workitem.Done && len(spans[t.ID]) > 0 {
+		if u == nil && isAccepted(wf, t.Status) && len(spans[t.ID]) > 0 {
 			u = &usage.Usage{Source: usage.SourceLog, Models: []usage.Model{}}
 		}
 		if u != nil {
@@ -259,23 +261,28 @@ func saveUsage(repo *workitem.Repo, id string, u *usage.Usage) (bool, error) {
 	return true, nil
 }
 
-// inProgress are the intervals an item was in progress, the last open when
-// it still is.
-func inProgress(it *workitem.Item) []usage.Span {
+// activeSpans are the intervals an item was worked in, each from its move
+// into a state of the active kind to its next move into a state of another
+// kind, so that moves between active states, such as from in-progress to a
+// testing state after it, keep one interval; the last is open when it still
+// is in one.
+func activeSpans(wf workflow.Workflow, it *workitem.Item) []usage.Span {
 	var out []usage.Span
-	for i, tr := range it.Transitions {
-		if tr.To != workitem.InProgress {
-			continue
+	open := false
+	for _, tr := range it.Transitions {
+		active := isActive(wf, tr.To)
+		switch {
+		case active && !open:
+			from, err := time.Parse(workitem.TimeFormat, tr.At)
+			if err != nil {
+				continue
+			}
+			out = append(out, usage.Span{From: from})
+			open = true
+		case !active && open:
+			out[len(out)-1].To, _ = time.Parse(workitem.TimeFormat, tr.At)
+			open = false
 		}
-		from, err := time.Parse(workitem.TimeFormat, tr.At)
-		if err != nil {
-			continue
-		}
-		s := usage.Span{From: from}
-		if i+1 < len(it.Transitions) {
-			s.To, _ = time.Parse(workitem.TimeFormat, it.Transitions[i+1].At)
-		}
-		out = append(out, s)
 	}
 	return out
 }
@@ -319,7 +326,7 @@ func (l *launcher) measureDone(st AgentState) {
 	if len(running) == 0 {
 		return
 	}
-	repo, err := workitem.Open(l.entry.Root)
+	repo, err := l.open(l.entry.Root)
 	if err != nil {
 		return
 	}
@@ -327,10 +334,11 @@ func (l *launcher) measureDone(st AgentState) {
 	if err != nil {
 		return
 	}
+	wf := repo.Flow()
 	sort.Strings(running)
 	for _, id := range running {
 		for _, t := range workitem.Children(items, id) {
-			if t.Status == workitem.Done && t.Usage == nil {
+			if isAccepted(wf, t.Status) && t.Usage == nil {
 				l.measure(id)
 				break
 			}

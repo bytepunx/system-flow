@@ -786,7 +786,14 @@ func newClaudeScratch(git execx.Runner, now time.Time, files map[string]string) 
 	if err != nil {
 		return s, err
 	}
-	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+	// moved to the state the pull takes from and pulled, as a story whose
+	// agent flai serve starts is
+	wf := repo.Flow()
+	pull, ok := pullTransition(wf)
+	if !ok {
+		return s, errors.New("the scratch project's workflow has no transition with the pull effect, so no story in it can be pulled; this flai's baseline workflow is not valid")
+	}
+	for _, to := range []string{pullQueue(wf), pull.To} {
 		if _, err := repo.Transition(story, to, claudeCheckAgent, "", now); err != nil {
 			return s, err
 		}

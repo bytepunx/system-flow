@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -27,9 +28,9 @@ import (
 // With the manifest's threads.remind_after set, it reminds the operator,
 // through the channel the host configuration keeps (Send), of each open
 // thread the inbox marks awaiting them (ADR-0181), on a document or on a
-// work item that is not done or cancelled, whose last entry is older than
-// remind_after, and again every threads.remind_every while it still awaits
-// them. A new entry starts the count over from that entry. With no channel
+// work item in no state that closes it, done or cancelled in the baseline,
+// whose last entry is older than remind_after, and again every
+// threads.remind_every while it still awaits them. A new entry starts the count over from that entry. With no channel
 // set, the reminder is logged instead, and that no channel is set is warned
 // of once per project per run.
 //
@@ -116,6 +117,9 @@ type reminder struct {
 	channel func() config.Notify // read at each look; nil is no channel
 	send    func(ctx context.Context, ch config.Notify, r Reminder) error
 	looks   *sync.WaitGroup // a look in the background is counted here
+	// flow is the workflow the project runs, Options.Workflow: nil runs the
+	// baseline. Which states close an item is read from it.
+	flow *workflow.Workflow
 
 	busy atomic.Bool
 	mu   sync.Mutex
@@ -127,7 +131,7 @@ type reminder struct {
 // newReminder is the reminder for project e; a look in the background is
 // counted in looks, which flai serve waits for when it stops.
 func newReminder(o Options, e Entry, looks *sync.WaitGroup) *reminder {
-	return &reminder{e: e, dir: o.Dir, now: o.Now, log: o.Logger, channel: o.Notify, send: Send, looks: looks}
+	return &reminder{e: e, dir: o.Dir, now: o.Now, log: o.Logger, channel: o.Notify, send: Send, looks: looks, flow: o.Workflow}
 }
 
 // soon looks in the background unless a look still runs: a send waits on
@@ -155,6 +159,7 @@ func (r *reminder) look(ctx context.Context) {
 		r.warnOnce("thread reminders could not read the project", err)
 		return
 	}
+	repo.Workflow = r.flow
 	after, err := repo.Manifest.Threads.RemindAfterDuration()
 	if err != nil {
 		r.warnOnce("thread reminders off for a setting not valid", err)
@@ -214,8 +219,8 @@ func (r *reminder) look(ctx context.Context) {
 }
 
 // awaitsOperator answers, of an open thread that awaits the operator, as
-// inbox.Summarize says (ADR-0181), on a document or on a work item that is
-// not done or cancelled, when its last entry was written and its summary;
+// inbox.Summarize says (ADR-0181), on a document or on a work item in no
+// state that closes it, when its last entry was written and its summary;
 // ok is false for any other thread.
 func awaitsOperator(repo *workitem.Repo, th *threads.Thread) (since time.Time, sum inbox.ThreadSummary, ok bool) {
 	if !th.Open() {
@@ -227,7 +232,7 @@ func awaitsOperator(repo *workitem.Repo, th *threads.Thread) (since time.Time, s
 	}
 	if item := th.Anchor.Item; item != "" {
 		// an item flai cannot read is not known to be finished
-		if it, err := repo.Get(item); err == nil && (it.Status == workitem.Done || it.Status == workitem.Cancelled) {
+		if it, err := repo.Get(item); err == nil && isClosed(repo.Flow(), it.Status) {
 			return time.Time{}, sum, false
 		}
 	}
