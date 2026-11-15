@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-11-14
+updated: 2026-11-15
 status: active
 topics: [all]
 ---
@@ -79,6 +79,39 @@ Tasks are not part of ready. The agent that pulls the story writes them once it 
 | done to anything | Nobody | Done is final: acceptance merged and archived the work |
 | backlog, ready, or in-progress to cancelled | Human | Reason appended to the item's notes. Everything open under the item is cancelled with it ([ADR-0028](../adrs/0028-cancelling-an-item-cancels-everything-open-under-it.md)) |
 | review to cancelled | Only a parent's cancellation | An item in review is accepted or sent back; it is cancelled only with its epic or story. An epic in review has no parent: it is moved back to in-progress first, or its stories are accepted |
+
+The checks behind the required actions are named rules from the vocabulary flai implements, `flai/internal/workflow/rules.go` ([ADR-0301 §4](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)). Each transition of the baseline lists them, and `Repo.Move` runs them in that order (S-0738). A rule checks only the item types it names, and refuses the move or warns and lets it through by its default severity, unless the transition sets another. A workflow file naming a rule the vocabulary lacks is refused when it is read, under `workflow.rule`, naming the rule and the transition.
+
+| Transition | Types | Rules, in order |
+|------------|-------|-----------------|
+| backlog to ready, in-progress to ready | all | `criteria-present`, `not-draft`, `after-done` |
+| ready to in-progress | all | `not-blocked`, `not-held`, `task-after` |
+| in-progress to review | all | `has-task`, `no-open-question`, `clean-worktree`, `criteria-ticked` (warn), `kluster-verified` |
+| review to done | epic, story | `children-closed`, `criteria-ticked` |
+| review to done, in-progress to done | task | `children-closed` |
+| review to in-progress | all | `reason-given`, `not-blocked`, `task-after` |
+| ready to backlog | all | none |
+| backlog, ready, in-progress, or review to cancelled | all | `reason-given` |
+| cancelled to backlog | all | `parent-open` |
+
+| Rule | Checks | Types | Default |
+|------|--------|-------|---------|
+| `criteria-present` | The body has `## Acceptance criteria` with at least one checkbox | story | refuse |
+| `not-draft` | The story is not a draft, or the move finalizes it (`--yes`) | story | refuse |
+| `has-task` | The story has at least one task | story | refuse |
+| `no-open-question` | The story's narrative has no open question | story | refuse |
+| `clean-worktree` | Nothing is uncommitted in the story's worktree; a worktree git cannot read warns (I-0017) | story | refuse |
+| `criteria-ticked` | Every acceptance criterion is ticked | story | refuse |
+| `kluster-verified` | The story's kluster namespace is deployed at its branch's head and its checks passed there, where the manifest's `kluster:` block names a deploy and the `kluster` host action is on (ADR-0292); `flai move` and `item_move` check it, since they read the namespace's record, and `Repo.Move` passes it by | story | warn |
+| `children-closed` | Every child is done or cancelled | epic, story | refuse |
+| `reason-given` | The move gives a reason; a cascade gives its parent's | all | refuse |
+| `parent-open` | The item's parent is not cancelled | all | refuse |
+| `not-blocked` | The item has no open blocked interval | all | warn |
+| `not-held` | The story is not held by an overlap or by `after` | story | warn |
+| `after-done` | Every story the story names in `after` is done | story | warn |
+| `task-after` | Every task the task names in `after` is closed | task | warn |
+
+The WIP limit is no rule: every move of a story into a column with a limit warns when it takes the column over it.
 
 `flai move <id> <state>` performs a transition, appends it to `transitions`, updates `status` and `updated`, and validates the rule for that transition. A `--reason` is recorded under the item's `## Notes`. Tasks may skip `review` and go from `in-progress` to `done` directly. A move to `cancelled` takes everything open under the item with it, in one operation: an epic's stories that are not done or cancelled and their open tasks, a story's open tasks. Each gets its own `cancelled` transition with the same actor and time and a note naming the item whose cancellation caused it; done, cancelled, and archived items are left alone; every move is validated before any file is written. A cancelled story moves its epic forward as [below](#an-epic-follows-its-stories); the stories an epic's cancellation takes with it do not. `flai move` lists the items first, asks on a terminal unless `--yes`, and changes nothing under `--dry-run`; the board shows the same list in its confirmation. Branches, worktrees, and narratives are never removed by a cancellation; the command names what it left. `flai check` reports an open item under a cancelled parent as `item.parent-cancelled`. A story moved from `review` to `done` is accepted rather than merely transitioned; a story found `done` but unarchived was never accepted, `flai check` flags it as `story.unaccepted`, and `flai accept` completes it. The board's `order` list is the pull order: ready stories first, then backlog stories in the order they should be refined.
 
