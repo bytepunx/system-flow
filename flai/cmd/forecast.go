@@ -42,7 +42,7 @@ the result with flai edit --forecast-duration, --forecast-delivery, and
 			if err != nil {
 				return fmt.Errorf("cannot read the board's pull order and in-progress limit: %w; restore board.md from git or run flai check to see what is wrong", err)
 			}
-			res, err := planning.Forecast(items, board, repo.Manifest.Planning, args[0], a.now())
+			res, err := planning.ForecastIn(repo.Flow(), items, board, repo.Manifest.Planning, args[0], a.now())
 			if err != nil {
 				return err
 			}

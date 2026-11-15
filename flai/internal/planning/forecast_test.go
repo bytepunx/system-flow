@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -311,5 +312,144 @@ func TestAPullerAnswersEachSequenceAsPullTimes(t *testing.T) {
 				t.Errorf("limit %d, sequence %d: the puller gives %v, PullTimes %v", limit, i, got, want)
 			}
 		}
+	}
+}
+
+// otherWorkflow is a board unlike the baseline: ready is renamed next, done
+// accepted, and review acceptance-review, keeping review as its alias, and
+// testing, of the active-work kind, sits between in-progress and it.
+const otherWorkflow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: next, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: accepted, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: next, effects: [commit]}
+  - {from: next, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: accepted, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: [backlog, next, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+func otherFlow(t *testing.T) workflow.Workflow {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", otherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	return w
+}
+
+// accepted is done under otherWorkflow: in progress for seconds, in testing
+// half as long again, so in the active-work states 1.5 times as long as its
+// agents worked, and accepted twice as long after it started.
+func accepted(id string, seconds int64) *workitem.Item {
+	it := done(id, "feature", seconds)
+	it.Status = "accepted"
+	at := func(factor float64) string {
+		return at(history.Add(time.Duration(float64(seconds) * factor * float64(time.Second))))
+	}
+	it.Transitions = []workitem.Transition{
+		{To: workitem.InProgress, At: at(0)}, {To: "testing", At: at(1)},
+		{To: "acceptance-review", At: at(1.5)}, {To: "accepted", At: at(2)},
+	}
+	return it
+}
+
+// otherItems are three accepted feature stories as past gives, S-0011 in
+// progress and S-0012 in testing, both since 11:00, S-0013 in
+// acceptance-review since 10:00, S-0014 next and S-0015 in backlog.
+func otherItems() []*workitem.Item {
+	held := story("S-0011", workitem.InProgress, "feature", "m1", 2, 2, now.Add(-time.Hour))
+	held.Forecast = &workitem.Forecast{Duration: "2h"}
+	testing := story("S-0012", workitem.InProgress, "feature", "m1", 2, 2, now.Add(-time.Hour))
+	testing.Status = "testing"
+	testing.Forecast = &workitem.Forecast{Duration: "1h"}
+	testing.Transitions = append(testing.Transitions, workitem.Transition{To: "testing", At: at(now.Add(-30 * time.Minute))})
+	reviewed := story("S-0013", workitem.InProgress, "feature", "m1", 2, 2, now.Add(-2*time.Hour))
+	reviewed.Status = "acceptance-review"
+	reviewed.Transitions = append(reviewed.Transitions, workitem.Transition{To: "acceptance-review", At: at(now.Add(-time.Hour))})
+	return []*workitem.Item{
+		accepted("S-0001", 1200), accepted("S-0002", 1600), accepted("S-0003", 2000),
+		held, testing, reviewed,
+		story("S-0014", "next", "feature", "m1", 2, 2, time.Time{}),
+		story("S-0015", workitem.Backlog, "feature", "m1", 2, 2, time.Time{}),
+	}
+}
+
+// S-0749: under a workflow with states renamed and testing added, a forecast
+// learns from the accepted stories, counting their time in testing as active
+// work; the stories in either active-work state hold lanes under the sum of
+// their limits, the one in acceptance-review none; and the next queue is
+// pulled before the backlog.
+func TestForecastInPlaysOutTheActiveWorkStatesOfTheWorkflow(t *testing.T) {
+	flow, items := otherFlow(t), otherItems()
+	b := &workitem.Board{WIPLimits: map[string]int{workitem.InProgress: 1, "testing": 1, "acceptance-review": 1}, Order: []string{"S-0014", "S-0015"}}
+	res, err := ForecastIn(flow, items, b, manifest.Planning{}, "S-0015", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := History{Match: "nature, model, and size band", Stories: 3, SecondsPerUnit: 400, BusyFactor: 1.5, CycleFactor: 2}
+	// S-0012 frees a lane at 11:00 + 1h × 1.5 = 12:30, S-0011 the other at
+	// 14:00; S-0014 holds the first for 27m × 1.5 to 13:10:30, and S-0015 is
+	// delivered 54m later, at 14:04:30.
+	if res.History != want || res.Limit != 2 || res.Position != 2 || res.Delivery != "2026-10-04T14:05:00Z" {
+		t.Errorf("history %+v, limit %d, position %d, delivery %s", res.History, res.Limit, res.Position, res.Delivery)
+	}
+	wantAhead := "S-0011 in-progress 2h forecast=true 2026-10-04T11:00:00Z-2026-10-04T15:00:00Z; " +
+		"S-0012 testing 1h forecast=true 2026-10-04T11:00:00Z-2026-10-04T13:00:00Z; " +
+		"S-0014 next 27m forecast=false 2026-10-04T12:30:00Z-2026-10-04T13:24:00Z"
+	if got := aheadOf(res); got != wantAhead {
+		t.Errorf("ahead\n got %s\nwant %s", got, wantAhead)
+	}
+	if suffix := "; 2nd in the pull order with an in-progress and testing limit of 2, behind S-0011, S-0012 and S-0014."; !strings.HasSuffix(res.Basis, suffix) {
+		t.Errorf("basis %q, want it to end %q", res.Basis, suffix)
+	}
+	pulls := NewPullerIn(flow, items, b.Order, res.Limit, time.Hour, now).PullTimes([]*workitem.Item{items[6], items[7]})
+	if got := fmt.Sprint(pulls); got != fmt.Sprint([]time.Time{now.Add(30 * time.Minute), now.Add(70*time.Minute + 30*time.Second)}) {
+		t.Errorf("pull times %s, want 12:30 and 13:10:30", got)
+	}
+	// the baseline has no accepted, next, or testing: no history, no lane
+	// held by S-0012, and S-0015 is not in the pull order at all
+	if res := forecast(t, items, b, manifest.Planning{}, "S-0014"); !res.Default || res.Limit != 1 || res.Position != 0 {
+		t.Errorf("under the baseline: default %t, limit %d, position %d", res.Default, res.Limit, res.Position)
+	}
+}
+
+// S-0749: a story in an active-work or a waiting state of the workflow is
+// delivered from when it started, said by its state's name, and one in an
+// accepted state is not forecast. Replayed, S-0012 keeps its own 1h.
+func TestForecastInOfAStoryUnderWayInTheWorkflow(t *testing.T) {
+	flow, items := otherFlow(t), otherItems()
+	b := &workitem.Board{WIPLimits: map[string]int{workitem.InProgress: 1}}
+	for _, c := range []struct{ id, deliver, where string }{
+		// 11:00 + 1h × 2
+		{"S-0012", "2026-10-04T13:00:00Z", "in testing since it started at 2026-10-04T11:00:00Z"},
+		// 10:00 + 27m × 2 is before now, so now
+		{"S-0013", "2026-10-04T12:00:00Z", "in acceptance review since it started at 2026-10-04T10:00:00Z"},
+	} {
+		res, err := ReplayIn(flow, items, b, manifest.Planning{}, c.id, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Delivery != c.deliver || res.Position != 0 || !strings.Contains(res.Basis, "; "+c.where+", so delivery counts from then.") {
+			t.Errorf("%s: delivery %s, position %d, basis %q; want %s, %s", c.id, res.Delivery, res.Position, res.Basis, c.deliver, c.where)
+		}
+	}
+	open := accepted("S-0030", 1200)
+	open.Archived = false
+	if _, err := ForecastIn(flow, append(items, open), b, manifest.Planning{}, "S-0030", now); err == nil || !strings.Contains(err.Error(), "it is accepted; forecast a story that is still open") {
+		t.Errorf("an accepted story: %v", err)
 	}
 }

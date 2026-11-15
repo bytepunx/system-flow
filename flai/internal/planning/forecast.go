@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -41,14 +42,15 @@ type Result struct {
 	Criteria int     `json:"criteria"`
 	Touches  int     `json:"touches"`
 	History  History `json:"history"`
-	// Position is the story's place in the pull order, ready stories then
-	// backlog ones, from 1; 0 when it is in progress or in review.
+	// Position is the story's place in the pull order, the stories of the
+	// queue state nearest the pull first, from 1; 0 when it is in an
+	// active-work or a waiting state.
 	Position int `json:"position"`
-	// Limit is the in-progress limit the pull order was played out with; 0
-	// means none.
+	// Limit is the active-work states' WIP limit the pull order was played
+	// out with, ActiveLimit; 0 means none.
 	Limit int `json:"limit"`
-	// Ahead are the stories in progress and those before it in the pull
-	// order, as they were played out.
+	// Ahead are the stories in the active-work states and those before it in
+	// the pull order, as they were played out.
 	Ahead []Ahead `json:"ahead"`
 }
 
@@ -81,23 +83,50 @@ type Ahead struct {
 	Delivery     string `json:"delivery"`
 }
 
-// Forecast works out how long story id will take from the done stories in
-// items with usage, and when it will be delivered by playing out the board's
-// pull order and in-progress limit from now. items includes archived ones.
+// Forecast is ForecastIn under the baseline workflow.
 func Forecast(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
-	return playOut(items, board, plan, id, now, false)
+	return ForecastIn(workflow.Baseline(), items, board, plan, id, now)
 }
 
-// Replay is Forecast for a story that keeps its own forecast.duration: only
-// its delivery and basis are worked out again. A story without a valid one
-// replays as Forecast gives it.
+// ForecastIn works out how long story id will take from the accepted stories
+// in items with usage, and when it will be delivered by playing out the
+// board's pull order through flow's active-work states and their WIP limit
+// from now. items includes archived ones.
+func ForecastIn(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
+	return playOut(flow, items, board, plan, id, now, false)
+}
+
+// Replay is ReplayIn under the baseline workflow.
 func Replay(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
-	return playOut(items, board, plan, id, now, true)
+	return ReplayIn(workflow.Baseline(), items, board, plan, id, now)
+}
+
+// ReplayIn is ForecastIn for a story that keeps its own forecast.duration:
+// only its delivery and basis are worked out again. A story without a valid
+// one replays as ForecastIn gives it.
+func ReplayIn(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time) (Result, error) {
+	return playOut(flow, items, board, plan, id, now, true)
+}
+
+// ActiveLimit is the WIP limit of flow's active-work states taken together:
+// the sum of the positive limits board sets on those that carry one, 0, no
+// limit, when none does. Under the baseline it is the in-progress limit.
+func ActiveLimit(flow workflow.Workflow, board *workitem.Board) int {
+	if board == nil {
+		return 0
+	}
+	limit := 0
+	for _, s := range flow.OfKind(workflow.KindActive) {
+		if l := board.WIPLimits[s.Name]; s.Limit && l > 0 {
+			limit += l
+		}
+	}
+	return limit
 }
 
 // playOut forecasts story id, played out with its own forecast.duration when
 // keep is set and it has a valid one, else with its estimate.
-func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time, keep bool) (Result, error) {
+func playOut(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, id string, now time.Time, keep bool) (Result, error) {
 	fallback, err := plan.FallbackDuration()
 	if err != nil {
 		return Result{}, fmt.Errorf("cannot forecast %s: %w", id, err)
@@ -115,37 +144,36 @@ func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 		return Result{}, fmt.Errorf("cannot forecast %s: it is a %s, and only a story has a forecast", id, target.Type)
 	case target.Archived:
 		return Result{}, fmt.Errorf("cannot forecast %s: it is archived; forecast a story that is still open", id)
-	case target.Closed():
+	case closed(flow, target.Status):
 		return Result{}, fmt.Errorf("cannot forecast %s: it is %s; forecast a story that is still open", id, target.Status)
 	}
 	now = now.UTC()
-	f := newForecaster(items, fallback)
+	f := newForecasterIn(flow, items, fallback)
 	est := f.estimate(target)
 	dur, basis, def := est.duration, est.basis, est.def
 	if d, ok := ownDuration(target); keep && ok {
 		dur, basis, def = d, "Its own forecast of "+FormatDuration(d), false
 	}
 	var order []string
-	limit := 0
+	limit := ActiveLimit(flow, board)
 	if board != nil {
-		order, limit = board.Order, max(board.WIPLimits[workitem.InProgress], 0)
+		order = board.Order
 	}
 	res := Result{
 		ID: id, Duration: FormatDuration(dur), DurationSeconds: int64(dur / time.Second),
 		Default: def, Size: est.size, Criteria: est.criteria, Touches: est.touches,
 		History: est.history, Limit: limit, Ahead: []Ahead{},
 	}
-	if target.Status == workitem.InProgress || target.Status == workitem.Review {
-		start := startedAt(target, now)
+	if kind := flow.Kind(target.Status); kind == workflow.KindActive || kind == workflow.KindWaiting {
+		start := startedAt(flow, target, now)
 		res.Delivery = stamp(later(now, start.Add(scale(dur, est.cycle))))
-		res.Basis = fmt.Sprintf("%s; %s since it started at %s, so delivery counts from then.", basis, phrase(target.Status), stamp(start))
+		res.Basis = fmt.Sprintf("%s; %s since it started at %s, so delivery counts from then.", basis, phraseIn(flow, target.Status), stamp(start))
 		return res, nil
 	}
 
-	p, ahead := startPlay(f, byID, items, order, limit, now)
+	p, ahead := startPlay(flow, f, byID, items, order, limit, now)
 	res.Ahead = append(res.Ahead, ahead...)
-	queue := append(workitem.PullSequence(order, items, workitem.Ready), workitem.PullSequence(order, items, workitem.Backlog)...)
-	for i, sid := range queue {
+	for i, sid := range pullQueue(flow, order, items) {
 		it := byID[sid]
 		d, fromForecast := dur, false
 		if sid != id {
@@ -155,7 +183,7 @@ func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 		if sid == id {
 			res.Position = i + 1
 			res.Delivery = stamp(p.delivered[sid])
-			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", basis, ordinal(i+1), limitPhrase(limit), behind(res.Ahead))
+			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", basis, ordinal(i+1), limitPhrase(flow, limit), behind(res.Ahead))
 			break
 		}
 		res.Ahead = append(res.Ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(p.delivered[sid])})
@@ -163,12 +191,24 @@ func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 	return res, nil
 }
 
+// pullQueue is the stories of flow's queue states in the order they are
+// pulled: those of the state nearest the pull, the last in board order,
+// first, each state's in the pull order.
+func pullQueue(flow workflow.Workflow, order []string, items []*workitem.Item) []string {
+	var queue []string
+	states := flow.OfKind(workflow.KindQueue)
+	for i := len(states) - 1; i >= 0; i-- {
+		queue = append(queue, workitem.PullSequence(order, items, states[i].Name)...)
+	}
+	return queue
+}
+
 // PullTimes plays out stories, in the sequence given, as Forecast plays out
 // the pull order, and gives when each is pulled. They go on limit lanes, none
 // when limit is not positive, from now, after the stories in progress in
 // items, taken in order; each holds its lane for its own forecast.duration,
 // else the one worked out from items with fallback, times its busy factor
-// (S-0213).
+// (S-0213). It plays out under the baseline workflow.
 func PullTimes(items []*workitem.Item, order []string, limit int, fallback time.Duration, stories []*workitem.Item, now time.Time) []time.Time {
 	return NewPuller(items, order, limit, fallback, now).PullTimes(stories)
 }
@@ -177,6 +217,7 @@ func PullTimes(items []*workitem.Item, order []string, limit int, fallback time.
 // limit, fallback, and now, building the forecaster once (S-0608). It keeps
 // the estimates it works out, so it is not safe for concurrent use.
 type Puller struct {
+	flow  workflow.Workflow
 	items []*workitem.Item
 	order []string
 	limit int
@@ -185,14 +226,20 @@ type Puller struct {
 	f     *forecaster
 }
 
-// NewPuller builds the forecaster for items with fallback once, for PullTimes
-// to play sequences out on.
+// NewPuller is NewPullerIn under the baseline workflow.
 func NewPuller(items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *Puller {
+	return NewPullerIn(workflow.Baseline(), items, order, limit, fallback, now)
+}
+
+// NewPullerIn builds the forecaster for items with fallback once, for
+// PullTimes to play sequences out on after the stories in flow's active-work
+// states.
+func NewPullerIn(flow workflow.Workflow, items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *Puller {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
 	}
-	return &Puller{items: items, order: order, limit: max(limit, 0), now: now.UTC(), byID: byID, f: newForecaster(items, fallback)}
+	return &Puller{flow: flow, items: items, order: order, limit: max(limit, 0), now: now.UTC(), byID: byID, f: newForecasterIn(flow, items, fallback)}
 }
 
 // PullTimes gives when each of stories is pulled, played out in the sequence
@@ -200,7 +247,7 @@ func NewPuller(items []*workitem.Item, order []string, limit int, fallback time.
 // lanes, so one sequence does not change the times of another; the
 // forecaster's estimates, which depend on the item alone, are shared.
 func (u *Puller) PullTimes(stories []*workitem.Item) []time.Time {
-	p, _ := startPlay(u.f, u.byID, u.items, u.order, u.limit, u.now)
+	p, _ := startPlay(u.flow, u.f, u.byID, u.items, u.order, u.limit, u.now)
 	out := make([]time.Time, len(stories))
 	for i, it := range stories {
 		d, _ := u.f.durationOf(it)
@@ -217,18 +264,23 @@ type play struct {
 	delivered map[string]time.Time
 }
 
-// startPlay sets out limit lanes from now, the stories in progress in items,
-// taken in order, holding theirs until their start plus their duration times
-// their busy factor, never before now. It gives them as they were played out.
-func startPlay(f *forecaster, byID map[string]*workitem.Item, items []*workitem.Item, order []string, limit int, now time.Time) (*play, []Ahead) {
+// startPlay sets out limit lanes from now, the stories in flow's active-work
+// states in items, those of each state in board order taken in order, holding
+// theirs until their start plus their duration times their busy factor, never
+// before now. It gives them as they were played out.
+func startPlay(flow workflow.Workflow, f *forecaster, byID map[string]*workitem.Item, items []*workitem.Item, order []string, limit int, now time.Time) (*play, []Ahead) {
 	p := &play{f: f, delivered: map[string]time.Time{}}
 	var releases []time.Time
 	var ahead []Ahead
-	for _, sid := range workitem.PullSequence(order, items, workitem.InProgress) {
+	var active []string
+	for _, s := range flow.OfKind(workflow.KindActive) {
+		active = append(active, workitem.PullSequence(order, items, s.Name)...)
+	}
+	for _, sid := range active {
 		it := byID[sid]
 		d, fromForecast := f.durationOf(it)
 		e := f.estimate(it)
-		start := startedAt(it, now)
+		start := startedAt(flow, it, now)
 		releases = append(releases, later(now, start.Add(scale(d, e.busy))))
 		p.delivered[sid] = later(now, start.Add(scale(d, e.cycle)))
 		ahead = append(ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(p.delivered[sid])})
@@ -289,23 +341,31 @@ type forecaster struct {
 	estimates map[string]estimate
 }
 
+// newForecaster is newForecasterIn under the baseline workflow.
 func newForecaster(items []*workitem.Item, fallback time.Duration) *forecaster {
+	return newForecasterIn(workflow.Baseline(), items, fallback)
+}
+
+// newForecasterIn reads the samples of items' stories accepted in flow.
+func newForecasterIn(flow workflow.Workflow, items []*workitem.Item, fallback time.Duration) *forecaster {
 	f := &forecaster{fallback: fallback, estimates: map[string]estimate{}}
 	for _, it := range items {
-		if s, ok := sampleOf(it); ok {
+		if s, ok := sampleOf(flow, it); ok {
 			f.samples = append(f.samples, s)
 		}
 	}
 	return f
 }
 
-// sampleOf reads a done story with usage and a cycle time; false for any
-// other item.
-func sampleOf(it *workitem.Item) (sample, bool) {
-	if it.Type != workitem.Story || it.Status != workitem.Done || it.Usage == nil || it.Usage.Seconds <= 0 {
+// sampleOf reads a story in one of flow's accepted states with usage and a
+// cycle time; false for any other item.
+func sampleOf(flow workflow.Workflow, it *workitem.Item) (sample, bool) {
+	if it.Type != workitem.Story || flow.Kind(it.Status) != workflow.KindAccepted || it.Usage == nil || it.Usage.Seconds <= 0 || len(it.Transitions) == 0 {
 		return sample{}, false
 	}
-	started, completed := it.FirstAt(workitem.InProgress), it.CompletedAt()
+	// an accepted story completed with its last transition (ADR-0055)
+	started := firstActive(flow, it)
+	completed, _ := time.Parse(workitem.TimeFormat, it.Transitions[len(it.Transitions)-1].At)
 	if started.IsZero() || !completed.After(started) {
 		return sample{}, false
 	}
@@ -313,7 +373,7 @@ func sampleOf(it *workitem.Item) (sample, bool) {
 	_, _, size := sizeOf(it)
 	return sample{
 		nature: it.Nature, model: modelOf(it), band: band(size),
-		perUnit: used / float64(size), busy: inProgressSeconds(it) / used, cycle: completed.Sub(started).Seconds() / used,
+		perUnit: used / float64(size), busy: activeSeconds(flow, it) / used, cycle: completed.Sub(started).Seconds() / used,
 	}, true
 }
 
@@ -425,8 +485,9 @@ func onModel(model string) string {
 	return "on " + model
 }
 
-// inProgressSeconds is the time an item spent in progress, over every spell.
-func inProgressSeconds(it *workitem.Item) float64 {
+// activeSeconds is the time an item spent in flow's active-work states, over
+// every spell.
+func activeSeconds(flow workflow.Workflow, it *workitem.Item) float64 {
 	var total time.Duration
 	var since time.Time
 	for _, tr := range it.Transitions {
@@ -438,20 +499,40 @@ func inProgressSeconds(it *workitem.Item) float64 {
 			total += at.Sub(since)
 			since = time.Time{}
 		}
-		if tr.To == workitem.InProgress {
+		if flow.Kind(tr.To) == workflow.KindActive {
 			since = at
 		}
 	}
 	return total.Seconds()
 }
 
-// startedAt is when an item first went in progress, as metrics counts cycle
-// time from; now when it has no such transition.
-func startedAt(it *workitem.Item, now time.Time) time.Time {
-	if t := it.FirstAt(workitem.InProgress); !t.IsZero() {
+// startedAt is when an item first went into one of flow's active-work
+// states, as metrics counts cycle time from; now when it has no such
+// transition.
+func startedAt(flow workflow.Workflow, it *workitem.Item, now time.Time) time.Time {
+	if t := firstActive(flow, it); !t.IsZero() {
 		return t
 	}
 	return now
+}
+
+// firstActive is the time of an item's first transition into one of flow's
+// active-work states, or zero.
+func firstActive(flow workflow.Workflow, it *workitem.Item) time.Time {
+	for _, tr := range it.Transitions {
+		if flow.Kind(tr.To) == workflow.KindActive {
+			t, _ := time.Parse(workitem.TimeFormat, tr.At)
+			return t
+		}
+	}
+	return time.Time{}
+}
+
+// closed reports whether status is one of flow's accepted or cancelled
+// states.
+func closed(flow workflow.Workflow, status string) bool {
+	kind := flow.Kind(status)
+	return kind == workflow.KindAccepted || kind == workflow.KindCancelled
 }
 
 func median(v []float64) float64 {
@@ -531,18 +612,37 @@ func (l *lanes) hold(i int, until time.Time) {
 	}
 }
 
-func phrase(status string) string {
-	if status == workitem.Review {
-		return "in review"
+// phrase is phraseIn under the baseline workflow.
+func phrase(status string) string { return phraseIn(workflow.Baseline(), status) }
+
+// phraseIn says where a story in status is, by its state's name in words: in
+// progress, in review, in acceptance review.
+func phraseIn(flow workflow.Workflow, status string) string {
+	if s, ok := flow.State(status); ok {
+		status = s.Name
 	}
-	return "in progress"
+	return "in " + strings.ReplaceAll(status, "-", " ")
 }
 
-func limitPhrase(limit int) string {
-	if limit <= 0 {
-		return "no in-progress limit"
+// limitPhrase names the WIP limit by flow's active-work states: an
+// in-progress limit of 3, an in-progress and testing limit of 5.
+func limitPhrase(flow workflow.Workflow, limit int) string {
+	var names []string
+	for _, s := range flow.OfKind(workflow.KindActive) {
+		names = append(names, s.Name)
 	}
-	return fmt.Sprintf("an in-progress limit of %d", limit)
+	name := "active-work"
+	if len(names) > 0 {
+		name = joinAnd(names)
+	}
+	if limit <= 0 {
+		return "no " + name + " limit"
+	}
+	article := "a"
+	if strings.ContainsRune("aeiou", rune(name[0])) {
+		article = "an"
+	}
+	return fmt.Sprintf("%s %s limit of %d", article, name, limit)
 }
 
 func behind(ahead []Ahead) string {
@@ -553,10 +653,15 @@ func behind(ahead []Ahead) string {
 	for i, a := range ahead {
 		ids[i] = a.ID
 	}
-	if len(ids) == 1 {
-		return "behind " + ids[0]
+	return "behind " + joinAnd(ids)
+}
+
+// joinAnd writes words as a list: a, a and b, a, b and c.
+func joinAnd(words []string) string {
+	if len(words) == 1 {
+		return words[0]
 	}
-	return "behind " + strings.Join(ids[:len(ids)-1], ", ") + " and " + ids[len(ids)-1]
+	return strings.Join(words[:len(words)-1], ", ") + " and " + words[len(words)-1]
 }
 
 // ordinal writes n as 1st, 2nd, 3rd, 4th, 11th, 21st.
