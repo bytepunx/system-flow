@@ -45,6 +45,17 @@ func (a *app) projectOrNone() (*workitem.Repo, error) {
 // commands are tried against a board with renamed and added states.
 var testWorkflow *workflow.Workflow
 
+// mcpProject is projectOrNone for the MCP server: a workflow file flai
+// cannot run does not keep it from starting; each tool call is refused with
+// the file's finding instead, until the file is fixed (ADR-0307 §3).
+func (a *app) mcpProject() (*workitem.Repo, error) {
+	repo, err := a.projectUnchecked()
+	if errors.Is(err, manifest.ErrNotFound) {
+		return nil, nil
+	}
+	return repo, err
+}
+
 // project opens the conforming repo above the working directory and points
 // it at the cached template for item bodies when one is available. It never
 // fetches. A workflow file flai cannot run refuses it (ADR-0307 §2).

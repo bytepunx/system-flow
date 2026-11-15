@@ -118,7 +118,8 @@ type KlusterRunner interface {
 
 // SystemKluster is the KlusterRunner with this host's kluster, docker, and
 // kubectl, through flai/internal/kluster, as flai kluster runs them. Its
-// deploys judge a story's state by Workflow, the baseline when nil.
+// deploys judge a story's state by Workflow, else by the project's workflow
+// file, else by the baseline (ADR-0307).
 type SystemKluster struct {
 	Workflow *workflow.Workflow
 }
@@ -152,13 +153,19 @@ func (SystemKluster) Up(ctx context.Context, root string, m manifest.Manifest, o
 }
 
 // Deploy deploys story as flai kluster deploy does, its progress lines left
-// out: each step's output is in its log.
+// out: each step's output is in its log. A workflow file flai cannot run
+// refuses the deploy with its finding.
 func (s SystemKluster) Deploy(ctx context.Context, root string, m manifest.Manifest, by, story, status, dir, commit string) (kluster.Record, error) {
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
 		return kluster.Record{}, err
 	}
 	c.Workflow = s.Workflow
+	if c.Workflow == nil {
+		if c.Workflow, err = workflow.Load(root, m.Layout["design"]); err != nil {
+			return kluster.Record{}, fmt.Errorf("deploy %s: the project's workflow file cannot be run: %w", story, err)
+		}
+	}
 	return c.DeployBy(ctx, m, by, story, status, dir, commit, io.Discard)
 }
 
@@ -451,19 +458,19 @@ func (p *klusterPass) look(ctx context.Context) {
 	}
 	var changes []workitem.Change
 	changes, _, p.since, p.seen = news(items, nil, p.since, p.seen, now)
-	root := mainCheckout(repo)
+	root, flow := mainCheckout(repo), repo.Flow()
 	deployable := klusterDeployable(repo.Manifest)
 	var queued []string
 	if deployable {
-		queued = p.lookReview(ctx, items, root, repo.Manifest, p.checksOn(repo))
+		queued = p.lookReview(ctx, flow, items, root, repo.Manifest, p.checksOn(repo))
 	}
 	if ctx.Err() != nil {
 		return
 	}
-	queued = append(queued, p.lookLeft(items, root)...)
+	queued = append(queued, p.lookLeft(flow, items, root)...)
 	if !deployable {
 		p.o.Logger.Debug("kluster block names no deploy, so no story is deployed and main is not promoted", "component", "serve", "root", p.e.Root)
-	} else if klusterAccepted(p.o.flow(), changes) || p.takeRepromote() {
+	} else if klusterAccepted(flow, changes) || p.takeRepromote() {
 		if p.enqueue(klusterJob{kind: klusterPromote}) {
 			queued = append(queued, klusterPromote)
 		}
@@ -511,9 +518,9 @@ func passedAt(r kluster.Record, head string, checksOn bool) bool {
 // commit followed only by changes under the design, docs, and wip folders,
 // so the issues a close-out commits do not deploy the story again. A record
 // or a diff that cannot be read is not at the head: it is logged, and the
-// story deployed.
-func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string, m manifest.Manifest, checksOn bool) []string {
-	git, flow := gitOf(p.o), p.o.flow()
+// story deployed. flow is the project's workflow.
+func (p *klusterPass) lookReview(ctx context.Context, flow workflow.Workflow, items []*workitem.Item, root string, m manifest.Manifest, checksOn bool) []string {
+	git := gitOf(p.o)
 	var queued []string
 	for _, it := range items {
 		if ctx.Err() != nil {
@@ -554,8 +561,8 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 // story is neither in review nor in progress, whoever moved it there, unless
 // a teardown already failed while the story stood where it stands, and
 // forgets what the pass tried for one with no record whose story is neither;
-// it names the teardowns queued.
-func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
+// it names the teardowns queued. flow is the project's workflow.
+func (p *klusterPass) lookLeft(flow workflow.Workflow, items []*workitem.Item, root string) []string {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		if it.Type == workitem.Story {
@@ -572,7 +579,6 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 	} else {
 		p.o.Logger.Warn("kluster deployments not read", "component", "serve", "root", p.e.Root, "err", err.Error())
 	}
-	flow := p.o.flow()
 	var queued []string
 	for _, ns := range slices.Sorted(maps.Keys(namespaces)) {
 		story := namespaces[ns]
@@ -742,7 +748,7 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to deploy it (%v)", j.story, err))
 		}
-		if flow := p.o.flow(); !klusterHolds(flow, it) || (!j.asked() && !flow.AwaitsAcceptance(it.Type, it.Status)) {
+		if flow := repo.Flow(); !klusterHolds(flow, it) || (!j.asked() && !flow.AwaitsAcceptance(it.Type, it.Status)) {
 			// left review since it was queued: the next look tears it down
 			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress or in review", j.story, it.Status))
 		}
@@ -752,7 +758,7 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to run its checks (%v)", j.story, err))
 		}
-		if !klusterHolds(p.o.flow(), it) {
+		if !klusterHolds(repo.Flow(), it) {
 			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve runs a story's checks against its namespace only while it is in progress or in review", j.story, it.Status))
 		}
 		return p.checksJob(ctx, repo, j)
@@ -1244,12 +1250,12 @@ func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, rea
 // sent back, and to is where the workflow sends back a story that awaits its
 // acceptance, empty when it names nowhere.
 func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, to, why string) {
-	flow := p.o.flow()
-	to = sentBackTo(flow)
 	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
-		return nil, nil, to, "flai serve could not read the project again to move it (" + err.Error() + ")"
+		return nil, nil, sentBackTo(p.o.flow()), "flai serve could not read the project again to move it (" + err.Error() + ")"
 	}
+	flow := repo.Flow()
+	to = sentBackTo(flow)
 	if !p.on(repo.Manifest) {
 		return nil, nil, to, "the kluster host action was turned off meanwhile"
 	}
@@ -1299,7 +1305,7 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		p.o.Logger.Warn("kluster teardown not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
 		return refusedEnd(fmt.Sprintf("flai serve could not read %s to tear it down (%v)", j.story, err))
 	}
-	flow := p.o.flow()
+	flow := repo.Flow()
 	if flow.AwaitsAcceptance(it.Type, it.Status) && !it.Archived {
 		// back in review: its deploy updates the namespace in place
 		return refusedEnd(fmt.Sprintf("%s moved to review while the teardown waited, and a namespace in review is the review's: flai serve tears it down once the story leaves review for ready or backlog, is cancelled, or is accepted", j.story))

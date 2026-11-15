@@ -764,7 +764,7 @@ func threadsToResolve(repo *workitem.Repo, it *workitem.Item, res *Acceptance) {
 		res.Blockers = append(res.Blockers, fmt.Sprintf("cannot list the items to find the threads accepting %s resolves: %v", it.ID, err))
 		return
 	}
-	open, err := threads.OnItems(repo, ThreadItems(all, it, res.Epic))
+	open, err := threads.OnItems(repo, ThreadItemsIn(repo.Flow(), all, it, res.Epic))
 	if err != nil {
 		res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read the threads on what accepting %s archives, which it resolves: %v; fix the thread file it names", it.ID, err))
 		return
@@ -867,12 +867,17 @@ func shortSHA(sha string) string {
 	return sha
 }
 
-// ThreadItems are the items whose threads accepting it resolves: what
-// ArchivedWith names, and each story's tasks. items include archived ones, so
-// that an acceptance finishing its commit names what it archived before.
+// ThreadItems is ThreadItemsIn under the baseline workflow flai carries.
 func ThreadItems(items []*workitem.Item, it *workitem.Item, epic *workitem.Followed) []string {
+	return ThreadItemsIn(workflow.Baseline(), items, it, epic)
+}
+
+// ThreadItemsIn are the items whose threads accepting it resolves under w:
+// what ArchivedIn names, and each story's tasks. items include archived ones,
+// so that an acceptance finishing its commit names what it archived before.
+func ThreadItemsIn(w workflow.Workflow, items []*workitem.Item, it *workitem.Item, epic *workitem.Followed) []string {
 	var ids []string
-	for _, id := range ArchivedWith(items, it.ID, epic) {
+	for _, id := range ArchivedIn(w, items, it.ID, epic) {
 		ids = append(ids, id)
 		if workitem.TypeOfID(id) == workitem.Story {
 			for _, c := range workitem.Children(items, id) {

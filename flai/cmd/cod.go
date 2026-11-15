@@ -41,7 +41,7 @@ nothing; record the result with flai edit --cost-of-delay-value.`,
 			if err != nil {
 				return err
 			}
-			res, err := planning.CostOfDelay(items, repo.Manifest.Planning, args[0])
+			res, err := planning.CostOfDelayIn(repo.Flow(), items, repo.Manifest.Planning, args[0])
 			if err != nil {
 				return err
 			}

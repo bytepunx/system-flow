@@ -50,7 +50,7 @@ FLAI_MCP_URL and FLAI_MCP_TOKEN, never in its arguments (S-0506).`,
   flai mcp http         # over HTTP in the foreground; Ctrl-C stops it`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo, err := a.projectOrNone()
+			repo, err := a.mcpProject()
 			if err != nil {
 				return err
 			}

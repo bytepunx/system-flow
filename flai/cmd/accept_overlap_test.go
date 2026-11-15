@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -36,7 +37,7 @@ func TestOverlapsOf(t *testing.T) {
 	projects := []manifest.Project{{Name: "flai", Path: "flai", Tags: []string{"cli"}}, {Name: "flaiover", Path: "flaiover"}}
 	changed := []string{"flai/cmd/accept.go", "flai/cmd/move.go", "design/system/workflow.md"}
 	got := map[string][]string{}
-	for _, o := range overlapsOf(items, projects, manifest.Claims{}, "S-0001", changed) {
+	for _, o := range overlapsOf(workflow.Baseline(), items, projects, manifest.Claims{}, "S-0001", changed) {
 		if o.Accepted != "S-0001" || o.Title != o.ID {
 			t.Errorf("notice: %+v", o)
 		}
@@ -51,13 +52,13 @@ func TestOverlapsOf(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("told:\n got %v\nwant %v", got, want)
 	}
-	if overlapsOf(items, projects, manifest.Claims{}, "S-0001", nil) != nil {
+	if overlapsOf(workflow.Baseline(), items, projects, manifest.Claims{}, "S-0001", nil) != nil {
 		t.Error("a merge that changed nothing tells nobody")
 	}
 	// S-0550: a changed path inside claims.shared is nobody's notice
 	shared := manifest.Claims{Shared: []string{"design/system"}}
 	got = map[string][]string{}
-	for _, o := range overlapsOf(items, projects, shared, "S-0001", changed) {
+	for _, o := range overlapsOf(workflow.Baseline(), items, projects, shared, "S-0001", changed) {
 		got[o.ID] = o.Paths
 	}
 	delete(want, "S-0005")
@@ -65,7 +66,7 @@ func TestOverlapsOf(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("told beside a shared path:\n got %v\nwant %v", got, want)
 	}
-	if o := overlapsOf(items, projects, shared, "S-0001", []string{"design/system/workflow.md"}); o != nil {
+	if o := overlapsOf(workflow.Baseline(), items, projects, shared, "S-0001", []string{"design/system/workflow.md"}); o != nil {
 		t.Errorf("a merge wholly inside the shared paths told %+v", o)
 	}
 }

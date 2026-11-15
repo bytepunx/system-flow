@@ -1,8 +1,12 @@
 package serve
 
 import (
+	"bytes"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
@@ -77,5 +81,66 @@ func TestOpenRepoRunsTheOptionsWorkflow(t *testing.T) {
 	}
 	if _, err := openRepo(o, t.TempDir()); err == nil {
 		t.Error("openRepo opened a folder with no manifest")
+	}
+}
+
+// S-0755, ADR-0307 §3: with no workflow in the options, openRepo runs the
+// project's own workflow file; a file flai cannot run refuses the open and is
+// logged once for each distinct finding, however many looks open it; and an
+// open that succeeds again lets the same finding be told again.
+func TestOpenRepoRunsTheProjectsFileAndLogsARefusalOnce(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	board := filepath.Join(root, "design", "workflows", "board.md")
+	if err := os.MkdirAll(filepath.Dir(board), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(text string) {
+		t.Helper()
+		if err := os.WriteFile(board, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var logged bytes.Buffer
+	o := Options{Logger: slog.New(slog.NewTextHandler(&logged, nil))}
+	write(renamedFlow)
+	repo, err := openRepo(o, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(repo.Flow().Names(), "testing") || !repo.Flow().AwaitsAcceptance(workflow.TypeStory, "awaiting") {
+		t.Errorf("openRepo runs %s; want the project's file", repo.Flow().Names())
+	}
+	refusals := func() int { return strings.Count(logged.String(), "level=WARN") }
+	noPull := strings.Replace(renamedFlow, "{from: ready, to: doing, effects: [pull]}", "{from: ready, to: doing}", 1)
+	write(noPull)
+	for range 3 {
+		if _, err := openRepo(o, root); err == nil || !strings.Contains(err.Error(), workflow.CodeNoPull) {
+			t.Fatalf("a file with no pull opens with %v; want the %s refusal", err, workflow.CodeNoPull)
+		}
+	}
+	if n := refusals(); n != 1 || !strings.Contains(logged.String(), "root="+root) || !strings.Contains(logged.String(), workflow.CodeNoPull) {
+		t.Errorf("three looks at one finding logged %d refusals:\n%s\nwant one naming the root and the finding", n, logged.String())
+	}
+	write(strings.Replace(renamedFlow, ", effects: [accept]", "", 1))
+	if _, err := openRepo(o, root); err == nil || !strings.Contains(err.Error(), workflow.CodeNoAccept) {
+		t.Fatalf("a file with no accept opens with %v; want the %s refusal", err, workflow.CodeNoAccept)
+	}
+	if n := refusals(); n != 2 {
+		t.Errorf("another finding logged %d refusals in all; want 2", n)
+	}
+	write(renamedFlow)
+	if _, err := openRepo(o, root); err != nil {
+		t.Fatalf("after the fix: %v", err)
+	}
+	write(noPull)
+	if _, err := openRepo(o, root); err == nil {
+		t.Fatal("the file broken again opened")
+	}
+	if n := refusals(); n != 3 {
+		t.Errorf("the file broken again after a fix logged %d refusals in all; want 3", n)
 	}
 }

@@ -341,11 +341,6 @@ type forecaster struct {
 	estimates map[string]estimate
 }
 
-// newForecaster is newForecasterIn under the baseline workflow.
-func newForecaster(items []*workitem.Item, fallback time.Duration) *forecaster {
-	return newForecasterIn(workflow.Baseline(), items, fallback)
-}
-
 // newForecasterIn reads the samples of items' stories accepted in flow.
 func newForecasterIn(flow workflow.Workflow, items []*workitem.Item, fallback time.Duration) *forecaster {
 	f := &forecaster{fallback: fallback, estimates: map[string]estimate{}}

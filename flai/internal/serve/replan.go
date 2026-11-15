@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -273,7 +274,7 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 	if policy == manifest.ReplanNever {
 		return policy, nil
 	}
-	moves, errs := replays(items, board, repo.Manifest.Planning, now)
+	moves, errs := replays(repo.Flow(), items, board, repo.Manifest.Planning, now)
 	for _, err := range errs {
 		r.starter.warn("forecast not replayed", "err", err)
 	}
@@ -576,11 +577,11 @@ func pick(q []queued, running func(item string) bool) int {
 
 // replays plays the board out again for every ready and backlog story with a
 // forecast duration, in pull order, each keeping its own duration
-// (planning.Replay), and returns those whose delivery moved with the new
+// (planning.ReplayIn) under flow, the project's workflow, and returns those whose delivery moved with the new
 // delivery and basis, and the replays that failed. Every story is played out
 // against the same items: the writes keep the durations the others are
 // played out with.
-func replays(items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
+func replays(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
@@ -596,7 +597,7 @@ func replays(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 		if it.Forecast.IsZero() || it.Forecast.Duration == "" {
 			continue
 		}
-		res, err := planning.Replay(items, board, plan, id, now)
+		res, err := planning.ReplayIn(flow, items, board, plan, id, now)
 		if err != nil {
 			errs = append(errs, err)
 			continue

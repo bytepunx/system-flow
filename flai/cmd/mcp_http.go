@@ -685,7 +685,7 @@ rotates the project's file.`,
 // httpMCPProject is the project an HTTP MCP server serves: one, always
 // (ADR-0030). Outside any project it says what to run instead (S-0101).
 func (a *app) httpMCPProject() (*workitem.Repo, error) {
-	repo, err := a.projectOrNone()
+	repo, err := a.mcpProject()
 	if err == nil && repo == nil {
 		return nil, errors.New("flai mcp over HTTP serves one project, and there is none here or above; run it in a project (flai serve keeps one running for each project it serves), or run flai mcp on stdio here, which serves every project below this folder")
 	}

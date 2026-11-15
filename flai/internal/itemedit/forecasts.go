@@ -78,7 +78,7 @@ func ApplyForecasts(repo *workitem.Repo, all []*workitem.Item, changes []Forecas
 	for _, it := range all {
 		byID[it.ID] = it
 	}
-	now := opt.Now.UTC().Format(workitem.TimeFormat)
+	now, flow := opt.Now.UTC().Format(workitem.TimeFormat), repo.Flow()
 	var edited []*workitem.Item
 	before := map[string][]byte{}
 	for _, ch := range changes {
@@ -88,7 +88,7 @@ func ApplyForecasts(repo *workitem.Repo, all []*workitem.Item, changes []Forecas
 			res.Refused[id] = fmt.Errorf("%s: %w", id, workitem.ErrNotFound)
 			continue
 		}
-		if ok, reason := editable(it); !ok {
+		if ok, reason := editableIn(flow, it); !ok {
 			res.Refused[id] = &docedit.RefusedError{Path: rel(repo, it.Path), Reason: reason}
 			continue
 		}

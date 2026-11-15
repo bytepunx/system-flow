@@ -5,6 +5,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -363,7 +364,7 @@ func New(opt Options) *mcp.Server {
 		SchemaCache:  opt.schemas(),
 		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session and before moving a story to review: it lists threads awaiting you, those you take part in or on your own story (ADR-0181), and in the orchestrator's role those awaiting the operator too, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready, the in-progress limit leaves room, and review is under its limit, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. A story's agent that flai serve started, whose story has a question of its own open to the designer or a conversation awaiting another story's reply, no message it owes a reply, and no task in progress, gets end and why from wait_for_events at once instead of a wait: write the narrative's Current state and Next steps with stream_state and end the session, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. The orchestrator flai serve starts for reasons gets end with why reasons done at once: end the session. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an epic moved following a story means that story's move took its epic along: nothing to do. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " " + eventKindsDescription + " Publishing is the operator's: accepted work reaches the remote only when it is published (git fetch, then flai release --pending, or the board's Publish), and you publish only when the operator asks (ADR-0067); inbox's unpublished lists what is accepted and not yet published, for that. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on. " + budgetInstructions,
 	})
-	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
+	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow), followFlow(one))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
 	addProjectTools(srv, one)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, narrative, or conversation changes or the timeout passes: " + waitBound(eventsWait, s.maxWait) + ". Hold it when idle, as an orchestrator run by hand does between decisions, or to react within a second to the designer's answer on a thread awaiting them. " + messageEventDescription + " " + eventKindsDescription + " For a story's agent that flai serve started, it answers at once with end true and why, after any events already behind the cursor, when the story has a question of the agent's own open to the designer or a conversation awaiting the other story's reply, no conversation awaiting its own reply, and no task in progress: the agent then writes its narrative's Current state and Next steps with stream_state and ends, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. For the orchestrator flai serve started for reasons, it answers at once with end true and why reasons done, after any events already behind the cursor, and the orchestrator ends the session; otherwise it holds as above. It does not see a sub-agent finish: a story's agent waits for one by launching it with the Agent tool's run_in_background set to false, which returns the sub-agent's result as the tool's result, and flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
@@ -377,6 +378,47 @@ func New(opt Options) *mcp.Server {
 		}, s.readResource)
 	}
 	return srv
+}
+
+// followFlow reads, before each tool call, the workflow file of the project
+// the call names again when it changed since it was last read, and refuses
+// the call with the file's finding while flai cannot run it (ADR-0307 §3).
+// A call that names no project one of p's can be picked for, one that spans
+// every project in a folder, has each project's file read again and is
+// refused by none: each project's own calls are.
+func followFlow(p projects) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			params, ok := req.GetParams().(*mcp.CallToolParamsRaw)
+			if !ok || params == nil {
+				return next(ctx, method, req)
+			}
+			var named struct {
+				Project string `json:"project"`
+			}
+			// arguments that are not an object name no project; the tool refuses them itself
+			_ = json.Unmarshal(params.Arguments, &named)
+			s, err := p.pick(named.Project)
+			if err != nil {
+				for _, each := range p.all() {
+					_ = each.repo.ReloadFlow() // kept as FlowErr, which the project's own calls are refused with
+				}
+				return next(ctx, method, req)
+			}
+			if err := s.repo.ReloadFlow(); err != nil {
+				return flowRefused(s, params.Name, err), nil
+			}
+			return next(ctx, method, req)
+		}
+	}
+}
+
+// flowRefused is the tool error that refuses tool on s's project while its
+// workflow file cannot be run: the finding, its path, line, and code, and
+// what to do.
+func flowRefused(s *server, tool string, err error) *mcp.CallToolResult {
+	text := fmt.Sprintf("%s is refused: flai cannot run the workflow file of the project %s (%s), and runs no tool on it until the file is fixed (ADR-0307): %v. The next call reads the file again; flai check lists every finding", tool, s.key, projectRoot(s.repo), err)
+	return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: text}}}
 }
 
 // ---- threads ----

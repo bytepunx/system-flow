@@ -285,6 +285,7 @@ func (r *roleEvents) catchUp(repo *workitem.Repo, f roles.Role, items []*workite
 // on.
 func awaitingRole(repo *workitem.Repo, f roles.Role, ths []*threads.Thread, now time.Time) []inbox.Event {
 	var out []inbox.Event
+	flow := repo.Flow()
 	for _, th := range ths {
 		if !th.Open() {
 			continue
@@ -317,7 +318,7 @@ func awaitingRole(repo *workitem.Repo, f roles.Role, ths []*threads.Thread, now 
 			cause = th.Anchor.Path
 		}
 		c := workitem.Change{ID: th.ID, Type: inbox.Thread, Title: th.Title, Kind: inbox.Thread, To: "you", By: sum.LastBy, Cause: cause, At: at}
-		out = append(out, inbox.Event{Change: c, Summary: inbox.Describe(c), Fields: map[string]string{inbox.FieldAwaits: agent, inbox.FieldOn: on}})
+		out = append(out, inbox.Event{Change: c, Summary: inbox.DescribeIn(flow, c), Fields: map[string]string{inbox.FieldAwaits: agent, inbox.FieldOn: on}})
 	}
 	return out
 }

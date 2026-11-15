@@ -179,12 +179,6 @@ func rel(repo *workitem.Repo, abs string) string {
 	return abs
 }
 
-// editable is editableIn under the baseline workflow, for a caller with no
-// repository's workflow at hand.
-func editable(it *workitem.Item) (bool, string) {
-	return editableIn(workflow.Baseline(), it)
-}
-
 // editableIn says whether it may be edited, and why not: an archived item
 // is not, nor one closed in flow.
 func editableIn(flow workflow.Workflow, it *workitem.Item) (bool, string) {

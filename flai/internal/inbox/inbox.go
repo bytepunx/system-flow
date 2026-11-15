@@ -529,6 +529,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	}
 	path := cursorPath(repo, name)
 	cur := loadCursor(path)
+	flow := repo.Flow()
 	events := []Event{}
 	next := cursor{Seen: now.Format(workitem.TimeFormat), Keys: map[string]bool{}, Order: board.Order}
 	for _, c := range workitem.Changes(items, cur.since(now), agent, cur.Keys) {
@@ -539,7 +540,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 		if !cur.known && c.Type == workitem.Task {
 			continue
 		}
-		events = append(events, Event{Change: c, Summary: Describe(c)})
+		events = append(events, Event{Change: c, Summary: DescribeIn(flow, c)})
 	}
 	// Edits someone else made with flai edit or from the dashboard (S-0085).
 	// They are not in the items' front matter, which is strict and shared
@@ -563,7 +564,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	for _, n := range itemedit.Notices(repo) {
 		if n.By != agent {
 			c := workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At}
-			noticed(Event{Change: c, Summary: Describe(c)})
+			noticed(Event{Change: c, Summary: DescribeIn(flow, c)})
 		}
 	}
 	// What happened in flai serve and flai accept (ADR-0211): news to every
@@ -594,7 +595,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	// of the story told.
 	for _, o := range itemedit.Overlaps(repo) {
 		c := workitem.Change{ID: o.ID, Type: workitem.Story, Title: o.Title, Kind: Overlapped, To: strings.Join(o.Paths, ","), By: o.By, Cause: o.Cause(), At: o.At}
-		summary := Describe(c)
+		summary := DescribeIn(flow, c)
 		if o.Accepted == "" {
 			summary = describeGrown(c, o.Grew, o.Reached)
 		}
@@ -648,11 +649,16 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	return events, omitted, nil
 }
 
-// Describe says a change in words. A move names the state it went to as the
-// workflow names it, c.To; a move a cancellation took along says so in the
-// baseline's words when it went to the baseline's state of kind cancelled,
-// and names the state otherwise (ADR-0301).
+// Describe is DescribeIn under the baseline workflow flai carries.
 func Describe(c workitem.Change) string {
+	return DescribeIn(baselineFlow(), c)
+}
+
+// DescribeIn says a change in words. A move names the state it went to as
+// the workflow names it, c.To; a move a cancellation took along says so in
+// w's words when it went to a state of w's cancelled kind, and names the
+// state otherwise (ADR-0301).
+func DescribeIn(w workflow.Workflow, c workitem.Change) string {
 	who := ""
 	if c.By != "" {
 		who = " by " + c.By
@@ -660,7 +666,7 @@ func Describe(c workitem.Change) string {
 	switch c.Kind {
 	case workitem.Moved:
 		if c.Cause != "" {
-			if c.To == "" || baselineFlow().Kind(c.To) == workflow.KindCancelled {
+			if c.To == "" || w.Kind(c.To) == workflow.KindCancelled {
 				return c.ID + " " + c.Title + " was cancelled with " + c.Cause + who
 			}
 			return c.ID + " " + c.Title + " moved to " + c.To + " with " + c.Cause + who

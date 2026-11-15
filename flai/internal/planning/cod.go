@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -67,11 +68,17 @@ type SharedStory struct {
 	FromForecast bool `json:"from_forecast"`
 }
 
-// CostOfDelay works out the cost of delay per week of epic or story id: from
-// its own inputs, or, for a story without any, as its share of its epic's
-// value apportioned by duration over the epic's open stories without inputs.
-// items includes archived ones, which the durations are forecast from.
+// CostOfDelay is CostOfDelayIn under the baseline workflow flai carries.
 func CostOfDelay(items []*workitem.Item, plan manifest.Planning, id string) (Cost, error) {
+	return CostOfDelayIn(workflow.Baseline(), items, plan, id)
+}
+
+// CostOfDelayIn works out the cost of delay per week of epic or story id:
+// from its own inputs, or, for a story without any, as its share of its
+// epic's value apportioned by duration over the epic's open stories without
+// inputs. items includes archived ones, which the durations are forecast
+// from, by the stories flow counts as accepted.
+func CostOfDelayIn(flow workflow.Workflow, items []*workitem.Item, plan manifest.Planning, id string) (Cost, error) {
 	id = workitem.CanonicalID(id)
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -127,7 +134,7 @@ func CostOfDelay(items []*workitem.Item, plan manifest.Planning, id string) (Cos
 	if err != nil {
 		return fail("%v", err)
 	}
-	f := newForecaster(items, fallback)
+	f := newForecasterIn(flow, items, fallback)
 	var own, total time.Duration
 	for _, it := range sharers(items, epic.ID) {
 		d, fromForecast := f.durationOf(it)

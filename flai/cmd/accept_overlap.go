@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -15,7 +16,7 @@ import (
 // shared is left out first (S-0550): many stories change those paths in
 // separate sections or new files, so their change is nobody's notice, as it
 // holds nobody (ADR-0096), and a change wholly inside them tells nobody.
-func overlapsOf(items []*workitem.Item, projects []manifest.Project, shared manifest.Claims, accepted string, changed []string) []itemedit.Overlap {
+func overlapsOf(flow workflow.Workflow, items []*workitem.Item, projects []manifest.Project, shared manifest.Claims, accepted string, changed []string) []itemedit.Overlap {
 	var told []string
 	for _, p := range changed {
 		if _, ok := shared.Match(p); !ok {
@@ -23,7 +24,7 @@ func overlapsOf(items []*workitem.Item, projects []manifest.Project, shared mani
 		}
 	}
 	var out []itemedit.Overlap
-	for _, c := range itemedit.Covering(items, projects, accepted, told) {
+	for _, c := range itemedit.CoveringIn(flow, items, projects, accepted, told) {
 		out = append(out, itemedit.Overlap{ID: c.ID, Title: c.Title, Accepted: accepted, Paths: c.Paths})
 	}
 	return out
@@ -69,7 +70,7 @@ func (a *app) tellOverlaps(repo *workitem.Repo, it *workitem.Item, by string, ch
 		a.logger().Warn("overlap notices not sent", "component", "accept", "item", it.ID, "err", err)
 		return nil
 	}
-	told := overlapsOf(items, repo.Manifest.Projects, repo.SharedClaims(), it.ID, changed)
+	told := overlapsOf(repo.Flow(), items, repo.Manifest.Projects, repo.SharedClaims(), it.ID, changed)
 	at := a.now().UTC().Format(workitem.TimeFormat)
 	for i := range told {
 		told[i].At, told[i].By = at, by

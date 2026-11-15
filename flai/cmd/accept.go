@@ -924,7 +924,7 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted
 	if err != nil {
 		return nil, err
 	}
-	archived := preview.ThreadItems(all, it, res.Epic)
+	archived := preview.ThreadItemsIn(repo.Flow(), all, it, res.Epic)
 	if err := a.resolveAccepted(repo, it, res, archived, o.by); err != nil {
 		return nil, err
 	}
@@ -1005,7 +1005,7 @@ func messagesToClose(repo *workitem.Repo, it *workitem.Item, acc *accepted) {
 		acc.Blockers = append(acc.Blockers, fmt.Sprintf("cannot list the items to find the conversations accepting %s closes: %v", it.ID, err))
 		return
 	}
-	ids := preview.ThreadItems(all, it, acc.Epic)
+	ids := preview.ThreadItemsIn(repo.Flow(), all, it, acc.Epic)
 	open, err := openConversations(repo, ids)
 	if err != nil {
 		acc.Blockers = append(acc.Blockers, fmt.Sprintf("cannot read the conversations of what accepting %s archives, which it closes: %v; fix the conversation file it names", it.ID, err))

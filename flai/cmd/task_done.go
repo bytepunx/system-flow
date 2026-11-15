@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -134,7 +135,7 @@ version behind it (ADR-0142).`,
 					return err
 				}
 			} else {
-				a.printTaskDone(res)
+				a.printTaskDone(repo.Flow(), res)
 			}
 			if code := res.ExitCode(); code != 0 {
 				return &exitError{code: code, msg: fmt.Sprintf("%s stopped at the %s step: %s", res.Task, res.Stopped, res.Error)}
@@ -161,8 +162,9 @@ func refuseNotATask(id string) error {
 }
 
 // printTaskDone prints a line for each step res ran, the step it stopped at
-// with why, and the inbox.
-func (a *app) printTaskDone(res taskdone.Result) {
+// with why, and the inbox; a synced branch's state reads as wf, the project's
+// workflow, names it.
+func (a *app) printTaskDone(wf workflow.Workflow, res taskdone.Result) {
 	w := a.out
 	if c := res.Commit; c != nil {
 		fmt.Fprintf(w, "commit: %s %s\n", short(c.Hash), c.Subject)
@@ -179,7 +181,7 @@ func (a *app) printTaskDone(res taskdone.Result) {
 		switch {
 		case s.Synced:
 			fmt.Fprintln(w, "sync: "+rebasedLine(*s))
-			printSyncChecks(w, &workitem.Item{ID: res.Story}, *s)
+			printSyncChecksOn(w, wf, &workitem.Item{ID: res.Story}, *s)
 		case s.Stopped == storygit.StopUncommitted && res.Stopped != taskdone.StepSync:
 			// refused for the paths left alone, which stops nothing (ADR-0128)
 			fmt.Fprintf(w, "sync: %s was not synced: %s\n", s.Branch, s.Continue)
