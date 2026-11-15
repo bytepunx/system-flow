@@ -287,3 +287,138 @@ func TestAnItemInAStateTheWorkflowLacks(t *testing.T) {
 		}
 	}
 }
+
+// edited is text with each of the lines in after put after its first line in
+// turn, failing the test when text lacks one.
+func edited(t *testing.T, text string, after ...[2]string) string {
+	t.Helper()
+	for _, a := range after {
+		if !strings.Contains(text, a[0]) {
+			t.Fatalf("the workflow file lacks %q", a[0])
+		}
+		text = strings.Replace(text, a[0], a[0]+a[1], 1)
+	}
+	return text
+}
+
+// qaBoard is the baseline file with a state of the project's own, qa, a
+// waiting state between in-progress and review, which no rule finds fault
+// with.
+func qaBoard(t *testing.T) string {
+	t.Helper()
+	return edited(t, baselineText(t),
+		[2]string{"  - {name: review, kind: waiting, limit: true}\n", "  - {name: qa, kind: waiting}\n"},
+		[2]string{"  - {from: ready, to: backlog}\n", "  - {from: in-progress, to: qa}\n  - {from: qa, to: review}\n"})
+}
+
+// writeBoard writes content as repo's workflow file and opens the project
+// again as flai check opens it, without refusing the file.
+func writeBoard(t *testing.T, repo *workitem.Repo, content string) *workitem.Repo {
+	t.Helper()
+	writeFile(t, filepath.Join(repo.Root, filepath.FromSlash(boardRel)), content)
+	again, err := workitem.OpenUnchecked(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return again
+}
+
+// qaProject is cancelledProject running qaBoard, with S-0002 moved through
+// ready and in-progress into qa.
+func qaProject(t *testing.T) *workitem.Repo {
+	t.Helper()
+	repo := writeBoard(t, cancelledProject(t), qaBoard(t))
+	if err := repo.FlowErr(); err != nil {
+		t.Fatalf("qaBoard is refused: %v", err)
+	}
+	s, err := repo.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{workitem.Ready, workitem.InProgress, "qa"} {
+		if _, err := repo.Transition(s, to, "alex", "", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return repo
+}
+
+// boardJudgments are the findings of Run on repo that judge the workflow, or
+// an item or the board against it: those under a workflow. code, and
+// item.sequence and board.order.
+func boardJudgments(t *testing.T, repo *workitem.Repo) []Finding {
+	t.Helper()
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.DeleteFunc(res.Findings, func(f Finding) bool {
+		return !strings.HasPrefix(f.Rule, "workflow.") && f.Rule != "item.sequence" && f.Rule != "board.order"
+	})
+}
+
+// S-0755: with the project's own workflow file, which flai can run, flai
+// check judges the items against it: a story in a state of the file's own,
+// entered by the file's transitions, gives no finding.
+func TestItemsAreJudgedAgainstTheProjectsWorkflowFile(t *testing.T) {
+	repo := qaProject(t)
+	if got := boardJudgments(t, repo); len(got) != 0 {
+		t.Errorf("S-0002 in qa, a state of the project's file: %+v", got)
+	}
+	// Without the file the same story is judged against the baseline, which
+	// has no qa: the judgment the file's state clears.
+	if err := os.Remove(filepath.Join(repo.Root, filepath.FromSlash(boardRel))); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := workitem.OpenUnchecked(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := hasFinding(boardJudgments(t, baseline), codeItem, "S-0002's status names state qa"); !ok {
+		t.Errorf("S-0002 in qa on the baseline gives no workflow.item: %+v", boardJudgments(t, baseline))
+	}
+}
+
+// S-0755: with the project's workflow file refused, flai check reports the
+// file's finding and leaves out the judgments of the items against the
+// workflow, in a whole run and in a checked write's, since the repository
+// runs the baseline in place of the board the project wrote (ADR-0307 §2).
+func TestARefusedWorkflowFileGivesItsFindingAlone(t *testing.T) {
+	repo := writeBoard(t, qaProject(t), edited(t, qaBoard(t),
+		[2]string{"  - {name: cancelled, kind: cancelled}\n", "  - {name: stuck, kind: waiting}\n"},
+		[2]string{"  - {from: qa, to: review}\n", "  - {from: review, to: stuck}\n"}))
+	if repo.FlowErr() == nil {
+		t.Fatal("a file with a dead end is not refused")
+	}
+	got := boardJudgments(t, repo)
+	if len(got) != 1 || got[0].Rule != codeDeadEnd || got[0].Path != boardRel {
+		t.Errorf("want the file's %s alone, at %s: %+v", codeDeadEnd, boardRel, got)
+	}
+	res, err := RunItemWrite(repo, now, Write{Items: []string{"S-0002"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range res.Findings {
+		if f.Rule == codeItem || f.Rule == "item.sequence" || f.Rule == "board.order" {
+			t.Errorf("a checked write of S-0002 judges it against the baseline: %+v", f)
+		}
+	}
+}
+
+// S-0755: a project without the workflow file runs the baseline and gets no
+// finding or advisory about the file it lacks (ADR-0307 §5).
+func TestNoWorkflowFileGivesNoAdvisory(t *testing.T) {
+	repo, err := workitem.OpenUnchecked(cancelledProject(t).Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range res.Findings {
+		if strings.HasPrefix(f.Rule, "workflow.") || f.Path == boardRel {
+			t.Errorf("a project without %s: %+v", boardRel, f)
+		}
+	}
+}

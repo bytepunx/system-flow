@@ -65,6 +65,19 @@ func (c *checker) workflow() {
 	}
 }
 
+// flowRefused reports whether the project's workflow file is one flai
+// cannot run, as c.repo.FlowErr() keeps it (ADR-0307 §2): flai check opens
+// the repository without refusing it, and the repository runs the baseline
+// in its place. While it is, the judgments of an item, and of the board's
+// order and limits, against the workflow's states, kinds, and transitions
+// are left out, workflow.item and item.sequence among them, since they would
+// judge the items against a board the project does not run; workflow reports
+// the file's own findings, which say what to fix. A project without the file
+// runs the baseline and is judged against it, with no advisory (ADR-0307 §5).
+func (c *checker) flowRefused() bool {
+	return c.repo.FlowErr() != nil
+}
+
 // flowLevel is the check level of a workflow finding.
 func flowLevel(f workflow.Finding) string {
 	if f.Level == workflow.LevelWarning {
@@ -77,8 +90,12 @@ func flowLevel(f workflow.Finding) string {
 // status or a transition of its history gives that the workflow the
 // repository runs neither has as a state nor lists as an alias (ADR-0301
 // §6): flai cannot tell which state the item is in, or was. It is on the
-// status line when the status names it, else on the transitions line.
+// status line when the status names it, else on the transitions line. It
+// reports nothing while the project's workflow file is refused (flowRefused).
 func (c *checker) itemStates(it *workitem.Item) {
+	if c.flowRefused() {
+		return
+	}
 	flow := c.repo.Flow()
 	seen := map[string]bool{}
 	report := func(name, key, where string) {

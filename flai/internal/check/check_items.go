@@ -156,7 +156,7 @@ func (c *checker) oneItem(it *workitem.Item) {
 		default:
 			// Cancelling a parent cancels what is open under it (ADR-0028); a tree
 			// cancelled by an older flai, or edited by hand, is caught here.
-			if c.inKind(parent.Status, workflow.KindCancelled) && !it.Closed() {
+			if !c.flowRefused() && c.inKind(parent.Status, workflow.KindCancelled) && !it.Closed() {
 				c.add(Error, "item.parent-cancelled", p, keyLine(p, "status"), "%s is %s under %s, which is %s; cancel it (flai move %s %s --reason \"%s cancelled\") or give it another parent", it.ID, it.Status, parent.ID, parent.Status, it.ID, workitem.CancelledState(c.repo.Flow()), parent.ID)
 			}
 			if !strings.Contains(parent.Body, "- "+it.ID+" ") && !strings.Contains(parent.Body, it.ID+"\n") {
@@ -176,6 +176,26 @@ func (c *checker) oneItem(it *workitem.Item) {
 	c.history(it)
 	c.itemStates(it)
 	children := c.childrenOf(it.ID)
+	if !c.flowRefused() {
+		c.itemByState(it, children)
+	}
+	if it.Closed() && it.IsBlocked() {
+		c.add(Warning, "item.blocked-closed", p, keyLine(p, "blocked"), "%s item still has an open blocked interval; close it at the item's close with flai unblock %s", it.Status, it.ID)
+	}
+	for _, h := range requiredHeadings[it.Type] {
+		if !strings.Contains(it.Body, "\n"+h+"\n") && !strings.Contains(it.Body, "\n"+h+" ") {
+			c.add(Warning, "item.heading", p, 1, "body is missing the %q section", h)
+		}
+	}
+}
+
+// itemByState runs the judgments of item it, whose children are children,
+// that its state's kind, or the commit effect's place on the board, decides:
+// story.tasks, story.criteria, story.draft, item.done-children, and
+// story.unchecked. oneItem leaves them out while the project's workflow file
+// is refused (flowRefused).
+func (c *checker) itemByState(it *workitem.Item, children []*workitem.Item) {
+	p := it.Path
 	// Tasks are written by the agent that pulls the story, once it is in
 	// progress, and are required once it waits, in review on the baseline,
 	// onwards (ADR-0021).
@@ -203,18 +223,15 @@ func (c *checker) oneItem(it *workitem.Item) {
 			c.add(Error, "story.unchecked", p, headingLine(p, "## Acceptance criteria"), "%s story has unchecked acceptance criteria", it.Status)
 		}
 	}
-	if it.Closed() && it.IsBlocked() {
-		c.add(Warning, "item.blocked-closed", p, keyLine(p, "blocked"), "%s item still has an open blocked interval; close it at the item's close with flai unblock %s", it.Status, it.ID)
-	}
-	for _, h := range requiredHeadings[it.Type] {
-		if !strings.Contains(it.Body, "\n"+h+"\n") && !strings.Contains(it.Body, "\n"+h+" ") {
-			c.add(Warning, "item.heading", p, 1, "body is missing the %q section", h)
-		}
-	}
 }
 
+// history reports item.chronology on its timestamps out of order, and
+// item.sequence on each transition the workflow does not allow after the one
+// before it; the sequence is left out while the project's workflow file is
+// refused (flowRefused).
 func (c *checker) history(it *workitem.Item) {
 	p := it.Path
+	refused := c.flowRefused()
 	created, errC := time.Parse(workitem.TimeFormat, it.Created)
 	updated, errU := time.Parse(workitem.TimeFormat, it.Updated)
 	flow := c.repo.Flow()
@@ -233,6 +250,9 @@ func (c *checker) history(it *workitem.Item) {
 			c.add(Error, "item.chronology", p, keyLine(p, "transitions"), "transitions[%d] at %s is before %s", i, tr.At, prevAt.Format(workitem.TimeFormat))
 		}
 		prevAt = at
+		if refused {
+			continue // judged against the board the project runs once it runs
+		}
 		// The transitions the workflow allows, back moves included (ADR-0055),
 		// leaving out those only a parent's cancellation makes: it takes an
 		// item out of review on the baseline, and nothing else does (ADR-0028).
@@ -846,9 +866,12 @@ func (c *checker) board() {
 	}
 	// The states that read in the pull order, the one nearest the pull first:
 	// ready and backlog on the baseline.
+	// While the project's workflow file is refused, the limits and the
+	// order's states are the baseline's, not the project's (flowRefused).
+	refused := c.flowRefused()
 	var ordered []string
 	for _, s := range flow.States {
-		if s.Limit {
+		if s.Limit && !refused {
 			c.wipLimit(b, s, counts[s.Name])
 		}
 		if s.Order {
@@ -862,7 +885,7 @@ func (c *checker) board() {
 		}
 		if !ok || it.Archived {
 			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is not on the board", id)
-		} else if s, known := flow.State(it.Status); !known || !s.Order {
+		} else if s, known := flow.State(it.Status); !refused && (!known || !s.Order) {
 			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is %s; only %s stories belong in the pull order", id, it.Status, andList(ordered))
 		}
 	}
