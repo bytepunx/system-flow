@@ -3,18 +3,21 @@ id: S-0750
 type: story
 nature: feature
 title: flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-15T20:29:16Z
+updated: 2026-11-15T20:56:18Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:20Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-15T20:29:27Z
+    by: agent-S-0750
 tags: [cli]
 topics: [cli, analysis]
-touches: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go]
+touches: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md, flai/internal/metrics/claims_test.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/digest_test.go]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,20 +25,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1615
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 190
+      output: 1100
+      cache_read: 11819517
+      cache_write: 747624
+      cost: 4.7504
   strategic:
     - kind: orchestrator
-      seconds: 26
+      seconds: 78
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 49
-          cache_read: 306146
-          cache_write: 40404
-          cost: 0.1017
+          input: 26
+          output: 155
+          cache_read: 922262
+          cache_write: 111136
+          cost: 0.3089
 cost_of_delay:
   value: 106.89
   by: system-flow

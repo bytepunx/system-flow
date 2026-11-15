@@ -2,7 +2,7 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743]
 topics: [planning, go, code, flai]
 paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver]
 date: 2026-11-03
@@ -86,4 +86,12 @@ T-3225 waits for T-3224 (after), because both change flai/internal/mcpserver: su
 
 So two tasks that change one package, even with no file in common, either wait one for the other or each run in a task worktree (D-0396). Run together in the story's worktree, each breaks the other's build, and two test helpers of the same name collide.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746.
+S-0743 met it in `flai/internal/serve`, where T-3218 (kluster), T-3219 (forge), and T-3220 (merge queue) shared no path but all build package `serve`. Its agent ran the three at once, each in a task worktree, and kept their test helpers apart by name (`wip/archive/agents/S-0743.md`):
+
+```text
+Layer 2 ran T-3218, T-3219, and T-3220 at once, each in a task worktree of its own (task/T-nnnn, since all three build package serve), with per-task test-helper prefixes (kl, fg, mq). Their files were copied into the story worktree, checked with cmp against what was committed, and the task worktrees removed.
+```
+
+So tasks of one layer that each add tests to one package give their test helpers a prefix of their own, so that the copied-back files do not declare one helper twice, and check each copied file with `cmp` against the task's commit before closing it.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743.

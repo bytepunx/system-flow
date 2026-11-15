@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2204.1959
-accrued_seconds: 1567408
-tasks_completed: 3609
-last_run: 2026-11-15T20:16:42Z
+accrued_cost: 2204.9104
+accrued_seconds: 1567565
+tasks_completed: 3615
+last_run: 2026-11-15T21:00:42Z
 ---
 
 # Orchestrator activity
@@ -25298,6 +25298,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.3040 USD, estimated
+
+### 2026-11-15T20:30:01Z
+
+- Summary: Release-due on S-0743 and S-0749: threshold met (count 3 vs 1; value 261.88 vs 1000 USD/week; pending S-0743, S-0744, S-0749). Did not run the publish formula again: S-0791, an unstarted publish instance in ready, publishes everything accepted and unreleased when its agent works it; in-progress is full (3 of 3).
+- Items: S-0743, S-0749, S-0744, S-0791
+- Seconds: 16
+- Cost: 0.0884 USD, estimated
+
+### 2026-11-15T20:30:19Z
+
+- Summary: I published nothing on this run: a release is due, but a publish story for it already exists.
+- Items: none
+- Seconds: 18
+- Cost: 0.0812 USD, estimated
+
+### 2026-11-15T20:33:28Z
+
+- Summary: Recommended an answer on TH-1223, citing design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md § 5. Timers
+- Items: S-0750
+- Seconds: 36
+- Cost: 0.1782 USD, estimated
+
+### 2026-11-15T20:33:44Z
+
+- Summary: TH-1223 (S-0750): recommended accepting ADR-0305 as written, under answer_threads autonomous. Accepting an ADR records a decision not yet made, so this goes to the operator as a recommendation. It rests on ADR-0301 §5, which asks for the ADR and fixes the timers. No policy figure applies.
+- Items: S-0750, TH-1223
+- Seconds: 16
+- Cost: 0.0290 USD, estimated
+
+### 2026-11-15T20:34:01Z
+
+- Summary: I posted a recommendation on TH-1223 to accept ADR-0305 as written. It is waiting for your answer.
+- Items: none
+- Seconds: 17
+- Cost: 0.0975 USD, estimated
+
+### 2026-11-15T21:00:42Z
+
+- Summary: Enqueued S-0741 in the merge queue at d0146719 (1st of 1 enqueued). The close-out passed at the branch head, and the verifier matched all 6 criteria to changed files within its touches. Policy throughput: forecast 29m; cost of delay 51.66/week.
+- Items: S-0741
+- Seconds: 54
+- Cost: 0.2402 USD, estimated
 
 ## Refusals
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1330
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 441
-      cache_read: 4348375
-      cache_write: 157691
-      cost: 1.7026
+      input: 52
+      output: 23779
+      cache_read: 4300475
+      cache_write: 267080
+      cost: 2.8718
 ---
 # T-3204 flai check reports the workflow findings: an unreachable state, a dead end, no pull, no acceptance, a bad timer, an unknown rule, and an item in a missing state
 

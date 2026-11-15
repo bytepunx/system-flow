@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 318.4161
-accrued_seconds: 34436
-tasks_completed: 214
-last_run: 2026-11-15T20:03:03Z
+accrued_cost: 321.2853
+accrued_seconds: 34719
+tasks_completed: 216
+last_run: 2026-11-15T20:34:08Z
 ---
 
 # Curator activity
@@ -1723,3 +1723,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0610
 - Seconds: 64
 - Cost: 0.5475 USD, estimated
+
+### 2026-11-15T20:33:05Z
+
+- Summary: Wrote D-0637, D-0639, D-0640, D-0641 and D-0642, plus D-0638, which I absorbed straight away by `design/system/workflow.md` § What waits on an acceptance (S-0296); merged S-0743 into D-0470 and S-0749 into D-0630; `flai digest compact` compacted no entry.
+- Trigger: accepted S-0743
+- Items: D-0470, D-0630, D-0637, D-0638, D-0639, D-0640, D-0641, D-0642
+- Seconds: 231
+- Cost: 1.7153 USD, estimated
+
+### 2026-11-15T20:34:08Z
+
+- Summary: Nothing to take in: `flai digest harvest --since 2026-11-15T20:33:05Z` found no candidates, so I wrote and merged no entries; I absorbed none, and `flai digest compact` compacted none. No design or docs commit has landed since the last run, so I re-checked only the seven newest entries (D-0630, D-0637, D-0639–D-0642, D-0470): no document states their facts, so all stay active.
+- Trigger: accepted S-0749
+- Items: none
+- Seconds: 52
+- Cost: 1.1539 USD, estimated

@@ -3,15 +3,21 @@ id: T-3240
 type: task
 nature: feature
 title: strategic-agents.md, the roles READMEs, and the operators' and users' guides list the move condition in place of to-review and to-backlog
-status: backlog
+status: in-progress
 parent: S-0748
 owner: alex
 created: 2026-11-12T16:08:54Z
-updated: 2026-11-12T16:08:54Z
-transitions: []
+updated: 2026-11-15T20:40:52Z
+transitions:
+  - to: ready
+    at: 2026-11-15T20:40:52Z
+    by: agent-S-0748
+  - to: in-progress
+    at: 2026-11-15T20:40:52Z
+    by: agent-S-0748
 stream: S-0748
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md]
+touches: [design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
 after: [T-3231]
 ---
 # T-3240 strategic-agents.md, the roles READMEs, and the operators' and users' guides list the move condition in place of to-review and to-backlog

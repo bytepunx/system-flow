@@ -3,12 +3,18 @@ id: T-3239
 type: task
 nature: feature
 title: The baseline orchestrator and planner role files use the new move condition in the template, in flai's embedded copies, and in this project
-status: backlog
+status: in-progress
 parent: S-0748
 owner: alex
 created: 2026-11-12T16:08:51Z
-updated: 2026-11-12T16:08:51Z
-transitions: []
+updated: 2026-11-15T20:40:52Z
+transitions:
+  - to: ready
+    at: 2026-11-15T20:40:51Z
+    by: agent-S-0748
+  - to: in-progress
+    at: 2026-11-15T20:40:52Z
+    by: agent-S-0748
 stream: S-0748
 tags: [cli, template]
 touches: [template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml]

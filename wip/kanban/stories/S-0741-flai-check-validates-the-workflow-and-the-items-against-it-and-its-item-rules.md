@@ -3,17 +3,20 @@ id: S-0741
 type: story
 nature: feature
 title: flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-15T20:04:08Z
+updated: 2026-11-15T20:59:12Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:34Z
     by: alex
   - to: in-progress
     at: 2026-11-15T19:40:03Z
+    by: agent-S-0741
+  - to: review
+    at: 2026-11-15T20:59:12Z
     by: agent-S-0741
 tags: [cli]
 topics: [cli]
@@ -26,31 +29,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1447
-  estimated: true
-  priced_by: estimate
+  seconds: 4761
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 2
-      work: 26
+      ceremony: 5
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 114
-      output: 675
-      cache_read: 7907473
-      cache_write: 395222
-      cost: 3.1371
+      input: 248
+      output: 113352
+      cache_read: 20499694
+      cache_write: 1273128
+      cost: 13.6895
   strategic:
     - kind: orchestrator
-      seconds: 32
+      seconds: 86
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 60
-          cache_read: 368403
-          cache_write: 49357
-          cost: 0.1231
+          input: 23
+          output: 207
+          cache_read: 764579
+          cache_write: 132475
+          cost: 0.2678
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 54
+          cache_read: 81986
+          cache_write: 39100
+          cost: 0.0955
 cost_of_delay:
   value: 51.66
   by: system-flow
@@ -73,12 +81,12 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] `flai check` reports each of these as a finding of its own code, under a `workflow.` prefix, naming the state, transition, timer, or item and what to do about it: a state no transition reaches, a state with no way to an accepted or a cancelled state, no transition with the pull effect, no transition with the acceptance effect, a timer naming a state the file lacks, a rule the vocabulary lacks, and an item whose status the workflow lacks
-- [ ] The baseline workflow passes every one of them
-- [ ] The item rules in `check_items.go` and `scope.go` name no state: each reads a state's kind, so a story in a wait state is checked as one in `review` is today
-- [ ] Tests give each finding on a workflow written to fail it, and run the item rules against a workflow with a state renamed and one added between `in-progress` and `review`
-- [ ] With the baseline, every existing `check` test passes unchanged
-- [ ] `design/system/flai-cli.md` and `docs/users/flai.md` list the new findings with what clears each
+- [x] `flai check` reports each of these as a finding of its own code, under a `workflow.` prefix, naming the state, transition, timer, or item and what to do about it: a state no transition reaches, a state with no way to an accepted or a cancelled state, no transition with the pull effect, no transition with the acceptance effect, a timer naming a state the file lacks, a rule the vocabulary lacks, and an item whose status the workflow lacks
+- [x] The baseline workflow passes every one of them
+- [x] The item rules in `check_items.go` and `scope.go` name no state: each reads a state's kind, so a story in a wait state is checked as one in `review` is today
+- [x] Tests give each finding on a workflow written to fail it, and run the item rules against a workflow with a state renamed and one added between `in-progress` and `review`
+- [x] With the baseline, every existing `check` test passes unchanged
+- [x] `design/system/flai-cli.md` and `docs/users/flai.md` list the new findings with what clears each
 
 ## Tasks
 

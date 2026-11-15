@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-15T20:15:49Z
+updated: 2026-11-15T20:40:27Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:18Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0748
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
-touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/start.go, flai/internal/check/check_roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/replan.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md, design/adrs/README.md]
+touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/replan.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md, design/adrs/README.md, flai/internal/roles/roles_test.go]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1677
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 2
+      test_runs: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 138
+      output: 659
+      cache_read: 10052103
+      cache_write: 724901
+      cost: 4.0736
   strategic:
     - kind: orchestrator
       seconds: 25
