@@ -129,6 +129,7 @@ var sequence = []rule{
 	{run: (*checker).conventions},
 	{run: (*checker).roles},
 	{run: (*checker).formulas},
+	{run: (*checker).workflow},
 	{run: (*checker).issues},
 	{run: (*checker).experiments},
 	{run: (*checker).analysis},

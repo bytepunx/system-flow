@@ -38,6 +38,7 @@ var oldOrder = []struct {
 	{"conventions", (*checker).conventions},
 	{"roles", (*checker).roles},
 	{"formulas", (*checker).formulas},
+	{"workflow", (*checker).workflow},
 	{"issues", (*checker).issues},
 	{"experiments", (*checker).experiments},
 	{"analysis", (*checker).analysis},
@@ -117,6 +118,7 @@ func everyRuleProject(t *testing.T) *workitem.Repo {
 	w("design/adrs/README.md", "# Architecture Decision Records\n\n| ADR | Title | Status |\n|-----|-------|--------|\n| [0007](0007-gone.md) | Gone | accepted |\n")
 	w("design/workflows/roles/broken.md", "---\nname: [broken\n---\n")
 	w("design/workflows/formulas/broken.md", "---\nname: [broken\n---\n")
+	w("design/workflows/board.md", "---\nname: [broken\n---\n")
 	w("design/experiments/broken.md", "no front matter\n")
 	w("design/analysis/broken.md", "no front matter\n")
 	w("design/digest/broken.md", "no front matter\n")

@@ -27,6 +27,10 @@ const File = "workflows/board.md"
 // under (ADR-0301 §1).
 const CodeFile = "workflow.file"
 
+// CodeTimer is the code flai reports a timer naming a state the file lacks
+// under (ADR-0301 §5).
+const CodeTimer = "workflow.timer"
+
 // State kinds: what a state means to flai (ADR-0301 §2).
 const (
 	KindQueue     = "queue"
@@ -672,12 +676,12 @@ func (p *reader) timers(w *Workflow) *Problem {
 			name  string
 			point *Point
 		}{{"from", t.From}, {"to", t.To}, {"until", t.Until}} {
-			if prob := p.point(w, at+"."+pt.name, pt.point); prob != nil {
+			if prob := p.point(w, t.Name, pt.name, at+"."+pt.name, pt.point); prob != nil {
 				return prob
 			}
 		}
 		for j, s := range t.Sum {
-			if prob := p.stateOf(w, fmt.Sprintf("%s.sum[%d]", at, j), s); prob != nil {
+			if prob := p.timerState(w, t.Name, fmt.Sprintf("%s.sum[%d]", at, j), "sum", s); prob != nil {
 				return prob
 			}
 		}
@@ -691,18 +695,30 @@ func (p *reader) timers(w *Workflow) *Problem {
 	return nil
 }
 
-// point is the problem with a point naming a state the file lacks or an
-// unknown kind.
-func (p *reader) point(w *Workflow, field string, pt *Point) *Problem {
+// point is the problem with timer's point part, its from, to, or until, at
+// field: naming a state the file lacks, a workflow.timer, or an unknown kind,
+// a workflow.file.
+func (p *reader) point(w *Workflow, timer, part, field string, pt *Point) *Problem {
 	switch {
 	case pt == nil:
 		return nil
 	case pt.Kind != "" && !slices.Contains(Kinds, pt.Kind):
 		return p.fail(field, "kind %q is not one of %s", pt.Kind, strings.Join(Kinds, ", "))
 	case pt.State != "":
-		return p.stateOf(w, field, pt.State)
+		return p.timerState(w, timer, field, part, pt.State)
 	}
 	return nil
+}
+
+// timerState is the workflow.timer problem with timer's part, its sum or a
+// point, naming name when name is no state of w.
+func (p *reader) timerState(w *Workflow, timer, field, part, name string) *Problem {
+	if slices.Contains(w.Names(), name) {
+		return nil
+	}
+	prob := p.fail(field, "timer %s's %s names %q, which is no state of the file; name one of %s, or add the state (ADR-0301 §5)", timer, part, name, strings.Join(w.Names(), ", "))
+	prob.Code = CodeTimer
+	return prob
 }
 
 // stateOf is the problem with name when it is no state of w.

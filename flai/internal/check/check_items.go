@@ -173,6 +173,7 @@ func (c *checker) oneItem(it *workitem.Item) {
 		c.add(Warning, "item.archive", p, keyLine(p, "status"), "%s is %s; run flai archive", it.ID, it.Status)
 	}
 	c.history(it)
+	c.itemStates(it)
 	children := c.childrenOf(it.ID)
 	// Tasks are written by the agent that pulls the story, once it is in
 	// progress, and are required from review onwards (ADR-0021).

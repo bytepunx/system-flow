@@ -28,7 +28,7 @@ type Write struct {
 // narratives of the written items' stories, and the index when the write
 // wrote it; and the markdown lint and conflict markers of the written files.
 // It skips every rule that reads no work item, among them the layout, the
-// documentation, the ADR index, the conventions, roles, formulas, issues,
+// documentation, the ADR index, the conventions, roles, formulas, the workflow, issues,
 // experiments, analysis, the digest, the design tokens, the component
 // examples, which start node, threads, and messages. A checked creation or
 // edit runs it before and after the write, in place of Run.

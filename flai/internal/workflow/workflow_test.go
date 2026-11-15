@@ -181,8 +181,6 @@ func TestParseRefusesWhatDoesNotParse(t *testing.T) {
 		{"timer with neither form", withTimer("{name: lead, title: Lead}"), 11, "timers[0]", "needs from and to, or sum"},
 		{"timer with both forms", withTimer("{name: lead, title: Lead, from: created, to: completed, sum: [backlog]}"), 11, "timers[0].sum", "not both"},
 		{"until without sum", withTimer("{name: lead, title: Lead, from: created, to: completed, until: completed}"), 11, "timers[0].until", "until bounds a sum only"},
-		{"sum of no state", withTimer("{name: wait, title: Wait, sum: [ready]}"), 11, "timers[0].sum[0]", `"ready" is no state`},
-		{"point of no state", withTimer("{name: lead, title: Lead, from: {first: ready}, to: completed}"), 11, "timers[0].from", `"ready" is no state`},
 		{"point of no kind", withTimer("{name: lead, title: Lead, from: {last: {kind: busy}}, to: completed}"), 11, "timers[0].from", `kind "busy"`},
 		{"point of another shape", withTimer("{name: lead, title: Lead, from: started, to: completed}"), 11, "timers[0].from", "a point is created, completed"},
 		{"unknown counts", withTimer("{name: lead, title: Lead, from: created, to: completed, counts: all}"), 11, "timers[0].counts", `counts "all"`},
@@ -199,6 +197,31 @@ func TestParseRefusesWhatDoesNotParse(t *testing.T) {
 			}
 			if !strings.Contains(p.Error(), p.Message) {
 				t.Errorf("Error %q lacks the message", p.Error())
+			}
+		})
+	}
+}
+
+// S-0741: a timer naming a state the file lacks, in its sum or in a point, is
+// refused under workflow.timer, naming the timer, its part, and the state.
+func TestParseRefusesATimerOfNoState(t *testing.T) {
+	cases := []struct {
+		name, content string
+		field, says   string
+	}{
+		{"sum of no state", withTimer("{name: wait, title: Wait, sum: [ready]}"), "timers[0].sum[0]", `timer wait's sum names "ready", which is no state of the file`},
+		{"from of no state", withTimer("{name: lead, title: Lead, from: {first: ready}, to: completed}"), "timers[0].from", `timer lead's from names "ready"`},
+		{"to of no state", withTimer("{name: lead, title: Lead, from: created, to: {last: review}}"), "timers[0].to", `timer lead's to names "review"`},
+		{"until of no state", withTimer("{name: wait, title: Wait, sum: [backlog], until: {first: ready}}"), "timers[0].until", `timer wait's until names "ready"`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, p := Parse("design/workflows/board.md", tc.content)
+			if p == nil {
+				t.Fatal("parsed, want a problem")
+			}
+			if p.Code != CodeTimer || p.Line != 11 || p.Field != tc.field || !strings.Contains(p.Message, tc.says) || !strings.Contains(p.Message, "name one of backlog, done") {
+				t.Errorf("got %s (code %s, line %d, field %q), want workflow.timer on line 11, field %q, saying %q", p, p.Code, p.Line, p.Field, tc.field, tc.says)
 			}
 		})
 	}
