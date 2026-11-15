@@ -389,3 +389,49 @@ func TestValidateShares(t *testing.T) {
 		}
 	}
 }
+
+// S-0749: under a board with ready renamed selected and testing added, of
+// the active-work kind, a story in testing holds and is asked, a selected
+// story is held, the ask is made once per stint in selected, and a share
+// lifts it; a story in acceptance-review holds nothing.
+func TestAskAndShareUnderAnotherWorkflow(t *testing.T) {
+	r := otherProject(t)
+	for id, touches := range map[string][]string{"S-0002": {"flai/internal/workitem"}, "S-0005": {"flai/internal/workitem/hold.go"}} {
+		it, err := r.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Touches = touches
+		if id == "S-0005" {
+			it.Transitions = []workitem.Transition{{To: "selected", At: t0.Format(workitem.TimeFormat), By: "a"}}
+		}
+		if err := r.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	opt := AskOptions{Held: "S-0005", Holder: "S-0002", Paths: []string{"flai/internal/workitem/hold.go"}, Now: t0.Add(time.Hour)}
+	c, wrote, err := AskHold(r, opt)
+	if err != nil || !wrote {
+		t.Fatalf("ask: wrote %v, %v", wrote, err)
+	}
+	opt.Now = t0.Add(2 * time.Hour)
+	if _, wrote, err := AskHold(r, opt); err != nil || wrote {
+		t.Errorf("asked again in the same stint in selected: wrote %v, %v", wrote, err)
+	}
+	if _, err := Share(r, ShareOptions{ID: c.ID, Story: "S-0002", Author: "agent-S-0002", Paths: []string{"flai/internal/workitem/hold.go"}, Split: "Apart.", Now: t0.Add(3 * time.Hour)}); err != nil {
+		t.Fatalf("share from a story in testing: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		opt  AskOptions
+		want string
+	}{
+		{"holder in acceptance-review", AskOptions{Held: "S-0005", Holder: "S-0003"}, "S-0003, the holding story, is in acceptance review; it must be in progress or in testing"},
+		{"held in testing", AskOptions{Held: "S-0002", Holder: "S-0001"}, "S-0002, the held story, is in testing; it must be selected"},
+	} {
+		tc.opt.Paths, tc.opt.Now = []string{"flai/internal/workitem/hold.go"}, t0
+		if _, wrote, err := AskHold(r, tc.opt); wrote || err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: wrote %v, got %v, want %q", tc.name, wrote, err, tc.want)
+		}
+	}
+}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1105,5 +1106,129 @@ func TestListsAtOnceAgree(t *testing.T) {
 		if errs[i] != nil || len(got[i]) != 5 || !reflect.DeepEqual(got[i], got[0]) {
 			t.Errorf("list %d: %s %v, want %s", i, ids(got[i]), errs[i], ids(got[0]))
 		}
+	}
+}
+
+// otherWorkflow is a board unlike the baseline (ADR-0301 §6): ready is
+// renamed selected, review acceptance-review, done shipped, and cancelled
+// dropped, none keeping its old name as an alias, and testing, of the
+// active-work kind, sits between in-progress and acceptance-review.
+const otherWorkflow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: selected, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true}
+  - {name: shipped, kind: accepted}
+  - {name: dropped, kind: cancelled}
+transitions:
+  - {from: backlog, to: selected, effects: [commit]}
+  - {from: selected, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: shipped, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: selected}
+  - {from: selected, to: backlog}
+  - {from: [backlog, selected, in-progress, testing], to: dropped, effects: [cancel]}
+  - {from: acceptance-review, to: dropped, by: [cascade], effects: [cancel]}
+  - {from: dropped, to: backlog, effects: [reopen]}
+---
+`
+
+// otherProject is project under otherWorkflow, with one story in each of
+// its open states and one in the backlog: S-0001 in-progress, S-0002
+// testing, S-0003 acceptance-review, S-0004 backlog, S-0005 selected.
+func otherProject(t *testing.T) *workitem.Repo {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", otherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	root := t.TempDir()
+	write(t, filepath.Join(root, "system-flow.yaml"), "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n")
+	for _, d := range []string{"design/system", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(t, filepath.Join(root, ".markdownlint.yaml"), lintConfig)
+	r, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Workflow = &w
+	for _, state := range []string{"in-progress", "testing", "acceptance-review", "backlog", "selected"} {
+		it, err := r.Create(workitem.NewOptions{Type: workitem.Story, Title: "Story " + state, Owner: "a", Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		setStatus(t, r, it.ID, state)
+	}
+	return r
+}
+
+// S-0749: under a board with states renamed and one added, a story talks in
+// each state of the active-work and the wait kinds, testing among them, and
+// a conversation closes when either story reaches the accepted or the
+// cancelled kind, whatever the state's name.
+func TestAConversationClosesByKindUnderAnotherWorkflow(t *testing.T) {
+	for _, tc := range []struct{ state, why string }{
+		{"shipped", "S-0003 was accepted"},
+		{"dropped", "S-0003 was cancelled"},
+	} {
+		t.Run(tc.state, func(t *testing.T) {
+			r := otherProject(t)
+			c := send(t, r, "S-0002", "S-0003", "Hello", t0)
+			if closed, why := c.Closed(r); closed {
+				t.Fatalf("open stories read as closed (%s)", why)
+			}
+			setStatus(t, r, "S-0003", tc.state)
+			if closed, why := c.Closed(r); !closed || why != tc.why {
+				t.Fatalf("reads as closed %v (%s), want %s", closed, why, tc.why)
+			}
+		})
+	}
+	r := otherProject(t)
+	c := send(t, r, "S-0001", "S-0002", "Hello", t0)
+	if got := ids(AwaitingOtherIn(r, []*Conversation{c}, "S-0001")); got != c.ID {
+		t.Errorf("a story in testing owes the reply: awaiting other %q", got)
+	}
+	setStatus(t, r, "S-0002", "selected")
+	if closed, _ := c.Closed(r); closed {
+		t.Error("a story moved back to selected leaves the conversation open")
+	}
+	if got := AwaitingOtherIn(r, []*Conversation{c}, "S-0001"); len(got) != 0 {
+		t.Errorf("a selected story has no agent to reply: awaiting other %s", ids(got))
+	}
+	for _, id := range []string{"S-0004", "S-0005"} {
+		_, err := Send(r, SendOptions{From: "S-0001", To: id, Author: "agent-S-0001", Text: "Hi", Now: t0})
+		if err == nil || !strings.Contains(err.Error(), "a message goes only between stories in progress, in testing, or in acceptance review") {
+			t.Errorf("a message to %s: %v", id, err)
+		}
+	}
+	if _, err := Send(r, SendOptions{From: "S-0001", To: "S-0004", Author: "agent-S-0001", Text: "Hi", Now: t0}); err == nil || !strings.Contains(err.Error(), "S-0004 is in the backlog;") {
+		t.Errorf("a message to a story in the backlog: %v", err)
+	}
+}
+
+// S-0749: a state reads in a sentence by its kind, as the baseline's always
+// read.
+func TestStateWords(t *testing.T) {
+	base := workflow.Baseline()
+	for status, want := range map[string]string{
+		"backlog": "in the backlog", "ready": "ready", "in-progress": "in progress", "review": "in review",
+		"done": "done", "cancelled": "cancelled", "nowhere": "nowhere",
+	} {
+		if got := stateWords(base, status); got != want {
+			t.Errorf("stateWords(%s) = %q, want %q", status, got, want)
+		}
+	}
+	if got := talkingWords(base); got != "in progress or in review" {
+		t.Errorf("talking words on the baseline: %q", got)
 	}
 }

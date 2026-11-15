@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -281,7 +282,8 @@ func (c *Conversation) Names(story string) bool {
 }
 
 // Closed reports whether the conversation reads as closed, and why: its
-// status is closed, or either story is done, cancelled, archived, or gone. A
+// status is closed, or either story is in a state of the accepted or the
+// cancelled kind in the repository's workflow, archived, or gone. A
 // story whose file cannot be read does not close it; Reply reports the error.
 func (c *Conversation) Closed(r *workitem.Repo) (closed bool, reason string) {
 	if c.Status == StatusClosed {
@@ -311,7 +313,8 @@ func (c *Conversation) closedReason() string {
 }
 
 // gone says why a story has left, so that its conversations read as closed,
-// or "" while it is open or cannot be read.
+// or "" while it is open or cannot be read. A story has left once its state
+// is of the accepted or the cancelled kind (ADR-0120 §3, ADR-0301 §2).
 func gone(r *workitem.Repo, story string) string {
 	it, err := r.Get(story)
 	switch {
@@ -319,9 +322,9 @@ func gone(r *workitem.Repo, story string) string {
 		return story + " does not exist"
 	case err != nil:
 		return ""
-	case it.Status == workitem.Done:
+	case workitem.IsKind(r.Flow(), it.Status, workflow.KindAccepted):
 		return it.ID + " was accepted"
-	case it.Status == workitem.Cancelled:
+	case workitem.IsKind(r.Flow(), it.Status, workflow.KindCancelled):
 		return it.ID + " was cancelled"
 	case it.Archived:
 		return it.ID + " is archived"
@@ -431,7 +434,8 @@ func (c *Conversation) Other(story string) string {
 
 // AwaitingOther returns story's conversations that read as open and await
 // the other story's reply: those story sent or answered last, in ID order,
-// and not settled. One whose other story is not in progress or in review is
+// and not settled. One whose other story is not in a state of the
+// active-work or the wait kind, on the baseline in progress or in review, is
 // left out: a ready story, such as one flai asked about a hold for, has no
 // agent to reply until it starts, so a reply to it awaits no one (ADR-0134).
 func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
@@ -453,7 +457,7 @@ func AwaitingOtherIn(r *workitem.Repo, all []*Conversation, story string) []*Con
 		if a := c.Awaiting(); a == "" || workitem.CanonicalID(a) == workitem.CanonicalID(story) {
 			continue
 		}
-		if it, err := r.Get(c.Other(story)); err == nil && it.Status != workitem.InProgress && it.Status != workitem.Review {
+		if it, err := r.Get(c.Other(story)); err == nil && !talks(r.Flow(), it.Status) {
 			continue
 		}
 		out = append(out, c)
@@ -590,7 +594,7 @@ func prepare(r *workitem.Repo, opt SendOptions) (message, error) {
 		return m, fmt.Errorf("an author is required (--by, FLAI_AGENT, or config author)")
 	}
 	if s := workitem.CanonicalID(strings.TrimSpace(opt.From)); s != "" && s == workitem.CanonicalID(strings.TrimSpace(opt.To)) {
-		return m, fmt.Errorf("%s cannot message itself: name another story in progress or in review", s)
+		return m, fmt.Errorf("%s cannot message itself: name another story %s", s, talkingWords(r.Flow()))
 	}
 	var err error
 	if m.from, err = sendable(r, opt.From, "sender"); err != nil {
@@ -929,9 +933,11 @@ func View(r *workitem.Repo, c *Conversation) map[string]any {
 }
 
 // sendable finds a story a message may go to or from: a story ID, of a story
-// that exists, is not archived, and is in progress or in review. role names
-// the side in the error.
+// that exists, is not archived, and is in a state of the active-work or the
+// wait kind, on the baseline in progress or in review. role names the side
+// in the error.
 func sendable(r *workitem.Repo, id, role string) (*workitem.Item, error) {
+	flow := r.Flow()
 	canon := workitem.CanonicalID(strings.TrimSpace(id))
 	if strings.TrimSpace(id) == "" {
 		return nil, fmt.Errorf("the %s's story is required: a message goes from one story to another, such as S-0001", role)
@@ -941,31 +947,66 @@ func sendable(r *workitem.Repo, id, role string) (*workitem.Item, error) {
 	}
 	it, err := r.Get(canon)
 	if errors.Is(err, workitem.ErrNotFound) {
-		return nil, fmt.Errorf("%s, the %s, does not exist: a message goes only between stories in progress or in review", canon, role)
+		return nil, fmt.Errorf("%s, the %s, does not exist: a message goes only between stories %s", canon, role, talkingWords(flow))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read %s, the %s: %w", canon, role, err)
 	}
 	if it.Archived {
-		return nil, fmt.Errorf("%s is archived; a message goes only between stories in progress or in review", it.ID)
+		return nil, fmt.Errorf("%s is archived; a message goes only between stories %s", it.ID, talkingWords(flow))
 	}
-	if it.Status != workitem.InProgress && it.Status != workitem.Review {
-		return nil, fmt.Errorf("%s is %s; a message goes only between stories in progress or in review", it.ID, stateWords(it.Status))
+	if !talks(flow, it.Status) {
+		return nil, fmt.Errorf("%s is %s; a message goes only between stories %s", it.ID, stateWords(flow, it.Status), talkingWords(flow))
 	}
 	return it, nil
 }
 
-// stateWords reads a status in a sentence: "S-0012 is in the backlog".
-func stateWords(status string) string {
-	switch status {
-	case workitem.Backlog:
-		return "in the backlog"
-	case workitem.InProgress:
-		return "in progress"
-	case workitem.Review:
-		return "in review"
+// talks reports whether a story in state may send and be sent messages: the
+// state is of the active-work or the wait kind in w (ADR-0120, ADR-0301 §2).
+func talks(w workflow.Workflow, state string) bool {
+	k := w.Kind(state)
+	return k == workflow.KindActive || k == workflow.KindWaiting
+}
+
+// talkingWords names the states a story talks in, in board order, in a
+// sentence: "in progress or in review" on the baseline.
+func talkingWords(w workflow.Workflow) string { return wordsWhere(w, talks) }
+
+// stateWords reads a status in a sentence by its state's kind in w: "S-0012
+// is in the backlog". A state of the active-work or the wait kind reads with
+// its hyphens as spaces, after "in" unless it starts so ("in progress", "in
+// review"); the initial queue is "in the" it ("in the backlog"); any other
+// reads as its name ("ready", "done"). A status w does not hold reads as
+// itself.
+func stateWords(w workflow.Workflow, status string) string {
+	s, ok := w.State(status)
+	if !ok {
+		return status
 	}
-	return status
+	switch {
+	case s.Kind == workflow.KindActive || s.Kind == workflow.KindWaiting:
+		words := strings.ReplaceAll(s.Name, "-", " ")
+		if strings.HasPrefix(words, "in ") {
+			return words
+		}
+		return "in " + words
+	case s.Kind == workflow.KindQueue && s.Initial:
+		return "in the " + s.Name
+	}
+	return s.Name
+}
+
+// orWords joins words as "a", "a or b", or "a, b, or c".
+func orWords(words []string) string {
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		return words[0]
+	case 2:
+		return words[0] + " or " + words[1]
+	}
+	return strings.Join(words[:len(words)-1], ", ") + ", or " + words[len(words)-1]
 }
 
 // storyOf is the conversation's own spelling of a story it names, so that

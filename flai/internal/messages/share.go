@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -39,11 +40,12 @@ type AskOptions struct {
 // be ready and the holder in progress; the file is refused, and nothing
 // written, when the project's lint rejects it.
 func AskHold(r *workitem.Repo, opt AskOptions) (*Conversation, bool, error) {
-	held, err := storyIn(r, opt.Held, "held story", workitem.Ready)
+	flow := r.Flow()
+	held, err := storyIn(r, opt.Held, "held story", pulledFrom, pulledFromWords(flow))
 	if err != nil {
 		return nil, false, err
 	}
-	holder, err := storyIn(r, opt.Holder, "holding story", workitem.InProgress)
+	holder, err := storyIn(r, opt.Holder, "holding story", holds, holdsWords(flow))
 	if err != nil {
 		return nil, false, err
 	}
@@ -67,7 +69,7 @@ func AskHold(r *workitem.Repo, opt AskOptions) (*Conversation, bool, error) {
 		c, err = begin(r, message{id: id, text: askText(id, held, holder, paths), author: AskAuthor, from: held, to: holder, about: paths, now: now})
 		return c, err == nil, err
 	}
-	if askedSince(c, held) {
+	if askedSince(flow, c, held) {
 		return c, false, nil
 	}
 	was := c.Marshal()
@@ -87,8 +89,8 @@ func AskHold(r *workitem.Repo, opt AskOptions) (*Conversation, bool, error) {
 
 // askedSince says whether c holds a message by flai written for held at or
 // after held last entered ready.
-func askedSince(c *Conversation, held *workitem.Item) bool {
-	since := readySince(held)
+func askedSince(w workflow.Workflow, c *Conversation, held *workitem.Item) bool {
+	since := readySince(w, held)
 	for _, e := range c.Entries() {
 		if e.Author != AskAuthor || workitem.CanonicalID(e.Story) != held.ID {
 			continue
@@ -100,10 +102,11 @@ func askedSince(c *Conversation, held *workitem.Item) bool {
 	return false
 }
 
-// readySince is when the story last entered ready, else when it was created.
-func readySince(it *workitem.Item) time.Time {
+// readySince is when the story last entered a state it is pulled from in w,
+// ready on the baseline, else when it was created.
+func readySince(w workflow.Workflow, it *workitem.Item) time.Time {
 	for i := len(it.Transitions) - 1; i >= 0; i-- {
-		if it.Transitions[i].To == workitem.Ready {
+		if pulledFrom(w, it.Transitions[i].To) {
 			t, _ := time.Parse(workitem.TimeFormat, it.Transitions[i].At)
 			return t
 		}
@@ -204,9 +207,11 @@ func Share(r *workitem.Repo, opt ShareOptions) (*Conversation, error) {
 	return c, nil
 }
 
-// sides finds the conversation's ready story, the held, and the other, the
-// holder, which must be in progress.
+// sides finds the conversation's ready story, the held, in a state a story is
+// pulled from, and the other, the holder, which must be in a state of the
+// active-work kind: on the baseline, ready and in progress.
 func sides(r *workitem.Repo, c *Conversation) (held, holder *workitem.Item, err error) {
+	flow := r.Flow()
 	from, err := r.Get(c.From)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read %s, of %s: %w", c.From, c.ID, err)
@@ -216,17 +221,17 @@ func sides(r *workitem.Repo, c *Conversation) (held, holder *workitem.Item, err 
 		return nil, nil, fmt.Errorf("read %s, of %s: %w", c.To, c.ID, err)
 	}
 	switch {
-	case from.Status == workitem.Ready && to.Status == workitem.Ready:
+	case pulledFrom(flow, from.Status) && pulledFrom(flow, to.Status):
 		return nil, nil, fmt.Errorf("%s and %s, the two stories of %s, are both ready: a share is made by the story in progress that holds a ready one; nothing was written", from.ID, to.ID, c.ID)
-	case from.Status == workitem.Ready:
+	case pulledFrom(flow, from.Status):
 		held, holder = from, to
-	case to.Status == workitem.Ready:
+	case pulledFrom(flow, to.Status):
 		held, holder = to, from
 	default:
-		return nil, nil, fmt.Errorf("neither %s (%s) nor %s (%s), the two stories of %s, is ready: a share lifts the hold on a ready story, so there is nothing to share; nothing was written", from.ID, stateWords(from.Status), to.ID, stateWords(to.Status), c.ID)
+		return nil, nil, fmt.Errorf("neither %s (%s) nor %s (%s), the two stories of %s, is ready: a share lifts the hold on a ready story, so there is nothing to share; nothing was written", from.ID, stateWords(flow, from.Status), to.ID, stateWords(flow, to.Status), c.ID)
 	}
-	if holder.Status != workitem.InProgress {
-		return nil, nil, fmt.Errorf("%s is %s, and only a story in progress holds a ready one (ADR-0096), so it has nothing to share with %s; nothing was written", holder.ID, stateWords(holder.Status), held.ID)
+	if !holds(flow, holder.Status) {
+		return nil, nil, fmt.Errorf("%s is %s, and only a story in progress holds a ready one (ADR-0096), so it has nothing to share with %s; nothing was written", holder.ID, stateWords(flow, holder.Status), held.ID)
 	}
 	return held, holder, nil
 }
@@ -294,9 +299,10 @@ func deeper(a, b string) string {
 	return b
 }
 
-// storyIn finds the story id, which must exist, not be archived, and be in
-// state; role names it in the error.
-func storyIn(r *workitem.Repo, id, role, state string) (*workitem.Item, error) {
+// storyIn finds the story id, which must exist, not be archived, and be in a
+// state of r's workflow that in accepts, the states want names in a
+// sentence; role names it in the error.
+func storyIn(r *workitem.Repo, id, role string, in func(workflow.Workflow, string) bool, want string) (*workitem.Item, error) {
 	canon := workitem.CanonicalID(strings.TrimSpace(id))
 	if !storyPattern.MatchString(canon) {
 		return nil, fmt.Errorf("%q, the %s, is not a story ID such as S-0001", id, role)
@@ -309,12 +315,50 @@ func storyIn(r *workitem.Repo, id, role, state string) (*workitem.Item, error) {
 		return nil, fmt.Errorf("read %s, the %s: %w", canon, role, err)
 	}
 	if it.Archived {
-		return nil, fmt.Errorf("%s, the %s, is archived; it must be %s", it.ID, role, stateWords(state))
+		return nil, fmt.Errorf("%s, the %s, is archived; it must be %s", it.ID, role, want)
 	}
-	if it.Status != state {
-		return nil, fmt.Errorf("%s, the %s, is %s; it must be %s", it.ID, role, stateWords(it.Status), stateWords(state))
+	if !in(r.Flow(), it.Status) {
+		return nil, fmt.Errorf("%s, the %s, is %s; it must be %s", it.ID, role, stateWords(r.Flow(), it.Status), want)
 	}
 	return it, nil
+}
+
+// pulledFrom reports whether a story in state waits to be pulled: w has a
+// transition a story takes out of it that gives the pull effect, as from
+// ready on the baseline. Only such a story is held on overlap (ADR-0096).
+func pulledFrom(w workflow.Workflow, state string) bool {
+	for _, t := range w.From(workflow.TypeStory, state) {
+		if t.HasEffect(workflow.EffectPull) {
+			return true
+		}
+	}
+	return false
+}
+
+// holds reports whether a story in state holds the stories it overlaps: the
+// state is of the active-work kind in w, as in progress is on the baseline.
+func holds(w workflow.Workflow, state string) bool {
+	return workitem.IsKind(w, state, workflow.KindActive)
+}
+
+// pulledFromWords names the states a story is pulled from, "ready" on the
+// baseline.
+func pulledFromWords(w workflow.Workflow) string { return wordsWhere(w, pulledFrom) }
+
+// holdsWords names the states of the active-work kind, "in progress" on the
+// baseline.
+func holdsWords(w workflow.Workflow) string { return wordsWhere(w, holds) }
+
+// wordsWhere names, in board order, the states of w that in accepts, as
+// stateWords reads each, joined by orWords.
+func wordsWhere(w workflow.Workflow, in func(workflow.Workflow, string) bool) string {
+	var words []string
+	for _, s := range w.States {
+		if in(w, s.Name) {
+			words = append(words, stateWords(w, s.Name))
+		}
+	}
+	return orWords(words)
 }
 
 // cleanPaths returns the paths cleaned as cleanAbout does, the error naming
