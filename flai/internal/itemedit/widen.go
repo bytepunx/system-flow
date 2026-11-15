@@ -189,8 +189,9 @@ func NarrowStory(o NarrowOptions) (Narrowed, error) {
 		return n, fmt.Errorf("read the tasks of %s to narrow its touches: %w", story.ID, err)
 	}
 	named := map[string]bool{}
+	flow := o.Repo.Flow()
 	for _, t := range tasks {
-		if t.Type == workitem.Task && !t.Closed() && workitem.CanonicalID(t.ID) != workitem.CanonicalID(task.ID) {
+		if t.Type == workitem.Task && !closedIn(flow, t.Status) && workitem.CanonicalID(t.ID) != workitem.CanonicalID(task.ID) {
 			for _, e := range t.Touches {
 				named[cleanTouch(e)] = true
 			}

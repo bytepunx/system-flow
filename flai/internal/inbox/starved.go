@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -90,13 +91,19 @@ func ReadStarved(repo *workitem.Repo, items []*workitem.Item, r Reader) (Starved
 		// a resolved thread awaits no one; a block reason may still name it
 		sums = append(sums, ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor})
 	}
-	return StarvedFrom(items, c, sums), nil
+	return StarvedFromIn(repo.Flow(), items, c, sums), nil
 }
 
-// StarvedFrom says what each story c refuses waits on, in c's order, given
-// the items c judged and the summaries of the threads, each Story and
-// Awaiting set as Summarize sets them. It reads nothing.
+// StarvedFrom is StarvedFromIn under the baseline workflow.
 func StarvedFrom(items []*workitem.Item, c workitem.Candidates, sums []ThreadSummary) Starved {
+	return StarvedFromIn(workflow.Baseline(), items, c, sums)
+}
+
+// StarvedFromIn says what each story c refuses waits on, in c's order, given
+// the items c judged and the summaries of the threads, each Story and
+// Awaiting set as Summarize sets them, with flow the board's workflow, whose
+// kinds tell a closed story from an open one (ADR-0301). It reads nothing.
+func StarvedFromIn(flow workflow.Workflow, items []*workitem.Item, c workitem.Candidates, sums []ThreadSummary) Starved {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
@@ -106,14 +113,14 @@ func StarvedFrom(items []*workitem.Item, c workitem.Candidates, sums []ThreadSum
 		out.Candidates = []workitem.Ranked{}
 	}
 	for _, o := range c.Others {
-		out.Stories = append(out.Stories, starvedStory(o, byID[o.ID], byID, sums))
+		out.Stories = append(out.Stories, starvedStory(flow, o, byID[o.ID], byID, sums))
 	}
 	return out
 }
 
 // starvedStory is what refused, the item story, waits on: a draft, held by
 // after, blocked, or anything else, the first that applies.
-func starvedStory(refused workitem.Refused, story *workitem.Item, byID map[string]*workitem.Item, sums []ThreadSummary) StarvedStory {
+func starvedStory(flow workflow.Workflow, refused workitem.Refused, story *workitem.Item, byID map[string]*workitem.Item, sums []ThreadSummary) StarvedStory {
 	out := StarvedStory{ID: refused.ID, Title: refused.Title, Reasons: refused.Reasons, Waits: WaitsOther}
 	switch {
 	case story == nil:
@@ -122,7 +129,7 @@ func starvedStory(refused workitem.Refused, story *workitem.Item, byID map[strin
 		out.Waits, out.Threads = WaitsDraft, awaitingOperator(story.ID, sums)
 	case refused.Held != nil && refused.Held.Code == workitem.HoldAfter:
 		out.Waits, out.Held = WaitsAfter, refused.Held.Reason
-		roots, loops := afterRoots(story, byID)
+		roots, loops := afterRoots(flow, story, byID)
 		out.Loops = loops
 		for _, it := range roots {
 			out.Roots = append(out.Roots, Ref{ID: it.ID, Title: it.Title, Status: it.Status})
@@ -149,7 +156,7 @@ func awaitingOperator(story string, sums []ThreadSummary) []Ref {
 // afterRoots are the stories at the root of story's after chain, in the order
 // the chain reaches them, and whether the chain loops. A story named in after
 // that is done, cancelled, or absent, as an archived one is, counts as done.
-func afterRoots(story *workitem.Item, byID map[string]*workitem.Item) ([]*workitem.Item, bool) {
+func afterRoots(flow workflow.Workflow, story *workitem.Item, byID map[string]*workitem.Item) ([]*workitem.Item, bool) {
 	const (
 		onChain = 1
 		walked  = 2
@@ -160,7 +167,7 @@ func afterRoots(story *workitem.Item, byID map[string]*workitem.Item) ([]*workit
 	var walk func(it *workitem.Item)
 	walk = func(it *workitem.Item) {
 		state[it.ID] = onChain
-		waits := pendingAfter(it, byID)
+		waits := pendingAfter(flow, it, byID)
 		if len(waits) == 0 && it != story {
 			roots = append(roots, it)
 		}
@@ -179,20 +186,31 @@ func afterRoots(story *workitem.Item, byID map[string]*workitem.Item) ([]*workit
 }
 
 // pendingAfter are the stories it names in after that are among byID and
-// neither done nor cancelled, each once, itself left out.
-func pendingAfter(it *workitem.Item, byID map[string]*workitem.Item) []*workitem.Item {
+// in no state of flow of kind accepted or cancelled, neither done nor
+// cancelled on the baseline, each once, itself left out.
+func pendingAfter(flow workflow.Workflow, it *workitem.Item, byID map[string]*workitem.Item) []*workitem.Item {
 	var out []*workitem.Item
 	seen := map[string]bool{}
 	for _, e := range it.After {
 		id := workitem.CanonicalID(e)
 		dep, ok := byID[id]
-		if !ok || id == it.ID || seen[id] || dep.Closed() {
+		if !ok || id == it.ID || seen[id] || closedIn(flow, dep.Status) {
 			continue
 		}
 		seen[id] = true
 		out = append(out, dep)
 	}
 	return out
+}
+
+// closedIn says whether status is a state of flow of kind accepted or
+// cancelled, whatever the board names it (ADR-0301).
+func closedIn(flow workflow.Workflow, status string) bool {
+	switch flow.Kind(status) {
+	case workflow.KindAccepted, workflow.KindCancelled:
+		return true
+	}
+	return false
 }
 
 // openBlock is the reason of its newest open block.
