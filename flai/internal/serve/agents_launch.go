@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -36,6 +37,9 @@ type launcher struct {
 	now    func() time.Time
 	log    func(msg string, args ...any)
 	warn   func(msg string, args ...any)
+	// flow is the workflow the project runs, Options.Workflow: nil runs
+	// the baseline flai carries (ADR-0301).
+	flow *workflow.Workflow
 
 	mu      sync.Mutex
 	said    map[string]string // why each skipped story waits, as last logged
@@ -138,7 +142,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck, notify: o.Notify, imageJobs: o.imageJobs,
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck, notify: o.Notify, imageJobs: o.imageJobs, flow: o.Workflow,
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},
