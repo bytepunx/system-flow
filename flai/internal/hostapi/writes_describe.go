@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -611,4 +612,98 @@ func withJSON(args []string) []string {
 		}
 	}
 	return append(append([]string{}, args...), "--json")
+}
+
+// ruleReasonGiven is the rule a transition lists when the move asks why it
+// is made (ADR-0301 §4): on the baseline, the cancellations and review's
+// send-back.
+const ruleReasonGiven = "reason-given"
+
+// move is an item.move described from the project's workflow (ADR-0301):
+// the item's state and the target in the workflow's current names, the
+// transition between them when the workflow has one, and what the move does
+// and asks for, read from that transition, not from a list of states.
+type move struct {
+	// ID is the item's ID as the repository gives it, or as given when the
+	// item could not be read; From is empty then.
+	ID, From, To string
+	// Transition is the move from the item's state to the target; Known
+	// says the workflow has one.
+	Transition workflow.Transition
+	Known      bool
+	// Accepts is an acceptance; Commits and Cancels say the target is the
+	// state an item commits or cancels to; AsksReason that the move asks
+	// why it is made.
+	Accepts, Commits, Cancels, AsksReason bool
+}
+
+// describeMove describes the move of the item id names, it when it could be
+// read, to the state to names, or an alias of it names, in wf.
+func describeMove(wf workflow.Workflow, it *workitem.Item, id, to string) move {
+	d := move{ID: id, To: stateName(wf, to)}
+	typ := workitem.TypeOfID(workitem.CanonicalID(id))
+	if it != nil {
+		d.ID, d.From, typ = it.ID, stateName(wf, it.Status), it.Type
+		d.Transition, d.Known = wf.Find(it.Type, it.Status, to)
+	}
+	d.Commits = intoEffect(wf, typ, workflow.EffectCommit, to)
+	d.Cancels = intoEffect(wf, typ, workflow.EffectCancel, to)
+	if d.Known {
+		d.Accepts = d.Transition.HasEffect(workflow.EffectAccept)
+		d.AsksReason = asks(d.Transition, ruleReasonGiven)
+	} else {
+		// without the transition, what the target's own transitions give:
+		// a cancellation asks why, as every cancel transition on the
+		// baseline does
+		d.Accepts = intoAcceptance(wf, it, d.To)
+		d.AsksReason = d.Cancels
+	}
+	return d
+}
+
+// stateName is the current name of the state name, or an alias of it,
+// names in wf, else name as given.
+func stateName(wf workflow.Workflow, name string) string {
+	if st, ok := wf.State(name); ok {
+		return st.Name
+	}
+	return name
+}
+
+// asks reports whether t lists rule as a refusal, at the rule's default
+// severity or refuse: a rule that only warns asks nothing of the mover.
+func asks(t workflow.Transition, rule string) bool {
+	for _, r := range t.Rules {
+		if r.Rule == rule && (r.Severity == "" || r.Severity == workflow.SeverityRefuse) {
+			return true
+		}
+	}
+	return false
+}
+
+// intoAcceptance reports whether a transition into the state named state
+// gives the accept effect in wf (ADR-0301 §3): one of its type, or of any
+// type when it is nil. On the baseline, an epic's or a story's move to done.
+func intoAcceptance(wf workflow.Workflow, it *workitem.Item, state string) bool {
+	for _, t := range wf.Transitions {
+		if t.To == state && (it == nil || t.Takes(it.Type)) && t.HasEffect(workflow.EffectAccept) {
+			return true
+		}
+	}
+	return false
+}
+
+// intoEffect reports whether the state to names, or an alias of it names, is
+// where the transition of an item of type typ that gives effect goes in wf
+// (ADR-0301 §3): ready for the commit effect and cancelled for the cancel
+// effect on the baseline.
+func intoEffect(wf workflow.Workflow, typ, effect, to string) bool {
+	t, ok := wf.WithEffect(typ, effect)
+	st, known := wf.State(to)
+	return ok && known && st.Name == t.To
+}
+
+// cascadeOnly reports whether only a parent's cancellation makes t.
+func cascadeOnly(t workflow.Transition) bool {
+	return len(t.By) == 1 && t.By[0] == workflow.ByCascade
 }

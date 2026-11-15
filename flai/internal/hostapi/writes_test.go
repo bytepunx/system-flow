@@ -4188,7 +4188,8 @@ func TestTheActionsARoleNamesAreTheProjectsToo(t *testing.T) {
 // testingWorkflow is a board unlike the baseline: testing sits between
 // in-progress and review, which only the story's agent leaves it for; review
 // is renamed acceptance-review, keeping review as its alias; and done and
-// cancelled are renamed shipped and dropped (ADR-0301 §6).
+// cancelled are renamed shipped and dropped (ADR-0301 §6). Its send-back
+// and cancellations ask a reason, as the baseline's do.
 const testingWorkflow = `---
 title: Board
 updated: 2026-11-14
@@ -4209,11 +4210,11 @@ transitions:
   - {from: acceptance-review, to: shipped, types: [epic, story], by: [acceptance], effects: [accept]}
   - {from: acceptance-review, to: shipped, types: [task]}
   - {from: in-progress, to: shipped, types: [task]}
-  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back], rules: [reason-given]}
   - {from: in-progress, to: ready}
   - {from: ready, to: backlog}
-  - {from: [backlog, ready, in-progress, testing], to: dropped, effects: [cancel]}
-  - {from: acceptance-review, to: dropped, by: [cascade], effects: [cancel]}
+  - {from: [backlog, ready, in-progress, testing], to: dropped, effects: [cancel], rules: [reason-given]}
+  - {from: acceptance-review, to: dropped, by: [cascade], effects: [cancel], rules: [reason-given]}
   - {from: dropped, to: backlog, effects: [reopen]}
 ---
 `
@@ -4300,5 +4301,93 @@ func TestItemMoveFollowsTheProjectsWorkflow(t *testing.T) {
 	}
 	if args, _ := move(`{"id":"S-0002","to":"dropped","include_uncommitted":true}`); strings.Contains(args, "--yes") {
 		t.Errorf("a move that is not an acceptance takes no --yes: %s", args)
+	}
+}
+
+// S-0747: a move is described from the workflow's transition: the item's
+// state and the target in the workflow's current names, an alias resolved;
+// whether the move accepts, commits, or cancels; and whether it asks a
+// reason, as the transition's rules say, or, with no transition from the
+// item's state, as a cancellation does. On the baseline, a draft is
+// finalized into ready, ready's cancellation and review's send-back ask why,
+// and only an epic's or a story's move to done is an acceptance; on
+// testingWorkflow the same moves come back under its names, and its testing
+// state's moves are plain ones.
+func TestDescribeMoveReadsTheTransition(t *testing.T) {
+	tw, p := workflow.Parse("design/workflows/board.md", testingWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	item := func(id, typ, status string) *workitem.Item {
+		return &workitem.Item{ID: id, Type: typ, Status: status}
+	}
+	story := func(status string) *workitem.Item { return item("S-0001", workitem.Story, status) }
+	task := func(status string) *workitem.Item { return item("T-0001", workitem.Task, status) }
+	type want struct {
+		From, To                              string
+		Known                                 bool
+		Effects                               []string
+		Accepts, Commits, Cancels, AsksReason bool
+	}
+	for _, c := range []struct {
+		name string
+		wf   workflow.Workflow
+		it   *workitem.Item
+		id   string
+		to   string
+		want want
+	}{
+		{"baseline: a story committed to ready", workflow.Baseline(), story("backlog"), "S-0001", "ready", want{From: "backlog", To: "ready", Known: true, Effects: []string{"commit"}, Commits: true}},
+		{"baseline: a ready story cancelled", workflow.Baseline(), story("ready"), "S-0001", "cancelled", want{From: "ready", To: "cancelled", Known: true, Effects: []string{"cancel"}, Cancels: true, AsksReason: true}},
+		{"baseline: a story accepted", workflow.Baseline(), story("review"), "S-0001", "done", want{From: "review", To: "done", Known: true, Effects: []string{"accept"}, Accepts: true}},
+		{"baseline: a story sent back", workflow.Baseline(), story("review"), "S-0001", "in-progress", want{From: "review", To: "in-progress", Known: true, Effects: []string{"send-back"}, AsksReason: true}},
+		{"baseline: a task closed from review", workflow.Baseline(), task("review"), "T-0001", "done", want{From: "review", To: "done", Known: true, Effects: []string{}}},
+		{"baseline: a done story to cancelled, with no transition", workflow.Baseline(), story("done"), "S-0001", "cancelled", want{From: "done", To: "cancelled", Cancels: true, AsksReason: true}},
+		{"baseline: an item not read, to done", workflow.Baseline(), nil, "S-0009", "done", want{To: "done", Accepts: true}},
+		{"testing: a story into testing", tw, story("in-progress"), "S-0001", "testing", want{From: "in-progress", To: "testing", Known: true, Effects: []string{}}},
+		{"testing: a story to review, by its alias", tw, story("testing"), "S-0001", "review", want{From: "testing", To: "acceptance-review", Known: true, Effects: []string{}}},
+		{"testing: a story in testing dropped", tw, story("testing"), "S-0001", "dropped", want{From: "testing", To: "dropped", Known: true, Effects: []string{"cancel"}, Cancels: true, AsksReason: true}},
+		{"testing: a story committed to ready", tw, story("backlog"), "S-0001", "ready", want{From: "backlog", To: "ready", Known: true, Effects: []string{"commit"}, Commits: true}},
+		{"testing: a story shipped", tw, story("acceptance-review"), "S-0001", "shipped", want{From: "acceptance-review", To: "shipped", Known: true, Effects: []string{"accept"}, Accepts: true}},
+		{"testing: a story in the old name review shipped", tw, story("review"), "S-0001", "shipped", want{From: "acceptance-review", To: "shipped", Known: true, Effects: []string{"accept"}, Accepts: true}},
+		{"testing: a story sent back from review, by its alias", tw, story("review"), "S-0001", "in-progress", want{From: "acceptance-review", To: "in-progress", Known: true, Effects: []string{"send-back"}, AsksReason: true}},
+		{"testing: a task shipped", tw, task("acceptance-review"), "T-0001", "shipped", want{From: "acceptance-review", To: "shipped", Known: true, Effects: []string{}}},
+		{"testing: an item not read, shipped", tw, nil, "S-0009", "shipped", want{To: "shipped", Accepts: true}},
+		{"testing: an item not read, dropped", tw, nil, "S-0009", "dropped", want{To: "dropped", Cancels: true, AsksReason: true}},
+	} {
+		d := describeMove(c.wf, c.it, c.id, c.to)
+		got := want{From: d.From, To: d.To, Known: d.Known, Effects: d.Transition.Effects, Accepts: d.Accepts, Commits: d.Commits, Cancels: d.Cancels, AsksReason: d.AsksReason}
+		if got.From != c.want.From || got.To != c.want.To || got.Known != c.want.Known || !slices.Equal(got.Effects, c.want.Effects) ||
+			got.Accepts != c.want.Accepts || got.Commits != c.want.Commits || got.Cancels != c.want.Cancels || got.AsksReason != c.want.AsksReason {
+			t.Errorf("%s: %+v, want %+v", c.name, got, c.want)
+		}
+		if d.ID != c.id {
+			t.Errorf("%s: the ID is %q", c.name, d.ID)
+		}
+	}
+}
+
+// S-0747: a dry run of a cancellation previews it, with the placeholder
+// reason only when the transition asks one: on the baseline a story's
+// cancellation does; on a workflow whose cancellation lists no reason-given
+// the dry run goes to flai without a reason, still a dry run, so flai never
+// cancels what was only previewed.
+func TestItemMoveDryRunAsksTheReasonTheTransitionAsks(t *testing.T) {
+	p := harbour(t)
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0002"}`)}}
+	m := writeMethods(rec.run, time.Now, Host{})
+	dryRun := func(to string) string {
+		t.Helper()
+		if _, e := m["item.move"](context.Background(), p, json.RawMessage(`{"id":"S-0002","to":"`+to+`","dry_run":true,"request_id":"dry-run-`+to+`"}`)); e != nil {
+			t.Fatalf("item.move to %s: %+v", to, e)
+		}
+		return strings.Join(rec.runs[len(rec.runs)-1].Args, " ")
+	}
+	if args := dryRun("cancelled"); args != "move S-0002 cancelled --by=olive --reason=preview --dry-run --json" {
+		t.Errorf("the baseline's dry run of a cancellation: %s", args)
+	}
+	withWorkflow(t, strings.ReplaceAll(testingWorkflow, "effects: [cancel], rules: [reason-given]", "effects: [cancel]"))
+	if args := dryRun("dropped"); args != "move S-0002 dropped --by=olive --dry-run --json" {
+		t.Errorf("the dry run of a cancellation that asks no reason: %s", args)
 	}
 }
