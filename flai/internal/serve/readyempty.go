@@ -17,8 +17,9 @@ import (
 const readyEmptyAuthor = "flai serve"
 
 // readyEmptyState is what flai serve keeps between looks, and across a
-// restart, of the ready column against the in-progress room: whether the last
-// look found it below, so that one draining is told once.
+// restart, of the queue the pull takes from, ready in the baseline, against
+// the room the active-work states' WIP limits leave (activeRoom): whether the
+// last look found it below, so that one draining is told once.
 type readyEmptyState struct {
 	Below bool `json:"below"`
 }
@@ -29,7 +30,8 @@ func readyEmptyPath(repo *workitem.Repo) string {
 	return filepath.Join(repo.CacheDir(), "ready-empty.json")
 }
 
-// readyNotHeldOnAfter counts the ready stories that no story named in after:
+// readyNotHeldOnAfter counts the stories waiting in the queue the pull takes
+// from (pullQueue; ready in the baseline) that no story named in after:
 // holds, the count ready-empty compares with the room (ADR-0279). A story held
 // on after waits for an acceptance and fills no lane meanwhile, so counting it
 // would keep the event, and the orchestrator's promotion, from a column full
@@ -50,8 +52,9 @@ func readyNotHeldOnAfter(ready []readyStory, holds *workitem.Holds) int {
 }
 
 // readyDrained decides, from the ready stories not held on after
-// (readyNotHeldOnAfter), the room the in-progress limit leaves (the limit
-// less the stories in progress, or below zero when there is no limit), and
+// (readyNotHeldOnAfter), the room the active-work states' WIP limits leave
+// (activeRoom: their sum less the stories in every active-work state, or
+// below zero when no active-work state has a limit), and
 // whether the last look found ready below the room, whether this look tells a
 // ready-empty event and whether ready is below the room now (ADR-0211 §1).
 // Ready is below when it is fewer than the room; with no limit, or no room,
@@ -64,13 +67,15 @@ func readyDrained(ready, room int, wasBelow bool) (emit, below bool) {
 
 // noteReadyEmpty appends a ready-empty event to the project's event log when
 // the ready column, ready stories in it not held on after, has drained below
-// room, the in-progress limit's room as readyStories counts it, since the
-// last look, and keeps whether it is below in .flai-cache, so that neither a
+// room, the active-work room as readyStories counts it, since the last
+// look, and keeps whether it is below in .flai-cache, so that neither a
 // later look nor a restart of flai serve tells the same draining again. It
 // keeps the flag before it appends, so that a flag it cannot keep never tells
-// one draining at every look. A flag it cannot read or keep, a board it cannot
-// read for the limit, or an event it cannot append, is warned of and the look
-// goes on: the event log is news, not state (ADR-0211 §4).
+// one draining at every look. The event's limit is the sum of the WIP limits
+// on the states of the active kind in repo's workflow (activeRoom), the
+// in-progress limit in the baseline. A flag it cannot read or keep, a board
+// it cannot read for the limit, or an event it cannot append, is warned of
+// and the look goes on: the event log is news, not state (ADR-0211 §4).
 func (l *launcher) noteReadyEmpty(repo *workitem.Repo, ready, room int) {
 	path := readyEmptyPath(repo)
 	was, err := readReadyEmpty(path)
@@ -90,15 +95,15 @@ func (l *launcher) noteReadyEmpty(repo *workitem.Repo, ready, room int) {
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
-		l.warn("ready-empty: the board could not be read for the in-progress limit, so the event is not told", "ready", ready, "room", room, "err", err)
+		l.warn("ready-empty: the board could not be read for the active-work limit, so the event is not told", "ready", ready, "room", room, "err", err)
 		return
 	}
-	limit := board.WIPLimits[workitem.InProgress]
+	_, limit := activeRoom(repo.Flow(), board.WIPLimits, nil)
 	if err := inbox.AppendEvent(repo, inbox.ReadyEmptyEvent(ready, room, limit, readyEmptyAuthor)); err != nil {
 		l.warn("ready-empty: the event could not be appended to the event log", "ready", ready, "room", room, "limit", limit, "err", err)
 		return
 	}
-	l.log("ready column below the in-progress room", "ready", ready, "room", room, "limit", limit)
+	l.log("ready column below the active-work room", "ready", ready, "room", room, "limit", limit)
 }
 
 // readReadyEmpty reads the flag kept at path; none kept is not below.

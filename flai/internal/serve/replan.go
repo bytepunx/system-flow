@@ -65,8 +65,8 @@ import (
 // added to its entry. It runs one planner at a time per project, with the
 // launcher of flai serve, so that the run's end is seen at once, through the
 // checks Plan makes; an entry they refuse is dropped, as is one for a story
-// its agent works: in progress or in review, or with its agent running
-// (I-0098). One whose start the budget state of the planner's provider holds
+// its agent works: in a state of the active or the waiting kind, in progress
+// or in review in the baseline, or with its agent running (I-0098). One whose start the budget state of the planner's provider holds
 // stays queued, in its place, until the state lets it start (S-0534). The
 // run records its triggers, joined by semicolons, and its activity entry
 // says them.
@@ -119,7 +119,7 @@ type replanner struct {
 func newReplanner(o Options, e Entry, starter *launcher) *replanner {
 	now := o.Now().UTC()
 	r := &replanner{o: o, e: e, starter: starter, since: now.Truncate(time.Second), seen: map[string]time.Time{}, cadences: map[string]*cadence{}, said: map[string]bool{}}
-	if repo, err := workitem.Open(e.Root); err == nil {
+	if repo, err := openRepo(o, e.Root); err == nil {
 		if board, err := repo.LoadBoard(); err == nil {
 			r.order = slices.Clone(board.Order)
 		}
@@ -138,7 +138,7 @@ func (r *replanner) look(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := r.o.Now().UTC()
-	repo, err := workitem.Open(r.e.Root)
+	repo, err := openRepo(r.o, r.e.Root)
 	if err != nil {
 		r.warnOnce("replanner could not read the project", err)
 		return
@@ -176,7 +176,7 @@ func (r *replanner) look(ctx context.Context) {
 	for _, n := range edits {
 		r.queueEdit(planner, byID[n.ID], n, cfg.Name)
 	}
-	if ahead := aheadOf(changes, reordered); len(ahead) > 0 {
+	if ahead := aheadOf(repo.Flow(), changes, reordered); len(ahead) > 0 {
 		policy, written := r.replan(repo, items, board, now, triggersOf(ahead))
 		for _, a := range ahead {
 			r.queueAhead(planner, a, policy, written)
@@ -318,9 +318,9 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 
 // drain starts the planner for the first queued story with no planner
 // running, unless a planner this replanner started still runs. An entry for
-// a story its agent works, by byID and the story's newest run, or one the
-// checks refuse, is dropped and logged, and the next one tried; one that
-// cannot be read is dropped and warned of. One whose start the budget state
+// a story its agent works, by byID read under the options' workflow and the
+// story's newest run, or one the checks refuse, is dropped and logged, and
+// the next one tried; one that cannot be read is dropped and warned of. One whose start the budget state
 // of the planner's provider holds keeps its place, as does every entry after
 // it, and the next look tries it again (S-0534); it is logged once per state.
 func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
@@ -337,7 +337,7 @@ func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
 		q := r.queue[i]
 		r.queue = slices.Delete(r.queue, i, i+1)
 		trigger := strings.Join(q.triggers, "; ")
-		if why := worked(q.item, byID[q.item], st.Stories[q.item]); why != "" {
+		if why := worked(r.o.flow(), q.item, byID[q.item], st.Stories[q.item]); why != "" {
 			r.starter.log("queued planner dropped", "item", q.item, "trigger", trigger, "reason", why)
 			continue
 		}
@@ -365,10 +365,11 @@ func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
 }
 
 // worked is why the planner is not started on its own for story id, it as
-// read, while its agent works it: it is in progress or in review, or run,
-// its newest agent run, runs; "" when neither (I-0098).
-func worked(id string, it *workitem.Item, run *AgentRun) string {
-	if it != nil && (it.Status == workitem.InProgress || it.Status == workitem.Review) {
+// read, while its agent works it: it is in a state wf gives the active or the
+// waiting kind (isUnderway), in progress or in review in the baseline, or
+// run, its newest agent run, runs; "" when neither (I-0098).
+func worked(wf workflow.Workflow, id string, it *workitem.Item, run *AgentRun) string {
+	if it != nil && isUnderway(wf, it.Status) {
 		return fmt.Sprintf("%s is %s; its agent works it, so the planner is not started for it on its own", id, it.Status)
 	}
 	if run.running() {
@@ -463,10 +464,11 @@ func editTrigger(it *workitem.Item, n itemedit.Notice, agent string) string {
 }
 
 // moveTriggers are the triggers among changes of work ahead completing, in
-// order: accepted for a story moved to done, cancelled for one moved to
-// cancelled. A task's or an epic's move is none.
-func moveTriggers(changes []workitem.Change) []string {
-	return triggersOf(aheadOf(changes, false))
+// order, read under wf: accepted for a story moved to a state of the accepted
+// kind, cancelled for one moved to a state of the cancelled kind. A task's or
+// an epic's move is none.
+func moveTriggers(wf workflow.Workflow, changes []workitem.Change) []string {
+	return triggersOf(aheadOf(wf, changes, false))
 }
 
 // ahead is work ahead completing or the order changing: the trigger event it
@@ -478,18 +480,19 @@ type ahead struct {
 }
 
 // aheadOf is the work ahead completing among changes, in order, a story
-// moved to done or to cancelled, then the order changing when reordered
-// says it did. A task's or an epic's move is none.
-func aheadOf(changes []workitem.Change, reordered bool) []ahead {
+// moved to a state wf gives the accepted or the cancelled kind (done or
+// cancelled in the baseline), then the order changing when reordered says it
+// did. A task's or an epic's move is none.
+func aheadOf(wf workflow.Workflow, changes []workitem.Change, reordered bool) []ahead {
 	var out []ahead
 	for _, c := range changes {
 		if c.Type != workitem.Story || c.Kind != workitem.Moved {
 			continue
 		}
-		switch c.To {
-		case workitem.Done:
+		switch wf.Kind(c.To) {
+		case workflow.KindAccepted:
 			out = append(out, ahead{event: "accepted", to: c.To, item: c.ID, trigger: "accepted " + c.ID})
-		case workitem.Cancelled:
+		case workflow.KindCancelled:
 			out = append(out, ahead{event: "cancelled", to: c.To, item: c.ID, trigger: "cancelled " + c.ID})
 		}
 	}
@@ -575,13 +578,14 @@ func pick(q []queued, running func(item string) bool) int {
 	return -1
 }
 
-// replays plays the board out again for every ready and backlog story with a
-// forecast duration, in pull order, each keeping its own duration
-// (planning.ReplayIn) under flow, the project's workflow, and returns those whose delivery moved with the new
-// delivery and basis, and the replays that failed. Every story is played out
-// against the same items: the writes keep the durations the others are
-// played out with.
-func replays(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
+// replays plays the board out again for every story with a forecast
+// duration in a state wf gives the queue kind (replayStates: ready, then
+// backlog, in the baseline), in pull order, each keeping its own duration
+// (planning.ReplayIn) under wf, the project's workflow, and returns those
+// whose delivery moved with the new delivery and basis, and the replays that
+// failed. Every story is played out against the same items: the writes keep
+// the durations the others are played out with.
+func replays(wf workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
@@ -592,12 +596,16 @@ func replays(flow workflow.Workflow, items []*workitem.Item, board *workitem.Boa
 	}
 	var out []moved
 	var errs []error
-	for _, id := range append(workitem.PullSequence(order, items, workitem.Ready), workitem.PullSequence(order, items, workitem.Backlog)...) {
+	var ids []string
+	for _, st := range replayStates(wf) {
+		ids = append(ids, workitem.PullSequence(order, items, st)...)
+	}
+	for _, id := range ids {
 		it := byID[id]
 		if it.Forecast.IsZero() || it.Forecast.Duration == "" {
 			continue
 		}
-		res, err := planning.ReplayIn(flow, items, board, plan, id, now)
+		res, err := planning.ReplayIn(wf, items, board, plan, id, now)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -607,6 +615,26 @@ func replays(flow workflow.Workflow, items []*workitem.Item, board *workitem.Boa
 		}
 	}
 	return out, errs
+}
+
+// replayStates are the states of the queue kind in wf, in the order replays
+// takes their stories: the queue the pull takes from first (pullQueue), then
+// the others from the nearest to the pull back to the first state, so that
+// the stories nearest their start come first. In the baseline that is ready,
+// then backlog.
+func replayStates(wf workflow.Workflow) []string {
+	pull := pullQueue(wf)
+	var out []string
+	if pull != "" {
+		out = append(out, pull)
+	}
+	queues := wf.OfKind(workflow.KindQueue)
+	for i := len(queues) - 1; i >= 0; i-- {
+		if queues[i].Name != pull {
+			out = append(out, queues[i].Name)
+		}
+	}
+	return out
 }
 
 // sameStamp reports whether two timestamps name the same time, or are the

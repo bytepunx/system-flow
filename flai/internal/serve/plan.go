@@ -31,7 +31,7 @@ import (
 // planner's (Dir.ActivityLogs); the serving flai settles the run once its
 // process is gone, judges how it went, and logs its activity in
 // wip/agents/planner.md. It is no story's agent: it is not counted against
-// the in-progress limit, and holds no story back.
+// the active-work limit, and holds no story back.
 
 // planned matches the ID of an item the planner plans: an epic's or a
 // story's.
@@ -126,9 +126,9 @@ type planStart struct {
 // project e, for the operator (Plan) and for the replanner alike (S-0211),
 // and returns what it is started with. It is refused, as a *Refused, while
 // the plan host action is off, for an ID that is not an epic's or a story's,
-// for an item that is archived, done, or cancelled, while a planner runs for
-// the item, and when nothing can start it; an item that cannot be read is an
-// error.
+// for an item that is archived or in a closed state, of the accepted or the
+// cancelled kind, while a planner runs for the item, and when nothing can
+// start it; an item that cannot be read is an error.
 func planCheck(o Options, e Entry, item string) (planStart, error) {
 	var cfg AgentConfig
 	if o.Agent != nil {
@@ -143,7 +143,7 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 	if !planned.MatchString(item) {
 		return planStart{}, refused("%q is not an epic's or a story's ID; the planner plans an E-nnnn or an S-nnnn", item)
 	}
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return planStart{}, err
 	}
@@ -154,7 +154,7 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 	switch {
 	case it.Archived:
 		return planStart{}, refused("%s is archived; the planner plans an epic or a story still on the board", it.ID)
-	case it.Status == workitem.Done || it.Status == workitem.Cancelled:
+	case isClosed(repo.Flow(), it.Status):
 		return planStart{}, refused("%s is %s; there is nothing left to plan", it.ID, it.Status)
 	}
 	if run := o.Dir.AgentStates()[e.Root].Plans[it.ID]; run.running() {

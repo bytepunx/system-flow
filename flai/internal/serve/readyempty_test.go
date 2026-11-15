@@ -278,3 +278,122 @@ func TestReadyNotHeldOnAfterCounts(t *testing.T) {
 		t.Errorf("readyNotHeldOnAfter with no holds = %d, want 4", got)
 	}
 }
+
+// t3215Lab is a starved-board lab running kindsWorkflow, whose board limits
+// doing at 2 and testing at 1, both of the active kind, and awaiting, of the
+// waiting kind, at 3. The board names no in-progress limit, so the one flai
+// keeps by default, 2, is all a pass that reads the state's name finds.
+func t3215Lab(t *testing.T) *readyEmptyLab {
+	t.Helper()
+	lab := newStarvedLab(t, 0)
+	lab.t3215Limits()
+	lab.o.Workflow = kindsWorkflow(t)
+	lab.repo.Workflow = lab.o.Workflow
+	lab.restart()
+	return lab
+}
+
+// t3215Limits writes the board's limits on doing, testing, and awaiting
+// again, keeping its pull order. Board.Save, which each move of a story
+// runs, writes the limits of the baseline's columns alone, so a move drops
+// them; the lab writes them again before each look.
+func (lab *readyEmptyLab) t3215Limits() {
+	lab.t.Helper()
+	board, err := lab.repo.LoadBoard()
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	text := "---\ntitle: Board\nstatus: active\nwip_limits:\n  ready: 5\n  doing: 2\n  testing: 1\n  awaiting: 3\norder: [" + strings.Join(board.Order, ", ") + "]\n---\n\n# Board\n"
+	if err := os.WriteFile(filepath.Join(lab.root, "wip/kanban/board.md"), []byte(text), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// t3215Look is the ready-empty and starved-board part of a look, on the
+// project as the lab's launcher opens it, under its workflow: the ready
+// stories and their holds as readyStories reads them, against the room
+// activeRoom gives from the board's limits and counts. It answers that room
+// and the limit it is of.
+func t3215Look(lab *readyEmptyLab) (room, limit int) {
+	lab.t.Helper()
+	lab.t3215Limits()
+	repo, err := lab.l.open(lab.root)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	stories, holds, _, _, _, err := readyStories(repo)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	items, err := repo.List(false)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	board, err := repo.LoadBoard()
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	view := workitem.NewBoardView(items, board, time.Now(), false, nil, holds)
+	room, limit = activeRoom(repo.Flow(), view.WIPLimits, view.Counts)
+	lab.l.noteReadyEmpty(repo, readyNotHeldOnAfter(stories, holds), room)
+	lab.l.noteStarved(repo, stories, holds, room)
+	return room, limit
+}
+
+// t3215Through moves the story id from ready through each of states in turn.
+func (lab *readyEmptyLab) t3215Through(id string, states ...string) {
+	lab.t.Helper()
+	for _, s := range states {
+		lab.move(id, s)
+	}
+}
+
+// S-0742 criteria 3 and 4, ADR-0279, ADR-0285: under a workflow with
+// in-progress renamed doing, testing added after it, and review renamed
+// awaiting, the ready-empty event and the starved-board thread count the
+// stories in the queue the pull takes from against the room the limits of
+// doing and testing leave together. A story in doing and one in testing both
+// fill it, and one in awaiting does not; the event's limit is their sum.
+func TestReadyEmptyAndTheStarvedBoardCountTheActiveWorkRoom(t *testing.T) {
+	lab := t3215Lab(t)
+	lab.backlog("Count the turns", true)
+	waits := lab.ready("Waits")
+	lab.t3215Through(waits, "doing", "testing", "awaiting")
+	tests := lab.ready("Tests")
+	lab.t3215Through(tests, "doing", "testing")
+	works := lab.ready("Works")
+	lab.t3215Through(works, "doing")
+
+	room, limit := t3215Look(lab)
+	if room != 1 || limit != 3 {
+		t.Fatalf("one story in doing and one in testing of limits 2 and 1 leave room %d of %d, want 1 of 3", room, limit)
+	}
+	lab.want(1, "an empty ready column below an active-work room of 1")
+	if e := lab.events()[0]; e.To != "0" || e.Fields[inbox.FieldRoom] != "1" || e.Fields[inbox.FieldLimit] != "3" {
+		t.Errorf("the event: %+v, want 0 ready of room 1, limit 3", e)
+	}
+	th := lab.starved(1, "a free active-work lane, the story in awaiting filling none, and nothing to start")
+
+	// sent back from awaiting into doing, the story fills the last lane
+	lab.move(waits, "doing")
+	if room, _ := t3215Look(lab); room != 0 {
+		t.Fatalf("two stories in doing and one in testing leave room %d, want 0", room)
+	}
+	lab.want(1, "no room left, so no second event")
+	for _, b := range lab.boardThreads() {
+		if b.Open() {
+			t.Errorf("the starved-board thread %s is open with every active-work lane taken (%s was opened)", b.ID, th.ID)
+		}
+	}
+
+	// a story pulled into ready fills the room the move to testing frees
+	lab.move(tests, "awaiting")
+	ready := lab.ready("Next")
+	if room, _ := t3215Look(lab); room != 1 {
+		t.Fatalf("after the story in testing moved to awaiting, room %d, want 1", room)
+	}
+	lab.want(1, "ready at the room of 1")
+	if again := lab.boardThreads(); len(again) != 1 {
+		t.Errorf("%d threads on the board with %s in ready able to start, want the one resolved", len(again), ready)
+	}
+}

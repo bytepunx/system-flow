@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -102,7 +103,7 @@ func TestAStoryAcceptedOrCancelledIsATrigger(t *testing.T) {
 		{ID: "S-0003", Type: workitem.Story, Kind: workitem.WasBlocked},
 		{ID: "S-0004", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Cancelled},
 	}
-	if got := moveTriggers(changes); !slices.Equal(got, []string{"accepted S-0001", "cancelled S-0004"}) {
+	if got := moveTriggers(workflow.Baseline(), changes); !slices.Equal(got, []string{"accepted S-0001", "cancelled S-0004"}) {
 		t.Errorf("triggers = %v", got)
 	}
 }
@@ -801,4 +802,58 @@ func TestTheQueueWaitsWhileTheBudgetStateHoldsThePlanner(t *testing.T) {
 		t.Errorf("queue = %+v, want %s still queued", lab.r.queue, second)
 	}
 	lab.release(first)
+}
+
+// t3215Renamed is kindsWorkflow with each state named from in kindsFlow
+// renamed to its to, for the board a pass must read by kind alone.
+func t3215Renamed(t *testing.T, fromTo ...string) workflow.Workflow {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", strings.NewReplacer(fromTo...).Replace(kindsFlow))
+	if p != nil {
+		t.Fatalf("the renamed workflow does not parse: %s", p)
+	}
+	return w
+}
+
+// S-0742 criterion 4: the replanner reads a move's state, the stories its
+// agent works, and the stories it replays by kind and by the pull, so that a
+// board with in-progress renamed doing, testing added, review renamed
+// awaiting, and done renamed shipped gives the outcome the baseline gives.
+func TestTheReplannerReadsKindsNotStateNames(t *testing.T) {
+	shipped := t3215Renamed(t, "done", "shipped")
+	changes := []workitem.Change{
+		{ID: "S-0001", Type: workitem.Story, Kind: workitem.Moved, To: "shipped"},
+		{ID: "S-0002", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Done},
+		{ID: "S-0003", Type: workitem.Story, Kind: workitem.Moved, To: "testing"},
+		{ID: "T-0001", Type: workitem.Task, Kind: workitem.Moved, To: "shipped"},
+		{ID: "S-0004", Type: workitem.Story, Kind: workitem.Moved, To: "cancelled"},
+	}
+	if got := moveTriggers(shipped, changes); !slices.Equal(got, []string{"accepted S-0001", "cancelled S-0004"}) {
+		t.Errorf("triggers under a board whose accepted state is shipped = %v", got)
+	}
+
+	kinds := *kindsWorkflow(t)
+	for _, c := range []struct {
+		status string
+		works  bool
+	}{{"ready", false}, {"doing", true}, {"testing", true}, {"awaiting", true}, {"done", false}, {"in-progress", false}} {
+		why := worked(kinds, "S-0001", &workitem.Item{ID: "S-0001", Type: workitem.Story, Status: c.status}, nil)
+		if (why != "") != c.works {
+			t.Errorf("a story in %s: worked = %q, want worked %v", c.status, why, c.works)
+		}
+	}
+
+	for _, c := range []struct {
+		name string
+		wf   workflow.Workflow
+		want []string
+	}{
+		{"baseline", workflow.Baseline(), []string{"ready", "backlog"}},
+		{"in-progress renamed and testing added", kinds, []string{"ready", "backlog"}},
+		{"ready renamed next", t3215Renamed(t, "ready", "next"), []string{"next", "backlog"}},
+	} {
+		if got := replayStates(c.wf); !slices.Equal(got, c.want) {
+			t.Errorf("%s: replayStates = %v, want %v", c.name, got, c.want)
+		}
+	}
 }

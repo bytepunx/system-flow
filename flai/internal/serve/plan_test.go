@@ -855,3 +855,39 @@ func TestAPlannerInAContainerIsRefusedWhatItLacks(t *testing.T) {
 		})
 	}
 }
+
+// S-0742 criterion 4: the planner is refused for a story in a closed state
+// by its kind, so that under a board whose accepted state is shipped a story
+// shipped is refused as a story done is in the baseline, and one in testing,
+// a state of the active kind the baseline does not have, is not refused for
+// its state.
+func TestThePlannerIsRefusedForAClosedStateByItsKind(t *testing.T) {
+	lab := planLab(t)
+	shipped := t3215Renamed(t, "done", "shipped")
+	lab.o.Workflow = &shipped
+	closed := lab.backlog("Shipped", nil)
+	it, err := lab.repo.Get(closed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(it.Path) // accepted, as its file says
+	if err := os.WriteFile(it.Path, []byte(strings.Replace(string(data), "status: backlog", "status: shipped", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = lab.plan(closed)
+	var no *Refused
+	if !errors.As(err, &no) || !strings.Contains(no.Why, closed+" is shipped; there is nothing left to plan") {
+		t.Errorf("plan %s, shipped: %v, want refused as accepted", closed, err)
+	}
+	open := lab.backlog("Testing", nil)
+	if it, err = lab.repo.Get(open); err != nil {
+		t.Fatal(err)
+	}
+	data, _ = os.ReadFile(it.Path)
+	if err := os.WriteFile(it.Path, []byte(strings.Replace(string(data), "status: backlog", "status: testing", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if ps, err := planCheck(lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, open); err != nil || ps.item != open {
+		t.Errorf("the checks for %s, in testing: %+v, %v, want passed", open, ps, err)
+	}
+}
