@@ -139,7 +139,35 @@ func (r *Repo) Transition(it *Item, to, by, reason string, now time.Time) (warni
 // finalize, a draft story moved to ready is finalized with the move (S-0199).
 // A moved story's epic follows it, short of done, in the same write
 // (S-0200); the stories a cancellation takes along do not move their epic.
+// A story's or an epic's move is made under the board lock (ADR-0306).
 func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
+	res, err := r.transitionAll(it, to, by, reason, now, finalize)
+	if err != nil {
+		return nil, err
+	}
+	items, err := r.List(false)
+	if err != nil {
+		return nil, err
+	}
+	return res, r.WriteIndex(items, now)
+}
+
+// transitionAll is TransitionAll's move and its writes of the items and the
+// board, short of the stream index. A move of a story or an epic, which can
+// take stories along, holds the board lock from its reading of the items and
+// the board until it has saved them, so that two moves made at once write
+// the board one after the other and neither writes back a board read before
+// the other's change (ADR-0306, I-0375). Each Save inside takes and lets go
+// of the items lock, after the board lock, never before it. A task's move
+// takes no board lock and writes no board.
+func (r *Repo) transitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
+	if it.Type != Task {
+		unlock, err := r.LockBoard()
+		if err != nil {
+			return nil, err
+		}
+		defer unlock()
+	}
 	all, err := r.List(true)
 	if err != nil {
 		return nil, err
@@ -201,13 +229,37 @@ func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, fin
 		}
 	}
 	if storyMoved {
+		// The order is normalised against the items as this move leaves
+		// them, so a stale name an earlier write left goes (ADR-0306 §4).
+		board.NormalizeOrder(wf, movedOver(items, changed), r.unparsedStories())
 		if err := board.Save(now.Format("2006-01-02")); err != nil {
 			return nil, err
 		}
 	}
-	items, err = r.List(false)
-	if err != nil {
-		return nil, err
+	return res, nil
+}
+
+// movedOver is items with each of changed in place of the item of its ID,
+// and added when items has none: the active items as a move leaves them,
+// since the item moved may be the caller's copy and not the one listed.
+func movedOver(items, changed []*Item) []*Item {
+	byID := make(map[string]*Item, len(changed))
+	for _, c := range changed {
+		byID[c.ID] = c
 	}
-	return res, r.WriteIndex(items, now)
+	out := make([]*Item, 0, len(items)+len(changed))
+	for _, x := range items {
+		if c, ok := byID[x.ID]; ok {
+			out = append(out, c)
+			delete(byID, x.ID)
+			continue
+		}
+		out = append(out, x)
+	}
+	for _, c := range changed {
+		if _, ok := byID[c.ID]; ok {
+			out = append(out, c)
+		}
+	}
+	return out
 }

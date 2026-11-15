@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // BoardFile is wip/kanban/board.md.
@@ -65,7 +66,97 @@ func (r *Repo) LoadBoard() (*Board, error) {
 	return b, nil
 }
 
-// Save writes board.md.
+// LockBoard takes the one lock every write of board.md is made under, an
+// operating system lock on .flai-cache/board.lock, so that two writers do not
+// each read the board, change their copy, and write it, the second over the
+// first (I-0375). It is apart from the items lock and the checked-write lock:
+// it is taken before the items lock, and never while the items lock or the
+// checked-write lock is held (ADR-0306). A holder reads the board after it
+// takes the lock, never before.
+func (r *Repo) LockBoard() (unlock func(), err error) {
+	return lockFile(filepath.Join(r.CacheDir(), "board.lock"), itemsLockWait)
+}
+
+// UpdateBoard is a write of board.md under the board lock (ADR-0306): it
+// takes the lock, reads the active items and the board inside it, lets change
+// make its change to that board, normalises the pull order against those
+// items, and saves the board, dated today, before it lets the lock go. An
+// error from change writes nothing and is returned as it is, so a rule
+// refusal stays one.
+func (r *Repo) UpdateBoard(today string, change func(b *Board, items []*Item) error) error {
+	unlock, err := r.LockBoard()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	items, err := r.List(false)
+	if err != nil {
+		return err
+	}
+	b, err := r.LoadBoard()
+	if err != nil {
+		return err
+	}
+	if err := change(b, items); err != nil {
+		return err
+	}
+	b.NormalizeOrder(r.Flow(), items, r.unparsedStories())
+	return b.Save(today)
+}
+
+// NormalizeOrder drops from the pull order each name that is not an active
+// story in a state flow orders, ready and backlog on the baseline, and its
+// placement with it, and keeps the other names in their order (ADR-0306 §4).
+// A name in unparsed, a story whose file the list left out because it did
+// not read or parse, is kept, since its state cannot be told. A name the
+// order repeats is kept once, where it first comes.
+func (b *Board) NormalizeOrder(flow workflow.Workflow, items []*Item, unparsed map[string]bool) {
+	ordered := map[string]bool{}
+	for _, it := range items {
+		if it.Archived || it.Type != Story {
+			continue
+		}
+		if s, ok := flow.State(it.Status); ok && s.Order {
+			ordered[it.ID] = true
+		}
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(b.Order))
+	for _, id := range b.Order {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		if ordered[id] || unparsed[CanonicalID(id)] {
+			out = append(out, id)
+			continue
+		}
+		delete(b.Placed, id)
+	}
+	b.Order = out
+}
+
+// unparsedStories is the IDs, by their file names, of the active story files
+// the latest list left out because they could not be read or did not parse
+// (Unreadable): the names NormalizeOrder keeps.
+func (r *Repo) unparsedStories() map[string]bool {
+	dir := filepath.Clean(r.ItemDir(Story, false))
+	out := map[string]bool{}
+	for _, u := range r.Unreadable() {
+		if filepath.Clean(filepath.Dir(u.Path)) != dir {
+			continue
+		}
+		if id := fileID.FindString(filepath.Base(u.Path)); id != "" {
+			out[CanonicalID(id)] = true
+		}
+	}
+	return out
+}
+
+// Save writes board.md as it is. It is the write a holder of the board lock
+// makes, through UpdateBoard or a move holding LockBoard, after it has read
+// the board inside the lock (ADR-0306); it takes no lock and does not
+// normalise the pull order by itself.
 func (b *Board) Save(today string) error {
 	var sb strings.Builder
 	sb.WriteString("---\n")
