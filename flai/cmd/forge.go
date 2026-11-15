@@ -241,7 +241,9 @@ func (a *app) forgeStatus(repo *workitem.Repo, id string, cfg config.Config) (fo
 	s.Matches = s.LocalHead != "" && s.RemoteHead == s.LocalHead
 	pushed := ok && (st.Outcome == serve.ForgePushed || st.Outcome == serve.ForgeUpToDate)
 	if !pushed || (!s.Matches && s.RemoteError == "") {
-		s.Why = whyNotPushed(s, acc.PullRequest(), tokenErr)
+		wf := repo.Flow()
+		awaiting := stateIs(wf, it.Status, workitem.AcceptSource(wf, workitem.Story))
+		s.Why = whyNotPushed(s, acc.PullRequest(), awaiting, tokenErr)
 	}
 	return s, nil
 }
@@ -298,8 +300,10 @@ func (a *app) originHead(root, branch string) (head, why string) {
 }
 
 // whyNotPushed is the first reason that applies for s's branch not being on
-// origin as the local head, each saying what clears it.
-func whyNotPushed(s forgeStatus, pullRequest bool, tokenErr error) string {
+// origin as the local head, each saying what clears it. awaiting is whether
+// the story is in the state its acceptance leaves from, the one flai pushes
+// a story in (ADR-0301).
+func whyNotPushed(s forgeStatus, pullRequest, awaiting bool, tokenErr error) string {
 	switch {
 	case !pullRequest:
 		return fmt.Sprintf("acceptance.mode is %s, so %s is accepted on this machine and nothing is pushed: set acceptance.mode: pull-request in system-flow.yaml to have stories in review pushed and their pull requests opened", s.Mode, s.Story)
@@ -313,7 +317,7 @@ func whyNotPushed(s forgeStatus, pullRequest bool, tokenErr error) string {
 			why += fmt.Sprintf(" (thread %s)", s.Thread)
 		}
 		return why
-	case s.Status != workitem.Review:
+	case !awaiting:
 		return fmt.Sprintf("%s is %s, not in review: flai pushes a story's branch and opens its pull request once the story is in review", s.Story, s.Status)
 	}
 	return fmt.Sprintf("nothing stops flai serve from pushing %s: it pushes it at its next look, once a minute while it runs, or push it now with flai forge push %s", s.Story, s.Story)

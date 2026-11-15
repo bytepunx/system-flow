@@ -13,8 +13,20 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/storystart"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// pullsFrom reports whether a story in status is one the pull starts: w has
+// a transition out of status for a story that gives the pull effect.
+func pullsFrom(w workflow.Workflow, status string) bool {
+	for _, t := range w.From(workitem.Story, status) {
+		if t.HasEffect(workflow.EffectPull) {
+			return true
+		}
+	}
+	return false
+}
 
 func newStreamCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
@@ -65,7 +77,7 @@ too.`,
 			agent, session := agentIdentity()
 			opt := workitem.StreamOptions{Agent: agent, Session: session, Host: workitem.ThisHost(), Now: a.now()}
 			var moved *workitem.MoveResult
-			if story.Type == workitem.Story && story.Status == workitem.Ready {
+			if story.Type == workitem.Story && pullsFrom(repo.Flow(), story.Status) {
 				if moved, err = storystart.Begin(repo, story, agent, opt.Now, a.logger()); err != nil {
 					var refused *storystart.Refused
 					if errors.As(err, &refused) {
@@ -312,7 +324,7 @@ so does the MCP tool verify's close-out.`,
 					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "trial_merge_failed": res.TrialMergeFailed, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
 			}
 			fmt.Fprintln(a.out, rebasedLine(res))
-			printSyncChecks(a.out, it, res)
+			printSyncChecksOn(a.out, repo.Flow(), it, res)
 			return nil
 		},
 	}

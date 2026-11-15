@@ -300,7 +300,7 @@ standard error.
 			if err != nil {
 				return err
 			}
-			if s.status != "in-progress" && s.status != "review" {
+			if !worked(repo.Flow(), s.status) {
 				return fmt.Errorf("%s is %s, and flai deploys only a story in progress or in review into its namespace; move it to in-progress or review first", s.id, s.status)
 			}
 			if s.worktree == "" {

@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -243,8 +244,9 @@ func storySeeds(repo *workitem.Repo, story *workitem.Item, paths []string) ([]st
 		return nil, fmt.Errorf("cannot read the tasks of %s: %w; run flai check to see what is wrong", story.ID, err)
 	}
 	touches := slices.Clone(story.Touches)
+	wf := repo.Flow()
 	for _, t := range items {
-		if t.Type == workitem.Task && t.Status != workitem.Cancelled && workitem.CanonicalID(t.Parent) == workitem.CanonicalID(story.ID) {
+		if t.Type == workitem.Task && !workitem.IsKind(wf, t.Status, workflow.KindCancelled) && workitem.CanonicalID(t.Parent) == workitem.CanonicalID(story.ID) {
 			touches = append(touches, t.Touches...)
 		}
 	}

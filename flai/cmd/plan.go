@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -439,19 +440,31 @@ func (a *app) orchestratorPlans(repo *workitem.Repo, item string) (thread string
 			return "", fmt.Errorf("%s%s is left out: %s", alone, it.ID, c.Reason)
 		}
 	}
+	// ready is where a story's commitment takes it, the backlog where items
+	// are created, as the workflow names them (ADR-0301)
+	wf := repo.Flow()
+	commit, _ := wf.WithEffect(workitem.Story, workflow.EffectCommit)
+	initial, _ := wf.Initial()
 	switch {
 	case it.Archived:
 		what = "is archived"
 	case it.Closed():
 		what = "is " + it.Status
-	case it.Type == workitem.Story && it.Status == workitem.Ready:
+	case it.Type == workitem.Story && stateIs(wf, it.Status, commit.To):
 		what = "is ready, not in the backlog, " + a.notAskedAgain(repo, it.ID)
-	case it.Type == workitem.Story && it.Status != workitem.Backlog:
+	case it.Type == workitem.Story && !stateIs(wf, it.Status, initial.Name):
 		what = "is " + it.Status + ", not in the backlog or ready"
 	default:
 		what += ", " + a.notAskedAgain(repo, it.ID)
 	}
 	return "", fmt.Errorf("%s%s is not one: it %s", alone, it.ID, what)
+}
+
+// stateIs reports whether status, by its name or an alias, is the state of w
+// named name.
+func stateIs(w workflow.Workflow, status, name string) bool {
+	s, ok := w.State(status)
+	return ok && name != "" && s.Name == name
 }
 
 // notAskedAgain says why id, an open epic or a story in the backlog or ready

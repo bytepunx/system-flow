@@ -11,8 +11,15 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// closedKind reports whether a state of kind closes an item: accepted or
+// cancelled.
+func closedKind(kind string) bool {
+	return kind == workflow.KindAccepted || kind == workflow.KindCancelled
+}
 
 func newBoardCmd(a *app) *cobra.Command {
 	var all bool
@@ -39,7 +46,11 @@ func newBoardCmd(a *app) *cobra.Command {
 			if a.jsonOut {
 				return a.printJSON(view)
 			}
-			for _, st := range workitem.States {
+			// the workflow's columns in its order; the merge queue reads under
+			// the state its stories await acceptance in (ADR-0301)
+			wf := repo.Flow()
+			awaiting := workitem.AcceptSource(wf, workitem.Story)
+			for _, st := range wf.Names() {
 				cards := columns[st]
 				limit := ""
 				if l, ok := board.WIPLimits[st]; ok && l > 0 {
@@ -65,11 +76,11 @@ func newBoardCmd(a *app) *cobra.Command {
 						fmt.Fprintf(a.out, "         %s\n", cd.Held.Reason)
 					}
 					// an open story's plan; a closed one's is history (S-0176)
-					if t := cd.Tasks; t != nil && st != workitem.Done && st != workitem.Cancelled {
+					if t := cd.Tasks; t != nil && !closedKind(wf.Kind(st)) {
 						fmt.Fprintf(a.out, "         tasks %d ready, %d waiting, %d in progress, %d done; %s\n", t.Ready, t.Waiting, t.InProgress, t.Done, plural(t.Layers, "layer"))
 					}
 				}
-				if line := queueSummary(view.Queue); st == workitem.Review && line != "" {
+				if line := queueSummary(view.Queue); st == awaiting && line != "" {
 					fmt.Fprintf(a.out, "         %s\n", line)
 					for _, held := range heldBackLines(view.Queue) {
 						fmt.Fprintf(a.out, "         %s\n", held)

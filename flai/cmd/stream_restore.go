@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -170,6 +171,13 @@ func (a *app) restoreMain(repo *workitem.Repo, story string, paths, trailers []s
 	return restored{Story: it.ID, Branch: storyBranch(it.ID), Commit: c.Hash, Paths: paths}, nil
 }
 
+// worked reports whether status is a state of w a story is worked or awaits
+// acceptance in: of the active or the waiting kind (ADR-0301).
+func worked(w workflow.Workflow, status string) bool {
+	k := w.Kind(status)
+	return k == workflow.KindActive || k == workflow.KindWaiting
+}
+
 // restoreRefusal is why a restore of paths on the branch of it, checked out
 // in worktree, is refused, nil when it is not: an item that is not a story in
 // progress or in review, a worktree missing, with a rebase unfinished, with
@@ -183,7 +191,7 @@ func (a *app) restoreRefusal(repo *workitem.Repo, it *workitem.Item, worktree st
 	if it.Type != workitem.Story {
 		return refuse("it is not a story; name the story (S-nnnn) whose branch undoes main's change"), nil
 	}
-	if it.Status != workitem.InProgress && it.Status != workitem.Review {
+	if !worked(repo.Flow(), it.Status) {
 		r := refuse("it is in %s, and a path is restored only on the branch of a story in progress or in review", it.Status)
 		r.Status = it.Status
 		return r, nil

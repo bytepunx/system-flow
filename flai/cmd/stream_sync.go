@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -51,8 +52,16 @@ func mergedWhat(p string) string {
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
 // clean pair resolved, each path where the branch undoes the main branch's
-// change (ADR-0155), and what it changed outside the story's claim.
+// change (ADR-0155), and what it changed outside the story's claim. It reads
+// the branches' states on the baseline workflow; printSyncChecksOn reads them
+// on a repository's own.
 func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult) {
+	printSyncChecksOn(w, workflow.Baseline(), story, res)
+}
+
+// printSyncChecksOn is printSyncChecks with each branch's state read on wf: a
+// state that waits reads "in" before its name (ADR-0301).
+func printSyncChecksOn(w io.Writer, wf workflow.Workflow, story *workitem.Item, res storygit.SyncResult) {
 	mine := storyBranch(story.ID)
 	for _, p := range res.Merged {
 		fmt.Fprintf(w, "merged %s: kept both sides' %s\n", p, mergedWhat(p))
@@ -77,8 +86,8 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 	}
 	for _, b := range res.Branches {
 		state := strings.ReplaceAll(b.Status, "-", " ")
-		if state == workitem.Review {
-			state = "in review"
+		if workitem.IsKind(wf, b.Status, workflow.KindWaiting) {
+			state = "in " + state
 		}
 		if b.Clean {
 			resolved := ""
