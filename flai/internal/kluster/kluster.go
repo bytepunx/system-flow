@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Binary is the program flai runs the cluster with.
@@ -68,6 +69,17 @@ type Cluster struct {
 	Name, Provider, Profile string
 	// Exec runs kluster.
 	Exec Exec
+	// Workflow is the workflow a story's state is judged by, its kind and
+	// not its name (ADR-0301); nil is the baseline.
+	Workflow *workflow.Workflow
+}
+
+// flowOf is the workflow w gives, the baseline when nil.
+func flowOf(w *workflow.Workflow) workflow.Workflow {
+	if w != nil {
+		return *w
+	}
+	return workflow.Baseline()
 }
 
 // New is the cluster m's kluster: block names, run in root with x: it reads

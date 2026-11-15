@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Cmd is one program for Exec.Command to run: in Dir, with Env laid over
@@ -512,8 +513,9 @@ func Running(root string) (Job, bool) {
 // commit, into its namespace: build, load, and deploy, as
 // design/system/kluster.md § The steps and their variables describes, each
 // step logged, the outcome recorded, and progress lines written to out. It
-// refuses a story that is not in progress or in review, and runs while no
-// other kluster job runs for the project. Neither its record nor its job says
+// refuses a story that is not underway, in a state of the active or the
+// waiting kind of c's workflow (in progress or in review in the baseline's),
+// and runs while no other kluster job runs for the project. Neither its record nor its job says
 // who asked; DeployBy's do.
 func (c Cluster) Deploy(ctx context.Context, m manifest.Manifest, story, status, dir, commit string, out io.Writer) (Record, error) {
 	return c.DeployBy(ctx, m, "", story, status, dir, commit, out)
@@ -523,14 +525,46 @@ func (c Cluster) Deploy(ctx context.Context, m manifest.Manifest, story, status,
 // agent, or flai serve for the review pass. The record's AskedBy and the
 // running job's By name by; empty names no one, as Deploy does.
 func (c Cluster) DeployBy(ctx context.Context, m manifest.Manifest, by, story, status, dir, commit string, out io.Writer) (Record, error) {
-	if status != "in-progress" && status != "review" {
-		return Record{}, fmt.Errorf("%s is %s, and flai deploys only a story in progress or in review into its namespace; move it to in-progress or review first", story, status)
+	if flow := flowOf(c.Workflow); !flow.Underway(status) {
+		in, to := underwayWords(flow)
+		return Record{}, fmt.Errorf("%s is %s, and flai deploys only a story %s into its namespace; move it to %s first", story, status, in, to)
 	}
 	t, err := StoryTarget(story, dir, commit)
 	if err != nil {
 		return Record{}, err
 	}
 	return c.deploy(ctx, m, "deploy", by, t, out)
+}
+
+// underwayWords names the states of flow's active and waiting kinds, in
+// board order, for a refusal: in, where a story stands (in progress or in
+// review in the baseline), and to, the states to move it to (in-progress or
+// review).
+func underwayWords(flow workflow.Workflow) (in, to string) {
+	var where, names []string
+	for _, s := range flow.States {
+		if !flow.Underway(s.Name) {
+			continue
+		}
+		names = append(names, s.Name)
+		if rest, ok := strings.CutPrefix(s.Name, "in-"); ok {
+			where = append(where, "in "+strings.ReplaceAll(rest, "-", " "))
+		} else {
+			where = append(where, "in "+s.Name)
+		}
+	}
+	return orList(where), orList(names)
+}
+
+// orList joins words as a list of alternatives: a, a or b, a, b, or c.
+func orList(words []string) string {
+	switch len(words) {
+	case 0:
+		return "underway"
+	case 1, 2:
+		return strings.Join(words, " or ")
+	}
+	return strings.Join(words[:len(words)-1], ", ") + ", or " + words[len(words)-1]
 }
 
 // ready says why a job cannot run for the project: no kluster: block, no
@@ -1134,10 +1168,6 @@ func lastLog(root string, r Record) string {
 	return LogDir(root, r.Namespace)
 }
 
-// inProgress is the column of a story whose namespace counts against
-// kluster.agent_namespaces (ADR-0292 §4).
-const inProgress = "in-progress"
-
 // ListOptions is what List needs beyond the records under the root.
 type ListOptions struct {
 	// DefaultNamespace is the namespace main is promoted into.
@@ -1151,6 +1181,10 @@ type ListOptions struct {
 	// Git resolves a story branch's head in the root; nil leaves every head
 	// empty.
 	Git execx.Runner
+	// Workflow is the workflow a column is judged by: a story whose column is
+	// of the active kind, in progress, holds a namespace against Limit
+	// (ADR-0292 §4, ADR-0301); nil is the baseline.
+	Workflow *workflow.Workflow
 }
 
 // Listing is the list of the namespaces flai kluster deployments and the
@@ -1186,6 +1220,8 @@ func List(root string, o ListOptions) (Listing, error) {
 	if column == nil {
 		column = func(string) string { return "" }
 	}
+	flow := flowOf(o.Workflow)
+	active := func(col string) bool { return col != "" && flow.Kind(col) == workflow.KindActive }
 	out := Listing{Deployments: list, Holding: []string{}, Limit: o.Limit}
 	recorded := map[string]bool{}
 	for i := range list {
@@ -1197,7 +1233,7 @@ func List(root string, o ListOptions) (Listing, error) {
 		story := strings.ToUpper(d.Story)
 		recorded[story] = true
 		d.Column = column(story)
-		if d.Column == inProgress {
+		if active(d.Column) {
 			out.Holding = append(out.Holding, story)
 		}
 		if o.Git == nil {
@@ -1214,7 +1250,7 @@ func List(root string, o ListOptions) (Listing, error) {
 		return Listing{}, err
 	}
 	for _, story := range asked {
-		if !recorded[story] && column(story) == inProgress {
+		if !recorded[story] && active(column(story)) {
 			out.Holding = append(out.Holding, story)
 		}
 	}

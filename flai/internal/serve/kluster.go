@@ -23,6 +23,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -116,8 +117,11 @@ type KlusterRunner interface {
 }
 
 // SystemKluster is the KlusterRunner with this host's kluster, docker, and
-// kubectl, through flai/internal/kluster, as flai kluster runs them.
-type SystemKluster struct{}
+// kubectl, through flai/internal/kluster, as flai kluster runs them. Its
+// deploys judge a story's state by Workflow, the baseline when nil.
+type SystemKluster struct {
+	Workflow *workflow.Workflow
+}
 
 // Absent is true when the cluster has no kubeconfig at
 // kluster.KubeconfigPath, or kluster status does not list it running.
@@ -149,11 +153,12 @@ func (SystemKluster) Up(ctx context.Context, root string, m manifest.Manifest, o
 
 // Deploy deploys story as flai kluster deploy does, its progress lines left
 // out: each step's output is in its log.
-func (SystemKluster) Deploy(ctx context.Context, root string, m manifest.Manifest, by, story, status, dir, commit string) (kluster.Record, error) {
+func (s SystemKluster) Deploy(ctx context.Context, root string, m manifest.Manifest, by, story, status, dir, commit string) (kluster.Record, error) {
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
 		return kluster.Record{}, err
 	}
+	c.Workflow = s.Workflow
 	return c.DeployBy(ctx, m, by, story, status, dir, commit, io.Discard)
 }
 
@@ -175,10 +180,11 @@ func (SystemKluster) Promote(ctx context.Context, root string, m manifest.Manife
 	return c.Promote(ctx, m, branch, io.Discard)
 }
 
-// klusterOf is the runner the options name, SystemKluster when none.
+// klusterOf is the runner the options name, SystemKluster with their
+// workflow when none.
 func klusterOf(o Options) KlusterRunner {
 	if o.Kluster == nil {
-		return SystemKluster{}
+		return SystemKluster{Workflow: o.Workflow}
 	}
 	return o.Kluster
 }
@@ -242,32 +248,44 @@ type klusterTried struct {
 	At       time.Time        `json:"at"`
 }
 
-// klusterSentBack is the pass's send back of a story from review to
-// in-progress after its deploy or its checks run failed (ADR-0254 §5a): the
-// head it failed at, the thread it opened or added to, the move's reason,
-// and the move's time, to the second, as the story's transition keeps it.
-// The next deploy the story's return to review queues writes what the pass
-// tried afresh, without it.
+// klusterSentBack is the pass's send back of a story from the state it
+// awaited its acceptance in, review in the baseline, along the workflow's
+// transition with the send-back effect, to in-progress in the baseline,
+// after its deploy or its checks run failed (ADR-0254 §5a, ADR-0301): the
+// head it failed at, the thread it opened or added to, the move's reason, the
+// state it moved the story to, and the move's time, to the second, as the
+// story's transition keeps it. The next deploy the story's return to review
+// queues writes what the pass tried afresh, without it.
 type klusterSentBack struct {
 	Head   string    `json:"head"`
 	Thread string    `json:"thread"`
 	Reason string    `json:"reason"`
+	To     string    `json:"to,omitempty"`
 	At     time.Time `json:"at"`
 }
 
 // klusterKept is whether it stands where the send back t records put it:
-// in progress, not archived, its newest move a move to in-progress by flai at
-// or after the send back. Such a story's agent is started on the send back's
-// thread; once it moves on, to review, cancelled, or anywhere else, or
-// someone else moves it back to in-progress, it is not. Its namespace stays
-// either way while it is in progress (ADR-0292 §3).
+// not archived, its newest move by flai at or after the send back, to the
+// state the send back moved it to. Such a story's agent is started on the
+// send back's thread; once it moves on, to review, cancelled, or anywhere
+// else, or someone else moves it back, it is not. Its namespace stays either
+// way while it is underway (ADR-0292 §3). A send back kept before its state
+// was, by a flai serve that ran only the baseline, is judged by the baseline:
+// its newest move a move with the send-back effect.
 func klusterKept(it *workitem.Item, t klusterTried) bool {
-	if t.SentBack == nil || it.Status != workitem.InProgress || it.Archived || len(it.Transitions) == 0 {
+	n := len(it.Transitions)
+	if t.SentBack == nil || it.Archived || n == 0 {
 		return false
 	}
-	last := it.Transitions[len(it.Transitions)-1]
+	last := it.Transitions[n-1]
 	at, err := time.Parse(workitem.TimeFormat, last.At)
-	return err == nil && last.To == workitem.InProgress && last.By == sendBackBy && !at.Before(t.SentBack.At)
+	if err != nil || last.By != sendBackBy || at.Before(t.SentBack.At) || last.To != it.Status {
+		return false
+	}
+	if t.SentBack.To != "" {
+		return it.Status == t.SentBack.To
+	}
+	return n > 1 && baselineFlow.Gives(it.Type, it.Transitions[n-2].To, last.To, workflow.EffectSendBack)
 }
 
 // klusterTriedPath is where the pass keeps what it last did for namespace ns.
@@ -418,7 +436,7 @@ func (p *klusterPass) look(ctx context.Context) {
 	p.lookMu.Lock()
 	defer p.lookMu.Unlock()
 	now := p.o.Now().UTC()
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		return
 	}
@@ -445,7 +463,7 @@ func (p *klusterPass) look(ctx context.Context) {
 	queued = append(queued, p.lookLeft(items, root)...)
 	if !deployable {
 		p.o.Logger.Debug("kluster block names no deploy, so no story is deployed and main is not promoted", "component", "serve", "root", p.e.Root)
-	} else if acceptances := accepted(nil, changes); len(acceptances) > 0 || p.takeRepromote() {
+	} else if klusterAccepted(p.o.flow(), changes) || p.takeRepromote() {
 		if p.enqueue(klusterJob{kind: klusterPromote}) {
 			queued = append(queued, klusterPromote)
 		}
@@ -454,6 +472,15 @@ func (p *klusterPass) look(ctx context.Context) {
 		p.o.Logger.Info("kluster jobs queued", "component", "serve", "root", p.e.Root, "jobs", strings.Join(queued, ","))
 		p.signal()
 	}
+}
+
+// klusterAccepted reports whether changes move a story into a state of
+// flow's accepted kind, done in the baseline: an acceptance, which promotes
+// main.
+func klusterAccepted(flow workflow.Workflow, changes []workitem.Change) bool {
+	return slices.ContainsFunc(changes, func(c workitem.Change) bool {
+		return c.Type == workitem.Story && c.Kind == workitem.Moved && flow.Kind(c.To) == workflow.KindAccepted
+	})
 }
 
 // checksOn is whether a passing deploy of the project's stories is followed
@@ -486,13 +513,13 @@ func passedAt(r kluster.Record, head string, checksOn bool) bool {
 // or a diff that cannot be read is not at the head: it is logged, and the
 // story deployed.
 func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string, m manifest.Manifest, checksOn bool) []string {
-	git := gitOf(p.o)
+	git, flow := gitOf(p.o), p.o.flow()
 	var queued []string
 	for _, it := range items {
 		if ctx.Err() != nil {
 			return queued
 		}
-		if it.Type != workitem.Story || it.Status != workitem.Review || it.Archived {
+		if it.Type != workitem.Story || !flow.AwaitsAcceptance(it.Type, it.Status) || it.Archived {
 			continue
 		}
 		ns, err := kluster.StoryNamespace(it.ID)
@@ -545,6 +572,7 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 	} else {
 		p.o.Logger.Warn("kluster deployments not read", "component", "serve", "root", p.e.Root, "err", err.Error())
 	}
+	flow := p.o.flow()
 	var queued []string
 	for _, ns := range slices.Sorted(maps.Keys(namespaces)) {
 		story := namespaces[ns]
@@ -557,7 +585,7 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 			continue
 		}
 		t, tried := readKlusterTried(root, ns)
-		if klusterHolds(it) {
+		if klusterHolds(flow, it) {
 			if tried && t.Teardown != "" {
 				// back in review or in progress: a teardown that failed before is
 				// tried again once it leaves
@@ -585,10 +613,11 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 	return queued
 }
 
-// klusterHolds is whether story it keeps its namespace: it is in progress or
-// in review, not archived (ADR-0292 §3).
-func klusterHolds(it *workitem.Item) bool {
-	return !it.Archived && (it.Status == workitem.InProgress || it.Status == workitem.Review)
+// klusterHolds is whether story it keeps its namespace: it is underway, in
+// a state of flow's active or waiting kind, in progress or in review in the
+// baseline, and not archived (ADR-0292 §3, ADR-0301).
+func klusterHolds(flow workflow.Workflow, it *workitem.Item) bool {
+	return !it.Archived && flow.Underway(it.Status)
 }
 
 // forget removes what the pass tried for namespace ns.
@@ -683,7 +712,7 @@ func (p *klusterPass) drain(ctx context.Context) {
 // a job a story's agent asked for then ends refused. Its end is kept in the
 // job's state, and told in a kluster event, when the agent asked for it.
 func (p *klusterPass) run(ctx context.Context, j klusterJob) {
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		p.o.Logger.Warn("kluster job not run", "component", "serve", "root", p.e.Root, "kind", j.kind, "story", j.story, "err", err.Error())
 		if j.asked() {
@@ -713,7 +742,7 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to deploy it (%v)", j.story, err))
 		}
-		if !klusterHolds(it) || (!j.asked() && it.Status != workitem.Review) {
+		if flow := p.o.flow(); !klusterHolds(flow, it) || (!j.asked() && !flow.AwaitsAcceptance(it.Type, it.Status)) {
 			// left review since it was queued: the next look tears it down
 			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress or in review", j.story, it.Status))
 		}
@@ -723,7 +752,7 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to run its checks (%v)", j.story, err))
 		}
-		if !klusterHolds(it) {
+		if !klusterHolds(p.o.flow(), it) {
 			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve runs a story's checks against its namespace only while it is in progress or in review", j.story, it.Status))
 		}
 		return p.checksJob(ctx, repo, j)
@@ -1043,7 +1072,7 @@ func (p *klusterPass) runChecks(ctx context.Context, repo *workitem.Repo, j klus
 	p.o.Logger.Warn("kluster checks failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "outcome", run.Outcome, "check", check, "log", run.Log, "by", j.asker())
 	if !j.asked() {
 		reason := fmt.Sprintf("flai serve's checks of %s against its kluster namespace ended %s, at %s, at commit %s", j.story, run.Outcome, check, short(j.head))
-		p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(unsent string) string { return checksFailureText(j, ns, run, unsent) })
+		p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(to, unsent string) string { return checksFailureText(j, ns, run, to, unsent) })
 	}
 	return &run, nil
 }
@@ -1062,25 +1091,35 @@ func checksFailureTitle(story string) string {
 
 // checksFailureText names the outcome, the check it ended at, the namespace,
 // the commit, and the log, and says what flai serve did with the story, as
-// heldText does for unsent, and what happens next.
-func checksFailureText(j klusterJob, ns string, run ChecksRun, unsent string) string {
+// heldText does for to and unsent, and what happens next.
+func checksFailureText(j klusterJob, ns string, run ChecksRun, to, unsent string) string {
 	log := "no log"
 	if run.Log != "" {
 		log = "`" + run.Log + "`"
 	}
 	return fmt.Sprintf("flai serve's checks of %s against its namespace `%s` at %s ended %s, at %s. Their log is %s.\n\n%s flai checks status %s shows the run.",
-		j.story, ns, j.head, run.Outcome, failedCheck(run), log, heldText(j.story, unsent, "a checks run against it passes"), j.story)
+		j.story, ns, j.head, run.Outcome, failedCheck(run), log, heldText(j.story, to, unsent, "a checks run against it passes"), j.story)
 }
 
 // heldText says what flai serve did with story after a failure in its
-// namespace: sent it back to in-progress, keeping its namespace, or, with
-// unsent, why it did not; and when it resolves the thread, once what passes
-// says passes.
-func heldText(story, unsent, passes string) string {
+// namespace: sent it back to to, in-progress in the baseline, keeping its
+// namespace, or, with unsent, why it did not; and when it resolves the
+// thread, once what passes says passes. An empty to is a send back the
+// workflow names no state for.
+func heldText(story, to, unsent, passes string) string {
 	if unsent != "" {
-		return fmt.Sprintf("flai serve did not send %[1]s back to in-progress: %[2]s. It deploys again at the story's next head in review, and resolves this thread once %[3]s.", story, unsent, passes)
+		return fmt.Sprintf("flai serve did not send %[1]s %[4]s: %[2]s. It deploys again at the story's next head in review, and resolves this thread once %[3]s.", story, unsent, passes, backTo(to))
 	}
-	return fmt.Sprintf("flai serve sent %[1]s back to in-progress, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place, and resolves this thread once %[2]s. Cancelling or accepting %[1]s tears the namespace down.", story, passes)
+	return fmt.Sprintf("flai serve sent %[1]s %[3]s, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place, and resolves this thread once %[2]s. Cancelling or accepting %[1]s tears the namespace down.", story, passes, backTo(to))
+}
+
+// backTo says where a send back goes: back to to, or back when the workflow
+// names no state.
+func backTo(to string) string {
+	if to == "" {
+		return "back"
+	}
+	return "back to " + to
 }
 
 // deployOnce brings the cluster up when it is absent, then deploys j's
@@ -1155,67 +1194,91 @@ func (p *klusterPass) up(ctx context.Context, root string, m manifest.Manifest) 
 }
 
 // failed opens the story's deploy failure thread, or adds the new failure to
-// the one open, and sends the story back to in-progress.
+// the one open, and sends the story back, to in-progress in the baseline.
 func (p *klusterPass) failed(repo *workitem.Repo, j klusterJob, ns string, f klusterFailure) {
 	reason := fmt.Sprintf("flai serve's kluster %s of %s failed %s, at commit %s", j.kind, j.story, f.where(), short(j.head))
-	p.sendBack(repo, j, ns, klusterFailureTitle(j.story), reason, func(unsent string) string { return klusterFailureText(j, ns, f, unsent) })
+	p.sendBack(repo, j, ns, klusterFailureTitle(j.story), reason, func(to, unsent string) string { return klusterFailureText(j, ns, f, to, unsent) })
 }
 
 // sendBack opens the thread titled title on j's story, or adds to the one
-// open, with what text says for why the story was not sent back, empty when
-// it was; then, once the thread is open, moves the story from review to
-// in-progress as flai for reason, and keeps the send back with what the
-// pass tried for namespace ns (ADR-0254 §5a). It moves nothing when the
-// kluster action went off meanwhile, or the story is no longer in review at
-// j.head, and the thread says so.
-func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, reason string, text func(unsent string) string) {
-	fresh, it, unsent := p.inReviewAt(j)
-	th := p.report(repo, j.story, title, text(unsent))
+// open, with what text says for the state the story is sent back to and why
+// it was not sent back, empty when it was; then, once the thread is open,
+// moves the story along the workflow's transition with the send-back effect
+// out of the state it awaits its acceptance in, review to in-progress in the
+// baseline, as flai for reason, and keeps the send back with what the pass
+// tried for namespace ns (ADR-0254 §5a, ADR-0301). It moves nothing when the
+// kluster action went off meanwhile, the story no longer awaits its
+// acceptance at j.head, or the workflow has no send back out of its state,
+// and the thread says so.
+func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, reason string, text func(to, unsent string) string) {
+	fresh, it, to, unsent := p.inReviewAt(j)
+	th := p.report(repo, j.story, title, text(to, unsent))
 	if unsent != "" {
-		p.o.Logger.Info("story not sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "commit", j.head, "why", unsent)
+		p.o.Logger.Info("story not sent back after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "commit", j.head, "why", unsent)
 		return
 	}
 	if th == nil {
 		return // no thread to send it back on: report warned of it
 	}
 	now := p.o.Now()
-	if _, err := fresh.Transition(it, workitem.InProgress, sendBackBy, reason, now); err != nil {
-		p.o.Logger.Warn("story not sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "err", err.Error())
+	if _, err := fresh.Transition(it, to, sendBackBy, reason, now); err != nil {
+		p.o.Logger.Warn("story not sent back after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "to", to, "thread", th.ID, "err", err.Error())
 		return
 	}
 	root := mainCheckout(fresh)
 	t, _ := readKlusterTried(root, ns)
 	t.Story = j.story
-	t.SentBack = &klusterSentBack{Head: j.head, Thread: th.ID, Reason: reason, At: now.UTC().Truncate(time.Second)}
+	t.SentBack = &klusterSentBack{Head: j.head, Thread: th.ID, Reason: reason, To: to, At: now.UTC().Truncate(time.Second)}
 	if err := writeKlusterTried(root, ns, t); err != nil {
 		p.o.Logger.Warn("kluster send back not recorded, so the story's namespace is not kept and its agent not started for it", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "err", err.Error())
 	}
-	p.journal("done", fmt.Sprintf("sent %s back to in-progress on %s: %s", j.story, th.ID, reason))
-	p.o.Logger.Info("story sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "reason", reason)
+	p.journal("done", fmt.Sprintf("sent %s %s on %s: %s", j.story, backTo(to), th.ID, reason))
+	p.o.Logger.Info("story sent back after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "to", to, "thread", th.ID, "reason", reason)
 }
 
-// inReviewAt reads the project and j's story again, and answers them with an
-// empty why when the story may be sent back: the kluster action is still on,
-// and the story still in review at j.head. Otherwise why says, in a thread's
-// words, why it is not sent back.
-func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, why string) {
-	repo, err := workitem.Open(p.e.Root)
+// inReviewAt reads the project and j's story again, and answers them, with
+// the state the workflow's send back out of the story's state goes to, and
+// an empty why when the story may be sent back: the kluster action is still
+// on, the story still awaits its acceptance at j.head, and the workflow sends
+// it back from there. Otherwise why says, in a thread's words, why it is not
+// sent back, and to is where the workflow sends back a story that awaits its
+// acceptance, empty when it names nowhere.
+func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, to, why string) {
+	flow := p.o.flow()
+	to = sentBackTo(flow)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
-		return nil, nil, "flai serve could not read the project again to move it (" + err.Error() + ")"
+		return nil, nil, to, "flai serve could not read the project again to move it (" + err.Error() + ")"
 	}
 	if !p.on(repo.Manifest) {
-		return nil, nil, "the kluster host action was turned off meanwhile"
+		return nil, nil, to, "the kluster host action was turned off meanwhile"
 	}
 	if it, err = repo.Get(j.story); err != nil {
-		return nil, nil, "flai serve could not read the story again to move it (" + err.Error() + ")"
+		return nil, nil, to, "flai serve could not read the story again to move it (" + err.Error() + ")"
 	}
-	if it.Status != workitem.Review || it.Archived {
-		return nil, nil, fmt.Sprintf("it is %s now, no longer in review", it.Status)
+	if !flow.AwaitsAcceptance(it.Type, it.Status) || it.Archived {
+		return nil, nil, to, fmt.Sprintf("it is %s now, no longer in review", it.Status)
+	}
+	back, ok := flow.SendBack(it.Type, it.Status)
+	if !ok {
+		return nil, nil, "", fmt.Sprintf("the workflow has no transition with the send-back effect out of %s, so flai serve has nowhere to send it", it.Status)
 	}
 	if head, err := kluster.StoryHead(gitOf(p.o), mainCheckout(repo), j.story); err != nil || head != j.head {
-		return nil, nil, fmt.Sprintf("its branch is no longer at %s", short(j.head))
+		return nil, nil, back.To, fmt.Sprintf("its branch is no longer at %s", short(j.head))
 	}
-	return repo, it, ""
+	return repo, it, back.To, ""
+}
+
+// sentBackTo is the state flow sends a story back to from the first state
+// it awaits its acceptance in, in-progress in the baseline; empty when it
+// names none.
+func sentBackTo(flow workflow.Workflow) string {
+	for _, from := range flow.AcceptFrom(workflow.TypeStory) {
+		if back, ok := flow.SendBack(workflow.TypeStory, from); ok {
+			return back.To
+		}
+	}
+	return ""
 }
 
 // passed resolves the story's deploy failure thread, if one is open.
@@ -1236,11 +1299,12 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		p.o.Logger.Warn("kluster teardown not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
 		return refusedEnd(fmt.Sprintf("flai serve could not read %s to tear it down (%v)", j.story, err))
 	}
-	if it.Status == workitem.Review && !it.Archived {
+	flow := p.o.flow()
+	if flow.AwaitsAcceptance(it.Type, it.Status) && !it.Archived {
 		// back in review: its deploy updates the namespace in place
 		return refusedEnd(fmt.Sprintf("%s moved to review while the teardown waited, and a namespace in review is the review's: flai serve tears it down once the story leaves review for ready or backlog, is cancelled, or is accepted", j.story))
 	}
-	if !j.asked() && klusterHolds(it) {
+	if !j.asked() && klusterHolds(flow, it) {
 		return klusterEnd{} // back in progress since it was queued: it keeps its namespace
 	}
 	root := mainCheckout(repo)
@@ -1287,7 +1351,7 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		why := fmt.Sprintf("flai serve tore down %s's namespace %s.", j.story, ns)
 		p.clear(repo, j.story, teardownFailureTitle(j.story), why)
 		p.clear(repo, manifest.File, teardownFailureTitle(j.story), why)
-		if it.Status == workitem.Done || it.Status == workitem.Cancelled {
+		if flow.Closed(it.Status) {
 			why = fmt.Sprintf("%s is %s, and flai serve tore down its namespace %s.", j.story, it.Status, ns)
 			p.clear(repo, j.story, klusterFailureTitle(j.story), why)
 			p.clear(repo, j.story, checksFailureTitle(j.story), why)
@@ -1415,11 +1479,11 @@ func klusterFailureTitle(story string) string {
 
 // klusterFailureText names the job, the step, its exit code, the commit, the
 // log, and the error, and says what flai serve did with the story, as
-// heldText does for unsent, and what happens next.
-func klusterFailureText(j klusterJob, ns string, f klusterFailure, unsent string) string {
+// heldText does for to and unsent, and what happens next.
+func klusterFailureText(j klusterJob, ns string, f klusterFailure, to, unsent string) string {
 	exit, log := f.said()
 	return fmt.Sprintf("flai serve's %s of %s into the namespace `%s` at %s failed %s, with %s. Its log is %s.\n\n```text\n%s\n```\n\n%s flai kluster deployments shows the namespace's record.",
-		j.kind, j.story, ns, j.head, f.where(), exit, log, f.err, heldText(j.story, unsent, "a deploy passes"))
+		j.kind, j.story, ns, j.head, f.where(), exit, log, f.err, heldText(j.story, to, unsent, "a deploy passes"))
 }
 
 func teardownFailureTitle(story string) string {

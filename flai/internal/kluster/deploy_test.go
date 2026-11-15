@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // fakeDocker is a docker on PATH that logs each call to $FAKE_LOG; lists
@@ -1281,5 +1282,70 @@ func TestKeepRefusalKeepsTheNewest(t *testing.T) {
 	}
 	if _, err := Refusals(root); err == nil || !strings.Contains(err.Error(), "delete it") {
 		t.Errorf("a file that does not parse: %v", err)
+	}
+}
+
+// klRenamedFlow is a workflow with in-progress renamed doing and review
+// renamed awaiting, and testing, of the active kind, between them (S-0743).
+const klRenamedFlow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: doing, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: awaiting, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready}
+  - {from: ready, to: doing}
+  - {from: doing, to: testing}
+  - {from: testing, to: awaiting}
+  - {from: awaiting, to: done, effects: [accept]}
+  - {from: awaiting, to: doing, effects: [send-back]}
+  - {from: [backlog, ready, doing, testing, awaiting], to: cancelled, effects: [cancel]}
+---
+`
+
+// S-0743: a deploy judges a story's state by its kind in the cluster's
+// workflow, a state of the active or the waiting kind, and words its refusal
+// from that workflow's states, the baseline's exactly as before; List counts
+// against the limit the stories whose column is of the active kind.
+func TestADeployAndTheListJudgeAStorysStateByItsKind(t *testing.T) {
+	f := teardownSetup(t)
+	_, err := f.c.DeployBy(context.Background(), f.m, "", "S-0101", "backlog", f.worktree, commitA, &bytes.Buffer{})
+	if want := "S-0101 is backlog, and flai deploys only a story in progress or in review into its namespace; move it to in-progress or review first"; err == nil || err.Error() != want {
+		t.Errorf("the baseline's refusal = %v, want %q", err, want)
+	}
+	w, p := workflow.Parse("design/workflows/board.md", klRenamedFlow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	f.c.Workflow = &w
+	for _, status := range []string{"in-progress", "review", "ready", "done"} {
+		_, err := f.c.DeployBy(context.Background(), f.m, "", "S-0101", status, f.worktree, commitA, &bytes.Buffer{})
+		if want := "S-0101 is " + status + ", and flai deploys only a story in doing, in testing, or in awaiting into its namespace; move it to doing, testing, or awaiting first"; err == nil || err.Error() != want {
+			t.Errorf("a story that is %s under the renamed workflow: %v, want %q", status, err, want)
+		}
+	}
+	for story, status := range map[string]string{"S-0101": "doing", "S-0102": "testing", "S-0103": "awaiting"} {
+		if _, err := f.c.DeployBy(context.Background(), f.m, "", story, status, f.worktree, commitA, &bytes.Buffer{}); err != nil {
+			t.Errorf("a story that is %s is deployed: %v", status, err)
+		}
+	}
+	columns := map[string]string{"S-0101": "doing", "S-0102": "testing", "S-0103": "awaiting"}
+	column := func(s string) string { return columns[s] }
+	l, err := List(f.root, ListOptions{DefaultNamespace: "authstar", Limit: 2, Column: column, Workflow: &w})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Live != 2 || !slices.Equal(l.Holding, []string{"S-0101", "S-0102"}) {
+		t.Errorf("held = %d, %q, want S-0101 in doing and S-0102 in testing, not S-0103 awaiting", l.Live, l.Holding)
+	}
+	if baseline, err := List(f.root, ListOptions{DefaultNamespace: "authstar", Limit: 2, Column: column}); err != nil || baseline.Live != 0 {
+		t.Errorf("under the baseline, which has none of these states, held = %+v, %v; want none", baseline.Holding, err)
 	}
 }

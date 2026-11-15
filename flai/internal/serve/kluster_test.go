@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1359,5 +1360,235 @@ func TestARefusalForTheLimitIsKeptAndListed(t *testing.T) {
 	}
 	if oldest := l.Refusals[len(l.Refusals)-1]; oldest.Reason != fmt.Sprintf("%s refused, time 1", three) {
 		t.Errorf("the oldest kept = %+v, want the first dropped", oldest)
+	}
+}
+
+// klRenamedLab is a kluster lab whose repository and pass run renamedFlow
+// (S-0743): doing and testing of the active kind, awaiting of the waiting
+// kind, the acceptance leaving from awaiting and the send back going to
+// doing.
+func klRenamedLab(t *testing.T) *klusterLab {
+	t.Helper()
+	lab := newKlusterLab(t, klusterBlock)
+	w := renamedWorkflow(t)
+	lab.repo.Workflow = w
+	lab.opts.Workflow = w
+	lab.pass = newKlusterPass(lab.opts, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+	return lab
+}
+
+// klStory makes a story with a worktree folder and its branch at head, and
+// moves it from backlog through each of states in turn. It has no epic,
+// whose walk after its story's moves follows the baseline's states.
+func (lab *klusterLab) klStory(title, head string, states ...string) string {
+	lab.t.Helper()
+	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "alex", Now: time.Now()})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	data, _ := os.ReadFile(st.Path)
+	if err := os.WriteFile(st.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [x] deploys\n", 1)), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	for _, to := range states {
+		lab.move(st.ID, to)
+	}
+	if err := os.MkdirAll(lab.repo.WorktreePath(st.ID), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.git.set(st.ID, head)
+	return st.ID
+}
+
+// klMoveAt moves a story to to a second after the lab's clock, so that the
+// pass's next look sees the move as news.
+func (lab *klusterLab) klMoveAt(id, to string) {
+	lab.t.Helper()
+	lab.mu.Lock()
+	at := lab.clock.Add(time.Second)
+	lab.mu.Unlock()
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(it, to, "alex", "the test moves it", at); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// S-0743: under a workflow with in-progress and review renamed and a state
+// of the active kind between them, the review pass deploys the story in the
+// state the acceptance leaves from, awaiting, and not the one in testing,
+// which is in progress and keeps no namespace it has not asked for.
+func TestKlusterDeploysTheStoryInTheStateTheAcceptanceLeavesFrom(t *testing.T) {
+	lab := klRenamedLab(t)
+	inTesting := lab.klStory("Testing", klHeadA, "ready", "doing", "testing")
+	awaiting := lab.klStory("Awaiting", klHeadB, "ready", "doing", "testing", "awaiting")
+	lab.round()
+	if got := lab.kluster.deploys(); strings.Join(got, ";") != "deploy "+awaiting+" "+klHeadB {
+		t.Fatalf("deploys = %v, want only %s's, which awaits its acceptance, and not %s's in testing", got, awaiting, inTesting)
+	}
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Errorf("a second look ran %v, want nothing: the awaiting story was tried at its head", got)
+	}
+	if sk, ok := klusterOf(Options{Workflow: lab.opts.Workflow}).(SystemKluster); !ok || sk.Workflow != lab.opts.Workflow {
+		t.Errorf("the system kluster does not deploy by the options' workflow: %+v", sk)
+	}
+}
+
+// S-0743: a failed deploy sends the story back along the workflow's
+// transition with the send-back effect, awaiting to doing, with today's
+// reason and thread; it keeps its namespace through testing, an active
+// state, and is deployed again in place once it awaits its acceptance again.
+func TestKlusterSendsAFailedDeployBackAlongTheSendBackTransition(t *testing.T) {
+	lab := klRenamedLab(t)
+	story := lab.klStory("Broken", klHeadA, "ready", "doing", "testing", "awaiting")
+	ns, _ := kluster.StoryNamespace(story)
+	lab.kluster.fail = func(_, head string) error {
+		if head == klHeadB {
+			return nil
+		}
+		return &kluster.StepError{Namespace: ns, Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
+	}
+	lab.round()
+	it, err := lab.repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reason := "flai serve's kluster deploy of " + story + " failed at the deploy step, at commit " + short(klHeadA)
+	last := it.Transitions[len(it.Transitions)-1]
+	if it.Status != "doing" || last.By != sendBackBy {
+		t.Fatalf("%s is %s, last moved by %s; want it sent back to doing by %s", story, it.Status, last.By, sendBackBy)
+	}
+	ths := lab.threadsOn(story)
+	if len(ths) != 1 || !ths[0].Open() || !strings.Contains(ths[0].Body, "sent "+story+" back to doing") {
+		t.Fatalf("the failure thread should say the story was sent back to doing: %d threads", len(ths))
+	}
+	tr, ok := readKlusterTried(lab.root, ns)
+	if !ok || tr.SentBack == nil || tr.SentBack.Thread != ths[0].ID || tr.SentBack.Reason != reason || tr.SentBack.To != "doing" || !klusterKept(it, tr) {
+		t.Fatalf("the send back kept is %+v, want one to doing on %s for %q that keeps the story", tr.SentBack, ths[0].ID, reason)
+	}
+	if journal := lab.entries(); !strings.Contains(journal[len(journal)-1].Detail, "sent "+story+" back to doing on "+ths[0].ID+": "+reason) {
+		t.Errorf("the journal's last entry is %+v, want the send back to doing", journal[len(journal)-1])
+	}
+
+	n := len(lab.kluster.all())
+	lab.move(story, "testing")
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a look at the sent back story in testing ran %v, want its namespace kept", got)
+	}
+	if it, _ = lab.repo.Get(story); klusterKept(it, tr) {
+		t.Error("a story its agent moved on from where the send back put it is still kept by it")
+	}
+	lab.git.set(story, klHeadB)
+	lab.move(story, "awaiting")
+	lab.round()
+	if got := strings.Join(lab.kluster.since(n), ";"); got != "absent;deploy "+story+" "+klHeadB {
+		t.Fatalf("calls once the story awaits its acceptance again = %v, want one deploy in place", got)
+	}
+	if got := lab.status(story); got != "awaiting" {
+		t.Errorf("the story is %s after its deploy passed, want it left awaiting", got)
+	}
+}
+
+// S-0743: a story whose state has no transition with the send-back effect
+// out of it is not sent back after a failed deploy: the thread says the
+// workflow names nowhere to send it, and the story stays where it is.
+func TestKlusterSendsNothingBackWhenTheWorkflowHasNoSendBack(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	text := strings.Replace(renamedFlow, "  - {from: awaiting, to: doing, effects: [send-back]}\n", "  - {from: awaiting, to: doing}\n", 1)
+	w, p := workflow.Parse("design/workflows/board.md", text)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	lab.repo.Workflow, lab.opts.Workflow = &w, &w
+	lab.pass = newKlusterPass(lab.opts, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+	story := lab.klStory("Stuck", klHeadA, "ready", "doing", "testing", "awaiting")
+	lab.kluster.fail = func(string, string) error {
+		return &kluster.StepError{Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
+	}
+	lab.round()
+	if got := lab.status(story); got != "awaiting" {
+		t.Fatalf("the story is %s, want it left awaiting with no send back to take", got)
+	}
+	ths := lab.threadsOn(story)
+	if len(ths) != 1 || !strings.Contains(ths[0].Body, "no transition with the send-back effect out of awaiting") {
+		t.Fatalf("the failure thread should say the workflow has no send back: %d threads", len(ths))
+	}
+}
+
+// S-0743: the transitions with the acceptance and the cancellation effects
+// tear a story's namespace down, an acceptance promotes main, and a story
+// moved back to a state of the active kind keeps its namespace until then.
+func TestKlusterTearsDownOnTheAcceptanceAndTheCancellation(t *testing.T) {
+	lab := klRenamedLab(t)
+	accepted := lab.klStory("Accepted", klHeadA, "ready", "doing", "testing", "awaiting")
+	cancelled := lab.klStory("Cancelled", klHeadB, "ready", "doing", "testing", "awaiting")
+	lab.round()
+	if got := len(lab.kluster.deploys()); got != 2 {
+		t.Fatalf("deploys = %v, want both awaiting stories'", lab.kluster.deploys())
+	}
+	n := len(lab.kluster.all())
+	lab.klMoveAt(accepted, "done")
+	lab.round()
+	if got := strings.Join(lab.kluster.since(n), ";"); got != "teardown "+accepted+";promote main" {
+		t.Fatalf("calls once %s was accepted = %q, want its teardown and main promoted", accepted, got)
+	}
+	n = len(lab.kluster.all())
+	lab.move(cancelled, "doing") // from awaiting only a parent's cancellation cancels it
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("calls once %s was back in doing = %v, want its namespace kept", cancelled, got)
+	}
+	lab.klMoveAt(cancelled, "cancelled")
+	lab.round()
+	if got := strings.Join(lab.kluster.since(n), ";"); got != "teardown "+cancelled {
+		t.Fatalf("calls once %s was cancelled = %q, want its teardown alone", cancelled, got)
+	}
+}
+
+// S-0743: a deploy a story's agent asks for runs while the story is in
+// either state of the active kind, doing or testing, and both hold a
+// namespace against kluster.agent_namespaces; a deploy a look queued for a
+// story that left the state the acceptance leaves from is refused.
+func TestKlusterAnAskedDeployRunsInEveryActiveStateAndCountsAgainstTheLimit(t *testing.T) {
+	lab := klRenamedLab(t)
+	doing := lab.klStory("Doing", klHeadA, "ready", "doing")
+	inTesting := lab.klStory("Testing", klHeadB, "ready", "doing", "testing")
+	awaiting := lab.klStory("Awaiting", klHeadC, "ready", "doing", "testing", "awaiting")
+	repo, err := openRepo(lab.opts, lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ story, head string }{{doing, klHeadA}, {inTesting, klHeadB}} {
+		end := lab.pass.runIn(context.Background(), repo, klusterJob{kind: klusterDeploy, story: c.story, head: c.head, by: "agent-" + c.story})
+		if end.outcome != kluster.OutcomePassed {
+			t.Errorf("the asked deploy of %s ended %s: %s", c.story, end.outcome, end.fail.err)
+		}
+	}
+	if got := strings.Join(lab.kluster.deploys(), ";"); got != "deploy "+doing+" "+klHeadA+";deploy "+inTesting+" "+klHeadB {
+		t.Fatalf("deploys = %q, want the asked deploys of %s and %s", got, doing, inTesting)
+	}
+	end := lab.pass.runIn(context.Background(), repo, klusterJob{kind: klusterDeploy, story: inTesting, head: klHeadB})
+	if end.outcome != kluster.OutcomeRefused {
+		t.Errorf("a deploy a look queued for %s in testing ended %s, want refused", inTesting, end.outcome)
+	}
+	lab.round() // deploys the awaiting story, which does not count against the limit
+	column := func(story string) string {
+		it, err := lab.repo.Get(story)
+		if err != nil {
+			return ""
+		}
+		return it.Status
+	}
+	l, err := kluster.List(lab.root, kluster.ListOptions{Limit: 2, Column: column, Workflow: lab.opts.Workflow})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Live != 2 || strings.Join(l.Holding, ",") != doing+","+inTesting || len(l.Deployments) != 3 {
+		t.Errorf("held = %d, %q of %d deployments, want %s and %s, and not %s, which awaits its acceptance", l.Live, l.Holding, len(l.Deployments), doing, inTesting, awaiting)
 	}
 }
