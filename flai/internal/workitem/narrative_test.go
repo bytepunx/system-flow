@@ -738,3 +738,45 @@ func TestOpenStreamRefusesANarrativeWithContent(t *testing.T) {
 		t.Errorf("narrative changed:\n%q\nwant\n%q", got, content)
 	}
 }
+
+// S-0739, ADR-0301 §2: a narrative's state is written while its story is in
+// a state of the active or the waiting kind, the added active state among
+// them; one closed by its state's kind keeps the state it closed with, and
+// any other is told to move to the pull's target, under every workflow alike.
+func TestNarrativeKindStreamStateFollowsTheWorkflow(t *testing.T) {
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r, st := inProgressStream(t), f.state
+			r.Workflow = f.flow(t)
+			start := func(status string) string {
+				return "S-0001 is " + status + ", and only a story in progress or in review has its narrative's state written; move it to " +
+					st(InProgress) + " first with `flai move S-0001 " + st(InProgress) + "`"
+			}
+			closed := func(status string) string {
+				return "S-0001 is " + status + ", so its narrative is finished and keeps the state it closed with; write new work's state in the narrative of the story that takes it up"
+			}
+			for _, c := range []struct{ status, refused string }{
+				{st(InProgress), ""}, {f.added, ""}, {st(Review), ""},
+				{st(Backlog), start(st(Backlog))}, {st(Ready), start(st(Ready))},
+				{st(Done), closed(st(Done))}, {st(Cancelled), closed(st(Cancelled))},
+			} {
+				s, err := r.Get("S-0001")
+				if err != nil {
+					t.Fatal(err)
+				}
+				s.Status = c.status
+				if err := r.Save(s); err != nil {
+					t.Fatal(err)
+				}
+				_, err = r.SetStreamState("S-0001", "In "+c.status+".", "", StreamOptions{Now: t0})
+				var refused *StreamRefusedError
+				switch {
+				case c.refused == "" && err != nil:
+					t.Errorf("%s: %v", c.status, err)
+				case c.refused != "" && (!errors.As(err, &refused) || refused.Reason != c.refused):
+					t.Errorf("%s: %v, want %q", c.status, err, c.refused)
+				}
+			}
+		})
+	}
+}

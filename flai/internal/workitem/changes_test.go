@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -141,5 +142,42 @@ func TestReorderedOnlyWhenPrioritiesChange(t *testing.T) {
 		if got := Reordered(c.before, c.after); got != c.want {
 			t.Errorf("Reordered(%v, %v) = %v, want %v", c.before, c.after, got, c.want)
 		}
+	}
+}
+
+// S-0739, ADR-0301 §2: a move into the state of the cancelled kind names the
+// ancestor whose cancellation took the item along, under every workflow
+// alike, and a move into any other state at that time names none.
+func TestChangesKindCancelledFollowsTheWorkflow(t *testing.T) {
+	const before, at = "2026-09-19T10:00:01Z", "2026-09-19T10:00:05Z"
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			w, st := f.of(t), f.state
+			epic := &Item{ID: "E-0001", Type: Epic, Title: "E", Transitions: []Transition{
+				{To: st(InProgress), At: before, By: "alex"}, {To: st(Cancelled), At: at, By: "alex"},
+			}}
+			story := &Item{ID: "S-0001", Type: Story, Parent: "E-0001", Title: "S", Transitions: []Transition{
+				{To: f.added, At: before, By: "claude"}, {To: st(Cancelled), At: at, By: "alex"},
+			}}
+			task := &Item{ID: "T-0001", Type: Task, Parent: "S-0001", Title: "T", Transitions: []Transition{
+				{To: st(Done), At: at, By: "alex"},
+			}}
+			since, _ := time.Parse(TimeFormat, "2026-09-19T10:00:00Z")
+			var got []string
+			for _, c := range ChangesIn(w, []*Item{epic, story, task}, since, "", nil) {
+				got = append(got, c.ID+" "+c.To+" "+c.Cause)
+			}
+			want := []string{
+				"E-0001 " + st(InProgress) + " ", "S-0001 " + f.added + " ",
+				"E-0001 " + st(Cancelled) + " ", "S-0001 " + st(Cancelled) + " E-0001", "T-0001 " + st(Done) + " ",
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("changes %q, want %q", got, want)
+			}
+			byID := map[string]*Item{epic.ID: epic, story.ID: story, task.ID: task}
+			if cause := CancelledWithIn(w, byID, task, at); cause != "E-0001" {
+				t.Errorf("the task's cause %q, want E-0001, the highest ancestor cancelled then", cause)
+			}
+		})
 	}
 }

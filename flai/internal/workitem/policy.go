@@ -230,8 +230,9 @@ func (r *Repo) ReadyOrderByPolicy(policy string) (ReadyOrder, *Board, []*Item, e
 // ReadyOrderKeeping orders the ready column, taken in its pull order, by a
 // policy, around the stories that someone other than the orchestrator placed
 // by hand within keep of now: those keep their places (S-0219). A keep that
-// is not positive keeps none. It returns the board and the items it read,
-// for Apply.
+// is not positive keeps none. The ready column is the state the pull takes a
+// story from, the source of the workflow's pull transition (ADR-0301 §3). It
+// returns the board and the items it read, for Apply.
 func (r *Repo) ReadyOrderKeeping(policy string, keep time.Duration, now time.Time) (ReadyOrder, *Board, []*Item, error) {
 	items, err := r.List(false)
 	if err != nil {
@@ -248,7 +249,7 @@ func (r *Repo) ReadyOrderKeeping(policy string, keep time.Duration, now time.Tim
 		}
 	}
 	var ready []*Item
-	current := PullSequence(board.Order, items, Ready)
+	current := PullSequence(board.Order, items, pullSource(r.Flow()))
 	kept := map[string]Placed{}
 	for _, id := range current {
 		ready = append(ready, byID[id])

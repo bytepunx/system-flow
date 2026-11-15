@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Finalizable drafts (S-0219). A draft story is complete when it has every
@@ -36,8 +38,16 @@ type DraftCheck struct {
 // FinalizableLacks is each thing story lacks to be finalized. parent is its
 // epic, nil when it names none or the epic is not found, and sections are the
 // level-two headings of the project's story template. It does not look at
-// the draft flag, so a story can be checked as it would be finalized.
+// the draft flag, so a story can be checked as it would be finalized. It runs
+// the baseline workflow, as FinalizableLacksIn does with it.
 func FinalizableLacks(story, parent *Item, sections []string) []string {
+	return FinalizableLacksIn(baselineFlow, story, parent, sections)
+}
+
+// FinalizableLacksIn is FinalizableLacks under workflow w: an epic is closed
+// when its state is of the accepted or the cancelled kind, and is named by
+// its own status (ADR-0301 §2).
+func FinalizableLacksIn(w workflow.Workflow, story, parent *Item, sections []string) []string {
 	lacks := []string{}
 	have := map[string]bool{}
 	for _, h := range levelTwoHeadings(story.Body) {
@@ -70,15 +80,15 @@ func FinalizableLacks(story, parent *Item, sections []string) []string {
 	case story.Parent == "":
 	case parent == nil:
 		lacks = append(lacks, "its epic "+story.Parent+" is not found")
-	case parent.Closed():
+	case closedKind(w.Kind(parent.Status)):
 		lacks = append(lacks, "its epic "+parent.ID+" is "+parent.Status)
 	}
 	return lacks
 }
 
 // Finalizable is each thing story lacks to be finalized, judged against the
-// project's story template and its parent epic as they are on disk. None
-// means it is complete.
+// project's story template and its parent epic as they are on disk, under
+// the workflow the repository runs. None means it is complete.
 func (r *Repo) Finalizable(story *Item) ([]string, error) {
 	if story.Type != Story {
 		return nil, fmt.Errorf("%s is %s: only a story is finalized", story.ID, articled(story.Type))
@@ -91,11 +101,13 @@ func (r *Repo) Finalizable(story *Item) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return FinalizableLacks(story, parent, sections), nil
+	return FinalizableLacksIn(r.Flow(), story, parent, sections), nil
 }
 
 // Drafts lists each draft story in the backlog, complete or with what it
-// lacks, ordered by orchestration.policy from the board's pull order.
+// lacks, ordered by orchestration.policy from the board's pull order. The
+// backlog is the state a promotion leaves, the source of the workflow's
+// commit transition (ADR-0301 §3), since a draft is finalized to be promoted.
 func (r *Repo) Drafts() (Drafts, error) {
 	items, err := r.List(false)
 	if err != nil {
@@ -109,13 +121,14 @@ func (r *Repo) Drafts() (Drafts, error) {
 	if err != nil {
 		return Drafts{}, err
 	}
+	w := r.Flow()
 	policy := r.Manifest.Orchestration.PolicyOrDefault()
 	byID := map[string]*Item{}
 	for _, it := range items {
 		byID[it.ID] = it
 	}
 	var drafts []*Item
-	for _, id := range PullSequence(board.Order, items, Backlog) {
+	for _, id := range PullSequence(board.Order, items, promoteSource(w)) {
 		if it := byID[id]; it.Draft {
 			drafts = append(drafts, it)
 		}
@@ -131,7 +144,7 @@ func (r *Repo) Drafts() (Drafts, error) {
 		if err != nil {
 			return Drafts{}, err
 		}
-		lacks := FinalizableLacks(story, parent, sections)
+		lacks := FinalizableLacksIn(w, story, parent, sections)
 		out.Drafts = append(out.Drafts, DraftCheck{
 			Position: rk.Position, ID: rk.ID, Title: rk.Title, Text: rk.Text,
 			Complete: len(lacks) == 0, Lacks: lacks,

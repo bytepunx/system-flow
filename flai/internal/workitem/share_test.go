@@ -434,3 +434,52 @@ func TestConversationsReadAtOnceAgree(t *testing.T) {
 		}
 	}
 }
+
+// S-0739, ADR-0301 §2, §3: a share is in force while both stories are in the
+// pull's source or a state of the active or the waiting kind, the added
+// active state among them, and a move into any other state since it was made
+// ends it, under every workflow alike.
+func TestShareKindInForceFollowsTheWorkflow(t *testing.T) {
+	const after = "2026-10-08T11:00:00Z"
+	moved := func(s *Item, to string) *Item {
+		s.Transitions = append(s.Transitions, Transition{To: to, At: after, By: "test"})
+		return s
+	}
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			w, st := f.of(t), f.state
+			holder := func(state string) *Item { return claimed("S-0001", state, "flai") }
+			held := func(state string) *Item { return claimed("S-0009", state, "flai/cmd") }
+			for _, c := range []struct {
+				name         string
+				holder, held *Item
+				want         bool
+			}{
+				{"both open", holder(st(InProgress)), held(st(Ready)), true},
+				{"the holder in the added active state", moved(holder(f.added), f.added), held(st(Ready)), true},
+				{"the holder in review", holder(st(Review)), held(st(Ready)), true},
+				{"the held story back in ready", holder(st(InProgress)), moved(held(st(Ready)), st(Ready)), true},
+				{"the held story back in backlog", holder(st(InProgress)), moved(held(st(Ready)), st(Backlog)), false},
+				{"the held story in backlog", holder(st(InProgress)), held(st(Backlog)), false},
+				{"the holder done", moved(holder(st(Done)), st(Done)), held(st(Ready)), false},
+				{"the holder cancelled and sent back", moved(holder(st(InProgress)), st(Cancelled)), held(st(Ready)), false},
+			} {
+				s := share("S-0001", "S-0009", "flai/cmd")
+				s.At = shareAt
+				h := NewHolds([]*Item{c.holder, c.held}, holdProjects)
+				if got := h.inForceIn(w, s); got != c.want {
+					t.Errorf("%s: in force = %v, want %v", c.name, got, c.want)
+				}
+			}
+
+			// a hold's asks count from when the story last entered the pull's source
+			story := &Item{ID: "S-0009", Type: Story, Created: "2026-10-01T00:00:00Z", Transitions: []Transition{
+				{To: st(Ready), At: "2026-10-02T00:00:00Z"}, {To: st(InProgress), At: "2026-10-03T00:00:00Z"},
+				{To: st(Ready), At: "2026-10-04T00:00:00Z"}, {To: f.added, At: "2026-10-05T00:00:00Z"},
+			}}
+			if got := readySince(w, story).Format(TimeFormat); got != "2026-10-04T00:00:00Z" {
+				t.Errorf("ready since %s, want 2026-10-04T00:00:00Z", got)
+			}
+		})
+	}
+}

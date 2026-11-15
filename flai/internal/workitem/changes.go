@@ -4,6 +4,8 @@ import (
 	"slices"
 	"sort"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Kinds of change to a work item that the files record with a time.
@@ -35,8 +37,16 @@ func (c Change) Key() string { return c.ID + "|" + c.Kind + "|" + c.To + "|" + c
 // Changes returns what happened after since, oldest first, leaving out
 // transitions made by self. Timestamps have second resolution, so a change
 // stamped with the very second of since is included unless seen names it:
-// the caller keeps the keys it has already reported for that second.
+// the caller keeps the keys it has already reported for that second. It runs
+// the baseline workflow, as ChangesIn does with it.
 func Changes(items []*Item, since time.Time, self string, seen map[string]bool) []Change {
+	return ChangesIn(baselineFlow, items, since, self, seen)
+}
+
+// ChangesIn is Changes under workflow w: a move into a state of the
+// cancelled kind names the item whose cancellation took it along (ADR-0301
+// §2).
+func ChangesIn(w workflow.Workflow, items []*Item, since time.Time, self string, seen map[string]bool) []Change {
 	since = since.UTC().Truncate(time.Second)
 	after := func(at string, c Change) bool {
 		t, err := time.Parse(TimeFormat, at)
@@ -55,8 +65,8 @@ func Changes(items []*Item, since time.Time, self string, seen map[string]bool) 
 		for _, tr := range it.Transitions {
 			c := base
 			c.Kind, c.To, c.By, c.At = Moved, tr.To, tr.By, tr.At
-			if tr.To == Cancelled {
-				c.Cause = CancelledWith(byID, it, tr.At)
+			if w.Kind(tr.To) == workflow.KindCancelled {
+				c.Cause = CancelledWithIn(w, byID, it, tr.At)
 			} else if it.Type == Epic {
 				c.Follows = FollowedWith(byID, it, tr)
 			}
@@ -118,12 +128,19 @@ func Reordered(before, after []string) bool {
 
 // CancelledWith names the item whose cancellation at the same moment took it
 // along: the highest ancestor cancelled at that time. Nothing records it; a
-// cascade stamps every item with one time (ADR-0028).
+// cascade stamps every item with one time (ADR-0028). It runs the baseline
+// workflow, as CancelledWithIn does with it.
 func CancelledWith(byID map[string]*Item, it *Item, at string) string {
+	return CancelledWithIn(baselineFlow, byID, it, at)
+}
+
+// CancelledWithIn is CancelledWith under workflow w: an ancestor was
+// cancelled by a move into a state of the cancelled kind (ADR-0301 §2).
+func CancelledWithIn(w workflow.Workflow, byID map[string]*Item, it *Item, at string) string {
 	cause := ""
 	for p := byID[it.Parent]; p != nil; p = byID[p.Parent] {
 		for _, tr := range p.Transitions {
-			if tr.To == Cancelled && tr.At == at {
+			if tr.At == at && w.Kind(tr.To) == workflow.KindCancelled {
 				cause = p.ID
 			}
 		}

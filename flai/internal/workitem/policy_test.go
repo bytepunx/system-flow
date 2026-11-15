@@ -175,3 +175,36 @@ func TestKeepPlaces(t *testing.T) {
 		t.Errorf("json:\n got %s\nwant %s", data, want)
 	}
 }
+
+// S-0739, ADR-0301 §3: the ready order is the order of the state the pull
+// takes a story from, and a story in any other state is left out of it,
+// under every workflow alike.
+func TestPolicyKindReadyOrderFollowsTheWorkflow(t *testing.T) {
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r, st := f.open(t), f.state
+			if from := pullSource(f.of(t)); from != st(Ready) {
+				t.Errorf("the pull's source %q, want %q", from, st(Ready))
+			}
+			mustCreate(t, r, Epic, "Epic", "")
+			states := map[*Item]string{}
+			for i, state := range []string{st(Ready), st(Backlog), st(Ready), f.added, st(Ready)} {
+				s := promoteKindStory(t, r)
+				s.CostOfDelay = &CostOfDelay{Value: amount(float64(100 * (i + 1)))}
+				states[s] = state
+			}
+			promoteKindSave(t, r, states)
+			got, _, _, err := r.ReadyOrderKeeping(PolicyCOD, 0, t0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var ids []string
+			for _, s := range got.Stories {
+				ids = append(ids, s.ID)
+			}
+			if want := []string{"S-0005", "S-0003", "S-0001"}; !reflect.DeepEqual(ids, want) {
+				t.Errorf("ready order %v, want %v", ids, want)
+			}
+		})
+	}
+}

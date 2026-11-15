@@ -315,8 +315,9 @@ func (r *Repo) SetStreamState(storyID, current, next string, opt StreamOptions) 
 // leaves its section alone; a missing section is inserted where the template
 // puts it. It stamps updated, and records the agent and session given, as
 // LogStream does, and appends nothing to the log. It refuses, with a
-// *StreamRefusedError, a story not in progress or in review and one with no
-// narrative, and, with an *mdlint.Error, text the project's lint rejects.
+// *StreamRefusedError, a story not in progress or in review, a state of the
+// active or the waiting kind (ADR-0301 §2), and one with no narrative, and,
+// with an *mdlint.Error, text the project's lint rejects.
 func (r *Repo) WriteStreamState(storyID string, text StreamText, opt StreamOptions) (*StreamState, error) {
 	current, next, context := strings.TrimSpace(text.Current), strings.TrimSpace(text.Next), strings.TrimSpace(text.Context)
 	decisions, questions := entries(text.Decisions), entries(text.Questions)
@@ -345,9 +346,10 @@ func (r *Repo) WriteStreamState(storyID string, text StreamText, opt StreamOptio
 	if story.Type != Story {
 		return nil, fmt.Errorf("%s is a %s; narratives belong to stories, so give its story's ID", story.ID, story.Type)
 	}
-	if story.Status != InProgress && story.Status != Review {
-		reason := fmt.Sprintf("%s is %s, and only a story in progress or in review has its narrative's state written; move it to in-progress first with `flai move %s in-progress`", story.ID, story.Status, story.ID)
-		if story.Status == Done || story.Status == Cancelled {
+	if kind := r.Flow().Kind(story.Status); !underwayKind(kind) {
+		start := pullTarget(r.Flow())
+		reason := fmt.Sprintf("%s is %s, and only a story in progress or in review has its narrative's state written; move it to %s first with `flai move %s %s`", story.ID, story.Status, start, story.ID, start)
+		if closedKind(kind) {
 			reason = fmt.Sprintf("%s is %s, so its narrative is finished and keeps the state it closed with; write new work's state in the narrative of the story that takes it up", story.ID, story.Status)
 		}
 		return nil, &StreamRefusedError{ID: story.ID, Status: story.Status, Reason: reason}

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Shares (ADR-0134). The agent of a story in progress that holds a ready story
@@ -178,6 +180,9 @@ func readConversationDoc(path string) (ConversationDoc, error) {
 // A share is in force while both its stories exist, are not archived, are
 // ready, in progress, or in review, and neither has moved to backlog, done,
 // or cancelled at or after it was made; one whose time does not parse is not.
+// Those are roles, read from the workflow (ADR-0301 §2, §3): ready is the
+// state the pull takes a story from, in progress and in review a state of the
+// active or the waiting kind, and a move into any other state ends the share.
 func (h *Holds) WithShares(shares []Share) *Holds {
 	h.shares = nil
 	for _, s := range shares {
@@ -197,19 +202,29 @@ func (h *Holds) InForce(s Share) bool {
 	return h.inForce(s)
 }
 
+// shareOpen reports whether a story in state keeps a share in force under
+// workflow w: the state the pull takes a story from, or one of the active or
+// the waiting kind (ADR-0301 §2, §3).
+func shareOpen(w workflow.Workflow, state string) bool {
+	return state == pullSource(w) || underwayKind(w.Kind(state))
+}
+
 // inForce says whether share s still holds, judged with the stories h knows.
-func (h *Holds) inForce(s Share) bool {
+func (h *Holds) inForce(s Share) bool { return h.inForceIn(h.holdsFlow(), s) }
+
+// inForceIn is inForce under workflow w.
+func (h *Holds) inForceIn(w workflow.Workflow, s Share) bool {
 	at, err := time.Parse(TimeFormat, s.At)
 	if err != nil || s.Holder == s.Held {
 		return false
 	}
 	for _, id := range []string{s.Holder, s.Held} {
 		it := h.story(id)
-		if it == nil || it.Archived || (it.Status != Ready && it.Status != InProgress && it.Status != Review) {
+		if it == nil || it.Archived || !shareOpen(w, it.Status) {
 			return false
 		}
 		for _, tr := range it.Transitions {
-			if tr.To != Backlog && tr.To != Done && tr.To != Cancelled {
+			if shareOpen(w, tr.To) {
 				continue
 			}
 			if when, err := time.Parse(TimeFormat, tr.At); err == nil && !when.Before(at) {
@@ -310,10 +325,15 @@ func (h *Holds) WithAsks(asks []Ask) *Holds {
 // last entered ready, as package messages judges an ask; a holder not asked
 // is left out, and nil when none was.
 func (h *Holds) asked(story *Item, overlaps []Overlap) []HoldAsk {
+	return h.askedIn(h.holdsFlow(), story, overlaps)
+}
+
+// askedIn is asked under workflow w, whose pull source is ready.
+func (h *Holds) askedIn(w workflow.Workflow, story *Item, overlaps []Overlap) []HoldAsk {
 	if len(h.asks) == 0 {
 		return nil
 	}
-	since := readySince(story)
+	since := readySince(w, story)
 	var out []HoldAsk
 	for _, o := range overlaps {
 		var newest *Ask
@@ -335,11 +355,13 @@ func (h *Holds) asked(story *Item, overlaps []Overlap) []HoldAsk {
 	return out
 }
 
-// readySince is when story last entered ready, else when it was created; a
+// readySince is when story last entered ready, the state the pull takes a
+// story from under workflow w (ADR-0301 §3), else when it was created; a
 // time that does not parse reads as the zero time.
-func readySince(story *Item) time.Time {
+func readySince(w workflow.Workflow, story *Item) time.Time {
+	ready := pullSource(w)
 	for i := len(story.Transitions) - 1; i >= 0; i-- {
-		if story.Transitions[i].To == Ready {
+		if story.Transitions[i].To == ready {
 			t, _ := time.Parse(TimeFormat, story.Transitions[i].At)
 			return t
 		}

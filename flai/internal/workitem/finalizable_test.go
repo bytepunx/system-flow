@@ -61,3 +61,60 @@ func TestFinalizableLacks(t *testing.T) {
 		t.Errorf("a template section the draft lacks: %q", got)
 	}
 }
+
+// S-0739, ADR-0301 §2: a draft's epic is closed by its state's kind, named by
+// its status, and open in any other state, the added active one among them,
+// under every workflow alike.
+func TestFinalizeKindLacksFollowTheWorkflow(t *testing.T) {
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			w, st := f.of(t), f.state
+			for state, want := range map[string][]string{
+				st(InProgress): {}, f.added: {}, st(Review): {}, st(Backlog): {},
+				st(Done):      {"its epic E-0001 is " + st(Done)},
+				st(Cancelled): {"its epic E-0001 is " + st(Cancelled)},
+			} {
+				epic := &Item{ID: "E-0001", Type: Epic, Status: state, Title: "Epic"}
+				if got := FinalizableLacksIn(w, completeDraft(), epic, storySections); !reflect.DeepEqual(got, want) {
+					t.Errorf("epic %s: lacks %q, want %q", state, got, want)
+				}
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §3: the drafts are those in the state a promotion leaves,
+// in the pull order, and their epic is closed by its state's kind, under
+// every workflow alike.
+func TestFinalizeKindDraftsFollowTheWorkflow(t *testing.T) {
+	var lacks []string // the baseline's, but for the epic's
+	for _, f := range promoteKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r, st := f.open(t), f.state
+			epic := mustCreate(t, r, Epic, "Epic", "")
+			draft, kept, queued := promoteKindStory(t, r), promoteKindStory(t, r), promoteKindStory(t, r)
+			draft.Draft, queued.Draft = true, true
+			promoteKindSave(t, r, map[*Item]string{epic: st(Cancelled), draft: st(Backlog), kept: st(Backlog), queued: st(Ready)})
+			got, err := r.Drafts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Drafts) != 1 || got.Drafts[0].ID != "S-0001" {
+				t.Fatalf("drafts %+v, want S-0001 alone", got.Drafts)
+			}
+			l := got.Drafts[0].Lacks
+			if len(l) == 0 || l[len(l)-1] != "its epic E-0001 is "+st(Cancelled) {
+				t.Fatalf("lacks %q, want the cancelled epic last", l)
+			}
+			if f.name == "baseline" {
+				lacks = l[:len(l)-1]
+			} else if !reflect.DeepEqual(l[:len(l)-1], lacks) {
+				t.Errorf("lacks %q, want the baseline's %q", l[:len(l)-1], lacks)
+			}
+			one, err := r.Finalizable(draft)
+			if err != nil || !reflect.DeepEqual(one, l) {
+				t.Errorf("finalizable %q, %v; want %q", one, err, l)
+			}
+		})
+	}
+}
