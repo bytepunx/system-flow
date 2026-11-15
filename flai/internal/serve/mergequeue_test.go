@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -326,6 +327,25 @@ func TestTheMergeQueueRunsABatchWhenEverythingIsOn(t *testing.T) {
 	}
 	if recs := lab.records("reason", ""); len(recs) != 0 {
 		t.Fatalf("said the queue did not run:\n%s", lab.logs.String())
+	}
+}
+
+// S-0743: the queue's pass opens the project with the workflow its options
+// give, so that the batch it runs takes the stories that wait in that
+// workflow's state the acceptance leaves from, awaiting, and not review.
+func TestTheMergeQueueOpensTheProjectWithTheOptionsWorkflow(t *testing.T) {
+	lab := newQueueLab(t)
+	lab.pass.o.Workflow = renamedWorkflow(t)
+	lab.look()
+	if n := lab.batches.count(); n != 1 {
+		t.Fatalf("batches run = %d, want 1", n)
+	}
+	repo := lab.batches.repos[0]
+	if repo.Workflow != lab.pass.o.Workflow {
+		t.Fatalf("the batch's repository runs %+v, want the options' workflow", repo.Workflow)
+	}
+	if flow := repo.Flow(); !flow.AwaitsAcceptance(workflow.TypeStory, "awaiting") || flow.AwaitsAcceptance(workflow.TypeStory, "testing") {
+		t.Error("the batch's repository does not take a story in awaiting, and not in testing, for the queue")
 	}
 }
 

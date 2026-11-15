@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -416,6 +417,14 @@ func bisected(t *testing.T) (*workitem.Repo, string, string) {
 	repo := project(t, "")
 	first, _ := story(t, repo, "Lands", []bool{true}, t0.Add(time.Hour))
 	failing, _ := story(t, repo, "Fails", []bool{true}, t0.Add(2*time.Hour))
+	bisectedTo(t, repo, first, failing)
+	return repo, first.ID, failing.ID
+}
+
+// bisectedTo enqueues first and failing in repo, in a batch bisected to
+// failing, failed at unit, as bisected does.
+func bisectedTo(t *testing.T, repo *workitem.Repo, first, failing *workitem.Item) {
+	t.Helper()
 	enqueue(t, repo, first.ID, failing.ID)
 	res := &Result{StoppedAt: "unit", Summary: "unit failed: TestFiles: f2.txt is there", FinishedAt: t1}
 	if _, err := Update(repo.CacheDir(), func(s *State) error {
@@ -430,7 +439,6 @@ func bisected(t *testing.T) (*workitem.Repo, string, string) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return repo, first.ID, failing.ID
 }
 
 // serveThreads are the threads on story that flai serve opened, as the
@@ -908,5 +916,151 @@ func TestARefusedSendBackThreadLeavesTheFindingsOut(t *testing.T) {
 				t.Errorf("logged %d warnings, want the refusal once, naming %s:\n%s", n, failing, logged.String())
 			}
 		})
+	}
+}
+
+// S-0743: under a workflow with review renamed awaiting and in-progress
+// renamed doing, the story a red batch is bisected to moves from awaiting
+// along the send-back transition to doing, by flai, with today's reason in
+// its notes, and its thread and outcome name doing as where it went and
+// awaiting as where to move it once fixed.
+func TestUnderAnotherWorkflowTheFailingStoryIsSentBackAlongTheSendBack(t *testing.T) {
+	repo := runRenamed(t, project(t, ""))
+	first := renamedStory(t, repo, "Lands", t0.Add(time.Hour))
+	failing := renamedStory(t, repo, "Fails", t0.Add(2*time.Hour))
+	bisectedTo(t, repo, first, failing)
+
+	sent, err := SendBack(Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }}, repo)
+	if !sent || err != nil {
+		t.Fatalf("sent %v, %v; want %s sent back", sent, err, failing.ID)
+	}
+	it, err := repo.Get(failing.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := it.Transitions[len(it.Transitions)-1]; it.Status != "doing" || last.To != "doing" || last.By != sendBackBy {
+		t.Errorf("%s is %s, last moved %+v; want doing by flai", failing.ID, it.Status, last)
+	}
+	reason := "moved to doing: merge queue batch 20261019-160000 fails with " + failing.ID + " at 4e4e4e4e4e4e: unit failed: TestFiles: f2.txt is there"
+	if !strings.Contains(it.Body, reason) {
+		t.Errorf("%s's notes do not say %q:\n%s", failing.ID, reason, it.Body)
+	}
+	ths := serveThreads(t, repo, failing.ID)
+	if len(ths) != 1 || ths[0].Title != "Merge queue batch 20261019-160000 fails with "+failing.ID+" at unit" {
+		t.Fatalf("threads by flai serve on %s: %+v, want the send back's", failing.ID, ths)
+	}
+	says := "flai moved " + failing.ID + " back to doing and took it out of the merge queue. Fix it on `story/" + failing.ID + "`, run flai verify " + failing.ID + ", move it to awaiting, and enqueue it again with flai queue add " + failing.ID + "."
+	if !strings.Contains(ths[0].Body, says) {
+		t.Errorf("thread does not say %q:\n%s", says, ths[0].Body)
+	}
+	st, err := ReadState(repo.CacheDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Outcomes) != 1 || st.Outcomes[0].Detail != "sent back to doing: merge queue batch 20261019-160000 fails with it at unit" {
+		t.Errorf("outcomes %+v, want %s sent back to doing", st.Outcomes, failing.ID)
+	}
+}
+
+// S-0743: under a workflow with testing before awaiting, a failing story
+// moved back to testing waits for no acceptance there, so it is not sent
+// back, gets no thread, and leaves the queue.
+func TestUnderAnotherWorkflowAFailingStoryInTestingIsNotSentBack(t *testing.T) {
+	repo := runRenamed(t, project(t, ""))
+	first := renamedStory(t, repo, "Lands", t0.Add(time.Hour))
+	failing := renamedStory(t, repo, "Fails", t0.Add(2*time.Hour))
+	bisectedTo(t, repo, first, failing)
+	it, err := repo.Get(failing.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{"doing", "testing"} {
+		if _, err := repo.Transition(it, to, "alex", "rework", t2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	moves := len(it.Transitions)
+
+	sent, err := SendBack(Deps{Now: func() time.Time { return t2 }}, repo)
+	if sent || err != nil {
+		t.Fatalf("sent %v, %v; want it not sent back", sent, err)
+	}
+	if it, _ := repo.Get(failing.ID); len(it.Transitions) != moves || len(serveThreads(t, repo, failing.ID)) != 0 {
+		t.Errorf("%s moved %d times, want %d, or got a thread", failing.ID, len(it.Transitions), moves)
+	}
+	st, err := ReadState(repo.CacheDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := st.EnqueuedAs(failing.ID); ok || len(st.Outcomes) != 1 || !strings.Contains(st.Outcomes[0].Detail, "it was testing, so it was not sent back") {
+		t.Errorf("enqueued %v, outcomes %+v; want %s failing, not sent back, out of the queue", ok, st.Outcomes, failing.ID)
+	}
+}
+
+// S-0743: a workflow with no send-back transition out of the state a
+// failing story waits for its acceptance in is an error naming the state,
+// and the story is not moved: flai does not guess where to send it.
+func TestASendBackWithNoSendBackTransitionIsAnErrorNamingTheState(t *testing.T) {
+	repo := runRenamed(t, project(t, ""))
+	first := renamedStory(t, repo, "Lands", t0.Add(time.Hour))
+	failing := renamedStory(t, repo, "Fails", t0.Add(2*time.Hour))
+	bisectedTo(t, repo, first, failing)
+	w, p := workflow.Parse("design/workflows/board.md", strings.Replace(renamedBoard, "  - {from: awaiting, to: doing, effects: [send-back]}\n", "", 1))
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	repo.Workflow = &w
+
+	sent, err := SendBack(Deps{Now: func() time.Time { return t2 }}, repo)
+	if sent || err == nil || !strings.Contains(err.Error(), "no transition with the send-back effect out of awaiting") {
+		t.Fatalf("sent %v, %v; want an error naming awaiting", sent, err)
+	}
+	if it, _ := repo.Get(failing.ID); it.Status != "awaiting" || len(serveThreads(t, repo, failing.ID)) != 0 {
+		t.Errorf("%s is %s, or got a thread; want it left in awaiting", failing.ID, it.Status)
+	}
+}
+
+// S-0743: under a workflow with review renamed awaiting, a story the queue
+// sent back that is in awaiting again at a new commit has its send back's
+// thread resolved, saying it is back in awaiting; one in testing at a new
+// commit waits for no acceptance there, and its thread stays open.
+func TestUnderAnotherWorkflowASentBackStoryAwaitingAtANewCommitHasItsThreadResolved(t *testing.T) {
+	repo, _ := gitProject(t, "")
+	runRenamed(t, repo)
+	back, head := branched(t, repo, renamedStory(t, repo, "Back", t0.Add(time.Hour)), func(_, wt string) { writeFile(t, wt, "a.txt", "a\n") })
+	th := sentBackAt(t, repo, back, head)
+	inTesting, testingHead := branched(t, repo, renamedStory(t, repo, "Testing", t0.Add(2*time.Hour)), func(_, wt string) { writeFile(t, wt, "b.txt", "b\n") })
+	it, err := repo.Get(inTesting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{"doing", "testing"} {
+		if _, err := repo.Transition(it, to, "flai", "merge queue batch 20261019-160000 fails with it", t2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	open := sentBackAt(t, repo, inTesting, testingHead)
+	var fixed string
+	for _, s := range []string{back, inTesting} {
+		wt := repo.WorktreePath(s)
+		writeFile(t, wt, s+".txt", "fixed\n")
+		runGit(t, wt, "add", "-A")
+		runGit(t, wt, "commit", "-q", "-m", s+"'s fix")
+		if s == back {
+			fixed = runGit(t, wt, "rev-parse", "HEAD")
+		}
+	}
+
+	resolved, err := ResolveSentBack(Deps{Runner: execx.System{}, Now: func() time.Time { return t2.Add(time.Hour) }}, repo)
+	if err != nil || !slices.Equal(resolved, []string{back}) {
+		t.Fatalf("resolved %v, %v; want %s alone", resolved, err, back)
+	}
+	got := thread(t, repo, th.ID)
+	es := got.Entries()
+	if last := es[len(es)-1]; got.Open() || !strings.Contains(last.Text, back+" is back in awaiting at "+fixed[:12]+", a new commit") {
+		t.Errorf("%s open %v, last entry %+v; want it resolved, back in awaiting", th.ID, got.Open(), last)
+	}
+	if !thread(t, repo, open.ID).Open() {
+		t.Errorf("%s of %s in testing was resolved, want it open", open.ID, inTesting)
 	}
 }

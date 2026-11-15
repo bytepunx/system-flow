@@ -148,6 +148,15 @@ func readyStory(t *testing.T, repo *workitem.Repo, title string, review time.Tim
 func readyStoryChanging(t *testing.T, repo *workitem.Repo, title string, review time.Time, change func(id, wt string)) (string, string) {
 	t.Helper()
 	s, _ := story(t, repo, title, []bool{true}, review)
+	return branched(t, repo, s, change)
+}
+
+// branched gives s, in review, its narrative and a branch, in its own
+// worktree, that commits what change writes there, with a passing flai
+// verify result at its head, as readyStoryChanging does; it answers the
+// story and its head.
+func branched(t *testing.T, repo *workitem.Repo, s *workitem.Item, change func(id, wt string)) (string, string) {
+	t.Helper()
 	// a story in review has its narrative, or flai check's narrative.missing
 	// error on main holds the queue in the landing's preflight (ADR-0234)
 	if _, err := repo.OpenStream(s, workitem.StreamOptions{Agent: "agent-" + s.ID, Now: t0}); err != nil {
@@ -1480,5 +1489,43 @@ func TestAMainNoteThatBreaksAMarkdownRuleHoldsTheQueueUntilItIsFixed(t *testing.
 	}
 	if want := []string{EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified}; !slices.Equal(kinds, want) {
 		t.Errorf("events %v, want %v", kinds, want)
+	}
+}
+
+// S-0743: under a workflow with review renamed awaiting and in-progress
+// renamed doing, a story that conflicts with the main branch is sent back
+// from awaiting along the send-back transition, to doing, with today's
+// reason, and the rest of the batch goes on.
+func TestUnderAnotherWorkflowABatchSendsBackAConflictingStoryAlongTheSendBack(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	runRenamed(t, repo)
+	a, headA := branched(t, repo, renamedStory(t, repo, "A", t0.Add(time.Hour)), func(_, wt string) { writeFile(t, wt, "x.txt", "one\ntwo by A\nthree\n") })
+	c, _ := branched(t, repo, renamedStory(t, repo, "C", t0.Add(2*time.Hour)), func(_, wt string) { writeFile(t, wt, "c.txt", "c\n") })
+	writeFile(t, repo.MainRoot, "x.txt", "one\ntwo on main\nthree\n")
+	runGit(t, repo.MainRoot, "commit", "-q", "-am", "main's change")
+	enqueue(t, repo, a, c)
+	d := deps(proc, t1)
+	// flai check, which the preflight runs on the main checkout, still judges
+	// a status by the baseline's states and would hold the queue on awaiting
+	// and doing: this test is of the send back, so its preflight is clean
+	d.Preflight = func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) { return nil, nil }
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{c}) {
+		t.Fatalf("batch %+v, want %s alone", st.Batch, c)
+	}
+	reason := "the merge queue's batch " + st.Batch.ID + " could not rebase it onto main: conflicts in x.txt; sync it with flai stream sync " + a
+	if len(st.Outcomes) != 1 || st.Outcomes[0].Story != a || st.Outcomes[0].Outcome != OutcomeSentBack || st.Outcomes[0].Detail != "sent back to doing and out of the queue: "+reason || st.Outcomes[0].Head != headA {
+		t.Fatalf("outcomes %+v, want %s sent back to doing", st.Outcomes, a)
+	}
+	it, err := repo.Get(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := it.Transitions[len(it.Transitions)-1]; it.Status != "doing" || last.To != "doing" || last.By != sendBackBy {
+		t.Errorf("%s is %s, last moved %+v; want it sent back to doing by flai", a, it.Status, last)
+	}
+	if !strings.Contains(it.Body, "moved to doing: "+reason) {
+		t.Errorf("%s's notes do not give the reason %q:\n%s", a, reason, it.Body)
 	}
 }

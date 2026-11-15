@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -221,9 +222,10 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 	if err != nil {
 		return q, fmt.Errorf("list the items to find the stories in review for the merge queue: %w; fix the item file it names", err)
 	}
+	flow := repo.Flow()
 	var review []*workitem.Item
 	for _, it := range items {
-		if it.Type == workitem.Story && it.Status == workitem.Review {
+		if awaitsAcceptance(flow, it) {
 			review = append(review, it)
 		}
 	}
@@ -256,7 +258,7 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 	}
 	var entries []Entry
 	for i, it := range review {
-		e := Entry{Story: it.ID, Title: it.Title, EnteredReview: enteredReview(it), Enqueued: enqueued[workitem.CanonicalID(it.ID)]}
+		e := Entry{Story: it.ID, Title: it.Title, EnteredReview: enteredReview(flow, it), Enqueued: enqueued[workitem.CanonicalID(it.ID)]}
 		var verifyReason *Reason
 		e.Head, verifyReason = g.verified(it.ID, reports[i])
 		if verifyReason != nil {
@@ -339,11 +341,49 @@ func OnBoard(ctx context.Context, r execx.Runner, repo *workitem.Repo, v workite
 	return Board{BoardView: v, Queue: &q}
 }
 
-// enteredReview is when it last entered review, from its last transition to
-// review; when it has none, when it entered its current state.
-func enteredReview(it *workitem.Item) time.Time {
+// awaitsAcceptance reports whether it is a story waiting, in flow, for its
+// acceptance, in a state the transition with the accept effect leaves from:
+// the stories the merge queue takes, those in review with the baseline
+// (ADR-0301).
+func awaitsAcceptance(flow workflow.Workflow, it *workitem.Item) bool {
+	return it.Type == workitem.Story && flow.AwaitsAcceptance(it.Type, it.Status)
+}
+
+// sendBackTo is the state flow's transition with the send-back effect takes
+// it to from its state, in-progress from review with the baseline; an error
+// names the state no such transition leaves.
+func sendBackTo(flow workflow.Workflow, it *workitem.Item) (string, error) {
+	t, ok := flow.SendBack(it.Type, it.Status)
+	if !ok {
+		return "", fmt.Errorf("the workflow has no transition with the send-back effect out of %s for a %s; add one to design/workflows/board.md", it.Status, it.Type)
+	}
+	return t.To, nil
+}
+
+// reviewIn names, for a text, the states a story waits for its acceptance
+// in under flow: review with the baseline.
+func reviewIn(flow workflow.Workflow) string {
+	return strings.Join(flow.AcceptFrom(workflow.TypeStory), " or ")
+}
+
+// sentBackTo names, for a text written before or without the story it is
+// about, the state flow's send back takes a story to from the first state it
+// waits for its acceptance in: in-progress with the baseline.
+func sentBackTo(flow workflow.Workflow) string {
+	for _, s := range flow.AcceptFrom(workflow.TypeStory) {
+		if t, ok := flow.SendBack(workflow.TypeStory, s); ok {
+			return t.To
+		}
+	}
+	return "the state the workflow's send-back names"
+}
+
+// enteredReview is when it last entered a state where it waits, in flow, for
+// its acceptance, from its last transition to one; when it has none, when it
+// entered its current state.
+func enteredReview(flow workflow.Workflow, it *workitem.Item) time.Time {
 	for i := len(it.Transitions) - 1; i >= 0; i-- {
-		if tr := it.Transitions[i]; tr.To == workitem.Review {
+		if tr := it.Transitions[i]; flow.AwaitsAcceptance(it.Type, tr.To) {
 			if at, err := time.Parse(workitem.TimeFormat, tr.At); err == nil {
 				return at.UTC()
 			}
@@ -490,7 +530,7 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) *Reason {
 		paths = append(paths, u.Path)
 	}
 	slices.Sort(paths)
-	return &Reason{Kind: KindUndoneMain, Paths: paths, Text: fmt.Sprintf("%s undoes the main branch's change to %s, and the queue never batches it: restore main's version with flai stream restore %s --path <path>, keep the removal by accepting it with flai accept %s --keep-removal <path> --reason \"<why>\", or send %s back to in-progress (ADR-0155)", storygit.Branch(story), strings.Join(paths, ", "), story, story, story)}
+	return &Reason{Kind: KindUndoneMain, Paths: paths, Text: fmt.Sprintf("%s undoes the main branch's change to %s, and the queue never batches it: restore main's version with flai stream restore %s --path <path>, keep the removal by accepting it with flai accept %s --keep-removal <path> --reason \"<why>\", or send %s back to %s (ADR-0155)", storygit.Branch(story), strings.Join(paths, ", "), story, story, story, sentBackTo(repo.Flow()))}
 }
 
 // dirt is the main checkout's uncommitted files outside the shared set and
@@ -557,7 +597,7 @@ func klusterHolds(r execx.Runner, repo *workitem.Repo, act Actions, story, head 
 	if act.Checks {
 		what = "its namespace's deploy and the checks run against it passed"
 	}
-	return &Reason{Kind: KindKluster, Text: fmt.Sprintf("%s: while the kluster host action is on, the queue batches %s only once %s at the head of its branch (ADR-0254 §5a); fix what failed and move it to review again so that flai serve deploys it there, or deploy it with flai kluster deploy %s in a shell on the host", why, story, what, story)}
+	return &Reason{Kind: KindKluster, Text: fmt.Sprintf("%s: while the kluster host action is on, the queue batches %s only once %s at the head of its branch (ADR-0254 §5a); fix what failed and move it to %s again so that flai serve deploys it there, or deploy it with flai kluster deploy %s in a shell on the host", why, story, what, reviewIn(repo.Flow()), story)}
 }
 
 // plural names ids after one or many, with the verb that agrees.

@@ -339,7 +339,7 @@ func (p *queuePass) look(ctx context.Context) {
 		p.mu.Unlock()
 		return
 	}
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		p.notRun(queueUnreadable, "flai serve could not open the project, so its merge queue starts no batch: fix what the error names", err)
 		return

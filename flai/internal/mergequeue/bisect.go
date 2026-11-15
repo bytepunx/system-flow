@@ -245,13 +245,14 @@ func (b *build) checkout(what string, args ...string) error {
 	return nil
 }
 
-// SendBack sends back to in-progress, once, the story the bisection of repo's
-// merge queue batch found, and reports whether it moved it. A story in review
-// is moved by flai, the reason, naming the batch, the commit, and what failed
-// there, appended to its notes, and a thread opened on it to its agent by flai
-// serve, saying what failed, the failing tier's findings in full and the
-// folder of its whole output, at which commit, with which stories, and what
-// to do. When the project's markdown lint refuses that thread, it is opened
+// SendBack sends back, once, along the workflow's transition with the
+// send-back effect, the story the bisection of repo's merge queue batch
+// found, and reports whether it moved it. A story in review, a state the
+// workflow's acceptance leaves from, is moved by flai, the reason, naming the
+// batch, the commit, and what failed there, appended to its notes, and a
+// thread opened on it to its agent by flai serve, saying what failed, the
+// failing tier's findings in full and the folder of its whole output, at
+// which commit, with which stories, and what to do. When the project's markdown lint refuses that thread, it is opened
 // with the findings left out and the folder named, so that a quote never
 // keeps the story in the queue (I-0242). A story no longer in review is not
 // moved and gets no thread. Either way it leaves the queue with
@@ -280,17 +281,28 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	}
 	failed.StoppedAt, failed.Summary = orDefault(failed.StoppedAt, "verify"), orDefault(failed.Summary, "the batch failed")
 	tier := failed.StoppedAt
+	flow := repo.Flow()
+	to := sentBackTo(flow)
 	it, err := repo.Get(story)
 	if err != nil && !errors.Is(err, workitem.ErrNotFound) {
-		return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: read it: %w; fix the story's file, and flai serve sends it back at its next look", story, batch.ID, err)
+		return false, fmt.Errorf("send %s back to %s, as merge queue batch %s fails with it: read it: %w; fix the story's file, and flai serve sends it back at its next look", story, to, batch.ID, err)
 	}
 	// read after the story, so that its move is not stamped before one it
 	// was read with (I-0183)
 	now := d.Now().UTC()
-	moved := err == nil && it.Type == workitem.Story && it.Status == workitem.Review
-	detail := fmt.Sprintf("sent back to in-progress: merge queue batch %s fails with it at %s", batch.ID, tier)
+	moved := err == nil && awaitsAcceptance(flow, it)
 	if moved {
-		th, err := openFailing(repo, batch, failed, failingText(batch, failed, head, true), now)
+		if to, err = sendBackTo(flow, it); err != nil {
+			return false, fmt.Errorf("send %s back, as merge queue batch %s fails with it: %w, and flai serve sends it back at its next look", story, batch.ID, err)
+		}
+	}
+	detail := fmt.Sprintf("sent back to %s: merge queue batch %s fails with it at %s", to, batch.ID, tier)
+	if moved {
+		from := it.Status
+		text := func(quote bool) string {
+			return failingText(batch, failed, head, quote) + sentBackText(story, from, to)
+		}
+		th, err := openFailing(repo, batch, failed, text(true), now)
 		var refused *mdlint.Error
 		if errors.As(err, &refused) {
 			// a quote the project's lint still refuses must not keep the
@@ -298,14 +310,14 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 			// look with the batch wedged (I-0242): the thread then names the
 			// log folder in place of the findings
 			d.Log.Warn("merge queue send-back thread refused by the markdown lint; opening it without the findings", "component", "mergequeue", "batch", batch.ID, "story", story, "err", err)
-			th, err = openFailing(repo, batch, failed, failingText(batch, failed, head, false), now)
+			th, err = openFailing(repo, batch, failed, text(false), now)
 		}
 		if err != nil {
-			return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: open its thread: %w; flai serve sends it back at its next look", story, batch.ID, err)
+			return false, fmt.Errorf("send %s back to %s, as merge queue batch %s fails with it: open its thread: %w; flai serve sends it back at its next look", story, to, batch.ID, err)
 		}
 		reason := fmt.Sprintf("merge queue batch %s fails with %s at %s: %s", batch.ID, story, short(bs.Commit), oneLine(failed.Summary))
-		if _, err := repo.Transition(it, workitem.InProgress, sendBackBy, reason, now); err != nil {
-			return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: %w; move it with flai move %s in-progress --reason, and see thread %s", story, batch.ID, err, story, th.ID)
+		if _, err := repo.Transition(it, to, sendBackBy, reason, now); err != nil {
+			return false, fmt.Errorf("send %s back to %s, as merge queue batch %s fails with it: %w; move it with flai move %s %s --reason, and see thread %s", story, to, batch.ID, err, story, to, th.ID)
 		}
 		d.Log.Info("merge queue story sent back", "component", "mergequeue", "batch", batch.ID, "story", story, "commit", bs.Commit, "tier", tier, "thread", th.ID)
 	} else {
@@ -344,13 +356,14 @@ func ResolveSentBack(d Deps, repo *workitem.Repo) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	flow := repo.Flow()
 	var resolved []string
 	for _, o := range st.Outcomes {
 		if o.Outcome != OutcomeFailing {
 			continue
 		}
 		it, err := repo.Get(o.Story)
-		if err != nil || it.Type != workitem.Story || it.Status != workitem.Review {
+		if err != nil || !awaitsAcceptance(flow, it) {
 			continue
 		}
 		head, err := d.Runner.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", storygit.Branch(it.ID)+"^{commit}")
@@ -365,7 +378,7 @@ func ResolveSentBack(d Deps, repo *workitem.Repo) ([]string, error) {
 			if !th.Open() || th.Opener() != sendBackAuthor || !strings.HasPrefix(th.Title, "Merge queue batch ") {
 				continue
 			}
-			why := fmt.Sprintf("%s is back in review at %s, a new commit; it is batched again once it is enqueued", it.ID, short(head))
+			why := fmt.Sprintf("%s is back in %s at %s, a new commit; it is batched again once it is enqueued", it.ID, it.Status, short(head))
 			if _, err := threads.Resolve(repo, th.ID, sendBackAuthor, why, d.Now()); err != nil {
 				return resolved, fmt.Errorf("resolve the merge queue's send back thread %s on %s: %w; resolve it with flai thread resolve %s", th.ID, it.ID, err, th.ID)
 			}
@@ -401,12 +414,12 @@ func openFailing(repo *workitem.Repo, batch *Batch, failed Result, text string, 
 var quoteFindings = mdlint.Fenced
 
 // failingText says what failed of batch's failing story, at which commit,
-// with which stories, and what to do. What failed is, with quote, the failing
-// tier's findings in full, as flai verify prints them, or the summary when
-// the result has none, as one kept by an older flai or one whose tiers could
-// not run; without quote, for a thread the lint refused with them, the
-// summary on one line alone, in a code span. The folder the tiers' whole
-// output is in follows, when there is one.
+// and with which stories; sentBackText says what to do. What failed is, with
+// quote, the failing tier's findings in full, as flai verify prints them, or
+// the summary when the result has none, as one kept by an older flai or one
+// whose tiers could not run; without quote, for a thread the lint refused
+// with them, the summary on one line alone, in a code span. The folder the
+// tiers' whole output is in follows, when there is one.
 func failingText(batch *Batch, failed Result, head Head, quote bool) string {
 	bs := batch.Bisect
 	tier := failed.StoppedAt
@@ -433,9 +446,15 @@ func failingText(batch *Batch, failed Result, head Head, quote bool) string {
 	if len(before) > 0 {
 		b.WriteString("The stories before it land; those after it stay enqueued. ")
 	}
-	fmt.Fprintf(&b, "flai moved %s back to in-progress and took it out of the merge queue. Fix it on %s, run flai verify %s, move it to review, and enqueue it again with flai queue add %s.",
-		story, codeSpan(storygit.Branch(story)), story, story)
 	return b.String()
+}
+
+// sentBackText says what to do once flai has sent story back from the state
+// it waited for its acceptance in, from, to the state to: review and
+// in-progress with the baseline.
+func sentBackText(story, from, to string) string {
+	return fmt.Sprintf("flai moved %s back to %s and took it out of the merge queue. Fix it on %s, run flai verify %s, move it to %s, and enqueue it again with flai queue add %s.",
+		story, to, codeSpan(storygit.Branch(story)), story, from, story)
 }
 
 // codeSpan is s in a code span whose fence is longer than any run of

@@ -636,23 +636,33 @@ func (b *build) conflictText(ahead, story string, paths []string) string {
 		story, ahead, b.id, b.id, storygit.Branch(story), ahead, list.String(), story, storygit.Branch(story), ahead, story, story)
 }
 
-// sendBack moves e back to in-progress, by flai, for a conflict with the
-// main branch itself in paths, and answers its outcome, sent back; a move
-// that fails is logged and leaves e out instead.
+// sendBack moves e back by flai, along the workflow's transition with the
+// send-back effect (to in-progress with the baseline), for a conflict with
+// the main branch itself in paths, and answers its outcome, sent back; a
+// move that fails, or a state with no such transition, is logged and leaves
+// e out instead.
 func (b *build) sendBack(e Entry, paths []string) *Outcome {
 	reason := fmt.Sprintf("the merge queue's batch %s could not rebase it onto %s: conflicts in %s; sync it with flai stream sync %s",
 		b.id, b.main, workitem.Shorten(paths, 10), e.Story)
+	flow := b.repo.Flow()
+	to := sentBackTo(flow)
 	it, err := b.repo.Get(e.Story)
 	if err == nil {
-		_, err = b.repo.Transition(it, workitem.InProgress, sendBackBy, reason, b.d.Now())
+		var back string
+		if back, err = sendBackTo(flow, it); err == nil {
+			to = back
+		}
+	}
+	if err == nil {
+		_, err = b.repo.Transition(it, to, sendBackBy, reason, b.d.Now())
 	}
 	if err != nil {
 		b.d.Log.Warn("merge queue batch could not send back a story that conflicts with the main branch; it is left out", "component", "mergequeue", "batch", b.id, "story", e.Story, "paths", paths, "err", err.Error())
-		return b.leftOut(e, "stopped on conflicts with "+b.main+" in "+workitem.Shorten(paths, 10)+", and could not be sent back to in-progress ("+said(err)+")")
+		return b.leftOut(e, "stopped on conflicts with "+b.main+" in "+workitem.Shorten(paths, 10)+", and could not be sent back to "+to+" ("+said(err)+")")
 	}
 	b.d.Log.Info("merge queue batch sent back a story that conflicts with the main branch", "component", "mergequeue", "batch", b.id, "story", e.Story, "paths", paths)
 	return &Outcome{Story: e.Story, Outcome: OutcomeSentBack, At: b.d.Now(), Base: b.base, Head: e.Head,
-		Detail: "sent back to in-progress and out of the queue: " + reason}
+		Detail: "sent back to " + to + " and out of the queue: " + reason}
 }
 
 // leftOut is e's outcome, left out of the batch for why.

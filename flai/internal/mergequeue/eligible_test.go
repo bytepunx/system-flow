@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -763,4 +764,150 @@ func TestTheKlusterGateHoldsAStoryOutOfTheQueue(t *testing.T) {
 	repo.Manifest.Kluster = nil
 	deployed(t, repo, s.ID, "aaaa", kluster.OutcomeFailed, kluster.StepDeploy, "", "")
 	eligible("no kluster: block", on)
+}
+
+// renamedBoard is a workflow other than the baseline (S-0743): in-progress
+// is doing and review is awaiting, neither with an alias, and testing, of
+// the active kind, sits between them. A queue that reads a state's name in
+// place of its kind or a transition's effect takes, or sends back, the wrong
+// story under it.
+const renamedBoard = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: doing, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: awaiting, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: doing, effects: [pull]}
+  - {from: doing, to: testing}
+  - {from: testing, to: awaiting}
+  - {from: awaiting, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: awaiting, to: done, types: [task]}
+  - {from: doing, to: done, types: [task]}
+  - {from: awaiting, to: doing, effects: [send-back]}
+  - {from: testing, to: doing}
+  - {from: doing, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, doing, testing], to: cancelled, effects: [cancel]}
+  - {from: awaiting, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// runRenamed has repo run renamedBoard in place of the baseline.
+func runRenamed(t *testing.T, repo *workitem.Repo) *workitem.Repo {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", renamedBoard)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	repo.Workflow = &w
+	return repo
+}
+
+// renamedStory makes, in repo running renamedBoard, a story with its one
+// criterion ticked and one task done, moved through doing and testing to
+// awaiting at each of awaits, back to doing between them; with no awaits it
+// stays in testing. It returns the story.
+func renamedStory(t *testing.T, repo *workitem.Repo, title string, awaits ...time.Time) *workitem.Item {
+	t.Helper()
+	s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Nature: "feature", Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Body = strings.Replace(s.Body, "## Acceptance criteria\n", "## Acceptance criteria\n- [x] criterion a\n", 1)
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	move := func(it *workitem.Item, to, reason string, at time.Time) {
+		t.Helper()
+		if _, err := repo.Transition(it, to, "alex", reason, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	move(s, workitem.Ready, "", t0)
+	move(s, "doing", "", t0)
+	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Build " + title, Parent: s.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	move(task, workitem.Ready, "", t0)
+	move(task, "doing", "", t0)
+	move(task, workitem.Done, "", t0)
+	move(s, "testing", "", t0)
+	for i, at := range awaits {
+		if i > 0 {
+			move(s, "doing", "rework", at.Add(-2*time.Minute))
+			move(s, "testing", "", at.Add(-time.Minute))
+		}
+		move(s, "awaiting", "", at)
+	}
+	return s
+}
+
+// S-0743: under a workflow with review renamed awaiting and testing added
+// before it, the queue takes the stories in awaiting, the state the
+// acceptance leaves from, in the order they last entered it, and leaves the
+// story in testing out of both lists, eligible or not.
+func TestUnderAnotherWorkflowTheQueueTakesTheStoriesTheAcceptanceLeavesFrom(t *testing.T) {
+	repo := runRenamed(t, project(t, ""))
+	g := scriptedGit{}
+	bounced := renamedStory(t, repo, "Bounced", t0.Add(time.Hour), t0.Add(4*time.Hour))
+	early := renamedStory(t, repo, "Early", t0.Add(3*time.Hour))
+	inTesting := renamedStory(t, repo, "Testing")
+	for _, s := range []*workitem.Item{bounced, early, inTesting} {
+		passed(t, repo, g, s.ID, "c0ffee"+s.ID)
+	}
+	q := compute(t, g, repo)
+	if got, want := ids(q.Eligible), []string{early.ID, bounced.ID}; !slices.Equal(got, want) {
+		t.Errorf("eligible %v, want %v", got, want)
+	}
+	if len(q.Ineligible) != 0 {
+		t.Errorf("ineligible %+v, want none: %s in testing is not the queue's", q.Ineligible, inTesting.ID)
+	}
+	if got := q.Eligible[1]; !got.EnteredReview.Equal(t0.Add(4 * time.Hour)) {
+		t.Errorf("%s entered review at %s, want its last entry to awaiting, %s", got.Story, got.EnteredReview, t0.Add(4*time.Hour))
+	}
+	if got := q.Eligible[0]; !got.EnteredReview.Equal(t0.Add(3 * time.Hour)) {
+		t.Errorf("%s entered review at %s, want its entry to awaiting, %s", got.Story, got.EnteredReview, t0.Add(3*time.Hour))
+	}
+}
+
+// S-0743: under a workflow with review renamed awaiting, flai queue add
+// refuses a story in testing, naming awaiting as where the queue takes it,
+// and enqueues a story in awaiting.
+func TestUnderAnotherWorkflowAddTakesAStoryTheAcceptanceLeavesFrom(t *testing.T) {
+	repo := runRenamed(t, project(t, ""))
+	g := scriptedGit{}
+	waiting := renamedStory(t, repo, "Waiting", t0.Add(time.Hour))
+	inTesting := renamedStory(t, repo, "Testing")
+	for _, s := range []*workitem.Item{waiting, inTesting} {
+		passed(t, repo, g, s.ID, "c0ffee"+s.ID)
+	}
+	_, err := Add(g, repo, inTesting.ID, "alex", t1)
+	var refused *Refusal
+	want := inTesting.ID + " is not enqueued: the merge queue takes a story in awaiting, and " + inTesting.ID + " is testing; move it to awaiting once its work is done"
+	if !errors.As(err, &refused) || refused.Text != want {
+		t.Errorf("add %s: %v; want the refusal %q", inTesting.ID, err, want)
+	}
+	if _, err := Add(g, repo, waiting.ID, "alex", t1); err != nil {
+		t.Fatalf("add %s in awaiting: %v", waiting.ID, err)
+	}
+	st, err := ReadState(repo.CacheDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := st.EnqueuedAs(waiting.ID); !ok {
+		t.Errorf("%s in awaiting is not enqueued", waiting.ID)
+	}
+	if _, ok := st.EnqueuedAs(inTesting.ID); ok {
+		t.Errorf("%s in testing is enqueued", inTesting.ID)
+	}
 }

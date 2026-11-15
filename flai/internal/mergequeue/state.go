@@ -461,8 +461,9 @@ func AddWith(r execx.Runner, repo *workitem.Repo, story, by string, at time.Time
 	if it.Type != workitem.Story {
 		return ch, &Refusal{Story: it.ID, Text: fmt.Sprintf("%s is not enqueued: the merge queue takes stories only, and %s is a %s", it.ID, it.ID, it.Type)}
 	}
-	if it.Status != workitem.Review {
-		return ch, &Refusal{Story: it.ID, Text: fmt.Sprintf("%s is not enqueued: the merge queue takes a story in review, and %s is %s; move it to review once its work is done", it.ID, it.ID, it.Status)}
+	if flow := repo.Flow(); !flow.AwaitsAcceptance(it.Type, it.Status) {
+		review := reviewIn(flow)
+		return ch, &Refusal{Story: it.ID, Text: fmt.Sprintf("%s is not enqueued: the merge queue takes a story in %s, and %s is %s; move it to %s once its work is done", it.ID, review, it.ID, it.Status, review)}
 	}
 	q, err := Compute(r, repo)
 	if err != nil {
