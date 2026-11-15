@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0748 The baseline orchestrator and planner role files write the state a move goes to as `when: {to: <state>}`, `{event: moved, when: {to: review}}`, `{event: moved, when: {to: backlog}}`, and `{call: item_move, when: {to: backlog}}` and `{call: flai move, when: {to: backlog}}`, with the same triggers and grants as before; a project's role file that names `to-review` or `to-backlog` keeps working, read as `{to: review}` and `{to: backlog}` (patch, ADR-0304).
+
 ## 1.1.41 - 2026-11-14
 
 - S-0781 flai check finds `story.unaccepted` outside the story at close-out (patch).

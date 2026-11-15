@@ -1,6 +1,6 @@
 ---
 title: Orchestrator
-updated: 2026-11-13
+updated: 2026-11-15
 status: active
 name: orchestrator
 role: orchestrate
@@ -12,8 +12,8 @@ action: orchestrate
 trigger:
   - asked
   - {event: thread, when: awaits-orchestrator}
-  - {event: moved, when: to-review}
-  - {event: moved, when: to-backlog}
+  - {event: moved, when: {to: review}}
+  - {event: moved, when: {to: backlog}}
   - {event: edited, when: draft-changed}
   - {event: planned}
   - {event: release-due}

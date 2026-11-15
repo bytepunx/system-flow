@@ -1,6 +1,6 @@
 ---
 title: Planner
-updated: 2026-10-31
+updated: 2026-11-15
 status: active
 name: planner
 role: plan
@@ -25,7 +25,7 @@ tools:
   - inbox
   - {call: item_new, when: draft-only}
   - {call: item_edit, when: ungated-edit}
-  - {call: item_move, when: to-backlog}
+  - {call: item_move, when: {to: backlog}}
   - thread_open
   - thread_reply
   - wait_for_events
@@ -39,7 +39,7 @@ commands:
   - flai thread reply
   - flai issue new
   - flai issue bump
-  - {call: flai move, when: to-backlog}
+  - {call: flai move, when: {to: backlog}}
 files: []
 permissions: []
 start: |
