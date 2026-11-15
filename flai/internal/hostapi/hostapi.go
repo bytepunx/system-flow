@@ -242,15 +242,37 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) []string {
 // being a git process per recorded path.
 const undoneWorkers = 8
 
-// boardUndone sets UndoesMain on each story card in ready, in progress, and
-// review, reading the stories at once on at most undoneWorkers goroutines
-// (S-0604). Each story has its own record file and each card its own slot,
-// so the reads share no write. An accepted or cancelled story's branch may
-// be gone, and it undoes nothing on main any more, so those are not read.
+// mayUndo reports whether the undone paths of a story in the state status
+// of wf are read: a state of kind active or waiting, or a queue state other
+// than the one items are created in, so ready, in-progress, and review on
+// the baseline (ADR-0301 §2). An accepted or cancelled story's branch may be
+// gone, and it undoes nothing on main any more.
+func mayUndo(wf workflow.Workflow, status string) bool {
+	if activeOrWaiting(wf, status) {
+		return true
+	}
+	s, ok := wf.State(status)
+	return ok && s.Kind == workflow.KindQueue && !s.Initial
+}
+
+// activeOrWaiting reports whether status names a state of wf of kind active
+// or waiting: in progress or awaiting review on the baseline (ADR-0301 §2).
+func activeOrWaiting(wf workflow.Workflow, status string) bool {
+	k := wf.Kind(status)
+	return k == workflow.KindActive || k == workflow.KindWaiting
+}
+
+// boardUndone sets UndoesMain on each story card in a column mayUndo names,
+// reading the stories at once on at most undoneWorkers goroutines (S-0604).
+// Each story has its own record file and each card its own slot, so the
+// reads share no write.
 func boardUndone(r execx.Runner, repo *workitem.Repo, v *workitem.BoardView) {
+	wf := repo.Flow()
 	var cards []*workitem.BoardCard
-	for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
-		col := v.Columns[st]
+	for st, col := range v.Columns {
+		if !mayUndo(wf, st) {
+			continue
+		}
 		for i := range col {
 			if col[i].Type == workitem.Story {
 				cards = append(cards, &col[i])
@@ -330,7 +352,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 	}
 	open := func(ctx context.Context, p channel.Project) (*workitem.Repo, *channel.Error) {
 		defer perf.Track(ctx, "repo.open")()
-		repo, err := workitem.Open(p.Root)
+		repo, err := openRepo(p.Root)
 		if err != nil {
 			return nil, failed(err)
 		}
@@ -633,7 +655,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if it.Type == workitem.Story {
 				out.Plan = workitem.PlanOf(children, it.ID)
 			}
-			if it.Type == workitem.Story && !it.Archived && (it.Status == workitem.Ready || it.Status == workitem.InProgress || it.Status == workitem.Review) {
+			if it.Type == workitem.Story && !it.Archived && mayUndo(repo.Flow(), it.Status) {
 				done = perf.Track(ctx, "undone.read")
 				out.UndoesMain = undoesMain(execx.Timed(ctx, execx.System{}), repo, it.ID)
 				done()

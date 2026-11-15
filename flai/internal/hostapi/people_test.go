@@ -328,3 +328,48 @@ func TestInboxDesignerOffersAPendingRecommendationToConfirm(t *testing.T) {
 		t.Errorf("a confirmed recommendation still awaits the designer: %+v", e)
 	}
 }
+
+// S-0747: the people reads take a state's meaning from the project's
+// workflow (ADR-0301): on a board where testing sits between in-progress
+// and review, renamed acceptance-review, a task in testing is the stream's
+// task at work, a story in testing still asks its narrative's question, and
+// a story in acceptance-review awaits the designer's review.
+func TestPeopleReadsFollowTheProjectsWorkflow(t *testing.T) {
+	p := people(t)
+	withWorkflow(t, testingWorkflow)
+	repo, err := openRepo(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	move := func(id string, states ...string) {
+		t.Helper()
+		for i, to := range states {
+			it, _ := repo.Get(id)
+			if _, err := repo.Transition(it, to, "claude", "to test again", t0.Add(time.Duration(50+i)*time.Minute)); err != nil {
+				t.Fatalf("%s to %s: %v", id, to, err)
+			}
+		}
+	}
+	move("S-0001", "testing")
+	move("T-0001", "testing")
+	move("S-0004", "in-progress", "testing", "acceptance-review")
+
+	var got struct{ Streams []StreamActivity }
+	if err := call(t, p, "activity.get", `{}`, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Streams) != 1 || got.Streams[0].Status != "testing" || got.Streams[0].Task == nil || got.Streams[0].Task.ID != "T-0001" {
+		t.Errorf("the stream in testing, its task in testing at work: %+v", got.Streams)
+	}
+	var in DesignerInbox
+	if err := call(t, p, "inbox.designer", `{}`, &in); err != nil {
+		t.Fatal(err)
+	}
+	keys := map[string]bool{}
+	for _, e := range in.Entries {
+		keys[e.Key] = true
+	}
+	if !keys["review:S-0004"] || !keys["question:S-0001:150ucnp"] || in.Counts["review"] != 1 || in.Counts["question"] != 1 {
+		t.Errorf("S-0004 in acceptance-review awaits review, S-0001 in testing asks: %v %+v", in.Counts, in.Entries)
+	}
+}

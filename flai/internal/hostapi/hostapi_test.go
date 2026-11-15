@@ -797,3 +797,49 @@ func TestProjectRolesAddTheBaselineOfEachBuiltInRole(t *testing.T) {
 		}
 	}
 }
+
+// S-0747: board.get and item.get read the undone paths of a story in a
+// state the project's workflow gives kind active or waiting, or a queue
+// state other than the initial one (ADR-0301): on a board where testing
+// sits between in-progress and review, renamed acceptance-review, the
+// stories ready, in testing, in acceptance-review, and in its alias review
+// are read, and those in backlog, shipped, and dropped are not.
+func TestBoardUndoneFollowsTheProjectsWorkflow(t *testing.T) {
+	p := harbour(t)
+	withWorkflow(t, testingWorkflow)
+	repo, err := openRepo(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := &undoneGit{undoes: map[string][]string{}}
+	v := workitem.BoardView{Columns: map[string][]workitem.BoardCard{}}
+	read := map[string]bool{"ready": true, "testing": true, "acceptance-review": true, "review": true, "backlog": false, "shipped": false, "dropped": false}
+	n := 0
+	for st := range read {
+		n++
+		id := fmt.Sprintf("S-%04d", 100+n)
+		v.Columns[st] = []workitem.BoardCard{{ID: id, Type: workitem.Story}}
+		g.undoes[id] = []string{"quay.md"}
+		rec := storygit.UndoneRecord{Story: id, Paths: []storygit.UndoneEntry{{Undone: storygit.Undone{Path: "quay.md", Lines: []string{"main's"}, OldBase: "b0"}, FoundAt: t0}}}
+		data, _ := json.Marshal(rec)
+		path := storygit.UndoneRecordPath(repo.CacheDir(), id)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	boardUndone(g, repo, &v)
+
+	for st, want := range read {
+		c := v.Columns[st][0]
+		if got := c.UndoesMain != nil; got != want {
+			t.Errorf("%s in %s read %v, want %v: %v", c.ID, st, got, want, c.UndoesMain)
+		}
+		if got := mayUndo(repo.Flow(), st); got != want {
+			t.Errorf("item.get reads a story in %s: %v, want %v", st, got, want)
+		}
+	}
+}

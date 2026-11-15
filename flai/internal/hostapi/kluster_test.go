@@ -1769,3 +1769,62 @@ func TestKlusterLogRefusesWhatIsNotANamespaceAStepOrAnOffset(t *testing.T) {
 		}
 	}
 }
+
+// S-0747: the kluster reads take a state's meaning from the project's
+// workflow (ADR-0301): on a board where testing sits between in-progress
+// and review, renamed acceptance-review, a story in testing is undeployed in
+// its column and its deploy is asked of flai serve as one in progress is,
+// and a story in acceptance-review is in review, beside those still in the
+// alias review.
+func TestKlusterReadsFollowTheProjectsWorkflow(t *testing.T) {
+	on, journal := true, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	withWorkflow(t, testingWorkflow)
+	capstan, _ := capstanAt(t, p, heads)
+	winch := inProgress(t, p.Root, "Winch")
+	repo, err := openRepo(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, m := range []struct{ id, to string }{{capstan, "testing"}, {winch, "testing"}, {winch, "acceptance-review"}} {
+		it, _ := repo.Get(m.id)
+		if _, err := repo.Transition(it, m.to, "olive", "", t0.Add(time.Duration(10+i)*time.Minute)); err != nil {
+			t.Fatalf("%s to %s: %v", m.id, m.to, err)
+		}
+	}
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
+	host := klusterHost(&on, &journal, jobs)
+
+	var got KlusterDeployments
+	if e := ask(t, host, p, "kluster.deployments", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	var review, columns []string
+	for _, r := range got.Review {
+		review = append(review, r.Story)
+	}
+	for _, u := range got.Undeployed {
+		columns = append(columns, u.Story+" "+u.Column)
+	}
+	if want := []string{"S-0001", "S-0002", winch}; !slices.Equal(review, want) {
+		t.Errorf("the stories in review: %v, want %v", review, want)
+	}
+	if want := []string{"S-0001 review", "S-0002 review", capstan + " testing", winch + " acceptance-review"}; !slices.Equal(columns, want) {
+		t.Errorf("the undeployed stories in their columns: %v, want %v", columns, want)
+	}
+
+	took := servesRequests(t, p.Root, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: kluster.JobID(r.Story, r.Kind, t0), Kind: r.Kind, Story: r.Story, Started: true, Log: kluster.LogDir(p.Root, "s-0004")}
+	})
+	var w struct {
+		Data KlusterAsked `json:"data"`
+	}
+	if e := ask(t, host, p, "kluster.deploy", `{"story":"`+capstan+`","request_id":"req-00000001"}`, &w); e != nil || !w.Data.Queued {
+		t.Errorf("the deploy of a story in testing is asked of flai serve: %+v %+v", e, w.Data)
+	}
+	if got := took(); len(got) != 1 || got[0].Story != capstan {
+		t.Errorf("flai serve was asked for %s: %+v", capstan, got)
+	}
+	jobs.Wait()
+}

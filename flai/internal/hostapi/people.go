@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -167,7 +168,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 		// activity.get: who is working on what, from the narratives.
 		"activity.get": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
 			done := perf.Track(ctx, "repo.open")
-			repo, err := workitem.Open(p.Root)
+			repo, err := openRepo(p.Root)
 			done()
 			if err != nil {
 				return nil, failed(err)
@@ -182,6 +183,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			for _, it := range items {
 				byID[it.ID] = it
 			}
+			wf := repo.Flow()
 			done = perf.Track(ctx, "narratives.read")
 			dir, list := narratives(repo)
 			done()
@@ -206,7 +208,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 						continue
 					}
 					a.Blocked = a.Blocked || openBlock(it) != nil
-					if a.Task == nil && it.Status == workitem.InProgress {
+					if a.Task == nil && wf.Kind(it.Status) == workflow.KindActive {
 						a.Task = &TaskRef{ID: it.ID, Title: it.Title}
 					}
 				}
@@ -238,7 +240,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 				return nil, e
 			}
 			done := perf.Track(ctx, "repo.open")
-			repo, err := workitem.Open(p.Root)
+			repo, err := openRepo(p.Root)
 			done()
 			if err != nil {
 				return nil, failed(err)
@@ -269,7 +271,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 		// inbox.designer: what needs a human. Not the agent's MCP inbox.
 		"inbox.designer": func(ctx context.Context, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
 			done := perf.Track(ctx, "repo.open")
-			repo, err := workitem.Open(p.Root)
+			repo, err := openRepo(p.Root)
 			done()
 			if err != nil {
 				return nil, failed(err)
@@ -329,16 +331,18 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 
 			// A question lingers in a narrative until whoever wrote it removes
 			// it by hand (it is not a thread, so nothing marks it answered);
-			// once the story it belongs to is in review, done, or cancelled, or
-			// gone from this list (archived), it no longer needs the designer,
-			// so it is left out here whatever the narrative still says.
+			// once the story it belongs to is in review, done, or cancelled (a
+			// state of kind waiting, accepted, or cancelled), or gone from this
+			// list (archived), it no longer needs the designer, so it is left
+			// out here whatever the narrative still says.
+			wf := repo.Flow()
 			done = perf.Track(ctx, "narratives.read")
 			dir, list := narratives(repo)
 			done()
 			for _, n := range list {
 				stream := str(n.fm["stream"], strings.TrimSuffix(n.name, ".md"))
 				story := byID[stream]
-				if story == nil || story.Status == workitem.Review || story.Status == workitem.Done || story.Status == workitem.Cancelled {
+				if story == nil || slices.Contains([]string{workflow.KindWaiting, workflow.KindAccepted, workflow.KindCancelled}, wf.Kind(story.Status)) {
 					continue
 				}
 				for _, q := range workitem.OpenQuestions(n.body) {
@@ -348,7 +352,7 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			}
 
 			for _, it := range items {
-				if it.Type == workitem.Story && it.Status == workitem.Review {
+				if it.Type == workitem.Story && wf.Kind(it.Status) == workflow.KindWaiting {
 					at := ""
 					if n := len(it.Transitions); n > 0 {
 						at = it.Transitions[n-1].At

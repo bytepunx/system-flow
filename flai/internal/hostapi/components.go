@@ -220,7 +220,7 @@ func checkoutOf(p channel.Project, story string) (checkout, *channel.Error) {
 		if e := needID(story); e != nil {
 			return checkout{}, e
 		}
-		repo, err := workitem.Open(p.Root)
+		repo, err := openRepo(p.Root)
 		if err != nil {
 			return checkout{}, failed(err)
 		}
@@ -264,7 +264,7 @@ func ComponentsWorktree(repo *workitem.Repo, id string) (string, string, error) 
 	switch {
 	case it.Type != workitem.Story:
 		return "", "", &storyRefused{fmt.Sprintf("%s is a %s; name a story (S-nnnn) in progress or in review, whose worktree holds the components it changes", it.ID, it.Type)}
-	case it.Archived || it.Status != workitem.InProgress && it.Status != workitem.Review:
+	case it.Archived || !activeOrWaiting(repo.Flow(), it.Status):
 		return "", "", &storyRefused{fmt.Sprintf("%s is %s: flai serves a story's components only while it is in progress or in review; name one that is, or leave the story out for the main checkout", it.ID, it.Status)}
 	}
 	wt := repo.WorktreePath(it.ID)

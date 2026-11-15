@@ -753,3 +753,31 @@ func TestComponentsStartBeyondTheCapIsARule(t *testing.T) {
 		t.Errorf("a worktree with no lock file is a rule, named relative to the worktree: %+v", e)
 	}
 }
+
+// S-0747: flai serves the components of a story in any state of kind active
+// or waiting of the project's workflow (ADR-0301): on a board where testing
+// sits between in-progress and review, a story in testing is served, one in
+// review, an alias of acceptance-review, too, and one ready is refused.
+func TestComponentsWorktreeFollowsTheProjectsWorkflow(t *testing.T) {
+	p := shipyardStories(t)
+	withWorkflow(t, testingWorkflow)
+	repo, err := openRepo(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Transition(it, "testing", "olive", "", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"S-0001", "S-0002"} {
+		if got, wt, err := ComponentsWorktree(repo, id); err != nil || got != id || wt != repo.WorktreePath(id) {
+			t.Errorf("%s: %s %s %v", id, got, wt, err)
+		}
+	}
+	if _, _, err := ComponentsWorktree(repo, "S-0004"); err == nil || !strings.Contains(err.Error(), "S-0004 is ready") {
+		t.Errorf("a story ready: %v", err)
+	}
+}

@@ -56,6 +56,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1083,7 +1084,7 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 		return nil, e
 	}
 	out.Limit = m.KlusterAgentNamespaces()
-	repo, err := workitem.Open(p.Root)
+	repo, err := openRepo(p.Root)
 	if err != nil {
 		return nil, failed(fmt.Errorf("cannot read the project's work items to list its deployments: %s", hostRelative(p.Root, err.Error())))
 	}
@@ -1093,7 +1094,7 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	}
 	if m.Kluster == nil {
 		out.NoBlock = kluster.ErrNoBlock.Error()
-		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, nil)
+		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, repo.Flow(), open, nil)
 		return out, nil
 	}
 	out.Block = true
@@ -1101,7 +1102,7 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	c, err := openKluster(p.Root, m)
 	if err != nil {
 		out.StatusError = klusterRelative(p.Root, err.Error())
-		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, nil)
+		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, repo.Flow(), open, nil)
 		return out, nil
 	}
 	named := c.Named()
@@ -1176,7 +1177,7 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 		}
 		out.Deployments = append(out.Deployments, row)
 	}
-	out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, deployed)
+	out.Review, out.Undeployed = undeployedRows(ctx, p.Root, repo.Flow(), open, deployed)
 	return out, nil
 }
 
@@ -1237,8 +1238,8 @@ func klusterLogDo(_ context.Context, _ Host, p channel.Project, raw json.RawMess
 	return out, nil
 }
 
-// openStories are the project's stories in progress or in review, in ID
-// order.
+// openStories are the project's stories in progress or in review, in a
+// state of kind active or waiting (ADR-0301 §2), in ID order.
 func openStories(repo *workitem.Repo) ([]*workitem.Item, error) {
 	all, err := repo.List(false)
 	if err != nil {
@@ -1246,7 +1247,7 @@ func openStories(repo *workitem.Repo) ([]*workitem.Item, error) {
 	}
 	var out []*workitem.Item
 	for _, it := range all {
-		if it.Type == workitem.Story && (it.Status == workitem.InProgress || it.Status == workitem.Review) {
+		if it.Type == workitem.Story && activeOrWaiting(repo.Flow(), it.Status) {
 			out = append(out, it)
 		}
 	}
@@ -1254,9 +1255,10 @@ func openStories(repo *workitem.Repo) ([]*workitem.Item, error) {
 }
 
 // undeployedRows are the stories deployed does not name, each with its
-// branch's head: review those in review, as an older dashboard reads them,
-// and undeployed every one, with its column.
-func undeployedRows(ctx context.Context, root string, stories []*workitem.Item, deployed map[string]bool) (review []KlusterReview, undeployed []KlusterUndeployed) {
+// branch's head: review those in review, in a state of wf of kind waiting,
+// as an older dashboard reads them, and undeployed every one, with its
+// column.
+func undeployedRows(ctx context.Context, root string, wf workflow.Workflow, stories []*workitem.Item, deployed map[string]bool) (review []KlusterReview, undeployed []KlusterUndeployed) {
 	review, undeployed = []KlusterReview{}, []KlusterUndeployed{}
 	for _, it := range stories {
 		if deployed[it.ID] {
@@ -1264,7 +1266,7 @@ func undeployedRows(ctx context.Context, root string, stories []*workitem.Item, 
 		}
 		head, headErr := storyHead(ctx, root, it.ID)
 		row := KlusterReview{Story: it.ID, Title: it.Title, Head: head, HeadError: headErr}
-		if it.Status == workitem.Review {
+		if wf.Kind(it.Status) == workflow.KindWaiting {
 			review = append(review, row)
 		}
 		undeployed = append(undeployed, KlusterUndeployed{KlusterReview: row, Column: it.Status})
@@ -1398,12 +1400,12 @@ func klusterDeployDo(ctx context.Context, host Host, p channel.Project, raw json
 	if e != nil {
 		return nil, e
 	}
-	repo, err := workitem.Open(p.Root)
+	repo, err := openRepo(p.Root)
 	if err != nil {
 		return nil, failed(fmt.Errorf("cannot read the project's work items to deploy %s: %s", story, hostRelative(p.Root, err.Error())))
 	}
 	it, err := repo.Get(story)
-	queued := err == nil && it.Status == workitem.InProgress
+	queued := err == nil && repo.Flow().Kind(it.Status) == workflow.KindActive
 	if !queued {
 		if e := lockFree(p); e != nil {
 			return nil, e
@@ -1412,7 +1414,7 @@ func klusterDeployDo(ctx context.Context, host Host, p channel.Project, raw json
 	if err != nil {
 		return nil, &channel.Error{Code: Rule, Message: hostRelative(p.Root, err.Error())}
 	}
-	if it.Status != workitem.InProgress && it.Status != workitem.Review {
+	if !activeOrWaiting(repo.Flow(), it.Status) {
 		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("%s is %s, and flai deploys only a story in progress or in review into its namespace; move it to in-progress or review first", it.ID, it.Status)}
 	}
 	wt := repo.WorktreePath(it.ID)
@@ -1454,7 +1456,7 @@ func klusterTeardownDo(_ context.Context, host Host, p channel.Project, raw json
 	} else if !ok {
 		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("%s has no deployment recorded; nothing to tear down", story)}
 	}
-	repo, err := workitem.Open(p.Root)
+	repo, err := openRepo(p.Root)
 	if err != nil {
 		return nil, failed(fmt.Errorf("cannot read the project's work items to tear down %s: %s", story, hostRelative(p.Root, err.Error())))
 	}
