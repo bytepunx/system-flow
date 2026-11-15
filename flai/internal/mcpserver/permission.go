@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -202,7 +203,7 @@ func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) Permissi
 	if it.Type != workitem.Story || filepath.Clean(s.repo.WorktreePath(it.ID)) != filepath.Join(s.worktrees(), id) {
 		return notStory
 	}
-	if it.Status != workitem.InProgress {
+	if s.repo.Flow().Kind(it.Status) != workflow.KindActive {
 		return deny("%s is %s, not in progress: %s", it.ID, it.Status, permissionScope)
 	}
 	shown := strings.Join(parts[1:], "/")

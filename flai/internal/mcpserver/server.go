@@ -36,6 +36,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -782,22 +783,32 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}
-	if in.To == workitem.Done && it.Type == workitem.Story && s.orchestrator() {
+	wf := s.repo.Flow()
+	accepts := acceptance(wf, it, in.To)
+	if accepts && it.Type == workitem.Story && s.orchestrator() {
 		// the orchestrator accepts through flai on the host, which checks what
 		// an acceptance needs and records its evidence (ADR-0093, ADR-0278)
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is a story: moving it to done is acceptance, which item_move never makes; the orchestrator accepts a story with flai accept %s --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093), run on the host by the MCP tool accept with story, verified, and evidence (ADR-0278)", it.ID, it.ID)
 	}
-	if in.To == workitem.Done && it.Type != workitem.Task {
+	if accepts {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))
 	}
-	if in.To == workitem.Ready && s.orchestrator() {
+	if t, ok := wf.Find(it.Type, it.Status, in.To); ok && !cascadeOnly(t) {
+		// the workflow's by says who makes the move (ADR-0301 §3); a move
+		// only a cascade makes is workitem.Move's to refuse, in its words
+		if err := t.Permits(workflow.Mover{Who: s.mover()}); err != nil {
+			return nil, ItemMoveOut{}, fmt.Errorf("%s: %w", it.ID, err)
+		}
+	}
+	commits := committedTo(wf, it.Type, in.To)
+	if commits && s.orchestrator() {
 		// the orchestrator promotes a candidate alone, while ready has room,
 		// as flai move holds it (S-0219)
 		if err := s.repo.Promotable(it); err != nil {
 			return nil, ItemMoveOut{}, err
 		}
 	}
-	if in.To == workitem.Ready && it.Type == workitem.Story && it.Draft {
+	if commits && it.Type == workitem.Story && it.Draft {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is a draft: finalizing it, which lets it go to ready, is the operator's; say in a thread or your narrative that it is ready to be finalized", it.ID)
 	}
 	// finalize is false: a move finalizes no draft; the orchestrator
@@ -811,6 +822,50 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 		warnings = []string{}
 	}
 	return nil, ItemMoveOut{ID: it.ID, Status: it.Status, Warnings: warnings, Cancelled: res.Cancelled, Followed: res.Followed}, nil
+}
+
+// acceptance reports whether moving it to the state to names, or an alias
+// of it names, is an acceptance in wf (ADR-0301 §3): the transition from its
+// state gives the accept effect, or, when wf has none from its state there,
+// a transition of its type into that state does. On the baseline, an epic's
+// or a story's move to done.
+func acceptance(wf workflow.Workflow, it *workitem.Item, to string) bool {
+	if t, ok := wf.Find(it.Type, it.Status, to); ok {
+		return t.HasEffect(workflow.EffectAccept)
+	}
+	st, ok := wf.State(to)
+	if !ok {
+		return false
+	}
+	for _, t := range wf.Transitions {
+		if t.To == st.Name && t.Takes(it.Type) && t.HasEffect(workflow.EffectAccept) {
+			return true
+		}
+	}
+	return false
+}
+
+// committedTo reports whether the state to names, or an alias of it names, is
+// the one an item of type typ commits to in wf, where its transition with the
+// commit effect goes (ADR-0301 §3): ready on the baseline.
+func committedTo(wf workflow.Workflow, typ, to string) bool {
+	t, ok := wf.WithEffect(typ, workflow.EffectCommit)
+	st, known := wf.State(to)
+	return ok && known && st.Name == t.To
+}
+
+// cascadeOnly reports whether only a parent's cancellation makes t.
+func cascadeOnly(t workflow.Transition) bool {
+	return len(t.By) == 1 && t.By[0] == workflow.ByCascade
+}
+
+// mover is who the caller is to a transition's by (ADR-0301 §3): a strategic
+// role when flai serve gave its session one, else a story's agent.
+func (s *server) mover() string {
+	if s.role != "" {
+		return workflow.MoverRole
+	}
+	return workflow.MoverAgent
 }
 
 // HostAction reports whether a host action, such as hostapi.ActionKluster,
@@ -835,7 +890,7 @@ const untickedWarning = " goes to review with unticked acceptance criteria ("
 // project without a kluster: block or without git, keeps warnings as they
 // are.
 func ReviewWarnings(git execx.Runner, repo *workitem.Repo, it *workitem.Item, warnings []string, on HostAction) []string {
-	if it.Type != workitem.Story || it.Status != workitem.Review || repo.Manifest.Kluster == nil || git == nil {
+	if it.Type != workitem.Story || repo.Flow().Kind(it.Status) != workflow.KindWaiting || repo.Manifest.Kluster == nil || git == nil {
 		return warnings
 	}
 	if repo.Manifest.KlusterAgentNamespaces() == 0 {
@@ -923,8 +978,10 @@ func (s *server) whoTouches(_ context.Context, _ *mcp.CallToolRequest, in WhoTou
 	}
 	want := strings.TrimSuffix(filepath.ToSlash(in.Path), "/")
 	out := WhoTouchesOut{Path: want, Items: []ItemBrief{}}
+	wf := s.repo.Flow()
 	for _, it := range items {
-		if it.Status != workitem.InProgress && it.Status != workitem.Review {
+		// in progress or awaiting review: a state of kind active or waiting
+		if k := wf.Kind(it.Status); k != workflow.KindActive && k != workflow.KindWaiting {
 			continue
 		}
 		for _, t := range it.Touches {
@@ -1280,8 +1337,9 @@ func (s *server) endWhy() string {
 	if err != nil {
 		return ""
 	}
+	wf := s.repo.Flow()
 	for _, it := range workitem.Children(items, s.story) {
-		if it.Status == workitem.InProgress {
+		if wf.Kind(it.Status) == workflow.KindActive {
 			return ""
 		}
 	}

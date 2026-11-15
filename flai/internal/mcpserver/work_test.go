@@ -78,6 +78,21 @@ func TestWaitForWorkResumesYourOwnStory(t *testing.T) {
 	}
 }
 
+// S-0746: an agent whose own story is in testing, a state of kind active
+// another workflow adds, is sent back to it as to one in progress.
+func TestWaitForWorkResumesYourOwnStoryInAnotherActiveState(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, mcpRepoWithWorkflow(t, mcpOtherWorkflow))
+	if _, err := f.repo.Transition(f.story, "testing", "alex", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	f.readyStory(t, "Next", t0)
+	out := answered(t, f.held(t, 3))
+	if out["reason"] != "resume" || storyOf(out) != f.story.ID {
+		t.Errorf("with my story in testing: %v", out)
+	}
+}
+
 // Criterion 3: nothing ready, so it waits; a story made ready is returned to
 // pull within a second.
 func TestWaitForWorkWaitsForAStoryToBeReady(t *testing.T) {

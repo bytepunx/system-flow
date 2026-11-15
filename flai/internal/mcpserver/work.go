@@ -11,6 +11,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -66,11 +67,14 @@ func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}
-	for _, c := range view.Columns[workitem.InProgress] {
-		if c.Type == workitem.Story && s.mine(c.ID) {
-			card := c
-			out.Reason, out.Story = WorkResume, &card
-			return out, nil
+	// the story in progress is in a state of kind active (ADR-0301 §2)
+	for _, st := range s.repo.Flow().OfKind(workflow.KindActive) {
+		for _, c := range view.Columns[st.Name] {
+			if c.Type == workitem.Story && s.mine(c.ID) {
+				card := c
+				out.Reason, out.Story = WorkResume, &card
+				return out, nil
+			}
 		}
 	}
 	done := perf.Track(ctx, "threads.read")

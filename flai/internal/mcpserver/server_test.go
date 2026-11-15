@@ -29,6 +29,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -2405,5 +2406,147 @@ func TestBoardToolCarriesTheMergeQueue(t *testing.T) {
 	off, _ := out["queue"].(map[string]any)
 	if failed != "" || off["off"] != true || off["off_reason"] != mergequeue.OffUnderPullRequest || len(off["eligible"].([]any)) != 0 || off["batch"] != nil {
 		t.Errorf("under pull-request: %s %v", failed, out["queue"])
+	}
+}
+
+// mcpOtherWorkflow is a board unlike the baseline, as workitem's tests have
+// it: review is renamed acceptance-review, keeping review as its alias, and
+// testing, of kind active, sits between in-progress and it (ADR-0301 §6).
+const mcpOtherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// mcpRepoWithWorkflow is an Options change that has the server's project run
+// the workflow file text in place of the baseline (ADR-0301), set before the
+// server is made: setupWith(t, mcpRepoWithWorkflow(t, text)).
+func mcpRepoWithWorkflow(t *testing.T, text string) func(*Options) {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", text)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	return func(o *Options) { o.Repo.Workflow = &w }
+}
+
+// S-0746: item_move follows the project's workflow: it moves a story through
+// testing, a state the baseline lacks, and into acceptance-review by the
+// alias review, recording the state's own name; who_touches counts the story
+// as open in both; and the move to done is refused in today's words.
+func TestItemMoveFollowsTheProjectsWorkflow(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, mcpRepoWithWorkflow(t, mcpOtherWorkflow))
+	for _, to := range []string{"ready", "in-progress", "done"} {
+		if _, failed := f.call(t, "item_move", map[string]any{"id": f.task.ID, "to": to}); failed != "" {
+			t.Fatalf("task to %s: %s", to, failed)
+		}
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": "done"}); !strings.Contains(failed, "is a story: moving it to done is acceptance, which only the operator does") {
+		t.Errorf("a story in progress to done: %q", failed)
+	}
+	for _, c := range []struct{ to, status string }{{"testing", "testing"}, {"review", "acceptance-review"}} {
+		out, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": c.to})
+		if failed != "" || out["status"] != c.status {
+			t.Fatalf("story to %s: %v %s", c.to, out, failed)
+		}
+		who, _ := f.call(t, "who_touches", map[string]any{"path": "flai/internal/mcpserver/server.go"})
+		if items := who["items"].([]any); len(items) != 1 || items[0].(map[string]any)["id"] != f.story.ID {
+			t.Errorf("who_touches with the story in %s: %v", c.status, who)
+		}
+	}
+	if story, _ := f.repo.Get(f.story.ID); story.Transitions[len(story.Transitions)-1].To != "acceptance-review" {
+		t.Errorf("a move by an alias records the state's name: %+v", story.Transitions)
+	}
+	_, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": "done"})
+	if want := f.story.ID + " is a story: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready"; failed != want {
+		t.Errorf("a story in acceptance-review to done: %q, want %q", failed, want)
+	}
+	if _, failed := f.call(t, "item_move", map[string]any{"id": f.story.Parent, "to": "done"}); !strings.Contains(failed, "is an epic: moving it to done is acceptance, which only the operator does") {
+		t.Errorf("an epic to done: %q", failed)
+	}
+	if story, _ := f.repo.Get(f.story.ID); story.Status != "acceptance-review" {
+		t.Errorf("a refused move changes nothing: %s", story.Status)
+	}
+}
+
+// S-0746: item_move refuses a transition whose by leaves its caller out,
+// naming the transition and who may make it, and changes nothing: the
+// story's agent a move only the operator makes, and a strategic role one
+// only the story's agent makes.
+func TestItemMoveRefusesATransitionItsCallerMayNotMake(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name, by string
+		as       func(*Options)
+		want     string
+	}{
+		{"the story's agent", "operator", nil, ": only the operator may move an item from in-progress to testing: ask the operator to make it"},
+		{"the orchestrator", "agent", asRole(guard.RoleOrchestrate), ": only the story's agent may move an item from in-progress to testing: ask the story's agent to make it"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			text := strings.Replace(mcpOtherWorkflow, "{from: in-progress, to: testing}", "{from: in-progress, to: testing, by: ["+c.by+"]}", 1)
+			with := []func(*Options){mcpRepoWithWorkflow(t, text)}
+			if c.as != nil {
+				with = append(with, c.as)
+			}
+			f := setupWith(t, func(o *Options) {
+				for _, w := range with {
+					w(o)
+				}
+			})
+			_, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": "testing"})
+			if failed != f.story.ID+c.want {
+				t.Errorf("got %q, want %q", failed, f.story.ID+c.want)
+			}
+			if story, _ := f.repo.Get(f.story.ID); story.Status != workitem.InProgress {
+				t.Errorf("a refused move changes nothing: %s", story.Status)
+			}
+		})
+	}
+}
+
+// S-0746: ReviewWarnings reads a story awaiting review as one in a state of
+// kind waiting, so under another workflow it speaks of the namespace for a
+// story in acceptance-review and keeps its silence for one in testing.
+func TestReviewWarningsFollowTheProjectsWorkflow(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, mcpRepoWithWorkflow(t, mcpOtherWorkflow))
+	f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
+	git := &moveKlusterGit{story: f.story.ID, head: moveKlusterC2}
+	for _, c := range []struct {
+		status string
+		warns  bool
+	}{{"testing", false}, {"acceptance-review", true}} {
+		it, _ := f.repo.Get(f.story.ID)
+		it.Status = c.status
+		got := ReviewWarnings(git, f.repo, it, nil, moveKlusterActions(true))
+		if warns := len(got) == 1 && strings.Contains(got[0], "namespace"); warns != c.warns || !c.warns && len(got) != 0 {
+			t.Errorf("a story in %s: %q, want a warning of its namespace: %v", c.status, got, c.warns)
+		}
 	}
 }
