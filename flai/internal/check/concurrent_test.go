@@ -131,7 +131,7 @@ func everyRuleProject(t *testing.T) *workitem.Repo {
 	w("wip/threads/TH-0001-t.md", "---\nid: TH-0001\ntitle: T\nanchor:\n  path: docs/missing.md\nstatus: open\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n---\n\n# TH-0001 T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex\nhi\n\n### 2026-09-01T12:00:00Z alex\nagain\n")
 	w("wip/messages/MS-0001-t.md", "---\nid: MS-0001\ntitle: T\nfrom: S-005\nto: S-006\nstatus: pending\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n---\n\n# MS-0001 T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex S-005\nhi\n")
 	w("docs/users/merge.md", "---\ntitle: Merge\nupdated: 2026-09-01\n---\n\n"+strings.Repeat("<", 7)+" HEAD\na\n"+strings.Repeat("=", 7)+"\nb\n"+strings.Repeat(">", 7)+" topic\n")
-	repo, err := workitem.Open(root)
+	repo, err := workitem.OpenUnchecked(root)
 	if err != nil {
 		t.Fatal(err)
 	}

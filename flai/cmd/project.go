@@ -40,15 +40,27 @@ func (a *app) projectOrNone() (*workitem.Repo, error) {
 	return repo, err
 }
 
-// project opens the conforming repo above the working directory and points
-// it at the cached template for item bodies when one is available. It never
-// fetches.
 // testWorkflow, when a test sets it, is the workflow every project the
 // commands open runs in place of the baseline (ADR-0301), so that the
 // commands are tried against a board with renamed and added states.
 var testWorkflow *workflow.Workflow
 
+// project opens the conforming repo above the working directory and points
+// it at the cached template for item bodies when one is available. It never
+// fetches. A workflow file flai cannot run refuses it (ADR-0307 §2).
 func (a *app) project() (*workitem.Repo, error) {
+	return a.openProject(workitem.Open)
+}
+
+// projectUnchecked is project for flai check alone: a workflow file flai
+// cannot run is kept as the repo's FlowErr, and the repo runs the baseline
+// (ADR-0307 §2).
+func (a *app) projectUnchecked() (*workitem.Repo, error) {
+	return a.openProject(workitem.OpenUnchecked)
+}
+
+// openProject is project, opening the repo with open.
+func (a *app) openProject(open func(string) (*workitem.Repo, error)) (*workitem.Repo, error) {
 	start := a.cwd
 	if start == "" {
 		var err error
@@ -56,8 +68,12 @@ func (a *app) project() (*workitem.Repo, error) {
 			return nil, err
 		}
 	}
-	repo, err := workitem.Open(start)
-	if err != nil {
+	repo, err := open(start)
+	var refused *workflow.LoadError
+	switch {
+	case errors.As(err, &refused):
+		return nil, err
+	case err != nil:
 		return nil, fmt.Errorf("%w (run flai new or flai import first)", err)
 	}
 	repo.Git = a.runner

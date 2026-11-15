@@ -107,9 +107,9 @@ again; each file rewritten is printed as "rewrote <path> (<rule>)", or
 			var repo *workitem.Repo
 			var err error
 			if len(args) == 1 {
-				repo, err = workitem.Open(args[0])
+				repo, err = workitem.OpenUnchecked(args[0])
 			} else {
-				repo, err = a.project()
+				repo, err = a.projectUnchecked()
 			}
 			if err != nil {
 				return err

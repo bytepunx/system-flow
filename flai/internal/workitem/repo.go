@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -45,18 +46,118 @@ type Repo struct {
 	// baseline flai carries, workflow.Baseline(); a test sets it to open a
 	// repository with another workflow.
 	Workflow *workflow.Workflow
+	// flow is the project's workflow file as Open last read it, shared by
+	// the Repo's copies; nil runs the baseline.
+	flow *flowFile
 }
 
 // baselineFlow is the baseline workflow, read once and never changed: every
 // Repo without a Workflow of its own shares it.
 var baselineFlow = workflow.Baseline()
 
-// Flow is the workflow the repository runs: its Workflow, else the baseline.
+// Flow is the workflow the repository runs: its Workflow, else the
+// project's workflow file as it was last read and could be run, else the
+// baseline.
 func (r *Repo) Flow() workflow.Workflow {
 	if r.Workflow != nil {
 		return *r.Workflow
 	}
+	if r.flow != nil {
+		if w := r.flow.state.Load().flow; w != nil {
+			return *w
+		}
+	}
 	return baselineFlow
+}
+
+// FlowErr is why the repository's workflow file could not be run when it
+// was last read, a *workflow.LoadError, else nil. An open by OpenUnchecked
+// keeps it and runs the baseline instead; a later read that fails keeps the
+// workflow the repository ran before it.
+func (r *Repo) FlowErr() error {
+	if r.flow == nil {
+		return nil
+	}
+	return r.flow.state.Load().err
+}
+
+// ReloadFlow reads the repository's workflow file again when its size or
+// modification time changed since it was last read (ADR-0307 §3), and
+// answers FlowErr: nil when the file runs or is gone, so that the baseline
+// runs. It is safe to call while other goroutines call Flow.
+func (r *Repo) ReloadFlow() error {
+	if r.flow == nil {
+		return nil
+	}
+	return r.flow.reload()
+}
+
+// flowFile is a project's workflow file and what was last read of it.
+// Reloads take mu; Flow and FlowErr read state alone.
+type flowFile struct {
+	root, design string
+	mu           sync.Mutex
+	state        atomic.Pointer[flowRead]
+}
+
+// flowRead is one read of the workflow file: the file's stamp before the
+// read, the workflow it gave or the one run before it when it gave err, and
+// err.
+type flowRead struct {
+	stamp fileStamp
+	flow  *workflow.Workflow
+	err   error
+}
+
+// fileStamp is what tells a file changed: whether it is there, whether
+// stat failed otherwise, its size, and its modification time.
+type fileStamp struct {
+	present, failed bool
+	size, mod       int64
+}
+
+// newFlowFile is the workflow file of the project at root whose design
+// folder is design, read once.
+func newFlowFile(root, design string) *flowFile {
+	f := &flowFile{root: root, design: design}
+	f.state.Store(&flowRead{})
+	_ = f.read(f.stamp())
+	return f
+}
+
+// stamp is the file's stamp now.
+func (f *flowFile) stamp() fileStamp {
+	fi, err := os.Stat(filepath.Join(f.root, filepath.FromSlash(workflow.Rel(f.design))))
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return fileStamp{}
+	case err != nil:
+		return fileStamp{failed: true}
+	}
+	return fileStamp{present: true, size: fi.Size(), mod: fi.ModTime().UnixNano()}
+}
+
+// reload reads the file again when its stamp changed.
+func (f *flowFile) reload() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	st := f.stamp()
+	if cur := f.state.Load(); cur.stamp == st {
+		return cur.err
+	}
+	return f.read(st)
+}
+
+// read loads the file, whose stamp before the read is st, and keeps what it
+// gave: the workflow, nil for the baseline when the file is gone, or the
+// error with the workflow run before it.
+func (f *flowFile) read(st fileStamp) error {
+	w, err := workflow.Load(f.root, f.design)
+	if err != nil {
+		w = f.state.Load().flow
+	}
+	f.state.Store(&flowRead{stamp: st, flow: w, err: err})
+	return err
 }
 
 // isState reports whether name is a state of the baseline workflow, or an
@@ -66,8 +167,25 @@ func isState(name string) bool {
 	return ok
 }
 
-// Open finds the manifest above start and returns a Repo.
+// Open finds the manifest above start and returns a Repo running the
+// project's workflow file, or the baseline when it has none. A workflow file
+// flai cannot run refuses the open with its finding (ADR-0307 §2).
 func Open(start string) (*Repo, error) {
+	r, err := OpenUnchecked(start)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.FlowErr(); err != nil {
+		return nil, fmt.Errorf("open the project at %s: its workflow file cannot be run: %w", r.Root, err)
+	}
+	return r, nil
+}
+
+// OpenUnchecked finds the manifest above start and returns a Repo that never
+// refuses its workflow file: one flai cannot run is kept as FlowErr, and the
+// Repo runs the baseline, for flai check, which reports the file's findings
+// (ADR-0307 §2).
+func OpenUnchecked(start string) (*Repo, error) {
 	path, err := manifest.Find(start)
 	if err != nil {
 		return nil, err
@@ -78,7 +196,7 @@ func Open(start string) (*Repo, error) {
 	}
 	root := filepath.Dir(path)
 	main, absent := mainCheckout(root)
-	return &Repo{Root: root, Manifest: m, MainRoot: main, MainAbsent: absent}, nil
+	return &Repo{Root: root, Manifest: m, MainRoot: main, MainAbsent: absent, flow: newFlowFile(root, m.Layout["design"])}, nil
 }
 
 // mainCheckout resolves a linked worktree's main checkout from its .git
