@@ -14,6 +14,7 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -341,6 +342,88 @@ func TestAChangeIsReportedOnceAcrossCalls(t *testing.T) {
 	}
 	if other := f.read(t, Options{Agent: "codex"}); len(other.Changes) == 0 {
 		t.Error("another agent's cursor is its own: it hears of the move")
+	}
+}
+
+// inboxOtherWorkflow is a board unlike the baseline: review is renamed
+// acceptance-review, keeping review as its alias, and testing, of kind
+// active, sits between in-progress and it (ADR-0301 §6).
+const inboxOtherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// S-0746: under a board with a state renamed and one added, the inbox tells
+// of a story's moves in the workflow's names: to testing, and to
+// acceptance-review when the move names review, its alias.
+func TestTheInboxTellsOfMovesInTheWorkflowsNames(t *testing.T) {
+	f := setup(t)
+	w, p := workflow.Parse("design/workflows/board.md", inboxOtherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	f.repo.Workflow = &w
+	f.read(t, Options{Agent: "claude"}) // the first look sets the cursor
+
+	f.clock = t0.Add(10 * time.Minute)
+	moved := f.storyIn(t, "Moved", []string{"docs/moved"}, workitem.Ready, workitem.InProgress)
+	for i, to := range []string{"testing", workitem.Review} {
+		if _, err := f.repo.Transition(moved, to, "alex", "", t0.Add(time.Duration(5+i)*time.Minute)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got []string
+	for _, c := range f.read(t, Options{Agent: "claude"}).Changes {
+		if c.ID == moved.ID {
+			got = append(got, c.Summary)
+		}
+	}
+	// the moves to ready and in-progress, before the first look, are not news
+	want := []string{
+		moved.ID + " Moved moved to testing by alex",
+		moved.ID + " Moved moved to acceptance-review by alex",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("the moves are told as\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// S-0746: a move a cancellation took along is told in the baseline's words
+// when it went to the baseline's cancelled state, and names the state it
+// went to when the workflow names it otherwise.
+func TestDescribeNamesTheStateACascadeMovedTo(t *testing.T) {
+	for _, tc := range []struct{ to, want string }{
+		{workitem.Cancelled, "S-0002 Story was cancelled with E-0001 by alex"},
+		{"dropped", "S-0002 Story moved to dropped with E-0001 by alex"},
+	} {
+		c := workitem.Change{ID: "S-0002", Type: workitem.Story, Title: "Story", Kind: workitem.Moved, To: tc.to, By: "alex", Cause: "E-0001"}
+		if got := Describe(c); got != tc.want {
+			t.Errorf("to %s: %q, want %q", tc.to, got, tc.want)
+		}
 	}
 }
 

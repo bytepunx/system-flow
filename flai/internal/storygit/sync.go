@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1231,7 +1232,7 @@ func checkSync(o SyncOptions, res *SyncResult) error {
 	res.Outside = outsideClaim(repo, story, items, mine)
 	var others []*workitem.Item
 	for _, it := range items {
-		if it.Type == workitem.Story && it.ID != story.ID && (it.Status == workitem.InProgress || it.Status == workitem.Review) && BranchExists(r, repo.MainRoot, Branch(it.ID)) {
+		if it.Type == workitem.Story && it.ID != story.ID && underWay(repo, it.Status) && BranchExists(r, repo.MainRoot, Branch(it.ID)) {
 			others = append(others, it)
 		}
 	}
@@ -1441,7 +1442,7 @@ func tellConflicts(o SyncOptions, res *SyncResult) {
 			continue
 		}
 		it, err := repo.Get(other)
-		if err != nil || it.Status == workitem.InProgress || it.Status == workitem.Review {
+		if err != nil || underWay(repo, it.Status) {
 			continue
 		}
 		closeConflicts(o, []*messages.Conversation{c}, goneReason(other, it.Status, story.ID))
@@ -1536,6 +1537,17 @@ func cleanReason(mine, theirs, story string) string {
 	return fmt.Sprintf("%s and %s merge cleanly at the sync of %s", mine, theirs, story)
 }
 
+// underWay says whether status is a state of the repository's workflow of
+// kind active or waiting: a story worked on or awaiting acceptance, whose
+// branch is open, whatever the board names the state (ADR-0301).
+func underWay(repo *workitem.Repo, status string) bool {
+	switch repo.Flow().Kind(status) {
+	case workflow.KindActive, workflow.KindWaiting:
+		return true
+	}
+	return false
+}
+
 // goneReason says that the other story, in state, is open no longer at the
 // story's sync.
 func goneReason(other, state, story string) string {
@@ -1588,7 +1600,7 @@ func resolveConflictThreads(o SyncOptions, res *SyncResult) error {
 		}
 		state := "gone"
 		if it, err := repo.Get(other); err == nil {
-			if it.Status == workitem.InProgress || it.Status == workitem.Review {
+			if underWay(repo, it.Status) {
 				continue
 			}
 			state = it.Status

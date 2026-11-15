@@ -28,6 +28,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -178,14 +179,46 @@ func rel(repo *workitem.Repo, abs string) string {
 	return abs
 }
 
+// editable is editableIn under the baseline workflow, for a caller with no
+// repository's workflow at hand.
 func editable(it *workitem.Item) (bool, string) {
+	return editableIn(workflow.Baseline(), it)
+}
+
+// editableIn says whether it may be edited, and why not: an archived item
+// is not, nor one closed in flow.
+func editableIn(flow workflow.Workflow, it *workitem.Item) (bool, string) {
 	switch {
 	case it.Archived:
 		return false, it.ID + " is archived; the archive is not edited"
-	case it.Closed():
+	case closedIn(flow, it.Status):
 		return false, it.ID + " is " + it.Status + "; a closed item is not edited"
 	}
 	return true, ""
+}
+
+// closedIn says whether status is a state of flow of kind accepted or
+// cancelled, whatever the board names it (ADR-0301).
+func closedIn(flow workflow.Workflow, status string) bool {
+	switch flow.Kind(status) {
+	case workflow.KindAccepted, workflow.KindCancelled:
+		return true
+	}
+	return false
+}
+
+// draftable refuses to make it a draft unless it sits in flow's initial
+// state, the backlog on the baseline: a draft is a story not yet committed
+// to. A change that makes no story a draft again is not its to judge.
+func draftable(flow workflow.Workflow, it *workitem.Item, ch Change) error {
+	if ch.Draft == nil || !*ch.Draft || it.Draft || it.Type != workitem.Story {
+		return nil
+	}
+	initial, ok := flow.Initial()
+	if st, known := flow.State(it.Status); !ok || !known || st.Name != initial.Name {
+		return invalid("%s is %s; only a story in the %s is a draft", it.ID, it.Status, initial.Name)
+	}
+	return nil
 }
 
 // Show loads an item for an editor.
@@ -201,14 +234,15 @@ func Show(repo *workitem.Repo, id string) (*View, error) {
 	v := &View{ID: it.ID, Type: it.Type, Status: it.Status, Title: it.Title, Nature: it.Nature, Tags: orEmpty(it.Tags), Touches: orEmpty(it.Touches), Topics: orEmpty(it.Topics), After: orEmpty(it.After),
 		Parent: it.Parent, Agent: it.Agent, DefaultAgent: repo.Manifest.Agent, Draft: it.Draft, CostOfDelay: it.CostOfDelay, Forecast: it.Forecast, Finalized: it.Finalized,
 		Currency: repo.Manifest.Planning.CurrencyCode(), Body: below(it.Body), Path: rel(repo, it.Path), Hash: docedit.Hash(string(data)), Natures: workitem.Natures, Parents: []Option{}}
-	v.Editable, v.Reason = editable(it)
+	flow := repo.Flow()
+	v.Editable, v.Reason = editableIn(flow, it)
 	if want := parentType(it.Type); want != "" {
 		items, err := repo.List(false)
 		if err != nil {
 			return nil, err
 		}
 		for _, p := range items {
-			if p.Type == want && !p.Closed() {
+			if p.Type == want && !closedIn(flow, p.Status) {
 				v.Parents = append(v.Parents, Option{ID: p.ID, Title: p.Title})
 			}
 		}
@@ -380,7 +414,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if err != nil {
 		return nil, err
 	}
-	if ok, reason := editable(it); !ok {
+	if ok, reason := editableIn(repo.Flow(), it); !ok {
 		return nil, &docedit.RefusedError{Path: rel(repo, it.Path), Reason: reason}
 	}
 	if opt.Hash != "" && docedit.Hash(string(oldData)) != opt.Hash {
@@ -499,6 +533,9 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			changed = append(changed, "agent")
 		}
 	}
+	if err := draftable(repo.Flow(), it, ch); err != nil {
+		return nil, err
+	}
 	planned, err := applyPlanning(it, ch, opt, repo.Manifest.Planning.CurrencyCode())
 	if err != nil {
 		return nil, err
@@ -525,7 +562,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if p.Type != want {
 			return nil, invalid("%s is a %s; a %s's parent must be a %s", p.ID, p.Type, it.Type, want)
 		}
-		if p.Archived || p.Closed() {
+		if p.Archived || closedIn(repo.Flow(), p.Status) {
 			return nil, invalid("%s is %s; pick an open parent", p.ID, p.Status)
 		}
 		newParent = p
@@ -791,9 +828,8 @@ func applyPlanning(it *workitem.Item, ch Change, opt Options, currency string) (
 			if it.Type != workitem.Story {
 				return nil, invalid("%s is not a story; only a story is a draft", it.ID)
 			}
-			if it.Status != workitem.Backlog {
-				return nil, invalid("%s is %s; only a story in the backlog is a draft", it.ID, it.Status)
-			}
+			// that it sits in the workflow's initial state is draftable's
+			// to judge, before the change is planned
 			// a draft again: who finalized it before no longer says anything
 			it.Draft, it.Finalized = true, nil
 		} else {

@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1481,6 +1482,90 @@ func TestSyncClosesAConflictConversationWhenTheOtherStoryIsNoLongerOpen(t *testi
 		t.Errorf("not closed: %v %q", closed, why)
 	}
 	noThreads(t, repo)
+}
+
+// syncOtherWorkflow is a board unlike the baseline: review is renamed
+// acceptance-review, keeping review as its alias, and testing, of kind
+// active, sits between in-progress and it (ADR-0301 §6).
+const syncOtherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// runSyncWorkflow makes repo run the workflow file text in place of the
+// baseline (ADR-0301).
+func runSyncWorkflow(t *testing.T, repo *workitem.Repo, text string) {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", text)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	repo.Workflow = &w
+}
+
+// S-0746: under a board with a state renamed and one added, the trial merge
+// takes the branch of a story in testing or in acceptance-review, both open
+// by their kinds, and keeps the pair's conversation, begun while the other
+// story was in progress, open; the sync that finds the other story in a
+// state of kind queue closes it, naming the state.
+func TestSyncTrialMergesTheStoriesOpenByTheWorkflowsKinds(t *testing.T) {
+	repo, story, _, _ := conflictingPair(t)
+	runSyncWorkflow(t, repo, syncOtherWorkflow)
+	other, err := repo.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, state := range []string{"in-progress", "testing", "acceptance-review"} {
+		other.Status = state
+		if err := repo.Save(other); err != nil {
+			t.Fatal(err)
+		}
+		if b := syncAt(t, repo, story, 1+i); b.Story != "S-0002" || b.Status != state || b.Clean || b.Conversation != "MS-0001" {
+			t.Errorf("%s: %+v", state, b)
+		}
+		if c := conversation(t, repo, "MS-0001"); c.Status != messages.StatusOpen {
+			t.Errorf("%s: the conversation was closed: %+v", state, c.Entries())
+		}
+	}
+
+	other.Status = workitem.Ready
+	if err := repo.Save(other); err != nil {
+		t.Fatal(err)
+	}
+	o := syncOptions(repo, story)
+	o.Now = syncClock.Add(4 * time.Minute)
+	res, err := Sync(o)
+	if err != nil || len(res.Branches) != 0 {
+		t.Fatalf("sync: %v %+v", err, res)
+	}
+	c := conversation(t, repo, "MS-0001")
+	if closed, why := c.Closed(repo); !closed || why != "S-0002 is ready, no longer open, at the sync of S-0001" {
+		t.Errorf("not closed: %v %q", closed, why)
+	}
 }
 
 // ADR-0121: a conflict thread an older flai opened gets no entry while the

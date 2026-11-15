@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -846,6 +847,112 @@ func TestRunLeavesOnlyAnOpenSiblingsPaths(t *testing.T) {
 				t.Errorf("%s touches %v", it.ID, got)
 			}
 		})
+	}
+}
+
+// doneOtherWorkflow is a board unlike the baseline: review is renamed
+// acceptance-review, keeping review as its alias, and testing, of kind
+// active, sits between in-progress and it (ADR-0301 §6).
+const doneOtherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// runDoneWorkflow makes repo run doneOtherWorkflow in place of the baseline.
+func runDoneWorkflow(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", doneOtherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	repo.Workflow = &w
+}
+
+// moveTask moves the task id through the states tos.
+func moveTask(t *testing.T, repo *workitem.Repo, id string, tos ...string) {
+	t.Helper()
+	it := get(t, repo, id)
+	for _, to := range tos {
+		if _, err := repo.TransitionAll(it, to, "agent", "", clock, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0746: under a board with a state renamed and one added, a task in
+// acceptance-review closes along its transition to done, the workflow's
+// state of kind accepted, and a sibling task in testing is open by its kind,
+// so its paths are left for its own close.
+func TestRunClosesATaskAlongTheWorkflowsTransitionToAccepted(t *testing.T) {
+	repo, wt := project(t)
+	runDoneWorkflow(t, repo)
+	setTouches(t, repo, "T-003", "src/one")
+	moveTask(t, repo, "T-003", "testing", workitem.Review)
+	sibling := newTask(t, repo, "Sibling", "src/two.go")
+	moveTask(t, repo, sibling, "testing")
+	write(t, wt, "src/one/a.go", "package one\n")
+	write(t, wt, "src/two.go", "package two\n")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" && res.Stopped != StepCheck {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "src/one/a.go" || strings.Join(res.Left, ",") != "src/two.go" {
+		t.Errorf("commit %+v, left %v", res.Commit, res.Left)
+	}
+	if res.Move == nil || res.Move.Skipped || res.Move.State != workitem.Done || get(t, repo, "T-003").Status != workitem.Done {
+		t.Errorf("move: %+v", res.Move)
+	}
+	if got := get(t, repo, sibling).Status; got != "testing" {
+		t.Errorf("%s is %s", sibling, got)
+	}
+}
+
+// S-0746: a task in a state the workflow gives no move to a state of kind
+// accepted, testing on this board, is not closed: the move step refuses,
+// naming the state and the moves it has, and the task stays where it is.
+func TestRunRefusesATaskTheWorkflowGivesNoWayToClose(t *testing.T) {
+	repo, _ := project(t)
+	runDoneWorkflow(t, repo)
+	moveTask(t, repo, "T-003", "testing")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 nothing"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "T-003 is testing, and the workflow has no move for a task from testing to a state of kind accepted (done); its moves from testing: acceptance-review, cancelled"
+	if res.Stopped != StepMove || res.ExitCode() != 1 || res.Error != want {
+		t.Fatalf("stopped at %q: %s\nwant %s", res.Stopped, res.Error, want)
+	}
+	if got := get(t, repo, "T-003").Status; got != "testing" {
+		t.Errorf("T-003 is %s", got)
 	}
 }
 

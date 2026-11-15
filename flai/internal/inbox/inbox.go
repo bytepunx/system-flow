@@ -21,6 +21,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -646,7 +648,10 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	return events, omitted, nil
 }
 
-// Describe says a change in words.
+// Describe says a change in words. A move names the state it went to as the
+// workflow names it, c.To; a move a cancellation took along says so in the
+// baseline's words when it went to the baseline's state of kind cancelled,
+// and names the state otherwise (ADR-0301).
 func Describe(c workitem.Change) string {
 	who := ""
 	if c.By != "" {
@@ -655,7 +660,10 @@ func Describe(c workitem.Change) string {
 	switch c.Kind {
 	case workitem.Moved:
 		if c.Cause != "" {
-			return c.ID + " " + c.Title + " was cancelled with " + c.Cause + who
+			if c.To == "" || baselineFlow().Kind(c.To) == workflow.KindCancelled {
+				return c.ID + " " + c.Title + " was cancelled with " + c.Cause + who
+			}
+			return c.ID + " " + c.Title + " moved to " + c.To + " with " + c.Cause + who
 		}
 		if c.Follows != "" {
 			return c.ID + " " + c.Title + " moved to " + c.To + who + ", following " + c.Follows
@@ -678,6 +686,10 @@ func Describe(c workitem.Change) string {
 	}
 	return c.ID + " " + c.Kind
 }
+
+// baselineFlow is the baseline workflow, read once, for Describe, which is
+// given a change and no repository's workflow.
+var baselineFlow = sync.OnceValue(workflow.Baseline)
 
 // describeMessage says a change of kind message: what to do with an entry
 // that awaits a reply, or, for a settled one, that none is owed (ADR-0154).

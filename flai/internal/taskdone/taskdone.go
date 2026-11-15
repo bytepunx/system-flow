@@ -3,9 +3,10 @@
 // other open task of the story covers, leaving those only another open task
 // covers for that task's close (ADR-0128), tells the other open stories
 // whose claim covers what the commit changed, syncs the story's branch,
-// moves the task to done, logs the narrative, widens the touches, checks the
-// story, and reads the agent's inbox for the story, in that order, stopping
-// at the first step that fails. flai task done, the MCP tool task_done, and
+// moves the task to done, the workflow's state of kind accepted (ADR-0301),
+// logs the narrative, widens the touches, checks the story, and reads the
+// agent's inbox for the story, in that order, stopping at the first step
+// that fails. flai task done, the MCP tool task_done, and
 // the host channel's task.done answer its Result, fitted to
 // ctxpack.PartLimit bytes of JSON (ADR-0179).
 package taskdone
@@ -33,6 +34,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -521,13 +523,25 @@ func (r *run) coverage() (mine, others []string, err error) {
 	holds := workitem.NewHolds(nil, r.o.Repo.Manifest.Projects)
 	mine = holds.Claim(&workitem.Item{Touches: r.task.Touches})
 	story, task := workitem.CanonicalID(r.story.ID), workitem.CanonicalID(r.task.ID)
+	flow := r.o.Repo.Flow()
 	for _, it := range items {
-		if it.Type != workitem.Task || workitem.CanonicalID(it.Parent) != story || workitem.CanonicalID(it.ID) == task || it.Closed() {
+		if it.Type != workitem.Task || workitem.CanonicalID(it.Parent) != story || workitem.CanonicalID(it.ID) == task || closed(flow, it.Status) {
 			continue
 		}
 		others = append(others, holds.Claim(&workitem.Item{Touches: it.Touches})...)
 	}
 	return mine, others, nil
+}
+
+// closed says whether status is a state of flow of kind accepted or
+// cancelled: a task no longer open, whatever the board names its state
+// (ADR-0301).
+func closed(flow workflow.Workflow, status string) bool {
+	switch flow.Kind(status) {
+	case workflow.KindAccepted, workflow.KindCancelled:
+		return true
+	}
+	return false
 }
 
 // covers says whether an entry of touches names path or a folder above it.
@@ -562,7 +576,7 @@ func (r *run) tell() error {
 		r.logger.Warn("change notices not sent", "component", "taskdone", "task", r.task.ID, "err", err)
 		return nil
 	}
-	for _, cov := range itemedit.Covering(items, r.o.Repo.Manifest.Projects, r.story.ID, paths) {
+	for _, cov := range itemedit.CoveringIn(r.o.Repo.Flow(), items, r.o.Repo.Manifest.Projects, r.story.ID, paths) {
 		conv, err := messages.Notify(r.o.Repo, messages.SendOptions{
 			From: r.story.ID, To: cov.ID, Author: r.o.Agent, Text: r.notice(cov), About: cov.Paths, Now: r.o.Now(), Notice: true,
 		})
@@ -647,22 +661,28 @@ func (r *run) leftOnly(uncommitted []string) bool {
 	return true
 }
 
-// move moves the task to done under flai move's rules, with what follows it,
-// unless it is done already.
+// move moves the task along its transition to a state of kind accepted,
+// done on the baseline, under flai move's rules, with what follows it,
+// unless it sits in such a state already (ADR-0301).
 func (r *run) move() error {
 	task, err := r.o.Repo.Get(r.task.ID)
 	if err != nil {
 		return fmt.Errorf("read %s to move it: %w", r.task.ID, err)
 	}
 	m := &Move{ID: task.ID, State: task.Status, Followed: []workitem.Followed{}, Warnings: []string{}}
-	if task.Status == workitem.Done {
+	flow := r.o.Repo.Flow()
+	if flow.Kind(task.Status) == workflow.KindAccepted {
 		m.Skipped = true
 		r.res.Move = m
 		return nil
 	}
-	moved, err := r.o.Repo.TransitionAll(task, workitem.Done, r.o.Agent, "", r.o.Now(), false)
+	to, err := closing(flow, task)
 	if err != nil {
-		return fmt.Errorf("move %s to done: %w", task.ID, err)
+		return err
+	}
+	moved, err := r.o.Repo.TransitionAll(task, to, r.o.Agent, "", r.o.Now(), false)
+	if err != nil {
+		return fmt.Errorf("move %s to %s: %w", task.ID, to, err)
 	}
 	m.State = task.Status
 	if moved.Followed != nil {
@@ -674,6 +694,29 @@ func (r *run) move() error {
 	}
 	r.res.Move = m
 	return nil
+}
+
+// closing is the state the task's first transition out of its state into a
+// state of kind accepted leads to, or why there is none: the workflow gives
+// a task in that state no way to close, and the error names the moves it has.
+func closing(flow workflow.Workflow, task *workitem.Item) (string, error) {
+	var moves []string
+	for _, t := range flow.From(workitem.Task, task.Status) {
+		if flow.Kind(t.To) == workflow.KindAccepted {
+			return t.To, nil
+		}
+		moves = append(moves, t.To)
+	}
+	var accepted []string
+	for _, s := range flow.OfKind(workflow.KindAccepted) {
+		accepted = append(accepted, s.Name)
+	}
+	allowed := "none"
+	if len(moves) > 0 {
+		allowed = strings.Join(moves, ", ")
+	}
+	return "", fmt.Errorf("%s is %s, and the workflow has no move for a task from %s to a state of kind accepted (%s); its moves from %s: %s",
+		task.ID, task.Status, task.Status, strings.Join(accepted, ", "), task.Status, allowed)
 }
 
 // log appends the log entry, or the message's subject line, or with neither

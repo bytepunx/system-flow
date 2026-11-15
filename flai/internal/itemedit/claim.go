@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -84,6 +85,8 @@ func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 // none, and a path whose overlap lies wholly inside a shared path of the
 // manifest counts as no overlap. Only a story in progress is compared, and only with stories in
 // progress: a story not yet started is held at pull time instead (ADR-0046).
+// In progress is a state of the repository's workflow of kind active,
+// whatever the board names it (ADR-0301).
 // A story whose claim is empty is not reported: the hold names it, and every
 // write would.
 //
@@ -116,7 +119,8 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 			story = it
 		}
 	}
-	if story == nil || story.Status != workitem.InProgress {
+	flow := w.repo.Flow()
+	if story == nil || flow.Kind(story.Status) != workflow.KindActive {
 		return nil, nil
 	}
 	var gained []string
@@ -130,7 +134,7 @@ func (w *ClaimWatch) Grown(by string, now time.Time) ([]Overlapping, error) {
 	}
 	var out []Overlapping
 	for _, it := range items {
-		if it.Archived || it.Type != workitem.Story || it.ID == story.ID || it.Status != workitem.InProgress {
+		if it.Archived || it.Type != workitem.Story || it.ID == story.ID || flow.Kind(it.Status) != workflow.KindActive {
 			continue
 		}
 		claim := holds.Claim(it)

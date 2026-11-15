@@ -92,6 +92,47 @@ func TestGrownReachesOnlyStoriesInProgressThroughWhatTheClaimGained(t *testing.T
 	}
 }
 
+// S-0746: under a board with a state renamed and one added, a story in
+// testing, of kind active, is in progress: its grown claim reaches another
+// story in testing, and not one in acceptance-review, of kind waiting.
+func TestGrownReachesStoriesInProgressByTheWorkflowsKind(t *testing.T) {
+	at := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	repo, story := claimRepo(t, at)
+	w := editWorkflow(t)
+	repo.Workflow = &w
+	mine := story("Mine", workitem.InProgress, "design")
+	theirs := story("Theirs", workitem.InProgress, "cli")
+	waiting := story("Waiting", workitem.InProgress, "docs")
+	for _, move := range []struct {
+		it *workitem.Item
+		to []string
+	}{{mine, []string{"testing"}}, {theirs, []string{"testing"}}, {waiting, []string{"testing", workitem.Review}}} {
+		for _, to := range move.to {
+			if _, err := repo.Transition(move.it, to, "alex", "", at); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	watch := WatchClaim(repo, mine.ID)
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Reach", Parent: mine.ID, Owner: "alex", Touches: []string{"design", "flai/cmd/x.go", "docs/a.md"}, Now: at}); err != nil {
+		t.Fatal(err)
+	}
+	// the pair's message is the messages package's to send, which still asks
+	// for in-progress or review by name: its refusal leaves the reach and the
+	// overlap notices standing, which is what this test judges
+	got, err := watch.Grown("claude", at)
+	if err != nil {
+		t.Logf("the message was not sent: %v", err)
+	}
+	if want := []Overlapping{{Story: theirs.ID, Title: "Theirs", Paths: []string{"flai/cmd/x.go"}}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("reached:\n got %+v\nwant %+v", got, want)
+	}
+	if notices := Overlaps(repo); len(notices) != 2 || notices[0].ID != mine.ID || notices[1].ID != theirs.ID {
+		t.Errorf("one notice for each story: %+v", notices)
+	}
+}
+
 // ADR-0096: a gained path whose overlap with another story in progress lies
 // wholly inside a shared path tells nobody, the narrower entry deciding: the
 // gained folder docs/users meets docs/users/flai.md, which is shared. One
