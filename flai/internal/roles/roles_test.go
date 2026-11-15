@@ -6,11 +6,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // orchestratorTrigger is the orchestrator's trigger, ADR-0209 §1's list as
 // ADR-0211 refines it, on one line.
-const orchestratorTrigger = "trigger: [asked, {event: thread, when: awaits-orchestrator}, {event: moved, when: to-review}, {event: moved, when: to-backlog}, {event: edited, when: draft-changed}, {event: planned}, {event: release-due}, {event: ready-empty}, {event: reordered}, {schedule: orchestration.schedule}]"
+const orchestratorTrigger = "trigger: [asked, {event: thread, when: awaits-orchestrator}, {event: moved, when: {to: review}}, {event: moved, when: {to: backlog}}, {event: edited, when: draft-changed}, {event: planned}, {event: release-due}, {event: ready-empty}, {event: reordered}, {schedule: orchestration.schedule}]"
 
 // orchestratorTriggers are the entries of the orchestrator's trigger, the
 // first on line first and each next one step lines further.
@@ -18,8 +20,8 @@ func orchestratorTriggers(first, step int) []Trigger {
 	out := []Trigger{
 		{Kind: TriggerAsked},
 		{Kind: TriggerEvent, Event: "thread", When: "awaits-orchestrator"},
-		{Kind: TriggerEvent, Event: "moved", When: "to-review"},
-		{Kind: TriggerEvent, Event: "moved", When: "to-backlog"},
+		{Kind: TriggerEvent, Event: "moved", When: CondTo, To: "review"},
+		{Kind: TriggerEvent, Event: "moved", When: CondTo, To: "backlog"},
 		{Kind: TriggerEvent, Event: "edited", When: "draft-changed"},
 		{Kind: TriggerEvent, Event: "planned"},
 		{Kind: TriggerEvent, Event: "release-due"},
@@ -134,7 +136,7 @@ tools:
   - inbox
   - {call: item_new, when: draft-only}
   - {call: item_edit, when: ungated-edit}
-  - {call: item_move, when: to-backlog}
+  - {call: item_move, when: {to: backlog}}
   - thread_open
   - thread_reply
   - wait_for_events
@@ -148,7 +150,7 @@ commands:
   - flai thread reply
   - flai issue new
   - flai issue bump
-  - {call: flai move, when: to-backlog}
+  - {call: flai move, when: {to: backlog}}
 ---
 
 You are the planner.
@@ -394,8 +396,11 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"continuous among others", "orchestrator.md", orchestratorFile, orchestratorTrigger, "trigger:\n  - asked\n  - continuous\n  - {event: reordered}", CodeFile, 14, "trigger continuous is no longer flai's"},
 		{"trigger condition on wrong trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: accepted, when: stale-figures}", CodeFile, 13, "does not qualify this trigger"},
 		{"call condition on a trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: draft-only}", CodeFile, 13, "qualifies a call"},
-		{"to-review on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: to-review}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"to on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: {to: review}}", CodeFile, 13, "condition {to: review} does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"to-review on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: to-review}", CodeFile, 13, "condition {to: review} does not qualify this trigger; it qualifies an {event} entry for moved"},
 		{"to-backlog on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: review, when: to-backlog}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"to on a schedule", "planner.md", plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: planning.schedule, when: {to: review}}", CodeFile, 17, "does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"a trigger's to on a state the workflow lacks", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: moved, when: {to: verifying}}", CodeFile, 13, `{event: moved, when: {to: verifying}}: state "verifying" is none of the workflow's states, backlog, ready, in-progress, review, done, cancelled; name one of them (ADR-0304 §2)`},
 		{"draft-changed on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: moved, when: draft-changed}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for edited"},
 		{"awaits-orchestrator on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: thread-opened, when: awaits-orchestrator}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for thread"},
 		{"unknown item kind", "planner.md", plannerFile, "item: [epic, story]", "item: [epic, task]", CodeFile, 18, "item kind \"task\""},
@@ -403,10 +408,17 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"bad charge", "planner.md", plannerFile, "charge: item", "charge: everyone", CodeFile, 20, "charge is \"everyone\""},
 		{"item charge with no item", "analyzer.md", analyzerFile, "charge: issues", "charge: item", CodeFile, 14, "the role takes no item (item: none)"},
 		{"unknown condition", "planner.md", plannerFile, "{call: item_new, when: draft-only}", "{call: item_new, when: drafts-only}", CodeFile, 24, "condition \"drafts-only\" is not one"},
-		{"condition on wrong call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: draft-only}", CodeFile, 26, "does not qualify item_move"},
-		{"trigger condition on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: stale-figures}", CodeFile, 26, "qualifies a trigger"},
-		{"trigger-only condition on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: to-review}", CodeFile, 26, "qualifies a trigger, not a call"},
-		{"under-folder on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: under-folder}", CodeFile, 26, "each files entry"},
+		{"condition on wrong call", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: draft-only}", CodeFile, 26, "does not qualify item_move"},
+		{"to on wrong call", "planner.md", plannerFile, "{call: item_new, when: draft-only}", "{call: item_new, when: {to: backlog}}", CodeFile, 24, "condition {to: backlog} does not qualify item_new; it qualifies item_move, flai move"},
+		{"trigger condition on a call", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: stale-figures}", CodeFile, 26, "qualifies a trigger"},
+		{"trigger-only condition on a call", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: draft-changed}", CodeFile, 26, "qualifies a trigger, not a call"},
+		{"under-folder on a call", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: under-folder}", CodeFile, 26, "each files entry"},
+		{"a call's to on a state the workflow lacks", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: {to: verifying}}", CodeFile, 26, `item_move when {to: verifying}: state "verifying" is none of the workflow's states`},
+		{"a call's to on ready", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: {to: ready}}", CodeGrant, 26, "item_move when {to: ready} allows a move to ready, and on a call to names only the workflow's initial state, backlog (ADR-0304 §4): write {to: backlog}; a move to ready is to-ready's, in the permissions entry for roles.planner.permissions.promote_to_ready, and no setting allows a move into an active, waiting, or accepted state"},
+		{"a call's to on review", "planner.md", plannerFile, "{call: flai move, when: {to: backlog}}", "{call: flai move, when: {to: review}}", CodeGrant, 40, "flai move when {to: review} allows a move to review"},
+		{"a call's to on done", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: {to: done}}", CodeGrant, 26, "allows a move to done"},
+		{"a call's to on ready inside its permission", "orchestrator.md", orchestratorFile, "tools: [{call: item_move, when: to-ready}]", "tools: [{call: item_move, when: {to: ready}}]", CodeGrant, 51, "item_move when {to: ready} allows a move to ready"},
+		{"a call naming to-review", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: to-review}", CodeGrant, 26, "item_move when {to: review} allows a move to review"},
 		{"unknown tool", "planner.md", plannerFile, "  - wait_for_events\n", "  - wait_for_ever\n", CodeFile, 29, "not one of flai's MCP tools"},
 		{"command under tools", "planner.md", plannerFile, "  - wait_for_events\n", "  - flai issue new\n", CodeFile, 29, "list it under commands"},
 		{"tool under commands", "planner.md", plannerFile, "  - flai epic new\n", "  - inbox\n", CodeFile, 32, "not a flai command"},
@@ -415,7 +427,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"formula run of every formula", "planner.md", plannerFile, "  - flai epic new\n", "  - flai formula run *\n", CodeFile, 32, "not a flai command"},
 		{"formula run with a flag", "planner.md", plannerFile, "  - flai epic new\n", "  - flai formula run publish --ready\n", CodeFile, 32, "not a flai command"},
 		{"git in commands", "planner.md", plannerFile, "  - flai epic new\n", "  - git commit\n", CodeGrant, 32, "names git"},
-		{"plain gated tool outside a permission", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "item_move", CodeGrant, 26, "name it under to-backlog, or under to-ready in the permissions entry for roles.planner.permissions.promote_to_ready"},
+		{"plain gated tool outside a permission", "planner.md", plannerFile, "{call: item_move, when: {to: backlog}}", "item_move", CodeGrant, 26, "name it under {to: backlog}, or under to-ready in the permissions entry for roles.planner.permissions.promote_to_ready"},
 		{"plain gated command outside a permission", "planner.md", plannerFile, "{call: flai edit, when: ungated-edit}", "flai edit", CodeGrant, 34, "named plainly allows flai edit"},
 		{"wildcard reaching a gated call", "planner.md", plannerFile, "  - flai touches *\n", "  - flai subproject *\n", CodeGrant, 35, "allows flai subproject add"},
 		{"gated condition outside a permission", "planner.md", plannerFile, "{call: item_edit, when: ungated-edit}", "{call: item_edit, when: finalize-draft}", CodeGrant, 25, "roles.planner.permissions.finalize_drafts"},
@@ -427,7 +439,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"wildcard reaching a never granted call", "orchestrator.md", orchestratorFile, "  - flai thread new\n", "  - flai thread *\n", CodeGrant, 28, "reaches flai thread confirm"},
 		{"story agent call while works_story is false", "orchestrator.md", orchestratorFile, "  - wait_for_events\n", "  - story_start\n", CodeGrant, 21, "works_story is false"},
 		{"accept with batch", "orchestrator.md", orchestratorFile, "{call: flai accept, when: accept-as-self}", "flai accept", CodeGrant, 61, "name it under accept-as-self"},
-		{"another role's setting", "planner.md", plannerFile, "  - {call: flai move, when: to-backlog}\n", "  - {call: flai move, when: to-backlog}\npermissions:\n  - setting: roles.analyzer.permissions.publish\n    tools: [release_publish]\n", CodeGrant, 42, "roles.planner.permissions.publish"},
+		{"another role's setting", "planner.md", plannerFile, "  - {call: flai move, when: {to: backlog}}\n", "  - {call: flai move, when: {to: backlog}}\npermissions:\n  - setting: roles.analyzer.permissions.publish\n    tools: [release_publish]\n", CodeGrant, 42, "roles.planner.permissions.publish"},
 		{"orchestration setting in a role's file", "analyzer.md", analyzerFile, "files: ['{design}/analysis/']\n", "files: ['{design}/analysis/']\npermissions:\n  - setting: orchestration.permissions.publish\n    tools: [release_publish]\n", CodeGrant, 18, "roles.analyzer.permissions.publish"},
 		{"unknown permission", "analyzer.md", analyzerFile, "files: ['{design}/analysis/']\n", "files: ['{design}/analysis/']\npermissions:\n  - setting: roles.analyzer.permissions.everything\n    tools: [release_publish]\n", CodeFile, 18, "permission \"everything\""},
 		{"malformed setting", "analyzer.md", analyzerFile, "files: ['{design}/analysis/']\n", "files: ['{design}/analysis/']\npermissions:\n  - setting: publish\n    tools: [release_publish]\n", CodeFile, 18, "neither orchestration.permissions"},
@@ -468,9 +480,9 @@ func TestValidateReportsEachProblem(t *testing.T) {
 	}
 }
 
-// ADR-0211: a trigger may name each event it adds, and each trigger
-// condition on its event, while to-backlog still qualifies item_move and
-// flai move.
+// ADR-0211, ADR-0304: a trigger may name each event it adds, and each
+// trigger condition on its event, to on any state the workflow has and under
+// its old names, while to still qualifies item_move and flai move.
 func TestNewEventsAndConditionsValidate(t *testing.T) {
 	for _, e := range []string{"moved", "thread", "planned", "ready-empty", "release-due", "review", "thread-opened"} {
 		if !slices.Contains(Events, e) {
@@ -483,6 +495,11 @@ func TestNewEventsAndConditionsValidate(t *testing.T) {
   - {event: planned}
   - {event: ready-empty}
   - {event: release-due}
+  - {event: moved, when: {to: review}}
+  - {event: moved, when: {to: backlog}}
+  - {event: moved, when: {to: in-progress}}
+  - {event: moved, when: {to: done}}
+  - {event: moved, when: {to: cancelled}}
   - {event: moved, when: to-review}
   - {event: moved, when: to-backlog}
   - {event: edited, when: draft-changed}
@@ -533,8 +550,8 @@ func TestValidateReportsTriggersNoLauncherServes(t *testing.T) {
 	}{
 		{"planner as shipped", "planner.md", plannerFile, ""},
 		{"planner on any condition or none", "planner.md", edit(t, plannerFile, plannerEntry, "{event: accepted}\n  - {event: edited}\n  - {event: edited, when: draft-changed}\n  - {event: cancelled}\n  - {event: reordered}"), ""},
-		{"planner on a move", "planner.md", edit(t, plannerFile, plannerEntry, "{event: moved, when: to-review}"),
-			"the planner's launcher in flai serve does not serve {event: moved, when: to-review}, so nothing would start the role on it; it serves asked; {event: edited}, {event: accepted}, {event: cancelled}, and {event: reordered}, each with or without a condition; and {schedule: <setting>, when: each-ready-story} (ADR-0250 §4)"},
+		{"planner on a move", "planner.md", edit(t, plannerFile, plannerEntry, "{event: moved, when: {to: review}}"),
+			"the planner's launcher in flai serve does not serve {event: moved, when: {to: review}}, so nothing would start the role on it; it serves asked; {event: edited}, {event: accepted}, {event: cancelled}, and {event: reordered}, each with or without a condition; and {schedule: <setting>, when: each-ready-story} (ADR-0250 §4)"},
 		{"planner on a thread", "planner.md", edit(t, plannerFile, plannerEntry, "{event: thread}"), "does not serve {event: thread}"},
 		{"planner on a schedule without each-ready-story", "planner.md", edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: planning.schedule}"), "does not serve {schedule: planning.schedule}"},
 		{"planner on its own schedule", "planner.md", edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: roles.planner.schedule, when: each-ready-story}"), ""},
@@ -701,5 +718,173 @@ func TestStartAndItsAdditionsAreRead(t *testing.T) {
 	}
 	if p, _ := Parse(r.Path, plannerFile); p.Start != "" || p.StartAdditions != "" || p.StartAdditionsLine != 0 {
 		t.Errorf("a file with neither: start %q, additions %q at %d", p.Start, p.StartAdditions, p.StartAdditionsLine)
+	}
+}
+
+// ADR-0304 §1, §5: when: {to: <state>} reads as the condition to and the
+// state, on a trigger and on a call, and the old names to-review and
+// to-backlog read as {to: review} and {to: backlog}, with no finding.
+func TestToNamesTheStateAMoveGoesTo(t *testing.T) {
+	for _, tc := range []struct{ name, trigger, call string }{
+		{"the mapping", "  - {event: moved, when: {to: review}}\n", "  - {call: item_move, when: {to: backlog}}\n"},
+		{"the old names", "  - {event: moved, when: to-review}\n", "  - {call: item_move, when: to-backlog}\n"},
+		{"a block mapping", "  - event: moved\n    when:\n      to: review\n", "  - call: item_move\n    when:\n      to: backlog\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := edit(t, plannerFile, "  - asked\n", "  - asked\n"+tc.trigger)
+			f = edit(t, f, "  - {call: item_move, when: {to: backlog}}\n", tc.call)
+			f = asDefined(t, f)
+			r, p := Parse("design/workflows/roles/reviewer.md", f)
+			if p != nil {
+				t.Fatalf("Parse: %s", p)
+			}
+			if got := r.Trigger[1]; got.When != CondTo || got.To != "review" || got.Event != "moved" {
+				t.Errorf("trigger = %+v, want moved when to review", got)
+			}
+			move := r.Tools[slices.IndexFunc(r.Tools, func(c Call) bool { return c.Call == "item_move" })]
+			if move.When != CondTo || move.To != "backlog" {
+				t.Errorf("item_move entry = %+v, want when to backlog", move)
+			}
+			if got := Validate([]Role{r}, "design", vocab); len(got) != 0 {
+				t.Errorf("Validate = %v, want none", got)
+			}
+		})
+	}
+}
+
+// ADR-0304 §1: to with no argument, a when of two conditions, and an
+// argument on a condition other than to are roles.file on the entry's line.
+func TestToTakesOneArgumentAndNoOtherConditionDoes(t *testing.T) {
+	for _, tc := range []struct{ name, when, want string }{
+		{"to alone", "to", "condition to takes the state the move goes to; write when: {to: <state>}"},
+		{"to with an empty argument", "{to: }", "condition to takes the state the move goes to"},
+		{"to with a list", "{to: [review, done]}", "condition to takes the state the move goes to"},
+		{"two conditions", "{to: review, draft-changed: x}", "when names one condition"},
+		{"an argument on another condition", "{draft-changed: x}", "condition draft-changed takes no argument, and only to does; write when: draft-changed, or {to: <state>}"},
+		{"a list", "[to, review]", "when is a condition's name, or {to: <state>}"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, p := Parse("design/workflows/roles/planner.md", edit(t, plannerFile, "{event: edited, when: stale-figures}", "{event: moved, when: "+tc.when+"}"))
+			if p == nil || p.Code != CodeFile || p.Line != 13 || !strings.Contains(p.Message, tc.want) {
+				t.Errorf("Parse = %v, want %s at line 13 saying %q", p, CodeFile, tc.want)
+			}
+		})
+		t.Run(tc.name+" on a call", func(t *testing.T) {
+			_, p := Parse("design/workflows/roles/planner.md", edit(t, plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: "+tc.when+"}"))
+			if p == nil || p.Code != CodeFile || p.Line != 26 || !strings.Contains(p.Message, tc.want) {
+				t.Errorf("Parse = %v, want %s at line 26 saying %q", p, CodeFile, tc.want)
+			}
+		})
+	}
+}
+
+// verifyingBoard is a workflow with a state of its own, verifying, between
+// in-progress and review, and checking as an old name of review.
+const verifyingBoard = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: verifying, kind: waiting}
+  - {name: review, kind: waiting, limit: true, aliases: [checking]}
+  - {name: done, kind: accepted}
+transitions:
+  - {from: backlog, to: ready}
+  - {from: ready, to: in-progress}
+  - {from: in-progress, to: verifying}
+  - {from: verifying, to: review}
+  - {from: review, to: done}
+---
+`
+
+// ADR-0304 §2, §4: to's state is checked against the workflow the project
+// runs, the baseline when none is given: a trigger on a state the workflow
+// has is clean, whatever its kind, one it lacks or names by an old name is
+// roles.file, and a call naming any state but the initial one is
+// roles.grant.
+func TestToIsCheckedAgainstTheWorkflow(t *testing.T) {
+	w, wp := workflow.Parse("design/workflows/board.md", verifyingBoard)
+	if wp != nil {
+		t.Fatalf("workflow.Parse: %s", wp)
+	}
+	own := vocab
+	own.Workflow = &w
+	trigger := func(state string) string {
+		return asDefined(t, edit(t, plannerFile, "  - asked\n", "  - asked\n  - {event: moved, when: {to: "+state+"}}\n"))
+	}
+	call := func(state string) string {
+		return asDefined(t, edit(t, plannerFile, "{call: item_move, when: {to: backlog}}", "{call: item_move, when: {to: "+state+"}}"))
+	}
+	cases := []struct {
+		name, content string
+		v             Vocabulary
+		code          string // "" for clean
+		line          int
+		want          string
+	}{
+		{"a trigger on the project's own state", trigger("verifying"), own, "", 0, ""},
+		{"a trigger on the project's own state against the baseline", trigger("verifying"), vocab, CodeFile, 13,
+			`{event: moved, when: {to: verifying}}: state "verifying" is none of the workflow's states, backlog, ready, in-progress, review, done, cancelled; name one of them (ADR-0304 §2)`},
+		{"a trigger on review against both", trigger("review"), own, "", 0, ""},
+		{"a trigger on a state neither has", trigger("archived"), own, CodeFile, 13,
+			`state "archived" is none of the workflow's states, backlog, ready, in-progress, verifying, review, done; name one of them`},
+		{"a trigger on an old name", trigger("checking"), own, CodeFile, 13,
+			"state checking is an old name of review, and a move names the state by its name; write {to: review}"},
+		{"a call to the initial state", call("backlog"), own, "", 0, ""},
+		{"a call to the project's own state", call("verifying"), own, CodeGrant, 26, "item_move when {to: verifying} allows a move to verifying, and on a call to names only the workflow's initial state, backlog"},
+		{"a call to the project's own state against the baseline", call("verifying"), vocab, CodeFile, 26, `item_move when {to: verifying}: state "verifying" is none of the workflow's states`},
+		{"a call to ready", call("ready"), own, CodeGrant, 26, "a move to ready is to-ready's, in the permissions entry for roles.reviewer.permissions.promote_to_ready"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, p := Parse("design/workflows/roles/reviewer.md", tc.content)
+			if p != nil {
+				t.Fatalf("Parse: %s", p)
+			}
+			got := Validate([]Role{r}, "design", tc.v)
+			if tc.code == "" {
+				if len(got) != 0 {
+					t.Errorf("Validate = %v, want none", got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Code != tc.code || got[0].Line != tc.line || !strings.Contains(got[0].Message, tc.want) {
+				t.Errorf("Validate = %v, want one %s at line %d saying %q", got, tc.code, tc.line, tc.want)
+			}
+		})
+	}
+}
+
+// ADR-0304 §1: a trigger entry and a call's condition read as a role file
+// writes them, to with its state as a mapping.
+func TestEntriesReadAsTheFileWritesThem(t *testing.T) {
+	for _, tc := range []struct {
+		t    Trigger
+		want string
+	}{
+		{Trigger{Kind: TriggerEvent, Event: "moved", When: CondTo, To: "review"}, "{event: moved, when: {to: review}}"},
+		{Trigger{Kind: TriggerEvent, Event: "edited", When: "stale-figures"}, "{event: edited, when: stale-figures}"},
+		{Trigger{Kind: TriggerEvent, Event: "moved"}, "{event: moved}"},
+		{Trigger{Kind: TriggerSchedule, Schedule: "planning.schedule", When: CondEachReadyStory}, "{schedule: planning.schedule, when: each-ready-story}"},
+		{Trigger{Kind: TriggerAsked}, "asked"},
+	} {
+		if got := tc.t.String(); got != tc.want {
+			t.Errorf("%+v.String() = %q, want %q", tc.t, got, tc.want)
+		}
+	}
+	for _, tc := range []struct {
+		c    Call
+		want string
+	}{
+		{Call{Call: "item_move", When: CondTo, To: "backlog"}, "{to: backlog}"},
+		{Call{Call: "item_new", When: "draft-only"}, "draft-only"},
+		{Call{Call: "inbox"}, ""},
+	} {
+		if got := tc.c.WhenText(); got != tc.want {
+			t.Errorf("%+v.WhenText() = %q, want %q", tc.c, got, tc.want)
+		}
 	}
 }

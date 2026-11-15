@@ -21,6 +21,7 @@ import (
 	"github.com/goccy/go-yaml/parser"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -142,6 +143,9 @@ type Definition struct {
 type Call struct {
 	Call string `json:"call"`
 	When string `json:"when,omitempty"`
+	// To is the argument of when: {to: <state>}, the state a move goes to,
+	// empty for every other condition (ADR-0304).
+	To string `json:"to,omitempty"`
 	// Line is the entry's file line.
 	Line int `json:"-"`
 }
@@ -153,9 +157,20 @@ type Trigger struct {
 	Event    string `json:"event,omitempty"`
 	Schedule string `json:"schedule,omitempty"`
 	When     string `json:"when,omitempty"`
+	// To is the argument of when: {to: <state>}, the state a move goes to,
+	// empty for every other condition (ADR-0304).
+	To string `json:"to,omitempty"`
 	// Line is the entry's file line.
 	Line int `json:"-"`
 }
+
+// WhenText is the entry's condition as a role file writes it: draft-only,
+// or {to: backlog}; empty for none.
+func (c Call) WhenText() string { return whenText(c.When, c.To) }
+
+// WhenText is the entry's condition as a role file writes it:
+// stale-figures, or {to: review}; empty for none.
+func (t Trigger) WhenText() string { return whenText(t.When, t.To) }
 
 // Permission is a permissions entry: the operator's setting and the calls
 // it allows (ADR-0207 §5).
@@ -196,6 +211,9 @@ type Vocabulary struct {
 	Commands []string
 	// Reads are the MCP tools every agent may call.
 	Reads []string
+	// Workflow is the workflow whose states a to condition names; nil is
+	// the baseline flai carries (ADR-0304 §2).
+	Workflow *workflow.Workflow
 }
 
 // Dir is the role files' folder for the design folder design, relative to
@@ -373,7 +391,7 @@ func (c *Call) UnmarshalYAML(n ast.Node) error {
 	}
 	var f struct {
 		Call string `yaml:"call"`
-		When string `yaml:"when"`
+		When when   `yaml:"when"`
 	}
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
@@ -381,7 +399,46 @@ func (c *Call) UnmarshalYAML(n ast.Node) error {
 	if f.Call == "" {
 		return shapeError(n, "a call entry's mapping needs call, the call's name, besides when")
 	}
-	c.Call, c.When = f.Call, f.When
+	c.Call, c.When, c.To = f.Call, f.When.name, f.When.arg
+	return nil
+}
+
+// when is an entry's when as read: a condition's name, and its argument for
+// one that takes it.
+type when struct{ name, arg string }
+
+// UnmarshalYAML reads a when: a condition's name, an old name as the
+// condition and argument it stands for, or {to: <state>}, a mapping of the
+// one condition that takes an argument to it (ADR-0304 §1, §5).
+func (w *when) UnmarshalYAML(n ast.Node) error {
+	kv := pairs(n)
+	if kv == nil {
+		var name string
+		if err := yaml.NodeToValue(n, &name); err != nil {
+			return shapeError(n, "when is a condition's name, or {to: <state>}")
+		}
+		if a, ok := ConditionAliases[name]; ok {
+			w.name, w.arg = a.Cond, a.Arg
+			return nil
+		}
+		if name == CondTo {
+			return shapeError(n, "condition to takes the state the move goes to; write when: {to: <state>} (ADR-0304 §1)")
+		}
+		w.name = name
+		return nil
+	}
+	if len(kv) != 1 {
+		return shapeError(n, "when names one condition; give a condition's name, or {to: <state>} alone (ADR-0304 §1)")
+	}
+	name := kv[0].Key.GetToken().Value
+	if name != CondTo {
+		return shapeError(n, fmt.Sprintf("condition %s takes no argument, and only to does; write when: %s, or {to: <state>} (ADR-0304 §1)", name, name))
+	}
+	var arg string
+	if err := yaml.NodeToValue(kv[0].Value, &arg); err != nil || arg == "" {
+		return shapeError(n, "condition to takes the state the move goes to; write when: {to: <state>} (ADR-0304 §1)")
+	}
+	w.name, w.arg = name, arg
 	return nil
 }
 
@@ -398,7 +455,7 @@ func (t *Trigger) UnmarshalYAML(n ast.Node) error {
 	var f struct {
 		Event    string `yaml:"event"`
 		Schedule string `yaml:"schedule"`
-		When     string `yaml:"when"`
+		When     when   `yaml:"when"`
 	}
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
@@ -413,7 +470,7 @@ func (t *Trigger) UnmarshalYAML(n ast.Node) error {
 	default:
 		return shapeError(n, "a trigger entry's mapping needs event or schedule")
 	}
-	t.When = f.When
+	t.When, t.To = f.When.name, f.When.arg
 	return nil
 }
 
@@ -453,7 +510,11 @@ func (k *Kinds) UnmarshalYAML(n ast.Node) error {
 // ADR-0207 and the names in v, and returns their problems sorted by path
 // and line.
 func Validate(roles []Role, design string, v Vocabulary) []Problem {
-	c := &checker{design: strings.TrimSuffix(path.Clean(design), "/"), v: v}
+	wf := workflow.Baseline()
+	if v.Workflow != nil {
+		wf = *v.Workflow
+	}
+	c := &checker{design: strings.TrimSuffix(path.Clean(design), "/"), v: v, wf: wf}
 	names, verbs := map[string]string{}, map[string]string{}
 	for _, r := range roles {
 		c.role(r)
@@ -480,7 +541,29 @@ func Validate(roles []Role, design string, v Vocabulary) []Problem {
 type checker struct {
 	design string
 	v      Vocabulary
+	wf     workflow.Workflow
 	out    []Problem
+}
+
+// state says why the workflow does not take state as the argument of a to
+// condition, empty when it does: the workflow has no such state, or names it
+// only as an old name of one it has (ADR-0304 §2).
+func (c *checker) state(state string) string {
+	s, ok := c.wf.State(state)
+	switch {
+	case !ok:
+		return fmt.Sprintf("state %q is none of the workflow's states, %s; name one of them (ADR-0304 §2)", state, strings.Join(c.wf.Names(), ", "))
+	case s.Name != state:
+		return fmt.Sprintf("state %s is an old name of %s, and a move names the state by its name; write {to: %s}", state, s.Name, s.Name)
+	}
+	return ""
+}
+
+// initial is the workflow's initial state's name, the one state a call's to
+// condition may name (ADR-0304 §4).
+func (c *checker) initial() string {
+	s, _ := c.wf.Initial()
+	return s.Name
 }
 
 func (c *checker) add(r Role, code string, line int, format string, args ...any) {
@@ -624,9 +707,13 @@ func (c *checker) triggers(r Role) {
 			case !ok:
 				at("condition %q is not one flai implements; use one of %s, or ask for a new one", t.When, strings.Join(ConditionNames(), ", "))
 			case !cond.OnTrigger():
-				at("condition %s qualifies a call, not a trigger; remove it from the trigger", t.When)
+				at("condition %s qualifies a call, not a trigger; remove it from the trigger", t.WhenText())
 			case !cond.QualifiesTrigger(t):
-				at("condition %s does not qualify this trigger; %s", t.When, triggerTargets(cond))
+				at("condition %s does not qualify this trigger; %s", t.WhenText(), triggerTargets(cond))
+			case cond.Argument != "":
+				if why := c.state(t.To); why != "" {
+					at("%s: %s", t, why)
+				}
 			}
 		}
 		if bad {
@@ -689,7 +776,8 @@ var launchers = map[string]launcher{
 }
 
 // String is the entry as a role file writes it: asked, {event: edited,
-// when: stale-figures}, or {schedule: planning.schedule}.
+// when: stale-figures}, {event: moved, when: {to: review}}, or
+// {schedule: planning.schedule}.
 func (t Trigger) String() string {
 	var b strings.Builder
 	switch t.Kind {
@@ -701,7 +789,7 @@ func (t Trigger) String() string {
 		return t.Kind
 	}
 	if t.When != "" {
-		b.WriteString(", when: " + t.When)
+		b.WriteString(", when: " + t.WhenText())
 	}
 	b.WriteString("}")
 	return b.String()
@@ -744,11 +832,16 @@ func (c *checker) call(r Role, e Call, field, p string) {
 			at(CodeFile, "condition %q is not one flai implements; use one of %s, or ask for a new one", e.When, strings.Join(ConditionNames(), ", "))
 			return
 		case cond.OnTrigger() && !cond.OnCall():
-			at(CodeFile, "condition %s qualifies a trigger, not a call; remove it from %s", e.When, e.Call)
+			at(CodeFile, "condition %s qualifies a trigger, not a call; remove it from %s", e.WhenText(), e.Call)
 			return
 		case !cond.Qualifies(e.Call):
-			at(CodeFile, "condition %s does not qualify %s; it qualifies %s", e.When, e.Call, qualifies(cond))
+			at(CodeFile, "condition %s does not qualify %s; it qualifies %s", e.WhenText(), e.Call, qualifies(cond))
 			return
+		case cond.Argument != "":
+			if why := c.state(e.To); why != "" {
+				at(CodeFile, "%s when %s: %s", e.Call, e.WhenText(), why)
+				return
+			}
 		}
 	}
 	c.grant(r, e, p)
@@ -798,10 +891,14 @@ func (c *checker) grant(r Role, e Call, p string) {
 	at := func(format string, args ...any) { c.add(r, CodeGrant, e.Line, format, args...) }
 	name := e.Call
 	if e.When != "" {
-		name = e.Call + " when " + e.When
+		name = e.Call + " when " + e.WhenText()
 	}
 	if e.When != "" {
 		cond, _ := Condition(e.When)
+		if cond.Name == CondTo && e.To != c.initial() {
+			at("%s allows a move to %s, and on a call to names only the workflow's initial state, %s (ADR-0304 §4): write {to: %s}; a move to ready is to-ready's, in the permissions entry for %s, and no setting allows a move into an active, waiting, or accepted state", name, e.To, c.initial(), c.initial(), settingFor(r, PromoteToReady))
+			return
+		}
 		if cond.Permission != "" && !cond.GatedBy(p) {
 			where := "outside any permission"
 			if p != "" {
@@ -813,7 +910,7 @@ func (c *checker) grant(r Role, e Call, p string) {
 	} else {
 		for _, t := range PlainGated {
 			if covers(e.Call, t) && !GrantsPlain(t, p) {
-				at("%s named plainly allows %s, which only the operator's settings allow; %s", e.Call, t, howToGrant(r, t))
+				at("%s named plainly allows %s, which only the operator's settings allow; %s", e.Call, t, howToGrant(r, t, c.initial()))
 				return
 			}
 		}
@@ -841,12 +938,17 @@ func reaches(name string, f Forbidden) string {
 }
 
 // howToGrant says how a role file names a plain-gated call: under a
-// condition no permission gates, or inside the permission that allows it.
-func howToGrant(r Role, call string) string {
+// condition no permission gates, to with the workflow's initial state
+// initial, or inside the permission that allows it.
+func howToGrant(r Role, call, initial string) string {
 	var ways []string
 	for _, cond := range Conditions {
 		if cond.Permission == "" && cond.Qualifies(call) {
-			ways = append(ways, "under "+cond.Name)
+			arg := ""
+			if cond.Name == CondTo {
+				arg = initial
+			}
+			ways = append(ways, "under "+whenText(cond.Name, arg))
 		}
 	}
 	for _, g := range Gated {

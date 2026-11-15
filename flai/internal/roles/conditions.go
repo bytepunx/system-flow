@@ -42,6 +42,9 @@ type Cond struct {
 	Schedule bool `json:"schedule,omitempty"`
 	// Files is whether it holds each files entry rather than a call.
 	Files bool `json:"files,omitempty"`
+	// Argument says what the condition takes as its argument, written
+	// when: {<name>: <argument>}; empty for one that takes none (ADR-0304 §1).
+	Argument string `json:"argument,omitempty"`
 	// Allows says in one line what the call or trigger may do under it.
 	Allows string `json:"allows"`
 	// Permission is the permission that gates it, empty when none does.
@@ -61,7 +64,7 @@ func (c Cond) GatedBy(p string) bool { return p == c.Permission || slices.Contai
 func (c Cond) Qualifies(call string) bool { return slices.Contains(c.Calls, call) }
 
 // OnTrigger reports whether the condition qualifies a trigger entry. A
-// condition may qualify calls too, as to-backlog does (ADR-0211 §3).
+// condition may qualify calls too, as to does (ADR-0211 §3, ADR-0304).
 func (c Cond) OnTrigger() bool { return len(c.Events) > 0 || c.Schedule }
 
 // OnCall reports whether the condition qualifies a call entry.
@@ -203,10 +206,9 @@ func once(ids []string) []string {
 
 // matches are the trigger conditions whose match flai implements against an
 // occurrence, by name; the event, or the schedule, is checked against the
-// condition's Events, or its Schedule, beside it.
+// condition's Events, or its Schedule, beside it. to, whose match needs its
+// argument, is Trigger.Holds's.
 var matches = map[string]func(Occurrence) bool{
-	"to-review":           func(o Occurrence) bool { return o.To == "review" },
-	"to-backlog":          func(o Occurrence) bool { return o.To == "backlog" },
 	"draft-changed":       func(o Occurrence) bool { return o.Draft },
 	"awaits-orchestrator": func(o Occurrence) bool { return o.Awaits == "you" || o.Awaits == "operator" },
 	"stale-figures":       func(o Occurrence) bool { return len(StaleFigures(o.Item, o.Edit)) > 0 },
@@ -217,13 +219,14 @@ var matches = map[string]func(Occurrence) bool{
 // Matches reports whether the condition holds for the occurrence o: o is an
 // event the condition qualifies, or a schedule for a condition that
 // qualifies one, and the condition's match holds. implemented is false for a
-// condition with no match against an occurrence: a call or files condition.
-// awaits-orchestrator reads the orchestrator as the reader, so a thread that
-// awaits it ("you") or the operator holds. stale-figures holds when
-// StaleFigures names a field of o.Edit on o.Item. replan-agent and
-// each-ready-story say only whether the trigger applies, not on what: a run
-// under replan-agent is on each story ReplanAgent gives, not the event's
-// item, and one under each-ready-story on each story EachReadyStory gives.
+// condition with no match against an occurrence: a call or files condition,
+// and to, whose argument only Trigger.Holds sees. awaits-orchestrator reads
+// the orchestrator as the reader, so a thread that awaits it ("you") or the
+// operator holds. stale-figures holds when StaleFigures names a field of
+// o.Edit on o.Item. replan-agent and each-ready-story say only whether the
+// trigger applies, not on what: a run under replan-agent is on each story
+// ReplanAgent gives, not the event's item, and one under each-ready-story on
+// each story EachReadyStory gives.
 func (c Cond) Matches(o Occurrence) (holds, implemented bool) {
 	match, ok := matches[c.Name]
 	if !ok {
@@ -233,6 +236,34 @@ func (c Cond) Matches(o Occurrence) (holds, implemented bool) {
 		return o.Event == "" && o.Schedule != "" && match(o), true
 	}
 	return slices.Contains(c.Events, o.Event) && match(o), true
+}
+
+// Holds reports whether the trigger entry t starts its role on the
+// occurrence o: o is t's event, or t's schedule come round, and t's
+// condition, when it has one, holds. {to: <state>} holds on an event the
+// condition qualifies whose item moved to <state> (ADR-0304 §3); any other
+// condition holds as its Matches says. implemented is false for a condition
+// flai has no match for against an occurrence, or one it does not know.
+func (t Trigger) Holds(o Occurrence) (holds, implemented bool) {
+	var on bool
+	switch t.Kind {
+	case TriggerEvent:
+		on = o.Event != "" && o.Event == t.Event
+	case TriggerSchedule:
+		on = o.Event == "" && o.Schedule != "" && o.Schedule == t.Schedule
+	}
+	if t.When == "" {
+		return on, true
+	}
+	c, ok := Condition(t.When)
+	if !ok {
+		return false, false
+	}
+	if c.Name == CondTo {
+		return on && slices.Contains(c.Events, o.Event) && o.To == t.To, true
+	}
+	held, implemented := c.Matches(o)
+	return on && held, implemented
 }
 
 // QualifiesTrigger reports whether the condition may stand on the trigger
@@ -250,7 +281,7 @@ func (c Cond) QualifiesTrigger(t Trigger) bool {
 // Conditions are every condition a role file may name (ADR-0207 §5).
 var Conditions = []Cond{
 	{Name: "draft-only", Calls: []string{"item_new", "flai story new"}, Allows: "a story only as a draft (draft true, --draft); an epic or a task as asked"},
-	{Name: "to-backlog", Calls: []string{"item_move", "flai move"}, Events: []string{"moved"}, Allows: "on a call, a move to backlog and nowhere else; on a trigger, only a move to backlog"},
+	{Name: CondTo, Calls: []string{"item_move", "flai move"}, Events: []string{"moved"}, Argument: "state", Allows: "on a trigger, only a move into the named state, any state the workflow has; on a call, a move into the named state and nowhere else, the workflow's initial state alone (ADR-0304)"},
 	{Name: "ungated-edit", Calls: []string{"item_edit", "flai edit"}, Allows: "any edit that neither finalizes a draft (draft false, --no-draft) nor sets a cost of delay input"},
 	{Name: "own-thread", Calls: []string{"thread_reply", "thread_resolve", "flai thread reply", "flai thread resolve"}, Allows: "on a thread the role opened, a follow-up, never a recommendation or a source, and resolving it"},
 	{Name: "under-folder", Files: true, Allows: "an edit of a file under the folder, after .. and symbolic links are resolved, never of the folder itself"},
@@ -267,9 +298,40 @@ var Conditions = []Cond{
 	{Name: "stale-figures", Events: []string{"edited"}, Allows: "only an edit of a backlog or ready story's goal, criteria, or touches when its forecast or cost of delay value is older than the edit, or of its cost of delay's inputs after its value, by someone other than a planner or the story's own agent (ADR-0250 §5)"},
 	{Name: "replan-agent", Events: []string{"accepted", "cancelled", "reordered"}, Allows: "only while planning.replan is agent, for each story whose delivery moved, in the order the replay moved them"},
 	{Name: "each-ready-story", Schedule: true, Allows: "once for every ready story, in pull order"},
-	{Name: "to-review", Events: []string{"moved"}, Allows: "only a move to review"},
 	{Name: "draft-changed", Events: []string{"edited"}, Allows: "only an edit of a story that is a draft after the edit"},
 	{Name: "awaits-orchestrator", Events: []string{"thread"}, Allows: "only a thread that awaits the orchestrator or the operator (ADR-0181)"},
+}
+
+// CondTo is the condition that names the state a move goes to, written
+// when: {to: <state>} (ADR-0304).
+const CondTo = "to"
+
+// Alias is a condition's old name, which a role file may still write, and
+// the condition and argument flai reads it as (ADR-0304 §5).
+type Alias struct {
+	Cond string `json:"cond"`
+	Arg  string `json:"arg"`
+}
+
+// String is what a role file writes instead: {to: review}.
+func (a Alias) String() string { return whenText(a.Cond, a.Arg) }
+
+// ConditionAliases are the old names a role file's when may still give, by
+// name, read as the condition and argument each stands for when the file is
+// parsed. They are not among Conditions, and no finding names them (ADR-0304
+// §5).
+var ConditionAliases = map[string]Alias{
+	"to-review":  {Cond: CondTo, Arg: "review"},
+	"to-backlog": {Cond: CondTo, Arg: "backlog"},
+}
+
+// whenText is a when as a role file writes it: the condition's name, or
+// {<name>: <arg>} for one with an argument.
+func whenText(name, arg string) string {
+	if arg == "" {
+		return name
+	}
+	return "{" + name + ": " + arg + "}"
 }
 
 // Condition returns the condition named name.
@@ -380,7 +442,7 @@ var Never = []Forbidden{
 	{Call: "flai queue resume"},
 	{Call: "flai order", Form: "placing a story by hand", Unless: []string{"by-policy"}},
 	{Call: "flai thread confirm"},
-	{Call: "item_move", Form: "to done", Unless: []string{"to-backlog", "to-ready"}},
+	{Call: "item_move", Form: "to done", Unless: []string{CondTo, "to-ready"}},
 	{Call: "shared_paths_edit"},
 	{Call: "flai shared add"},
 	{Call: "flai shared remove"},
@@ -408,8 +470,8 @@ var Never = []Forbidden{
 	{Call: "flai message reply", StoryAgent: true},
 	{Call: "flai message send", StoryAgent: true},
 	{Call: "flai message share", StoryAgent: true},
-	{Call: "item_move", Form: "to in-progress or review", Unless: []string{"to-backlog", "to-ready"}, StoryAgent: true},
-	{Call: "flai move", Form: "to in-progress or review", Unless: []string{"to-backlog", "to-ready", "accept-as-self"}, StoryAgent: true},
+	{Call: "item_move", Form: "to in-progress or review", Unless: []string{CondTo, "to-ready"}, StoryAgent: true},
+	{Call: "flai move", Form: "to in-progress or review", Unless: []string{CondTo, "to-ready", "accept-as-self"}, StoryAgent: true},
 }
 
 // covers reports whether a call entry naming call reaches target: the same
