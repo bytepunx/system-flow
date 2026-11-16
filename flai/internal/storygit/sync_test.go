@@ -1687,6 +1687,64 @@ func TestSyncFindsNothingUndoneOnABranchThatKeepsMainsChanges(t *testing.T) {
 	}
 }
 
+// I-0385, ADR-0309: a branch that replaces a loop in board/board.go, so
+// removing its closing "\t}", rebased onto a main that added a function to
+// the end of the same file, with an if block closing in "\t}", undoes
+// nothing: the branch removes no line at the number main added it at, and
+// the text compare before ADR-0309 found main's "\t}" undone. The sync reports
+// none and records none, and a record the text compare wrote for the path,
+// as S-0739's holds, drops out of RecordedUndone and the record.
+func TestSyncFindsNothingUndoneWhenTheBranchRemovesALineOfTheTextMainAddedElsewhere(t *testing.T) {
+	const (
+		path  = "board/board.go"
+		count = "func count(xs []int) int {\n\tn := 0\n\tfor _, x := range xs {\n\t\tn += x\n\t}\n\treturn n\n}\n"
+		name  = "\n// name is the board's name.\nfunc name() string {\n\treturn \"board\"\n}\n"
+		ready = "\n// ready reports whether xs holds any.\nfunc ready(xs []int) bool {\n\tif len(xs) == 0 {\n\t\treturn false\n\t}\n\treturn true\n}\n"
+	)
+	repo := syncProject(t)
+	r := execx.System{}
+	if err := os.MkdirAll(filepath.Join(repo.MainRoot, "board"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, repo.MainRoot, path, "package board\n\n"+count+name)
+	git(t, repo.MainRoot, "add", "-A")
+	git(t, repo.MainRoot, "commit", "-q", "-m", "feat: the board")
+	story, wt := openStory(t, repo, "S-0001", "board")
+	oldBase, _ := r.Run(wt, "git", "rev-parse", "HEAD")
+	write(t, wt, path, "package board\n\nfunc count(xs []int) int {\n\treturn len(xs)\n}\n"+name)
+	git(t, wt, "commit", "-q", "-am", "refactor: [S-0001] count without the loop")
+	write(t, repo.MainRoot, path, "package board\n\n"+count+name+ready)
+	git(t, repo.MainRoot, "commit", "-q", "-am", "feat: [S-0002] ready")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || res.Stopped != "" {
+		t.Fatalf("the rebase is not clean: %+v", res)
+	}
+	if got, _ := os.ReadFile(filepath.Join(wt, "board", "board.go")); !strings.Contains(string(got), "\treturn len(xs)\n") || !strings.HasSuffix(string(got), ready) {
+		t.Fatalf("the branch does not hold both changes: %q", got)
+	}
+	if res.UndoesMain == nil || len(res.UndoesMain) != 0 {
+		t.Errorf("undoes main: %+v", res.UndoesMain)
+	}
+	if _, err := os.Stat(UndoneRecordPath(repo.CacheDir(), "S-0001")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a record was written: %v", err)
+	}
+
+	// the record the text compare before ADR-0309 wrote for the path
+	if err := recordUndone(repo.CacheDir(), "S-0001", []Undone{{Path: path, Lines: []string{"\t}"}, OldBase: oldBase}}, syncClock); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := RecordedUndone(r, repo, "S-0001"); err != nil || len(got) != 0 {
+		t.Errorf("recorded: %+v %v, want none", got, err)
+	}
+	if _, err := os.Stat(UndoneRecordPath(repo.CacheDir(), "S-0001")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the record still holds the path: %v", err)
+	}
+}
+
 // The table I-0360's stop was on, as one long row on one line: in
 // notes/table.md, a markdown file outside the design and docs folders, so
 // that no section merge settles the stop (ADR-0175, ADR-0276).
