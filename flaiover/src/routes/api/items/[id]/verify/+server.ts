@@ -1,6 +1,6 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
-import type { VerifyReport } from '$lib/review';
+import type { VerifyStatus } from '$lib/review';
 import type { RequestHandler } from './$types';
 
 /**
@@ -11,7 +11,7 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = ({ params }) =>
 	respond(async () => {
 		try {
-			const { data } = await repo().run<VerifyReport | null>('verify.status', { id: params.id });
+			const { data } = await repo().run<VerifyStatus | null>('verify.status', { id: params.id });
 			return { report: data ?? null };
 		} catch (e) {
 			if (e instanceof RepoError && e.status === 503) return { report: null };

@@ -292,6 +292,52 @@
       }
     },
     {
+      "name": "A story whose close-out runs at its new head",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0799",
+              "title": "The review page and the merge queue name the close-out running at a story's new head",
+              "entered_review": "2026-11-16T02:00:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef",
+              "reasons": [
+                {
+                  "kind": "verify_running",
+                  "text": "the last flai verify of S-0799 failed at its step sync, at 0123456789ab, and close-out job S-0799-j2 runs at 89abcdef0123, at its step flai verify: S-0799 is eligible once it passes",
+                  "job": {
+                    "id": "S-0799-j2",
+                    "started": "2026-11-16T03:10:00Z",
+                    "head": "89abcdef0123456789abcdef0123456789abcdef",
+                    "step": "flai verify"
+                  }
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T09:05:00Z"
+            }
+          ],
+          "outcomes": []
+        }
+      },
+      "width": 320
+    },
+    {
       "name": "Batch failed at a tier",
       "props": {
         "queue": {

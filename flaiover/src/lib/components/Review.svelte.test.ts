@@ -1400,6 +1400,78 @@ describe('Review', () => {
 			expect(rows.join(' ')).not.toContain('stale-narrative');
 		});
 
+		// I-0384: after a sync moved the head, the last report is from before it, and a close-out runs
+		// at the new head; the row said only the old failure.
+		const JOB = {
+			id: 'S-0041-j2',
+			started: '2026-10-06T23:00:00Z',
+			head: 'fedcba9876543210fedc',
+			step: 'flai verify'
+		};
+		const RUNNING =
+			'Close-out running at fedcba987654: job S-0041-j2, at flai verify, since 2026-10-06 19:00 EDT.';
+		const note = (id: string) =>
+			document.querySelector(`[data-testid="${id}"]`)?.textContent?.replace(/\s+/g, ' ').trim();
+
+		it('says a failed report is from before the head moved, beside the close-out running at the new head (I-0384)', async () => {
+			backend({
+				verify: () =>
+					json({
+						report: {
+							...REPORT,
+							passed: false,
+							stopped_at: 'sync',
+							moved: true,
+							running: JOB
+						}
+					})
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(note('verify-summary')).toContain('Stopped at sync');
+			expect(note('verify-moved')).toBe(
+				'This report is from before the head moved to fedcba987654.'
+			);
+			expect(note('verify-running')).toBe(RUNNING);
+			expect(steps()).toHaveLength(3);
+		});
+
+		it('says only that a close-out runs while the story has no report yet (I-0384)', async () => {
+			backend({ verify: () => json({ report: { story: 'S-0041', running: JOB } }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(note('verify-summary')).toBe('No flai verify result yet.');
+			expect(note('verify-running')).toBe(RUNNING);
+			expect(note('verify-moved')).toBeUndefined();
+			expect(steps()).toEqual([]);
+		});
+
+		it('notes neither at a report at the head with no close-out running', async () => {
+			backend({ verify: () => json({ report: REPORT }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(note('verify-moved')).toBeUndefined();
+			expect(note('verify-running')).toBeUndefined();
+		});
+
+		it('says the preview is as of the last finished flai verify while a close-out runs, and leaves Accept to the blockers (I-0384)', async () => {
+			const why =
+				"close-out job job-7 runs at S-0041's head abc1234, at its step flai verify; this preview is as of S-0041's last finished flai verify, at 0123456, until the job ends (I-0384)";
+			backend({
+				preview: {
+					branch: 'story/S-0041',
+					blockers: [],
+					plan: null,
+					verify_running: { ...JOB, id: 'job-7', head: 'abc1234' },
+					verify_running_why: why
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(note('preview-verify-running')).toBe(why);
+			expect(button('Accept').disabled).toBe(false);
+		});
+
 		it('shows nothing and no error when the story has no result', async () => {
 			backend({});
 			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });

@@ -1,4 +1,6 @@
 <script lang="ts" module>
+	import { runningNote, type CloseoutProgress } from '$lib/review';
+
 	/** Why a story in review is not eligible for the merge queue, as flai names it. */
 	export type QueueReason = {
 		kind: string;
@@ -8,6 +10,8 @@
 		paths?: string[];
 		/** For dirty_main (S-0402): the command that sets the uncommitted files aside. */
 		command?: string;
+		/** For verify_running (I-0384): the close-out job running at the story's head. */
+		job?: CloseoutProgress;
 	};
 	/** A story in review as the merge queue sees it. */
 	export type QueueEntry = {
@@ -266,6 +270,15 @@
 				.map((r) => ({ story: e.story, paths: r.paths ?? [], command: r.command }))
 		)
 	);
+	// Each story whose close-out runs at its head, not yet verified there: its job and step, in place
+	// of a failure, since it is eligible once the job passes (I-0384).
+	const closingOut = $derived(
+		ineligible.flatMap((e) =>
+			(e.reasons ?? [])
+				.filter((r) => r.kind === 'verify_running')
+				.map((r) => ({ story: e.story, text: r.job ? runningNote(r.job) : r.text }))
+		)
+	);
 	let copied = $state<string | null>(null);
 	let copyError = $state<string | null>(null);
 
@@ -513,6 +526,20 @@
 						{copyError}
 					</p>
 				{/if}
+			</div>
+		{/if}
+		{#if closingOut.length}
+			<div class="mt-1" data-testid="merge-queue-closing-out">
+				<p class="font-semibold text-ink">
+					Closing out: each is eligible once the close-out running at its head passes.
+				</p>
+				<ul class="mt-1 space-y-0.5">
+					{#each closingOut as c (c.story)}
+						<li data-story={c.story} data-testid="merge-queue-closing-out-row">
+							<span class="font-mono text-ink">{c.story}</span>: {c.text}
+						</li>
+					{/each}
+				</ul>
 			</div>
 		{/if}
 		{#if ineligible.length}

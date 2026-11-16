@@ -211,7 +211,17 @@ export type VerifyReport = {
 	notes?: VerifyNote[];
 	/** The story's kluster namespace, read on the host as the page asks (S-0662). */
 	kluster?: KlusterEvidence;
+	/** The report's commit is not the head of the story's branch: the head moved since it ran (I-0384). */
+	moved?: boolean;
+	/** The close-out job running at another commit than the report's (I-0384). */
+	running?: CloseoutProgress;
 };
+/** A close-out job as flai answers it (closeout.Progress): its ID, when it started, the head it runs at, and its step. */
+export type CloseoutProgress = { id: string; started: string; head?: string; step?: string };
+/** What verify.status answers while a close-out job runs for a story that has no report yet (I-0384). */
+export type VerifyRunning = { story: string; running: CloseoutProgress };
+/** What verify.status answers for a story with a report or a running close-out job: the report, or the job alone. */
+export type VerifyStatus = VerifyReport | VerifyRunning;
 
 /** A finding or a note as a page shows it: where, as path:line and a name, and what it says. */
 export type VerifyLine = { where: string; message: string };
@@ -228,6 +238,8 @@ export type VerifyRow = {
 };
 /** A report as a page shows it: the outcome, the commit and when, a row per step, the notes apart. */
 export type VerifyView = {
+	/** Whether there is a report; false while a close-out runs before the story's first, and then only running is said. */
+	reported: boolean;
 	passed: boolean;
 	outcome: string;
 	commit: string;
@@ -236,6 +248,10 @@ export type VerifyView = {
 	duration: string;
 	rows: VerifyRow[];
 	notes: VerifyLine[];
+	/** That the report is from before the branch's head moved; empty when it is at the head. */
+	moved: string;
+	/** The close-out job running at another commit, its head, step, and start; empty when none runs. */
+	running: string;
 };
 
 const STATE_LABEL: Record<VerifyState, string> = {
@@ -278,9 +294,29 @@ function rowDuration(s: VerifyStep): string {
  * A report as rows for the review page (S-0270): a row per step in the order flai ran them, with
  * the findings under the step that failed only; a step not reached or skipped has no duration, and
  * a reused tier shows, in its place, when the run it comes from began (S-0341). The notes from
- * outside the story are apart, since they do not fail it.
+ * outside the story are apart, since they do not fail it. A report from before the head moved
+ * says so, and a close-out running at another commit is named with its job, step, and start; while
+ * one runs before the story's first report, the view says only that (I-0384).
  */
-export function verifyView(report: VerifyReport): VerifyView {
+export function verifyView(status: VerifyStatus): VerifyView {
+	const running = status.running ? runningNote(status.running) : '';
+	if (!('steps' in status)) {
+		return {
+			reported: false,
+			passed: false,
+			outcome: 'No flai verify result yet',
+			commit: '',
+			base: '',
+			ranAt: '',
+			duration: '',
+			rows: [],
+			notes: [],
+			moved: '',
+			running
+		};
+	}
+	const report = status;
+	const head = report.running?.head;
 	const rows = report.steps.map((s): VerifyRow => ({
 		name: s.name,
 		tier: s.tier === true,
@@ -297,6 +333,7 @@ export function verifyView(report: VerifyReport): VerifyView {
 		omitted: s.state === 'failed' ? (s.omitted ?? 0) : 0
 	}));
 	return {
+		reported: true,
 		passed: report.passed,
 		outcome: report.passed
 			? 'Passed every step'
@@ -311,8 +348,23 @@ export function verifyView(report: VerifyReport): VerifyView {
 		notes: (report.notes ?? []).map((n) => ({
 			where: where(n.path, n.line, n.rule),
 			message: `${n.level}: ${n.message}`
-		}))
+		})),
+		moved: report.moved
+			? `This report is from before the head moved${head ? ` to ${head.slice(0, 12)}` : ''}.`
+			: '',
+		running
 	};
+}
+
+/**
+ * A running close-out job in words (I-0384): the head it runs at, short, its ID, its step, and when
+ * it started; each part left out when flai gives none.
+ */
+export function runningNote(job: CloseoutProgress): string {
+	const at = job.head ? ` at ${job.head.slice(0, 12)}` : '';
+	const step = job.step ? `, at ${job.step}` : '';
+	const since = job.started ? `, since ${localTime(job.started)}` : '';
+	return `Close-out running${at}: job ${job.id}${step}${since}.`;
 }
 
 /** A deploy or a checks run of the story's namespace as the review page shows it (S-0662). */

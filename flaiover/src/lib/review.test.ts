@@ -295,6 +295,62 @@ describe('verifyView (S-0270)', () => {
 		});
 		expect(v.rows[0]).toMatchObject({ label: 'reused', duration: '1.5s', findings: [] });
 	});
+
+	describe('after a sync moved the head (I-0384)', () => {
+		const job = {
+			id: 'S-0270-j2',
+			started: '2026-10-06T23:00:00Z',
+			head: 'fedcba9876543210fedc',
+			step: 'flai verify'
+		};
+
+		it('says a report at the head neither moved nor has a close-out running', () => {
+			const v = verifyView(failing);
+			expect(v).toMatchObject({ reported: true, moved: '', running: '' });
+		});
+
+		it('says a report is from before the head moved, to the head the close-out runs at', () => {
+			const v = verifyView({ ...failing, moved: true, running: job });
+			expect(v.outcome).toBe('Stopped at flaiover');
+			expect(v.moved).toBe('This report is from before the head moved to fedcba987654.');
+		});
+
+		it('says a report is from before the head moved without naming a head it does not have', () => {
+			expect(verifyView({ ...failing, moved: true }).moved).toBe(
+				'This report is from before the head moved.'
+			);
+		});
+
+		it('names the close-out running at the new head: its job, step, and start', () => {
+			const v = verifyView({ ...failing, moved: true, running: job });
+			expect(v.running).toBe(
+				'Close-out running at fedcba987654: job S-0270-j2, at flai verify, since 2026-10-06 19:00 EDT.'
+			);
+		});
+
+		it('leaves out the head and the step of a job that has not written them', () => {
+			const v = verifyView({ ...failing, running: { id: 'job-7', started: job.started } });
+			expect(v.running).toBe('Close-out running: job job-7, since 2026-10-06 19:00 EDT.');
+		});
+
+		it('says only that a close-out runs while the story has no report yet', () => {
+			const v = verifyView({ story: 'S-0270', running: job });
+			expect(v).toEqual({
+				reported: false,
+				passed: false,
+				outcome: 'No flai verify result yet',
+				commit: '',
+				base: '',
+				ranAt: '',
+				duration: '',
+				rows: [],
+				notes: [],
+				moved: '',
+				running:
+					'Close-out running at fedcba987654: job S-0270-j2, at flai verify, since 2026-10-06 19:00 EDT.'
+			});
+		});
+	});
 });
 
 describe('klusterView (S-0662)', () => {

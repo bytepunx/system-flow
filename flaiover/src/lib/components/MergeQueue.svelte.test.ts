@@ -2,7 +2,8 @@
 // its hold switch, and the batch's step, result, and drop; S-0400: a red batch's bisection, and
 // what each batched story comes to in the batch; S-0402: a story the main checkout's uncommitted
 // files hold back, with its files and the command that frees them; S-0552: the coalesce window the
-// next batch fills in; S-0549: the landing's preflight's hold, with its files, findings, and thread.
+// next batch fills in; S-0549: the landing's preflight's hold, with its files, findings, and thread;
+// I-0384: a story whose close-out runs at its new head, with the job and its step.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import MergeQueue, {
@@ -13,6 +14,7 @@ import MergeQueue, {
 	type MergeQueueState
 } from './MergeQueue.svelte';
 import { localTime } from '$lib/localtime';
+import type { CloseoutProgress } from '$lib/review';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -417,6 +419,57 @@ describe('MergeQueue', () => {
 			const mark = document.querySelectorAll('[data-testid="merge-queue-mark"]')[1];
 			expect(mark.textContent).toBe('(held back)');
 			expect(mark.className).toContain('text-warn');
+		});
+	});
+
+	describe('a story whose close-out runs at its new head (I-0384)', () => {
+		const closing = (job?: CloseoutProgress): MergeQueueState => ({
+			...running,
+			ineligible: [
+				...running.ineligible!,
+				{
+					...entry('S-0005', 'Synced'),
+					reasons: [
+						{
+							kind: 'verify_running',
+							text: 'S-0005 has no flai verify result yet, and close-out job S-0005-j1 runs at 0123456789ab, at its step flai verify: S-0005 is eligible once it passes',
+							...(job ? { job } : {})
+						}
+					]
+				}
+			]
+		});
+
+		it('names the running job, its head, step, and start, not a failure', () => {
+			render(
+				closing({
+					id: 'S-0005-j1',
+					started: '2026-10-18T11:00:00Z',
+					head: '0123456789abcdef0123',
+					step: 'flai verify'
+				})
+			);
+			const rows = document.querySelectorAll('[data-testid="merge-queue-closing-out-row"]');
+			expect(rows).toHaveLength(1);
+			expect(el('merge-queue-closing-out-row')!.dataset.story).toBe('S-0005');
+			expect(text('merge-queue-closing-out-row')).toBe(
+				`S-0005: Close-out running at 0123456789ab: job S-0005-j1, at flai verify, since ${localTime('2026-10-18T11:00:00Z')}.`
+			);
+			const box = el('merge-queue-closing-out')!;
+			expect(box.querySelector('.text-danger')).toBeNull();
+			expect(text('merge-queue-closing-out')).toMatch(/^Closing out: each is eligible once/);
+		});
+
+		it('gives flai’s text for a reason without its job', () => {
+			render(closing());
+			expect(text('merge-queue-closing-out-row')).toBe(
+				'S-0005: S-0005 has no flai verify result yet, and close-out job S-0005-j1 runs at 0123456789ab, at its step flai verify: S-0005 is eligible once it passes'
+			);
+		});
+
+		it('lists none when no close-out runs', () => {
+			render(running);
+			expect(el('merge-queue-closing-out')).toBeNull();
 		});
 	});
 

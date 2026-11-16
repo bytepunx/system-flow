@@ -17,7 +17,8 @@
 		type KlusterRunView,
 		type KlusterView,
 		type PatchKind,
-		type VerifyReport,
+		type CloseoutProgress,
+		type VerifyStatus,
 		type VerifyView
 	} from '$lib/review';
 	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
@@ -76,6 +77,10 @@
 		forge_blockers?: ForgeBlocker[];
 		/** The story's pull request's URL, when flai serve kept one. */
 		pull_request?: string;
+		/** The close-out job running at the story's head, so the preview is as of the last finished flai verify (I-0384). */
+		verify_running?: CloseoutProgress;
+		/** The sentence saying so, present exactly when verify_running is. */
+		verify_running_why?: string;
 		plan?: {
 			level: string;
 			commits: string[];
@@ -620,10 +625,11 @@
 
 	async function loadVerify(target: string) {
 		try {
-			const { report } = await get<{ report: VerifyReport | null }>(`/api/items/${target}/verify`);
+			const { report } = await get<{ report: VerifyStatus | null }>(`/api/items/${target}/verify`);
 			if (target !== id) return;
 			verify = report ? verifyView(report) : null;
-			kluster = klusterView(report?.kluster, resolve('/ops/deployments'));
+			const evidence = report && 'kluster' in report ? report.kluster : undefined;
+			kluster = klusterView(evidence, resolve('/ops/deployments'));
 		} catch (e) {
 			if (target === id) verifyError = e instanceof Error ? e.message : String(e);
 		}
@@ -1279,6 +1285,13 @@
 			</h2>
 			{#if verifyError}
 				<p class="text-muted" data-testid="verify-error"><LogText text={verifyError} /></p>
+			{:else if verify && !verify.reported}
+				<p data-testid="verify-summary">
+					<span class="font-medium text-muted">{verify.outcome}</span>.
+				</p>
+				{#if verify.running}
+					<p class="mt-1 text-ink" data-testid="verify-running">{verify.running}</p>
+				{/if}
 			{:else if verify}
 				<p data-testid="verify-summary">
 					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}
@@ -1287,6 +1300,12 @@
 					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at
 					{localTime(verify.ranAt)}, in {verify.duration}.
 				</p>
+				{#if verify.moved}
+					<p class="mt-1 font-medium text-warn" data-testid="verify-moved">{verify.moved}</p>
+				{/if}
+				{#if verify.running}
+					<p class="mt-1 text-ink" data-testid="verify-running">{verify.running}</p>
+				{/if}
 				<ul class="mt-2 space-y-1">
 					{#each verify.rows as row, i (i)}
 						<li data-testid="verify-step">
@@ -1583,6 +1602,11 @@
 							{/each}
 						</ul>
 					</div>
+				{/if}
+				{#if preview.verify_running_why}
+					<p class="mb-2 text-muted" data-testid="preview-verify-running">
+						{preview.verify_running_why}
+					</p>
 				{/if}
 				{#if blockers.length}
 					<div
