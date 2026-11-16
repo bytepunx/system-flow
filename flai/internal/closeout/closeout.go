@@ -18,6 +18,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
@@ -102,6 +103,10 @@ type Job struct {
 	All     bool      `json:"all,omitempty"`
 	Fresh   bool      `json:"fresh,omitempty"`
 	Started time.Time `json:"started"`
+	// Head is the worktree's head when the job's run began, written once it
+	// is read, before the close-out starts; "" until then, when it could not
+	// be read, and in a job written before S-0799.
+	Head string `json:"head,omitempty"`
 	// Ended and the rest are set once the job ended: ExitCode is the
 	// close-out's, -1 when it could not run or was interrupted; Commit is
 	// the worktree's head at the end; DurationMS is how long it ran.
@@ -115,6 +120,86 @@ type Job struct {
 
 // Running reports whether the job has not ended.
 func (j Job) Running() bool { return j.Ended.IsZero() }
+
+// The steps of a close-out as its log shows them, in the order they run,
+// named as the close-out's last line names the step it stopped at; after
+// StepSync the next round begins again at StepVerify (ADR-0156).
+const (
+	// StepVerify is flai verify, from the rebase to the last tier.
+	StepVerify = "flai verify"
+	// StepCommit is the commit of what is outstanding.
+	StepCommit = "commit"
+	// StepSyncCheck is flai verify --sync-only.
+	StepSyncCheck = "the sync check"
+	// StepSync is flai stream sync once main moved, before the next round.
+	StepSync = "flai stream sync"
+)
+
+// Progress is how far a story's running close-out job has got.
+type Progress struct {
+	// ID is the job's id.
+	ID string `json:"id"`
+	// Started is when the job started.
+	Started time.Time `json:"started"`
+	// Head is the worktree's head when its run began; "" while the job has
+	// not written it yet and in a job written before S-0799.
+	Head string `json:"head,omitempty"`
+	// Step is the step the close-out is on, one of StepVerify, StepCommit,
+	// StepSyncCheck, and StepSync, or "" when its log cannot say.
+	Step string `json:"step,omitempty"`
+}
+
+// Running is the progress of story's close-out job under the project's cache
+// dir and true while the job runs, or false with no error when the story has
+// had no job or its job ended. The step is read from the job's log, from the
+// lines the close-out script, and flai serve's close-out of a container
+// story, print as each step begins. flai verify prints its steps only once
+// it ended, so the log cannot say which of verify's own steps runs, and the
+// step is StepVerify throughout. Step is "" when the log has no such line
+// yet: before the verify starts, when the log is not there, and for the whole
+// of a close-out that is flai serve's own flai verify, run where the
+// worktree has no close-out script.
+func Running(cacheDir, story string) (Progress, bool, error) {
+	j, ok, err := ReadJob(cacheDir, story)
+	if err != nil || !ok || !j.Running() {
+		return Progress{}, false, err
+	}
+	p := Progress{ID: j.ID, Started: j.Started, Head: j.Head}
+	path := LogPath(cacheDir, story)
+	data, err := os.ReadFile(path)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+	case err != nil:
+		return Progress{}, false, fmt.Errorf("read the log of close-out job %s at %s: %w; check that the project's .flai-cache is readable", j.ID, path, err)
+	default:
+		p.Step = stepOf(string(data), story)
+	}
+	return p, true, nil
+}
+
+// stepOf is the step story's close-out is on by its log: the step the last
+// line that begins one names, StepCommit once flai verify said it passed
+// every step, or "" when no line says.
+func stepOf(log, story string) string {
+	step := ""
+	for line := range strings.Lines(log) {
+		line = strings.TrimRight(line, "\r\n")
+		switch {
+		case strings.HasPrefix(line, "close-out: flai verify "+story+" --sync-only"):
+			step = StepSyncCheck
+		case strings.HasPrefix(line, "close-out: flai verify "+story+" "):
+			step = StepVerify
+		case line == "close-out: commit":
+			step = StepCommit
+		case strings.HasPrefix(line, "close-out: main moved during the run; flai stream sync "+story):
+			step = StepSync
+		case step == StepVerify && strings.HasPrefix(line, "verify: "+story+" passed every step"):
+			// the commit logs a line only when something is outstanding
+			step = StepCommit
+		}
+	}
+	return step
+}
 
 // Wait is how long Ask waits for flai serve.
 type Wait struct {

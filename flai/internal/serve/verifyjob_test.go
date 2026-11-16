@@ -267,6 +267,34 @@ func TestACloseOutRequestRunsAJobThatEndsWithAVerifiedEvent(t *testing.T) {
 	}
 }
 
+// I-0384: a running job's file names the head it runs at, which closeout
+// answers while it runs, and the ended job keeps it beside the head it ended
+// at.
+func TestARunningJobsFileHoldsTheHeadItRunsAt(t *testing.T) {
+	t.Parallel()
+	lab := newVerifyLab(t, true)
+	lab.start()
+	a := lab.ask(closeout.Request{Message: "close out"})
+	waitFor(t, "the running job's head", func() bool {
+		job, ok, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+		return err == nil && ok && job.Running() && job.Head == "head-a"
+	})
+	p, ok, err := closeout.Running(lab.repo.CacheDir(), lab.story)
+	if err != nil || !ok || p.ID != a.Job || p.Head != "head-a" || p.Started.IsZero() {
+		t.Errorf("the running job's progress: %+v %v %v", p, ok, err)
+	}
+	lab.write("next-head", "head-b\n")
+	lab.release()
+	lab.awaitVerified(1)
+	job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+	if err != nil || job.Running() || job.Head != "head-a" || job.Commit != "head-b" {
+		t.Errorf("the ended job's heads: %+v %v", job, err)
+	}
+	if _, ok, err := closeout.Running(lab.repo.CacheDir(), lab.story); ok || err != nil {
+		t.Errorf("an ended job is not running: %v %v", ok, err)
+	}
+}
+
 // ADR-0229 §3: a close-out that exits non-zero is stopped at the step its own
 // verify run names, journaled failed.
 func TestACloseOutThatStopsIsStoppedAtTheStepTheRecordNames(t *testing.T) {

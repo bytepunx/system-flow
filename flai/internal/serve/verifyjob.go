@@ -349,12 +349,18 @@ func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, [
 	return argv, nil, nil
 }
 
-// runJob runs job's close-out, body, in worktree for at most the pass's
-// limit, its output in its log, then ends it. When ctx ends first, the
-// process group is stopped and the job left running in its state, for the
-// next flai serve to end interrupted.
+// runJob writes the head job runs at in its state, runs its close-out, body,
+// in worktree for at most the pass's limit, its output in its log, then ends
+// it. When ctx ends first, the process group is stopped and the job left
+// running in its state, for the next flai serve to end interrupted.
 func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job closeout.Job, body func(context.Context, io.Writer) (int, error)) {
 	before := p.head(worktree)
+	// the head it runs at, so that a reader can tell a running job at a new
+	// head from the report of one before it (I-0384)
+	job.Head = before
+	if err := closeout.WriteJob(dir, job); err != nil {
+		p.o.Logger.Warn("close-out job's head not written", "component", "serve", "root", p.e.Root, "story", job.Story, "job_id", job.ID, "err", err.Error())
+	}
 	jctx, cancel := context.WithTimeout(ctx, p.limit)
 	defer cancel()
 	code := -1
