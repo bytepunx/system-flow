@@ -64,10 +64,11 @@ type AgentState struct {
 const pastRuns = 20
 
 // keep is past with was, the run a new one replaces, put first and the
-// oldest let go beyond pastRuns; past as it is when was is nil or is that
-// new run.
+// oldest let go beyond pastRuns; past as it is when was is nil, is that new
+// run, or is a run held for its image job, which never ran: its replacement,
+// the start made again, takes its place in the one write (S-0795).
 func keep(past []*AgentRun, was, r *AgentRun) []*AgentRun {
-	if was == nil || was.same(r) {
+	if was == nil || was.same(r) || was.imageHeld() {
 		return past
 	}
 	out := append([]*AgentRun{was}, past...)

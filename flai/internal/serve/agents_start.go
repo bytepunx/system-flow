@@ -469,7 +469,8 @@ func (l *launcher) goOnDue(ctx context.Context) {
 // serve stopped first. It reports whether the budget state held it, so that
 // it stays held. A run that another start or the operator's stop has
 // replaced since is left as it is. The held run, once the start made again
-// has replaced it, is kept among no past runs, since it never ran; a start
+// has replaced it, is kept among no past runs, since it never ran: put
+// leaves it out in the write that records the start (keep, S-0795); a start
 // that recorded nothing fails it, so that no run stays held with no start to
 // go on.
 func (l *launcher) goOn(ctx context.Context, h *imageHold) (budgetHeld bool) {
@@ -477,7 +478,6 @@ func (l *launcher) goOn(ctx context.Context, h *imageHold) (budgetHeld bool) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	if cur := st.of(&h.run); !cur.same(&h.run) || !cur.imageHeld() {
 		heldRuns.Delete(heldKey(l.entry.Root, &h.run))
-		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { dropPast(s, &h.run) })
 		l.log("held agent start dropped: its run was replaced or stopped", append(said, "job_id", h.job.ID())...)
 		return false
 	}
@@ -499,21 +499,9 @@ func (l *launcher) goOn(ctx context.Context, h *imageHold) (budgetHeld bool) {
 			failed.Error = fmt.Sprintf("flai serve did not make the start once the image job %s ended", h.job.ID())
 			failed.Why = "could not be started: " + failed.Error
 			s.put(&failed)
-			return
 		}
-		dropPast(s, &h.run)
 	})
 	return false
-}
-
-// dropPast takes held, a run that waited for its image job and was replaced
-// by the start made again, out of the past runs s keeps of each role.
-func dropPast(s *AgentState, held *AgentRun) {
-	drop := func(past []*AgentRun) []*AgentRun { return slices.DeleteFunc(slices.Clone(past), held.same) }
-	s.PastPlans, s.PastOrchestrators, s.PastAnalyzers, s.PastCurators = drop(s.PastPlans), drop(s.PastOrchestrators), drop(s.PastAnalyzers), drop(s.PastCurators)
-	for name, past := range s.PastRoles {
-		s.PastRoles[name] = drop(past)
-	}
 }
 
 // heldOrphan fails run, a run recorded as waiting for its image job that no

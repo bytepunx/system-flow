@@ -2089,6 +2089,39 @@ func TestEveryRolesEarlierRunsAreKept(t *testing.T) {
 	}
 }
 
+// S-0795, I-0369: a run held for its image job (PID 0) that its start
+// replaces is kept among no role's past runs, in the one put that records the
+// start, so that no reader between two writes sees it there; an earlier run
+// that ran is still kept.
+func TestAHeldRunItsStartReplacesIsNoPastRun(t *testing.T) {
+	kinds := map[string]AgentRun{
+		"planner":      {Item: "E-0001", Agent: "planner-E-0001"},
+		"orchestrator": {Agent: "orchestrator"},
+		"analyzer":     {Agent: "analyzer", Focus: "all"},
+		"curator":      {Agent: "curator", Role: conventions.RoleCurate},
+		"reviewer":     {Item: "S-0001", RoleName: "reviewer", Role: "review", Action: "review"},
+	}
+	for name, kind := range kinds {
+		var s AgentState
+		earlier := kind
+		earlier.Started, earlier.Ended, earlier.PID, earlier.Outcome = "2026-11-16T00:00:00Z", "2026-11-16T00:01:00Z", 7, OutcomeWorked
+		s.put(&earlier)
+		held := kind
+		held.Started, held.ImageJob, held.ImageHeld = "2026-11-16T00:02:00Z", "job-1", true
+		s.put(&held)
+		start := held
+		start.ImageHeld, start.PID = false, 42
+		s.put(&start)
+		past := map[string][]*AgentRun{"planner": s.PastPlans, "orchestrator": s.PastOrchestrators, "analyzer": s.PastAnalyzers, "curator": s.PastCurators, "reviewer": s.PastRoles["reviewer"]}[name]
+		if len(past) != 1 || !past[0].same(&earlier) {
+			t.Errorf("%s: past runs after the held run's start = %+v, want only the earlier run", name, past)
+		}
+		if cur := s.of(&start); !cur.same(&start) {
+			t.Errorf("%s: newest run = %+v, want the start", name, cur)
+		}
+	}
+}
+
 // S-0420: RoleStates gives each role the files name, by name, with its file's
 // verb, path, items, and trigger kinds, its action's state, its newest run
 // under way, every run under way, its ended runs newest first and at most
