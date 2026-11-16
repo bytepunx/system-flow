@@ -4,10 +4,10 @@ title: "S-0747 cannot be enqueued: its branch is 51 commits behind main, and the
 anchor:
   path: wip/kanban/stories/S-0747-the-host-api-s-writes-kluster-components-and-people-methods-act-on-a-state-s.md
   item: S-0747
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-15T21:09:45Z
-updated: 2026-11-15T21:09:45Z
+updated: 2026-11-16T00:30:54Z
 ---
 
 # TH-1228 S-0747 cannot be enqueued: its branch is 51 commits behind main, and the close-out stops at sync
@@ -29,3 +29,9 @@ On wip/kanban/stories/S-0747-the-host-api-s-writes-kluster-components-and-people
 **Why it matters:** review is full (5 of 5), which starves the board (TH-1224).
 
 Rebasing the story branch is the story's work, not mine.
+
+### 2026-11-16T00:28:30Z alex
+done
+
+### 2026-11-16T00:30:54Z orchestrator
+Resolved: The operator synced S-0747: story/S-0747 at f88f6cd now contains main. I asked for its close-out again (job S-0747-20261116T003049Z); I enqueue it once that passes at the head.

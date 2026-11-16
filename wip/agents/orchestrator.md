@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2210.2999
-accrued_seconds: 1568680
-tasks_completed: 3653
-last_run: 2026-11-15T23:18:39Z
+accrued_cost: 2211.0396
+accrued_seconds: 1568858
+tasks_completed: 3658
+last_run: 2026-11-16T00:31:33Z
 ---
 
 # Orchestrator activity
@@ -25606,6 +25606,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.0975 USD, estimated
+
+### 2026-11-16T00:29:03Z
+
+- Summary: TH-1226/TH-1227: operator synced S-0739 (head 8d1e1ba) and S-0742 (head 84ee285) with main; resolved both threads and asked for fresh close-outs (jobs S-0739-20261116T002837Z, S-0742-20261116T002838Z). Enqueue under accept_reviews waits on their verdicts.
+- Items: S-0739, S-0742
+- Seconds: 51
+- Cost: 0.1330 USD, estimated
+
+### 2026-11-16T00:29:51Z
+
+- Summary: S-0742 left in review: close-out at 84ee285 stopped at vet (orchestrate_reasons_test.go:578 calls reasonsOf in its old form after the sync). Opened TH-1233 recommending it go back to in-progress. S-0739's close-out is still running; a later run enqueues it.
+- Items: S-0742, S-0739
+- Seconds: 48
+- Cost: 0.1095 USD, estimated
+
+### 2026-11-16T00:30:13Z
+
+- Summary: Your sync cleared the behind-main problem on both stories, and I've closed TH-1226 and TH-1227. Neither story is in the merge queue yet: S-0742 now fails a test step, and S-0739's re-run hasn't finished.
+- Items: none
+- Seconds: 22
+- Cost: 0.1919 USD, estimated
+
+### 2026-11-16T00:30:56Z
+
+- Summary: TH-1228 answered (operator synced S-0747; story/S-0747 at f88f6cd contains main): resolved my thread, and asked for S-0747's close-out at the new head, job S-0747-20261116T003049Z. Left in review until the verdict; a later run verifies and enqueues it.
+- Items: S-0747, TH-1228
+- Seconds: 20
+- Cost: 0.1043 USD, estimated
+
+### 2026-11-16T00:31:33Z
+
+- Summary: I've closed TH-1228. S-0747 is not in the merge queue yet, because its new close-out run is still going.
+- Items: none
+- Seconds: 37
+- Cost: 0.2010 USD, estimated
 
 ## Refusals
 

@@ -3,10 +3,10 @@ id: S-0793
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-15T21:17:19Z
-updated: 2026-11-15T21:34:05Z
+updated: 2026-11-16T00:36:08Z
 transitions:
   - to: ready
     at: 2026-11-15T21:17:21Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-15T21:34:05Z
     by: agent-S-0793
+  - to: done
+    at: 2026-11-16T00:36:08Z
+    by: orchestrator
 blocked:
   - from: 2026-11-15T21:32:20Z
     until: 2026-11-15T21:32:46Z
@@ -85,3 +88,15 @@ Publish what is accepted and not yet released, by the project's release policy.
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
 
 Published on the retry TH-1230 asked for (D-0603): flai 1.98.0 → 1.99.0, a minor bump from S-0741, tag `flai/v1.99.0` on the release commit `a299ee4dc chore: publish flai 1.99.0`, pushed with the branch. The first run had exited 1 on a briefly held `.git/index.lock`, recorded in I-0359.
+
+### Accepted by the orchestrator
+
+- Verified: 612141ec7fccf5f3e65c7a72247ce11f28dd4ce4
+- Batch: 20261116-002222
+- Enqueued verified: 48b3a1532be9af9642b368f5dc68b060a4b968e6
+- At: 2026-11-16T00:36:08Z
+
+Verdict: S-0793 meets all three criteria at 48b3a15; the close-out passed every step there.
+- 1: T-3384 done
+- 2: T-3385 done
+- 3: T-3386 done

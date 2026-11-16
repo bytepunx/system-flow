@@ -4,10 +4,10 @@ title: "S-0742 cannot be enqueued: its branch is 51 commits behind main, and the
 anchor:
   path: wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-again-and-finds-its-reasons.md
   item: S-0742
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-15T21:09:43Z
-updated: 2026-11-15T21:09:43Z
+updated: 2026-11-16T00:28:54Z
 ---
 
 # TH-1227 S-0742 cannot be enqueued: its branch is 51 commits behind main, and the close-out stops at sync
@@ -29,3 +29,9 @@ On wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-a
 **Why it matters:** review is full (5 of 5), which starves the board (TH-1224).
 
 Rebasing the story branch is the story's work, not mine.
+
+### 2026-11-16T00:28:02Z alex
+done
+
+### 2026-11-16T00:28:54Z orchestrator
+Resolved: story/S-0742 now contains main (0 commits behind, head 84ee285). Close-out job S-0742-20261116T002838Z is running at that head; the queue takes the story once it passes.

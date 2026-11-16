@@ -4,10 +4,10 @@ title: "S-0739 cannot be enqueued: its branch is 37 commits behind main, and the
 anchor:
   path: wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-holds-order-and-promotion-read-a.md
   item: S-0739
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-15T21:09:40Z
-updated: 2026-11-15T21:09:40Z
+updated: 2026-11-16T00:28:53Z
 ---
 
 # TH-1226 S-0739 cannot be enqueued: its branch is 37 commits behind main, and the close-out stops at sync
@@ -29,3 +29,9 @@ On wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-hold
 **Why it matters:** review is full (5 of 5), which starves the board (TH-1224).
 
 Rebasing the story branch is the story's work, not mine.
+
+### 2026-11-16T00:27:35Z alex
+done
+
+### 2026-11-16T00:28:53Z orchestrator
+Resolved: story/S-0739 now contains main (0 commits behind, head 8d1e1ba). Close-out job S-0739-20261116T002837Z is running at that head; the queue takes the story once it passes.
