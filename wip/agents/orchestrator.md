@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2209.4172
-accrued_seconds: 1568433
-tasks_completed: 3645
-last_run: 2026-11-15T21:36:08Z
+accrued_cost: 2210.2999
+accrued_seconds: 1568680
+tasks_completed: 3653
+last_run: 2026-11-15T23:18:39Z
 ---
 
 # Orchestrator activity
@@ -25550,6 +25550,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1794 USD, estimated
+
+### 2026-11-15T21:47:16Z
+
+- Summary: Release due after S-0748's acceptance: release_evaluate met under threshold (count 1 at or over 1; value 94.42 USD/week under 1000). Started the publish formula with flai formula run publish --ready --autocommit: instance S-0794, ready, committed ffe1e0838.
+- Items: S-0794, S-0748
+- Seconds: 29
+- Cost: 0.0740 USD, estimated
+
+### 2026-11-15T21:48:03Z
+
+- Summary: TH-1231 (merge queue held on role files): left the flai serve notice unanswered as the rules say; opened TH-1232 on S-0748 telling the operator the cause is the host's flai 1.98.0 predating S-0748's role-file form, recommending S-0794's publish then flai host upgrade. Ordered ready by throughput: S-0794 rank 1 (no forecast duration).
+- Items: S-0748, S-0794
+- Seconds: 47
+- Cost: 0.0786 USD, estimated
+
+### 2026-11-15T21:48:25Z
+
+- Summary: I've handled both reasons, but the merge queue stays held until you upgrade the host's flai, and the release is stuck behind a full in-progress column.
+- Items: none
+- Seconds: 22
+- Cost: 0.1396 USD, estimated
+
+### 2026-11-15T22:39:34Z
+
+- Summary: Enqueued S-0790 at 697d56d, place 2 of 2 behind S-0793, under accept_reviews. The close-out passed at the branch head over main ffe1e08, the verifier matched both criteria to changed files, and the accept dry run showed no blockers. Cost of delay value is 5 USD/week and the forecast is 1h. The queue stays held by TH-1231's preflight: the role files cannot be parsed by host flai 1.99.0, as TH-1232 explains. My own prime failed the same way, so I worked from the start prompt.
+- Items: S-0790
+- Seconds: 40
+- Cost: 0.1947 USD, estimated
+
+### 2026-11-15T22:39:50Z
+
+- Summary: I added S-0790 to the merge queue, but it won't land until the merge queue's hold is cleared.
+- Items: none
+- Seconds: 16
+- Cost: 0.0960 USD, estimated
+
+### 2026-11-15T23:18:12Z
+
+- Summary: Enqueued S-0755 in the merge queue (3rd, behind S-0793 and S-0790) at ee46238 under accept_reviews: close-out passed at the branch head over main ffe1e08, the verifier matched all 6 criteria to changed files inside its touches, and the accept dry run showed no blocker. The queue stays held by TH-1231 (host flai 1.98.0 cannot parse S-0748's role files; TH-1232). My prime --role orchestrate fails on the same two files.
+- Items: S-0755
+- Seconds: 66
+- Cost: 0.2023 USD, estimated
+
+### 2026-11-15T23:18:22Z
+
+- Summary: ready-empty: promoted nothing. promote_candidates (throughput) lists no candidate: S-0241 is a draft held per TH-1165, and every E-0034 backlog story is held by after (S-0750 in progress; S-0739, S-0742, S-0747, S-0755 in review). The ready column is unchanged (S-0794), so there was nothing to reorder. E-0034 not replanned: flai plan --candidates lists it only for alex's TH-1201 entry, which confirms S-0736's acceptance and asks for no plan change, the same call as the earlier run.
+- Items: E-0034, S-0794
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-15T23:18:39Z
+
+- Summary: I added S-0755 to the merge queue, but nothing will land yet: the queue is held. I promoted nothing to ready, because no story qualifies.
+- Items: none
+- Seconds: 17
+- Cost: 0.0975 USD, estimated
 
 ## Refusals
 

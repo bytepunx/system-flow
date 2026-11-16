@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.42 - 2026-11-16
+
+- S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it (patch).
 - S-0748 The baseline orchestrator and planner role files write the state a move goes to as `when: {to: <state>}`, `{event: moved, when: {to: review}}`, `{event: moved, when: {to: backlog}}`, and `{call: item_move, when: {to: backlog}}` and `{call: flai move, when: {to: backlog}}`, with the same triggers and grants as before; a project's role file that names `to-review` or `to-backlog` keeps working, read as `{to: review}` and `{to: backlog}` (patch, ADR-0304).
 
 ## 1.1.41 - 2026-11-14

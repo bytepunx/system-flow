@@ -3,23 +3,37 @@ id: T-3383
 type: task
 nature: improvement
 title: Close I-0375 with what fixed it
-status: ready
+status: done
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:57Z
-updated: 2026-11-15T21:18:47Z
+updated: 2026-11-15T22:08:12Z
 transitions:
   - to: ready
     at: 2026-11-15T21:18:47Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-15T22:08:06Z
+    by: agent-S-0790
+  - to: done
+    at: 2026-11-15T22:08:12Z
+    by: agent-S-0790
 stream: S-0790
 tags: [issues]
 touches: [design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-3382]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 6
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1062
+      cache_read: 277428
+      cache_write: 11660
+      cost: 0.148
   strategic:
     - kind: orchestrator
       seconds: 3

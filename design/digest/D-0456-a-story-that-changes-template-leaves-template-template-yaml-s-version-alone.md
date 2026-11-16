@@ -2,7 +2,7 @@
 id: D-0456
 title: "A story that changes template/ leaves template/template.yaml's version alone: flai release bumps it at publish, and the story's changelog lines go under ## Unreleased"
 kind: decision
-sources: [S-0421, S-0524, T-1773, S-0424]
+sources: [S-0421, S-0524, T-1773, S-0424, S-0748]
 topics: [template, planning, git]
 paths: [template/template.yaml, template/CHANGELOG.md]
 date: 2026-11-02
@@ -19,7 +19,8 @@ A story, or a task a planner writes for it, does not bump the `version` line of 
 - S-0421, against T-1773's Work, which asked for a bump: "`template/template.yaml` is not bumped, though T-1773's Work asked for it: `flai release` bumps it at publish (the last five bumps are publish commits), and the changelog line goes under `## Unreleased` (git.md)."
 - S-0524: "`template.yaml` is bumped at publish, not here."
 - S-0424, citing this entry: "`template/template.yaml` is left alone: the version is set at publish (D-0456)."
+- S-0748: "template/template.yaml is not bumped: its version moves only in publish commits (chore: publish ..., template 1.1.41), and a story writes under ## Unreleased in template/CHANGELOG.md alone (git.md)."
 
 Every recent commit that changes `template/template.yaml` is a `chore: publish ...` commit. A planner should not write a version bump into a task's Work. `docs/contributors/template.md` § Versioning says the release tooling bumps the version in this monorepo. The convention does not yet say a story leaves it alone, which is why D-0410 recorded earlier stories doing both.
 
-Sources: the Decisions of wip/archive/agents/S-0421.md, S-0524.md, and S-0424.md; T-1773.
+Sources: the Decisions of wip/archive/agents/S-0421.md, S-0524.md, S-0424.md, and S-0748.md; T-1773.

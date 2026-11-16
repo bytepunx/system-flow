@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-15T21:30:58Z
+updated: 2026-11-15T21:54:33Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:20Z
@@ -17,6 +17,9 @@ transitions:
     by: agent-S-0750
 blocked:
   - from: 2026-11-15T21:30:58Z
+    until: 2026-11-15T21:53:40Z
+    reason: awaiting the operator on TH-1223
+  - from: 2026-11-15T21:54:33Z
     reason: awaiting the operator on TH-1223
 tags: [cli]
 topics: [cli, analysis]
@@ -29,19 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3703
+  seconds: 3733
   priced_by: harness
   turns:
     - day: 2026-11-15
       ceremony: 1
-      work: 83
+      work: 89
   models:
     - model: claude-opus-5-5
-      input: 398
-      output: 137056
-      cache_read: 33728844
-      cache_write: 1137124
-      cost: 16.1248
+      input: 414
+      output: 139101
+      cache_read: 36079354
+      cache_write: 1146785
+      cost: 16.7132
   strategic:
     - kind: orchestrator
       seconds: 78

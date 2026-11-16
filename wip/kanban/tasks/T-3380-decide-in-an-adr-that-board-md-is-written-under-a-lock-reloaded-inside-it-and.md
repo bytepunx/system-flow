@@ -22,9 +22,17 @@ stream: S-0790
 tags: [design]
 touches: [design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 77
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 6195
+      cache_read: 1618334
+      cache_write: 68019
+      cost: 0.8634
   strategic:
     - kind: orchestrator
       seconds: 4

@@ -3,10 +3,10 @@ id: S-0790
 type: story
 nature: improvement
 title: "flai check finds `board.order` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-15T01:56:43Z
-updated: 2026-11-15T21:19:30Z
+updated: 2026-11-15T22:38:19Z
 transitions:
   - to: ready
     at: 2026-11-15T21:11:49Z
@@ -14,17 +14,31 @@ transitions:
   - to: in-progress
     at: 2026-11-15T21:16:43Z
     by: agent-S-0790
+  - to: review
+    at: 2026-11-15T22:38:19Z
+    by: agent-S-0790
 tags: [cli]
-touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, design/system/workflow.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md, design/adrs/0306-every-write-of-board-md-takes-one-board-lock-reads-the-board-again-inside-it.md]
+touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, design/system/workflow.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md, design/adrs/0306-every-write-of-board-md-takes-one-board-lock-reads-the-board-again-inside-it.md, design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4919
+  priced_by: harness
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 250
+      output: 70556
+      cache_read: 18430296
+      cache_write: 774631
+      cost: 9.8326
   strategic:
     - kind: planner
       seconds: 568
@@ -43,21 +57,21 @@ usage:
           cache_write: 188685
           cost: 3.4797
     - kind: orchestrator
-      seconds: 195
+      seconds: 235
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 497
-          cache_read: 1797460
-          cache_write: 289231
-          cost: 0.6308
+          input: 70
+          output: 601
+          cache_read: 2289323
+          cache_write: 352799
+          cost: 0.7991
         - model: claude-sonnet-5-5
-          input: 4
-          output: 685
-          cache_read: 20426
-          cache_write: 25715
-          cost: 0.0369
+          input: 8
+          output: 718
+          cache_read: 34414
+          cache_write: 45012
+          cost: 0.0633
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -83,8 +97,8 @@ finalized:
 This story remediates [I-0375](../../../design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md), "flai check finds `board.order` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0375 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0375 is closed with `flai issue close I-0375 --reason` saying what fixed it
+- [x] The cause I-0375 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0375 is closed with `flai issue close I-0375 --reason` saying what fixed it
 
 ## Tasks
 - T-3380 Decide in an ADR that board.md is written under a lock, reloaded inside it, and normalised on every write

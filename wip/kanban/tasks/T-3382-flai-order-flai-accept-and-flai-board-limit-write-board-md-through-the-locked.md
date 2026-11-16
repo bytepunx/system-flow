@@ -3,23 +3,37 @@ id: T-3382
 type: task
 nature: improvement
 title: flai order, flai accept, and flai board limit write board.md through the locked update
-status: ready
+status: done
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:50Z
-updated: 2026-11-15T21:18:46Z
+updated: 2026-11-15T22:07:42Z
 transitions:
   - to: ready
     at: 2026-11-15T21:18:46Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-15T21:51:05Z
+    by: agent-S-0790
+  - to: done
+    at: 2026-11-15T22:07:42Z
+    by: agent-S-0790
 stream: S-0790
 tags: [cli]
-touches: [flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go]
+touches: [flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go]
 after: [T-3381]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 997
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 13365
+      cache_read: 3491243
+      cache_write: 146738
+      cost: 1.8626
   strategic:
     - kind: orchestrator
       seconds: 3

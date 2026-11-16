@@ -20,16 +20,16 @@ tags: [cli]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 3530
+  seconds: 3560
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 207
-      output: 71342
-      cache_read: 17556904
-      cache_write: 591908
-      cost: 8.3935
+      input: 228
+      output: 76680
+      cache_read: 19888783
+      cache_write: 632166
+      cost: 9.2132
 ---
 # T-3236 Write and accept the metrics ADR that defines lead, cycle, queue, and review time and time in state as readings of the workflow's timers
 

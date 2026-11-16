@@ -9,7 +9,7 @@ date: 2026-11-13
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0793, T-3386, TH-1230]
 ---
 
 # D-0603 A publish step that exits 1 because another git process briefly held the main checkout's index lock, with nothing tagged, committed, or pushed, is unblocked and run again once; a second failure blocks and asks again, never a retry loop

@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 618
-      cache_read: 152060
-      cache_write: 5127
-      cost: 0.0727
+      output: 587
+      cache_read: 152235
+      cache_write: 4839
+      cost: 0.0705
 ---
 # T-3242 metrics.md defines lead, cycle, queue, and review time and time in state from their timers and links the ADR
 

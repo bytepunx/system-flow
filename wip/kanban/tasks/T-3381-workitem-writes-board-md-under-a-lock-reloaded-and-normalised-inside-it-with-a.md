@@ -3,11 +3,11 @@ id: T-3381
 type: task
 nature: improvement
 title: workitem writes board.md under a lock, reloaded and normalised inside it, with a test that reproduces I-0375's lost update
-status: in-progress
+status: done
 parent: S-0790
 owner: alex
 created: 2026-11-15T21:11:42Z
-updated: 2026-11-15T21:20:22Z
+updated: 2026-11-15T21:50:43Z
 transitions:
   - to: ready
     at: 2026-11-15T21:18:46Z
@@ -15,14 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-15T21:20:22Z
     by: agent-S-0790
+  - to: done
+    at: 2026-11-15T21:50:43Z
+    by: agent-S-0790
 stream: S-0790
 tags: [cli]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go]
 after: [T-3380]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1821
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 11000
+      cache_read: 2873274
+      cache_write: 120765
+      cost: 1.5329
   strategic:
     - kind: orchestrator
       seconds: 3
