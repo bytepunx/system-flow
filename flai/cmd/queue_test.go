@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
@@ -110,6 +111,33 @@ func TestQueueListsTheEligibleThenEveryReasonOfTheOthers(t *testing.T) {
 	}
 	if q.Batch == nil || strings.Join(q.Batch.Stories, " ") != "S-0001" || q.Batch.Step != "verify" || len(q.Outcomes) != 1 {
 		t.Errorf("batch and outcomes: %+v %+v", q.Batch, q.Outcomes)
+	}
+
+	// I-0384: while a close-out job of S-0002 runs, the queue names it, its
+	// step, and its head in place of the missing result.
+	cache := filepath.Join(root, ".flai-cache")
+	dir := closeout.Dir(cache)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := closeout.WriteJob(dir, closeout.Job{ID: "S-0002-j1", Story: "S-0002", By: "agent", Started: at, Head: "0123456789abcdef"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(closeout.LogPath(cache, "S-0002"), []byte("close-out: flai verify S-0002 --all\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runIn(t, root, "queue")
+	want := "       verify_running: S-0002 has no flai verify result yet, and close-out job S-0002-j1 runs at 0123456789ab, at its step flai verify: S-0002 is eligible once it passes\n"
+	if code != 0 || !strings.Contains(out, want) || strings.Contains(out, "verify_missing") {
+		t.Errorf("flai queue with a close-out running: %d %s\nwant %q in:\n%s", code, errOut, want, out)
+	}
+	js, errOut, code = runIn(t, root, "queue", "--json")
+	q = mergequeue.Queue{}
+	if code != 0 || json.Unmarshal([]byte(js), &q) != nil || len(q.Ineligible) != 1 {
+		t.Fatalf("flai queue --json with a close-out running: %d %s %s", code, js, errOut)
+	}
+	if r := q.Ineligible[0].Reasons[0]; r.Kind != mergequeue.KindVerifyRunning || r.Job == nil || r.Job.ID != "S-0002-j1" || r.Job.Step != closeout.StepVerify || r.Job.Head != "0123456789abcdef" {
+		t.Errorf("reason with a close-out running: %+v %+v", r, r.Job)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -267,11 +268,32 @@ func TestEachOtherStoryInReviewHasEveryReasonItIsNotEligible(t *testing.T) {
 	all, _ := story(t, repo, "Everything", []bool{false}, t0.Add(30*time.Minute))
 	openThread(t, repo, all.ID, "Open")
 
+	// I-0384: a sync moved the head past a failed result, and the close-out
+	// job runs at the new head; the same with no job; and a job running on a
+	// story with no result, at the head of its branch, as it has not written
+	// its own.
+	syncing, _ := story(t, repo, "Syncing", []bool{true}, t0.Add(10*time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: syncing.ID, Commit: "3333", Passed: false, StoppedAt: "sync"}); err != nil {
+		t.Fatal(err)
+	}
+	g.head(syncing.ID, "4444")
+	runningJob(t, repo, syncing.ID, "job-1", "4444", "close-out: flai verify "+syncing.ID+" --all\n")
+
+	moved, _ := story(t, repo, "Moved", []bool{true}, t0.Add(11*time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: moved.ID, Commit: "5555", Passed: false, StoppedAt: "sync"}); err != nil {
+		t.Fatal(err)
+	}
+	g.head(moved.ID, "6666")
+
+	first, _ := story(t, repo, "First close-out", []bool{true}, t0.Add(12*time.Hour))
+	g.head(first.ID, "7777")
+	runningJob(t, repo, first.ID, "job-2", "", "")
+
 	q := compute(t, g, repo)
 	if got := ids(q.Eligible); !slices.Equal(got, []string{ok.ID}) {
 		t.Errorf("eligible %v, want only %s", got, ok.ID)
 	}
-	wantOrder := []string{all.ID, missing.ID, failed.ID, stale.ID, noBranch.ID, unticked.ID, threaded.ID, undone.ID, broken.ID}
+	wantOrder := []string{all.ID, missing.ID, failed.ID, stale.ID, noBranch.ID, unticked.ID, threaded.ID, undone.ID, broken.ID, syncing.ID, moved.ID, first.ID}
 	if got := ids(q.Ineligible); !slices.Equal(got, wantOrder) {
 		t.Fatalf("ineligible %v, want %v", got, wantOrder)
 	}
@@ -293,6 +315,9 @@ func TestEachOtherStoryInReviewHasEveryReasonItIsNotEligible(t *testing.T) {
 		{threaded.ID, []string{KindThreadOpen}, []string{"threads " + onStory + ", " + onTask + " are not resolved"}},
 		{undone.ID, []string{KindUndoneMain}, []string{"a.go, b.go", "never batches", "ADR-0155"}},
 		{broken.ID, []string{KindUnreadable}, []string{"cannot read the last flai verify result", "delete it"}},
+		{syncing.ID, []string{KindVerifyRunning}, []string{"failed at its step sync, at 3333", "close-out job job-1 runs at 4444, at its step flai verify", syncing.ID + " is eligible once it passes"}},
+		{moved.ID, []string{KindVerifyFailed}, []string{"failed at its step sync, at 5555, before the head of story/" + moved.ID + " moved to 6666", "flai verify " + moved.ID + " --job"}},
+		{first.ID, []string{KindVerifyRunning}, []string{first.ID + " has no flai verify result yet, and close-out job job-2 runs at 7777: " + first.ID + " is eligible once it passes"}},
 	}
 	for _, c := range cases {
 		e := byID[c.story]
@@ -317,6 +342,33 @@ func TestEachOtherStoryInReviewHasEveryReasonItIsNotEligible(t *testing.T) {
 	}
 	if byID[stale.ID].Head != "dddd" || byID[missing.ID].Head != "" {
 		t.Errorf("heads %q and %q, want the stale story's head and none for the unverified", byID[stale.ID].Head, byID[missing.ID].Head)
+	}
+	if job := byID[syncing.ID].Reasons[0].Job; job == nil || job.ID != "job-1" || job.Head != "4444" || job.Step != closeout.StepVerify || !job.Started.Equal(t0) {
+		t.Errorf("syncing job %+v, want job-1 at 4444 on its step flai verify", job)
+	}
+	if job := byID[first.ID].Reasons[0].Job; job == nil || job.ID != "job-2" || job.Head != "7777" || job.Step != "" {
+		t.Errorf("first job %+v, want job-2 at the branch's head 7777 with no step", job)
+	}
+	if job := byID[moved.ID].Reasons[0].Job; job != nil {
+		t.Errorf("moved job %+v, want none", job)
+	}
+}
+
+// runningJob writes a running close-out job id of story under repo's cache
+// dir, started at t0 at head, and, when log is not "", its log.
+func runningJob(t *testing.T, repo *workitem.Repo, story, id, head, log string) {
+	t.Helper()
+	dir := closeout.Dir(repo.CacheDir())
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := closeout.WriteJob(dir, closeout.Job{ID: id, Story: story, By: "agent", Started: t0, Head: head}); err != nil {
+		t.Fatal(err)
+	}
+	if log != "" {
+		if err := os.WriteFile(closeout.LogPath(repo.CacheDir(), story), []byte(log), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -627,7 +679,8 @@ func TestTheQueueCarriesTheWindow(t *testing.T) {
 // many stories are in review, where it ran a rev-parse for each story and two
 // more for the main branch. While no story in review has a passing flai
 // verify result, no head can be held back by the main checkout's dirt, and
-// it runs no git at all.
+// it reads only the heads, to tell a result from before the head moved
+// (I-0384); with no result and no close-out job, it runs no git at all.
 func TestTheQueuesGitDoesNotGrowWithTheStoriesInReview(t *testing.T) {
 	status := []string{"-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all"}
 	for _, n := range []int{1, 3, 6} {
@@ -664,6 +717,19 @@ func TestTheQueuesGitDoesNotGrowWithTheStoriesInReview(t *testing.T) {
 		calls = calls[:0]
 		for _, id := range stories {
 			if err := verify.SaveReport(repo, verify.Report{Story: id, Commit: "c0ffee" + id, Passed: false}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := ComputeAt(g, repo, t0); err != nil {
+			t.Fatal(err)
+		}
+		if len(calls) != 1 || !strings.HasPrefix(calls[0], "git for-each-ref ") {
+			t.Errorf("%d in review, none passed: the queue ran %q, want one git for-each-ref", n, calls)
+		}
+
+		calls = calls[:0]
+		for _, id := range stories {
+			if err := os.Remove(verify.ReportPath(repo, id)); err != nil {
 				t.Fatal(err)
 			}
 		}
