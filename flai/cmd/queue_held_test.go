@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
@@ -105,5 +106,39 @@ func TestQueueShowsThePreflightHoldAndTheLandingWaitingOnMain(t *testing.T) {
 	printQueue(&out, mergequeue.Queue{Mode: "local", Preflight: hold})
 	if want := "clean of these, and the queue resumes on its own; thread TH-0007\n"; !strings.Contains(out.String(), want) || strings.Contains(out.String(), "flai queue resume") {
 		t.Errorf("flai queue must name the thread, and no operator's hold, with %q:\n%s", want, out.String())
+	}
+}
+
+// S-0797 criterion 1, I-0382, ADR-0311: flai queue says a hold whose running
+// flai is behind main may be the installed flai's: it names the installed
+// flai, main's commits it lacks, the newest release, the remedy, and why the
+// second check did not settle it, and says the queue resumes once a look
+// finds main clean rather than once the files are fixed. --json carries the
+// cause as flai_behind.
+func TestQueueNamesTheInstalledFlaiWhenItMayBeWhatHolds(t *testing.T) {
+	t.Parallel()
+	since := time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC)
+	behind := &mergequeue.FlaiBehind{Behind: release.Behind{Running: "1.99.0", Commit: "4d5e6f7", By: "commit", From: "4d5e6f7", Main: "abc", Path: "flai", Commits: 3, Newest: "1.99.0",
+		Message: "flai 1.99.0, built from commit 4d5e6f7, lacks 3 commits main has under flai/ since that commit: publish the release with flai release --pending and install it with flai host upgrade"},
+		Why: "the manifest names no flai.command, a program that runs the flai main builds, so the preflight could not check main with a flai built from main"}
+	hold := &mergequeue.PreflightHold{Since: since, Main: "abc", Thread: "TH-0007", FlaiBehind: behind, Findings: []verify.FileFinding{
+		{Tier: mergequeue.PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "design/workflows/roles/planner.md", Rule: "roles.file", Message: "the role file has no roles"},
+	}}
+	var out bytes.Buffer
+	printQueue(&out, mergequeue.Queue{Mode: "local", Preflight: hold})
+	want := "held by the preflight since 2026-11-01T09:00:00Z: no batch is built until a look finds the main checkout clean of these, such as once the release below is installed, and the queue resumes on its own; thread TH-0007\n" +
+		"  design/workflows/roles/planner.md roles.file: the role file has no roles (flai-check)\n" +
+		"  the installed flai may be what finds these: flai 1.99.0, built from commit 4d5e6f7, lacks 3 commits main has under flai/ since that commit: publish the release with flai release --pending and install it with flai host upgrade\n" +
+		"  the newest flai release in main is 1.99.0\n" +
+		"  why main's flai did not settle it: the manifest names no flai.command, a program that runs the flai main builds, so the preflight could not check main with a flai built from main\n"
+	if !strings.HasPrefix(out.String(), want) {
+		t.Errorf("flai queue must start with %q:\n%s", want, out.String())
+	}
+	raw, err := json.Marshal(mergequeue.Queue{Mode: "local", Preflight: hold})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"flai_behind":{"running":"1.99.0","commit":"4d5e6f7","by":"commit"`) || !strings.Contains(string(raw), `"why":"the manifest names no flai.command`) {
+		t.Errorf("flai queue --json does not carry the cause as flai_behind:\n%s", raw)
 	}
 }

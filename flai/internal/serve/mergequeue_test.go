@@ -17,7 +17,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -1147,5 +1149,115 @@ func waitEntered(t *testing.T, f *fakeBatches) {
 	case <-f.entered:
 	case <-time.After(5 * time.Second):
 		t.Fatal("no batch began")
+	}
+}
+
+// ADR-0234: a hold that names no cause keeps the thread's words, asking the
+// operator to fix the files.
+func TestAHoldWithNoCauseKeepsTheThreadsWords(t *testing.T) {
+	hold := &mergequeue.PreflightHold{Main: "0123456789abcdef", Findings: []verify.FileFinding{
+		{Tier: mergequeue.PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "design/workflows/roles/planner.md", Rule: "roles.file", Message: "the role file has no roles"},
+	}}
+	want := "The merge queue's preflight found what a landing would fail on in the main checkout, at main's head `0123456789ab`:\n\n" +
+		"- `design/workflows/roles/planner.md`, `roles.file`: `the role file has no roles` (flai check)\n\n" +
+		"The queue builds no batch and runs no tier until these are fixed. It changes none of these files: they are yours. " +
+		"Fix them in the main checkout. The queue looks again as the main checkout changes and as main's head moves, " +
+		"and the look that finds main clean clears the hold, resolves this thread, and builds batches again, with nothing else asked of you."
+	if got := holdText(hold); got != want {
+		t.Errorf("holdText =\n%s\nwant\n%s", got, want)
+	}
+	if got := holdDetail(hold, "TH-0007"); strings.Contains(got, "behind") {
+		t.Errorf("holdDetail = %q, want no cause", got)
+	}
+}
+
+// behindHold is I-0382's hold: flai 1.99.0, built before main's change to the
+// role files, reports roles.file on a role file that is right, and main's
+// manifest names no flai.command to check it again with.
+func behindHold() *mergequeue.PreflightHold {
+	b := release.Behind{Running: "1.99.0", Commit: "4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e", By: "commit", From: "4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+		Main: "0123456789abcdef0123456789abcdef01234567", Path: "flai", Commits: 3, Newest: "1.99.0",
+		Message: "flai 1.99.0, built from commit 4d5e6f7, lacks 3 commits main has under flai/ since that commit: publish the release with flai release --pending and install it with flai host upgrade"}
+	return &mergequeue.PreflightHold{Since: time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC), Main: b.Main, Findings: []verify.FileFinding{
+		{Tier: mergequeue.PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "design/workflows/roles/planner.md", Rule: "roles.file", Message: "the role file has no roles"},
+	}, FlaiBehind: &mergequeue.FlaiBehind{Behind: b, Why: "the manifest names no flai.command, a program that runs the flai main builds, so the preflight could not check main with a flai built from main"}}
+}
+
+// S-0797 criterion 1, I-0382, ADR-0311: the thread on a hold whose running
+// flai is behind main, opened at the look that found the hold, says the
+// findings may be the installed flai's rather than the files': it names the
+// installed flai and its commit, how many of main's commits under the flai
+// sub-project it lacks and since what, the newest release, and why the second
+// check did not settle it, gives the remedy, and does not ask the operator to
+// fix the files; the project's markdown lint passes it. The journal names the
+// cause too.
+func TestAHoldWhoseFlaiIsBehindMainNamesTheInstalledFlaiAndTheRemedy(t *testing.T) {
+	lab := newQueueLab(t)
+	if err := os.WriteFile(filepath.Join(lab.root, ".markdownlint.yaml"), []byte(projectLint), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hold := behindHold()
+	lab.pass.run = func(_ context.Context, _ mergequeue.Deps, repo *workitem.Repo) (bool, error) {
+		_, err := mergequeue.Update(repo.CacheDir(), func(s *mergequeue.State) error {
+			if s.Preflight == nil {
+				s.Preflight = hold
+			}
+			return nil
+		})
+		return false, err
+	}
+	lab.look()
+	all := lab.holdThreads()
+	if len(all) != 1 {
+		t.Fatalf("threads on the manifest = %+v, want one:\n%s", all, lab.logs.String())
+	}
+	body := all[0].Marshal()
+	for _, want := range []string{"`design/workflows/roles/planner.md`, `roles.file`: `the role file has no roles` (flai check)",
+		"These findings may be the installed flai's rather than the files'.",
+		"The installed flai, flai `1.99.0`, built from commit `4d5e6f7a8b9c`, lacks 3 of main's commits under `flai/` since that commit; the newest flai release in main is `1.99.0`.",
+		"did not settle them: `the manifest names no flai.command,",
+		"Leave these files as they are, unless you see they are wrong",
+		"Publish the release with `flai release --pending` and install it with `flai host upgrade`.",
+		"the first look after the install that finds main clean clears the hold, resolves this thread"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the thread does not say %q:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, "Fix them in the main checkout") {
+		t.Errorf("the thread asks the operator to fix files that may be right:\n%s", body)
+	}
+	if got := lab.entries(); len(got) != 1 || !strings.Contains(got[0].Detail, "; the running flai may be behind main: flai 1.99.0, built from commit 4d5e6f7, lacks 3 commits") {
+		t.Fatalf("journal = %+v, want the hold with its cause", got)
+	}
+}
+
+// S-0797, ADR-0311: the cause reads and lints clean however the running flai
+// was placed, by its release tag or by the newest release tag, under a path
+// or in the whole tree, with a cause that carries Markdown and a tab.
+func TestTheCauseOfAHoldLintsCleanHoweverTheFlaiWasPlaced(t *testing.T) {
+	// the repository's own .markdownlint.yaml: the package sits at flai/internal/serve
+	c, err := mdlint.Load(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		by, from, path, newest string
+		commits                int
+		want                   string
+	}{
+		{"tag", "flai/v1.99.0", "flai/", "1.100.0", 1, "lacks 1 of main's commits under `flai/` since its release tag `flai/v1.99.0`, git not knowing its build commit; the newest flai release in main is `1.100.0`."},
+		{"newest", "flai/v1.98.0", "", "", 12, "lacks 12 of main's commits in the tree since the newest release tag `flai/v1.98.0`, git placing it by neither its build commit nor its release tag."},
+	} {
+		hold := behindHold()
+		b := hold.FlaiBehind
+		b.Commit, b.By, b.From, b.Path, b.Newest, b.Commits = "", tc.by, tc.from, tc.path, tc.newest, tc.commits
+		b.Why = "scripts/flai.sh check --json gave no check result (exit status 2:\t*no* `go` [here](#x))"
+		text := holdText(hold)
+		if !strings.Contains(text, "The installed flai, flai `1.99.0`, "+tc.want) {
+			t.Errorf("by %s, the thread does not say %q:\n%s", tc.by, tc.want, text)
+		}
+		if f := c.Lint("# " + holdTitle + "\n\n" + text + "\n"); len(f) > 0 {
+			t.Errorf("by %s, the thread lints with %v:\n%s", tc.by, f, text)
+		}
 	}
 }

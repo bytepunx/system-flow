@@ -276,13 +276,24 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 		fmt.Fprintf(w, "held by %s at %s: no batch is built until flai queue resume\n", q.HeldBy, q.HeldAt.UTC().Format(time.RFC3339))
 	}
 	if h := q.Preflight; h != nil {
-		line := fmt.Sprintf("held by the preflight since %s: no batch is built until the main checkout is clean of these, and the queue resumes on its own", h.Since.UTC().Format(time.RFC3339))
+		until := "until the main checkout is clean of these"
+		if h.FlaiBehind != nil {
+			until = "until a look finds the main checkout clean of these, such as once the release below is installed"
+		}
+		line := fmt.Sprintf("held by the preflight since %s: no batch is built %s, and the queue resumes on its own", h.Since.UTC().Format(time.RFC3339), until)
 		if h.Thread != "" {
 			line += "; thread " + h.Thread
 		}
 		fmt.Fprintln(w, line)
 		for _, f := range h.Findings {
 			fmt.Fprintf(w, "  %s\n", preflightLine(f))
+		}
+		if b := h.FlaiBehind; b != nil {
+			fmt.Fprintf(w, "  the installed flai may be what finds these: %s\n", b.Message)
+			if b.Newest != "" {
+				fmt.Fprintf(w, "  the newest flai release in main is %s\n", b.Newest)
+			}
+			fmt.Fprintf(w, "  why main's flai did not settle it: %s\n", b.Why)
 		}
 	}
 	if len(q.Eligible) == 0 && len(q.Ineligible) == 0 {

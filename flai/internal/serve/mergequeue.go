@@ -703,8 +703,10 @@ func resolveHoldThreads(repo *workitem.Repo, prev *mergequeue.PreflightHold, at 
 // holdText is the text of the thread to the operator for hold: each finding,
 // with its file, line, rule, message, and what found it, that the queue
 // builds no batch until they are fixed and changes none of them, and that the
-// hold clears on its own. Code-like parts are in code spans, with no tab, so
-// that the project's markdown lint passes the thread.
+// hold clears on its own. A hold whose findings may be the running flai's
+// says so and gives the remedy instead of asking for the files to be fixed
+// (behindText). Code-like parts are in code spans, with no tab, so that the
+// project's markdown lint passes the thread.
 func holdText(hold *mergequeue.PreflightHold) string {
 	var b strings.Builder
 	b.WriteString("The merge queue's preflight found what a landing would fail on in the main checkout")
@@ -725,10 +727,55 @@ func holdText(hold *mergequeue.PreflightHold) string {
 		}
 		fmt.Fprintf(&b, " (%s)\n", foundBy(f))
 	}
+	if hold.FlaiBehind != nil {
+		b.WriteString("\n" + behindText(hold.FlaiBehind))
+		return b.String()
+	}
 	b.WriteString("\nThe queue builds no batch and runs no tier until these are fixed. It changes none of these files: they are yours. ")
 	b.WriteString("Fix them in the main checkout. The queue looks again as the main checkout changes and as main's head moves, ")
 	b.WriteString("and the look that finds main clean clears the hold, resolves this thread, and builds batches again, with nothing else asked of you.")
 	return b.String()
+}
+
+// behindText says that a hold's findings may be the installed flai's rather
+// than the files', as b finds it: the installed flai, how many of main's
+// commits under the flai sub-project it lacks and since what, the newest flai
+// release, and why checking main again did not settle them; then the remedy,
+// and that the hold clears on its own after it (ADR-0311).
+func behindText(b *mergequeue.FlaiBehind) string {
+	installed := "flai " + codeSpan(spanText(b.Running))
+	if b.Commit != "" {
+		installed += ", built from commit " + codeSpan(short(b.Commit))
+	}
+	count := fmt.Sprintf("%d of main's commits", b.Commits)
+	if b.Commits == 1 {
+		count = "1 of main's commits"
+	}
+	where := "in the tree"
+	if b.Path != "" {
+		where = "under " + codeSpan(strings.TrimSuffix(b.Path, "/")+"/")
+	}
+	var since string
+	switch b.By {
+	case "commit":
+		since = "since that commit" // FlaiBehind compares from the build commit it names
+	case "tag":
+		since = "since its release tag " + codeSpan(b.From) + ", git not knowing its build commit"
+	default:
+		since = "since the newest release tag " + codeSpan(b.From) + ", git placing it by neither its build commit nor its release tag"
+	}
+	var s strings.Builder
+	s.WriteString("These findings may be the installed flai's rather than the files'. ")
+	fmt.Fprintf(&s, "The installed flai, %s, lacks %s %s %s", installed, count, where, since)
+	if b.Newest != "" {
+		fmt.Fprintf(&s, "; the newest flai release in main is %s", codeSpan(b.Newest))
+	}
+	s.WriteString(". Checking main again with a flai built from main did not settle them: " + codeSpan(spanText(b.Why)) + "\n\n")
+	s.WriteString("Leave these files as they are, unless you see they are wrong: the queue changes none of them. ")
+	s.WriteString("Publish the release with `flai release --pending` and install it with `flai host upgrade`. ")
+	s.WriteString("The queue builds no batch and runs no tier until then. It looks again as the main checkout changes and as main's head moves, ")
+	s.WriteString("and the first look after the install that finds main clean clears the hold, resolves this thread, and builds batches again.")
+	return s.String()
 }
 
 // spanText is s on one line, with no tab, for a code span.
@@ -745,9 +792,13 @@ func foundBy(f verify.FileFinding) string {
 }
 
 // holdDetail is the journal's entry for hold beginning: each file with its
-// rules, and thread, or that none is open yet.
+// rules, why the findings may be the running flai's when they may be, and
+// thread, or that none is open yet.
 func holdDetail(hold *mergequeue.PreflightHold, thread string) string {
 	detail := "merge queue held by its preflight, so it builds no batch until the main checkout is clean: " + strings.Join(holdFiles(hold.Findings), "; ")
+	if b := hold.FlaiBehind; b != nil {
+		detail += "; the running flai may be behind main: " + b.Message
+	}
 	if thread == "" {
 		return detail + "; no thread to the operator yet, the next look opens one"
 	}
