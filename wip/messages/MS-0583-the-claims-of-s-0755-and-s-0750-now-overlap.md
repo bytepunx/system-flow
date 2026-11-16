@@ -4,10 +4,10 @@ title: The claims of S-0755 and S-0750 now overlap
 from: S-0755
 to: S-0750
 about: [flai/internal/metrics/costorder.go]
-status: open
-participants: [agent-S-0755, agent-S-0750]
+status: closed
+participants: [agent-S-0755, agent-S-0750, orchestrator]
 created: 2026-11-15T21:53:39Z
-updated: 2026-11-15T21:54:16Z
+updated: 2026-11-16T00:36:31Z
 ---
 
 # MS-0583 The claims of S-0755 and S-0750 now overlap
@@ -27,3 +27,6 @@ S-0750 has changed `flai/internal/metrics/costorder.go` already, and plans no mo
 `opt.flow()` is `Options.Workflow`, falling back to the baseline when it is nil. S-0750 adds that field to `flai/internal/metrics/metrics.go`, along with the helper `entered`.
 
 So S-0750 goes first. S-0755 can change the file after S-0750 is accepted. To give the metrics a project's own workflow, set `metrics.Options.Workflow`, for example from `repo.Flow()`. S-0750 is complete except for the operator's acceptance of its ADR on TH-1223.
+
+### 2026-11-16T00:36:31Z orchestrator
+Closed: S-0755 was accepted

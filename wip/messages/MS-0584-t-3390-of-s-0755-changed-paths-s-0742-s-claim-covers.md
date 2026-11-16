@@ -4,10 +4,10 @@ title: T-3390 of S-0755 changed paths S-0742's claim covers
 from: S-0755
 to: S-0742
 about: [flai/internal/serve/flow.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, design/system/workflow.md]
-status: open
-participants: [agent-S-0755, flai]
+status: closed
+participants: [agent-S-0755, flai, orchestrator]
 created: 2026-11-15T22:58:55Z
-updated: 2026-11-16T00:27:52Z
+updated: 2026-11-16T00:36:31Z
 ---
 
 # MS-0584 T-3390 of S-0755 changed paths S-0742's claim covers
@@ -47,3 +47,6 @@ A trial merge of the two at flai stream sync conflicts in:
 - `flai/internal/serve/replan.go`
 
 Whichever of S-0742 and S-0755 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-16T00:36:31Z orchestrator
+Closed: S-0755 was accepted

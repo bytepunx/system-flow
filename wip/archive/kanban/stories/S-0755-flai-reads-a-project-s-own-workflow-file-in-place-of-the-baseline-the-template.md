@@ -3,11 +3,11 @@ id: S-0755
 type: story
 nature: feature
 title: flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:15Z
-updated: 2026-11-15T23:16:28Z
+updated: 2026-11-16T00:36:31Z
 transitions:
   - to: ready
     at: 2026-11-15T21:35:42Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T23:16:28Z
     by: agent-S-0755
+  - to: done
+    at: 2026-11-16T00:36:31Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, template, conventions]
 touches: [flai/internal/workflow/load.go, flai/internal/workflow/load_test.go, flai/internal/workitem/repo.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, docs/operators/runbooks/change-the-board.md, docs/operators/runbooks/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/conventions.md, design/system/workflow.md, design/system/template.md, design/workflows/README.md, template/root/design/workflows/README.md, design/adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md, design/adrs/README.md, flai/cmd/check.go, flai/cmd/project.go, flai/internal/check/concurrent_test.go, flai/internal/workflow/validate.go, flai/internal/workitem/repo_flow_test.go, flai/internal/check/check_items.go, flai/cmd/accept.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/cmd/cod.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/task_done.go, flai/internal/inbox/inbox.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/workflow_test.go, flai/internal/planning/cod.go, flai/internal/planning/forecast.go, flai/internal/preview/accept.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, flai/internal/serve/kluster.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, design/system/flai-cli.md, design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md, design/issues/summary.md, flai/cmd/guard.go, flai/internal/check/check_roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go]
@@ -126,3 +129,18 @@ An operator changes the board by editing a file in their project. flai reads the
 - Tasks: T-3253 (the load) first; then T-3259 (the check on the project's file) and T-3260 (template and upgrade) together; then T-3262 (the runbook and documents), which describes the file as T-3260 ships it.
 - Forecast 47m, `flai forecast`'s rate for size 26, up from its 42m for the first draft's 23 once the runbook and the template version were added.
 - Cost of delay: 83.73 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 47m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: a225b9263f131ad0c3281e46ecfbcc615ea70b13
+- Batch: 20261116-002222
+- Enqueued verified: ee46238929293bfdcb14ad220b8cd9c82cbba51e
+- At: 2026-11-16T00:36:31Z
+
+Verdict: S-0755 meets all six criteria at ee46238; the close-out passed every step there and every changed file is inside its touches.
+- 1: flai/internal/workflow/load.go, flai/internal/workflow/validate.go, flai/internal/workitem/repo.go, flai/cmd/project.go, flai/cmd/check.go, flai/cmd/accept.go, flai/internal/mcpserver/server.go, flai/internal/serve/flow.go, design/adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md, flai/internal/workflow/load_test.go
+- 2: template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go
+- 3: flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go
+- 4: flai/internal/check/check_workflow.go, flai/internal/check/check_items.go, flai/internal/check/workflow_test.go
+- 5: docs/operators/runbooks/change-the-board.md, docs/operators/runbooks/README.md, docs/operators/index.md
+- 6: docs/users/flai.md, docs/users/conventions.md, design/system/workflow.md, design/system/template.md, design/workflows/README.md, template/root/design/workflows/README.md, template/CHANGELOG.md
