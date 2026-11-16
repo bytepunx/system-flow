@@ -214,7 +214,11 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 		// story's head among them while the merge queue batches (ADR-0221),
 		// and the blocker kluster while the kluster host action is on and the
 		// story's namespace was not deployed, or its checks did not pass, at
-		// its head (ADR-0254 §5a).
+		// its head (ADR-0254 §5a). For a story the operator's Accept would
+		// enqueue, while the queue batches and is not held, it lists no
+		// verify_behind_main and names the stale tiers the batch runs
+		// instead; a queue state that cannot be read counts as held
+		// (ADR-0308).
 		"accept.preview": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			id, e := idOnly(raw)
 			if e != nil {
@@ -227,7 +231,12 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 					return nil, err
 				}
 				batches := mergequeue.Batches(host.enabled(ActionMergeQueue, p.Root), repo.Manifest)
-				return preview.AcceptWith(r, repo, it, by, now(), log, preview.AcceptOptions{QueueBatches: batches,
+				held := false
+				if batches {
+					st, err := mergequeue.ReadState(repo.CacheDir())
+					held = err != nil || st.Held
+				}
+				return preview.AcceptWith(r, repo, it, by, now(), log, preview.AcceptOptions{QueueBatches: batches, QueueHeld: held,
 					KlusterOn: host.enabled(ActionKluster, p.Root), ChecksOn: host.enabled(ActionChecks, p.Root)})
 			})
 		},

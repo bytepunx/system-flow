@@ -401,32 +401,106 @@ func TestAcceptPreviewListsTheQueueTiersWhileTheQueueBatches(t *testing.T) {
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	preview := func(on bool) map[string]any {
-		t.Helper()
-		host := Host{Enabled: func(action, root string) bool { return on && action == ActionMergeQueue && root == p.Root }}
-		out, rerr := readMethods(time.Now, host)["accept.preview"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
-		if rerr != nil {
-			t.Fatalf("accept.preview: %+v", rerr)
-		}
-		data, err := json.Marshal(out)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var got struct {
-			Data map[string]any `json:"data"`
-		}
-		if err := json.Unmarshal(data, &got); err != nil {
-			t.Fatal(err)
-		}
-		return got.Data
-	}
-	got := preview(true)
+	got := acceptPreview(t, p, true)
 	if b, _ := got["queue_tiers_blocker"].(map[string]any); b["code"] != "queue_tiers" || !reflect.DeepEqual(got["queue_tiers"], []any{"integration"}) {
 		t.Errorf("with the queue batching, accept.preview lists queue_tiers naming integration: %v", got)
 	}
-	if got := preview(false); got["queue_tiers_blocker"] != nil || got["queue_tiers"] != nil {
+	if got := acceptPreview(t, p, false); got["queue_tiers_blocker"] != nil || got["queue_tiers"] != nil {
 		t.Errorf("with the merge-queue host action off, accept.preview lists no queue tiers: %v", got)
 	}
+}
+
+// acceptPreview is accept.preview's answer for S-0001 at p, with the
+// merge-queue host action on or off.
+func acceptPreview(t *testing.T, p channel.Project, on bool) map[string]any {
+	t.Helper()
+	host := Host{Enabled: func(action, root string) bool { return on && action == ActionMergeQueue && root == p.Root }}
+	out, rerr := readMethods(time.Now, host)["accept.preview"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
+	if rerr != nil {
+		t.Fatalf("accept.preview: %+v", rerr)
+	}
+	data, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	return got.Data
+}
+
+// I-0381, ADR-0308: while the merge queue batches and is not held, the
+// operator's Accept enqueues the story, so accept.preview lists no
+// verify_behind_main for a story whose last passing flai verify ran a tier
+// that a path main brought in since sends back, and names the stale tiers the
+// batch runs instead. A held queue, a queue state that cannot be read, and a
+// queue that does not batch land the story by hand, and keep the blocker.
+func TestAcceptPreviewLeavesAVerifyBehindMainToTheBatchUnlessTheQueueIsHeld(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	p, repo := reviewing(t)
+	m := filepath.Join(p.Root, "system-flow.yaml")
+	data, _ := os.ReadFile(m)
+	if err := os.WriteFile(m, append(data, "orchestration:\n  permissions:\n    accept_reviews: true\ntests:\n  - name: docs-lint\n    command: [lint-md, \"{files}\"]\n    paths: [\"docs/**\"]\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := execx.System{}
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := r.Run(p.Root, "git", args...)
+		if err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+		return strings.TrimSpace(out)
+	}
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "-A"}, {"commit", "-q", "-m", "one"}, {"branch", storygit.Branch("S-0001")}} {
+		git(args...)
+	}
+	head := git("rev-parse", storygit.Branch("S-0001"))
+	if err := os.MkdirAll(filepath.Join(p.Root, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.Root, "docs", "guide.md"), []byte("# Guide\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git("add", "-A")
+	git("commit", "-q", "-m", "two")
+	if err := verify.SaveReport(repo, verify.Report{Story: "S-0001", Commit: head, MergeBase: head, Passed: true, Steps: []verify.Step{
+		{Name: "docs-lint", Tier: true, State: verify.Passed},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	blocked := func(name string, on bool) {
+		t.Helper()
+		got := acceptPreview(t, p, on)
+		if b, _ := got["verify_behind_main_blocker"].(map[string]any); b["code"] != "verify_behind_main" || got["stale_tiers_queued"] != nil {
+			t.Errorf("%s lands S-0001 by hand, so accept.preview lists verify_behind_main: %v", name, got)
+		}
+	}
+
+	got := acceptPreview(t, p, true)
+	if got["verify_behind_main_blocker"] != nil || !reflect.DeepEqual(got["stale_tiers"], []any{"docs-lint"}) {
+		t.Errorf("with the queue batching and not held, accept.preview lists no verify_behind_main and names docs-lint stale: %v", got)
+	}
+	if q, _ := got["stale_tiers_queued"].(string); !strings.Contains(q, "docs/guide.md") || !strings.Contains(q, "the merge queue's batch runs every tier again") {
+		t.Errorf("with the queue batching and not held, accept.preview says the batch runs the stale tiers: %q", q)
+	}
+	if _, err := mergequeue.Hold(repo, "olive", t0); err != nil {
+		t.Fatal(err)
+	}
+	blocked("a held queue", true)
+	if err := os.WriteFile(mergequeue.StatePath(repo.CacheDir()), []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	blocked("a queue state that cannot be read", true)
+	blocked("a queue that does not batch", false)
 }
 
 // statsAnswer is one stats.get call's answer.
