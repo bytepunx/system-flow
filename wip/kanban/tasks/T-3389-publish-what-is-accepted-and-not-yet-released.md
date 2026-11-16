@@ -3,12 +3,18 @@ id: T-3389
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0794
 owner: alex
 created: 2026-11-15T21:47:08Z
-updated: 2026-11-15T21:47:08Z
-transitions: []
+updated: 2026-11-16T00:38:46Z
+transitions:
+  - to: ready
+    at: 2026-11-16T00:38:46Z
+    by: agent-S-0794
+  - to: in-progress
+    at: 2026-11-16T00:38:46Z
+    by: agent-S-0794
 stream: S-0794
 tags: []
 after: [T-3388]

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.43 - 2026-11-16
+
+- S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board (patch).
 - S-0755 The template ships the board's workflow file, `design/workflows/board.md`, the baseline flai carries byte for byte; flai reads a project's own file in place of the baseline and refuses one it cannot run, and `flai upgrade` adds the file to a project that lacks it and never changes it afterwards, saying when the template's baseline changed so that the operator carries the change over in a story (minor, ADR-0301, ADR-0307).
 
 ## 1.1.42 - 2026-11-16

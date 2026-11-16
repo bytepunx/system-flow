@@ -3,10 +3,10 @@ id: TH-1231
 title: "The merge queue is held: the main checkout has files a landing would fail on"
 anchor:
   path: system-flow.yaml
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-15T21:46:13Z
-updated: 2026-11-15T21:46:13Z
+updated: 2026-11-16T00:36:34Z
 ---
 
 # TH-1231 The merge queue is held: the main checkout has files a landing would fail on
@@ -22,3 +22,6 @@ The merge queue's preflight found what a landing would fail on in the main check
 - `design/workflows/roles/planner.md`, line 28, `roles.file`: `front matter does not parse: cannot unmarshal map[string]interface {} into Go struct field Role.Tools of type string; give each field the shape ADR-0207 §2 gives it` (flai check)
 
 The queue builds no batch and runs no tier until these are fixed. It changes none of these files: they are yours. Fix them in the main checkout. The queue looks again as the main checkout changes and as main's head moves, and the look that finds main clean clears the hold, resolves this thread, and builds batches again, with nothing else asked of you.
+
+### 2026-11-16T00:36:34Z flai serve
+Resolved: main is clean: the merge queue's preflight found nothing at 2026-11-16T00:36:34Z, so the queue builds batches again

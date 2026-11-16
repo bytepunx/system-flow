@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2211.0396
-accrued_seconds: 1568858
-tasks_completed: 3658
-last_run: 2026-11-16T00:31:33Z
+accrued_cost: 2211.2478
+accrued_seconds: 1568928
+tasks_completed: 3660
+last_run: 2026-11-16T00:38:05Z
 ---
 
 # Orchestrator activity
@@ -25641,6 +25641,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 37
 - Cost: 0.2010 USD, estimated
+
+### 2026-11-16T00:37:51Z
+
+- Summary: Started the planner for S-0795 under plan_backlog_stories: flai plan --candidates lists it with no touches, forecast, cost of delay value, or tasks; it is the one draft TH-1234 names that a plan can unstarve. Left E-0034 unplanned: the operator's entry on TH-1228 ("done") confirms a sync and asks for no change to the plan.
+- Items: S-0795, E-0034
+- Seconds: 56
+- Cost: 0.1807 USD, estimated
+
+### 2026-11-16T00:38:05Z
+
+- Summary: Did not start a new publish formula for the release-due of S-0790 and S-0755: release_evaluate is met under threshold (count 2 at or over 1; 88.73 USD/week), but instance S-0794 is already in progress with none of its tasks run, and its flai release --pending bundles both. Left TH-1234 alone: its last entry is flai serve's notice. S-0241 stays a draft as TH-1165 recommends (blocked); S-0795 is incomplete in flai promote --drafts, now with its planner; promote_candidates lists no candidate.
+- Items: S-0790, S-0755, S-0794, S-0241, S-0795
+- Seconds: 14
+- Cost: 0.0275 USD, estimated
 
 ## Refusals
 
