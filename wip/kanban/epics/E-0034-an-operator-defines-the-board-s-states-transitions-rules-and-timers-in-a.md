@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-16T23:42:03Z
+updated: 2026-11-16T23:42:04Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -120,6 +120,7 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
 - S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
 - S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke
 - S-0806 The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour
+- S-0807 A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need
 
 ## Notes
 
