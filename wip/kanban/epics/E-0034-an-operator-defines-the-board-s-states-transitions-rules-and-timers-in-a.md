@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-16T23:42:09Z
+updated: 2026-11-16T23:42:10Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -127,6 +127,7 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
 - S-0811 The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
 - S-0812 flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
 - S-0813 A tier's queue and when are read as the suites of the batch and the move to review, flai upgrade writes them into a project's file, and the two keys are retired
+- S-0814 The review page and the board show the suites each step needs and ran, and follow a state's job in the activity stream
 
 ## Notes
 
