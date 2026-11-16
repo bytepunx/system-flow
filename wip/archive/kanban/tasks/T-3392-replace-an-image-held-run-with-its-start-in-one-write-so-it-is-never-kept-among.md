@@ -3,15 +3,36 @@ id: T-3392
 type: task
 nature: remediation
 title: Replace an image-held run with its start in one write, so it is never kept among the past runs
-status: backlog
+status: done
 parent: S-0795
 owner: alex
 created: 2026-11-16T00:40:58Z
-updated: 2026-11-16T00:40:58Z
-transitions: []
+updated: 2026-11-16T00:52:10Z
+transitions:
+  - to: ready
+    at: 2026-11-16T00:45:07Z
+    by: agent-S-0795
+  - to: in-progress
+    at: 2026-11-16T00:45:14Z
+    by: agent-S-0795
+  - to: done
+    at: 2026-11-16T00:52:10Z
+    by: agent-S-0795
 stream: S-0795
 tags: [flai, serve]
-touches: [flai/internal/serve/agents_state.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/serve/agents_state.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 416
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 2786
+      cache_read: 1544888
+      cache_write: 29782
+      cost: 0.603
 ---
 # T-3392 Replace an image-held run with its start in one write, so it is never kept among the past runs
 

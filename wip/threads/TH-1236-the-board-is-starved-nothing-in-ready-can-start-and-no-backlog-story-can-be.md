@@ -3,10 +3,10 @@ id: TH-1236
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-16T00:43:36Z
-updated: 2026-11-16T00:43:36Z
+updated: 2026-11-16T00:51:10Z
 ---
 
 # TH-1236 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -32,3 +32,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0797 The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed: a draft; finalize it.
 - S-0798 A close-out asked for a story whose branch is behind main stops at sync without syncing, and the failed report makes a story the merge queue could batch not eligible: a draft; finalize it.
 - S-0799 After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head: a draft; finalize it.
+
+### 2026-11-16T00:51:10Z flai serve
+Resolved: S-0796 The acceptance preview lists verify_behind_main while the merge queue batches, so the review page disables Accept and offers Rebase and resolve for a story the acceptance would enqueue can be promoted from the backlog, so the board is no longer starved.

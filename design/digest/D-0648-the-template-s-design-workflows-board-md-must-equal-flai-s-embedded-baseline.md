@@ -6,8 +6,8 @@ sources: [S-0755, T-3260]
 topics: [template, flai, go, code]
 paths: [flai/internal/workflow/baseline/board.md, template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go]
 date: 2026-11-16
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/template.md#upgrading-a-project"
 asked_again: []
 cited: []
 ---

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 326.4944
-accrued_seconds: 35652
-tasks_completed: 219
-last_run: 2026-11-16T00:39:46Z
+accrued_cost: 328.4972
+accrued_seconds: 36195
+tasks_completed: 221
+last_run: 2026-11-16T00:49:14Z
 ---
 
 # Curator activity
@@ -1763,3 +1763,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0603, D-0636, D-0645, D-0646, D-0647
 - Seconds: 211
 - Cost: 2.4245 USD, estimated
+
+### 2026-11-16T00:48:20Z
+
+- Summary: I added one new digest entry, D-0648, and absorbed it in the same run; I merged S-0755 into D-0640, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0755, S-0790
+- Items: D-0640, D-0648
+- Seconds: 504
+- Cost: 1.6384 USD, estimated
+
+### 2026-11-16T00:49:14Z
+
+- Summary: This run found nothing to take in. `flai digest harvest --since 2026-11-16T00:48:20Z` returned no candidates, so I wrote no entries and merged none. No design or docs commit has landed since the last run, which was 30 seconds earlier. I re-checked D-0640 and D-0603 against the design, and no document states their facts, so I absorbed none. `flai digest compact` compacted no entries.
+- Trigger: accepted S-0794
+- Items: none
+- Seconds: 39
+- Cost: 0.3644 USD, estimated

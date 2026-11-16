@@ -3,10 +3,10 @@ id: S-0795
 type: story
 nature: remediation
 title: TestContainerStrategicStartUnderALayerWaitsForTheHarnessImageAlone fails under load in the race run
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-16T00:01:08Z
-updated: 2026-11-16T00:43:35Z
+updated: 2026-11-16T01:53:29Z
 transitions:
   - to: ready
     at: 2026-11-16T00:43:21Z
@@ -14,28 +14,47 @@ transitions:
   - to: in-progress
     at: 2026-11-16T00:43:35Z
     by: agent-S-0795
+  - to: review
+    at: 2026-11-16T01:36:49Z
+    by: agent-S-0795
+  - to: done
+    at: 2026-11-16T01:53:29Z
+    by: alex
 tags: [flai, serve, test]
-touches: [flai/internal/serve/agents_state.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/container_test.go, design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md]
+touches: [flai/internal/serve/agents_state.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3215
+  priced_by: harness
+  turns:
+    - day: 2026-11-16
+      ceremony: 2
+      test_runs: 3
+      hand_edits: 2
+      work: 51
+  models:
+    - model: claude-opus-5-5
+      input: 126
+      output: 24175
+      cache_read: 13403938
+      cache_write: 258402
+      cost: 5.232
   strategic:
     - kind: orchestrator
-      seconds: 134
+      seconds: 141
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 213
-          cache_read: 946128
-          cache_write: 105082
-          cost: 0.319
+          input: 28
+          output: 222
+          cache_read: 1030526
+          cache_write: 105501
+          cost: 0.3448
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -61,8 +80,8 @@ finalized:
 This story remediates [I-0369](../../../design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md), "TestContainerStrategicStartUnderALayerWaitsForTheHarnessImageAlone fails under load in the race run". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0369 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0369 is closed with `flai issue close I-0369 --reason` saying what fixed it
+- [x] The cause I-0369 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0369 is closed with `flai issue close I-0369 --reason` saying what fixed it
 
 ## Tasks
 - T-3392 Replace an image-held run with its start in one write, so it is never kept among the past runs

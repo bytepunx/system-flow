@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1378.6397
-accrued_seconds: 162368
-tasks_completed: 267
-last_run: 2026-11-16T00:42:16Z
+accrued_cost: 1389.4979
+accrued_seconds: 163325
+tasks_completed: 272
+last_run: 2026-11-16T01:48:21Z
 ---
 
 # Planner activity
@@ -2130,3 +2130,43 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0795, T-3392, T-3393
 - Seconds: 259
 - Cost: 2.2993 USD, estimated
+
+### 2026-11-16T00:51:40Z
+
+- Summary: I planned S-0796 and created five backlog tasks, T-3394 to T-3398 (no tasks existed to revisit); I set its touches (14 files), a 45m forecast raised from flai's 27m, a cost of delay of 300 USD a week, and a `### Planning` note, and opened plan thread TH-1237 on it.
+- Trigger: orchestrator
+- Items: S-0796, T-3394, T-3395, T-3396, T-3397, T-3398
+- Seconds: 362
+- Cost: 2.3584 USD, estimated
+
+### 2026-11-16T01:45:22Z
+
+- Summary: Planned S-0798: set its touches (15 files), forecast 1h (up from flai's 33m), cost of delay 300 USD/week and `### Planning` notes; created tasks T-3399, T-3400, T-3401 (layer 1) and T-3402 (layer 2, after all three); revisited none; plan thread TH-1239.
+- Trigger: orchestrator
+- Items: S-0798, T-3399, T-3400, T-3401, T-3402
+- Seconds: 416
+- Cost: 6.7130 USD, estimated
+
+### 2026-11-16T01:45:58Z
+
+- Summary: Planned S-0797: wrote its touches, forecast (1h30m) and cost of delay (450 USD/week), created tasks T-3403, T-3404, T-3406, T-3408 and T-3411 in three layers with no tasks revisited, and opened plan thread TH-1240.
+- Trigger: orchestrator
+- Items: S-0797, T-3403, T-3404, T-3406, T-3408, T-3411
+- Seconds: 36
+- Cost: 0.6810 USD, estimated
+
+### 2026-11-16T01:47:01Z
+
+- Summary: S-0800 is planned: I set its touches, a 50m forecast, a cost of delay of 112.50 USD a week and a `### Planning` note, created tasks T-3405, T-3407, T-3410, T-3412 and T-3413 in four layers, revisited none, and summarised the plan on thread TH-1241.
+- Trigger: orchestrator
+- Items: S-0800, T-3405, T-3407, T-3410, T-3412, T-3413
+- Seconds: 63
+- Cost: 0.4411 USD, estimated
+
+### 2026-11-16T01:48:21Z
+
+- Summary: S-0799 is planned: 28 file touches, forecast 1h15m (flai's 58m raised), 50 USD a week cost of delay, tasks T-3409 and T-3414 to T-3419 created in five layers (none revisited), plan summarised on TH-1242.
+- Trigger: orchestrator
+- Items: S-0799, T-3409, T-3414, T-3415, T-3416, T-3417, T-3418, T-3419
+- Seconds: 80
+- Cost: 0.6647 USD, estimated
