@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -56,6 +57,23 @@ type PreflightHold struct {
 	// Thread is the ID of the one thread flai serve opens to the operator
 	// for the hold; "" until it is opened.
 	Thread string `json:"thread,omitempty"`
+	// FlaiBehind is why the findings may be the running flai's rather than
+	// the files' (ADR-0311), as the last look found it; nil when the
+	// running flai is not behind main's flai sub-project, or a flai built
+	// from main confirmed them.
+	FlaiBehind *FlaiBehind `json:"flai_behind,omitempty"`
+}
+
+// FlaiBehind is why the preflight's findings may be the running flai's
+// rather than the files' (ADR-0311): how far the running flai is behind
+// main's flai sub-project, and why checking main again with a flai built
+// from main did not settle them.
+type FlaiBehind struct {
+	release.Behind
+	// Why says why the second check did not settle the findings: the
+	// manifest names no flai.command, the command gave no result, or the
+	// flai it runs is behind main too.
+	Why string `json:"why"`
 }
 
 // PreflightHeld reports whether the landing's preflight holds the queue.

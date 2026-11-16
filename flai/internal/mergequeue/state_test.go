@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
@@ -384,6 +385,45 @@ func TestThePreflightHoldRoundTripsAndTheOperatorsHoldLeavesIt(t *testing.T) {
 	}
 	if st := read(); st.Held || !reflect.DeepEqual(st.Preflight, open) {
 		t.Errorf("flai queue resume cleared or changed the preflight's hold: %+v", st.Preflight)
+	}
+}
+
+// ADR-0311: the cause on a preflight hold, how far the running flai is
+// behind main's flai sub-project and why the second check did not settle
+// it, is written flat under flai_behind and read back as it was.
+func TestThePreflightHoldsCauseRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+	behind := &FlaiBehind{Behind: release.Behind{Running: "1.99.0", Commit: "abc1234", By: "commit", From: "abc1234", Main: "c0ffee", Path: "flai",
+		Commits: 3, Newest: "1.99.0", Message: "flai 1.99.0 lacks 3 commits"}, Why: "the manifest names no flai.command"}
+	hold := &PreflightHold{Since: t0, Main: "c0ffee", Thread: "TH-0001", FlaiBehind: behind, Findings: []verify.FileFinding{
+		{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "design/workflows/roles/story.md", Line: 1, Level: "error", Rule: "roles.file", Message: "not a role file"},
+	}}
+	if _, err := Update(dir, func(s *State) error { s.Preflight = hold; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	st, err := ReadState(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(st.Preflight, hold) {
+		t.Errorf("read back %+v, want %+v", st.Preflight, hold)
+	}
+	data, err := os.ReadFile(StatePath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw struct {
+		Preflight struct {
+			FlaiBehind map[string]any `json:"flai_behind"`
+		} `json:"preflight"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]any{"running": "1.99.0", "path": "flai", "commits": float64(3), "why": "the manifest names no flai.command"} {
+		if got := raw.Preflight.FlaiBehind[key]; got != want {
+			t.Errorf("flai_behind.%s is %v, want %v, in %s", key, got, want, data)
+		}
 	}
 }
 

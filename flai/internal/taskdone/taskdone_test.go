@@ -536,31 +536,10 @@ func TestRunStopsWhenTheTreesFlaiGivesNoResult(t *testing.T) {
 	}
 }
 
-// checkResult finds flai check --json's indented result among build and log
-// lines, and holds no result in output without one.
-func TestCheckResultFindsTheResultAmongOtherLines(t *testing.T) {
-	result := checkJSON(t, note)
-	for _, tc := range []struct {
-		name, out string
-		want      bool
-	}{
-		{"alone", strings.TrimSpace(result), true},
-		{"after a build line and a log line", "building bin/flai\nlevel=INFO msg=\"{\"\n" + result, true},
-		{"before a log line", result + "level=WARN msg=done", true},
-		{"no findings key", "{\n  \"version\": \"1.70.0\"\n}", false},
-		{"cut short", "building bin/flai\n{\n  \"findings\": [", false},
-		{"no object", "go: build failed", false},
-		{"empty", "", false},
-	} {
-		res, ok := checkResult(tc.out)
-		if ok != tc.want {
-			t.Errorf("%s: ok %v, want %v", tc.name, ok, tc.want)
-			continue
-		}
-		if ok && (len(res.Findings) != 1 || !reflect.DeepEqual(res.Findings[0], note) || res.Items != 12) {
-			t.Errorf("%s: %+v", tc.name, res)
-		}
-	}
+// outputTail quotes a long output's last lines, from a line's start. The
+// check result it is quoted beside is read by check.ResultFromOutput, tested
+// in the check package.
+func TestOutputTailQuotesTheLastLines(t *testing.T) {
 	if got := outputTail(strings.Repeat("line\n", 1000)); len(got) > maxOutput+4 || !strings.HasPrefix(got, "…\nline\n") {
 		t.Errorf("tail of %d bytes: %.40q", len(got), got)
 	}

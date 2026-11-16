@@ -865,7 +865,7 @@ func (r *run) treeCheck(command string) error {
 	path := filepath.Join(r.wt, filepath.FromSlash(command))
 	args := []string{"check", "--strict", "--story", r.story.ID, "--json"}
 	out, runErr := r.o.Runner.Run(r.wt, path, args...)
-	res, ok := checkResult(out)
+	res, ok := check.ResultFromOutput(out)
 	if !ok {
 		why := ""
 		if runErr != nil {
@@ -888,7 +888,7 @@ func (r *run) checkedBy(command, path string) string {
 	var v struct {
 		Version string `json:"version"`
 	}
-	raw, ok := jsonObject(out)
+	raw, ok := check.JSONObject(out)
 	if err == nil && ok {
 		err = json.Unmarshal(raw, &v)
 	}
@@ -897,44 +897,6 @@ func (r *run) checkedBy(command, path string) string {
 		return command
 	}
 	return fmt.Sprintf("%s (flai %s)", command, v.Version)
-}
-
-// checkResult is the flai check --json result in out, a command's combined
-// output, and whether it holds one: an object with a findings key.
-func checkResult(out string) (*check.Result, bool) {
-	raw, ok := jsonObject(out)
-	if !ok {
-		return nil, false
-	}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &keys); err != nil {
-		return nil, false
-	}
-	if _, ok := keys["findings"]; !ok {
-		return nil, false
-	}
-	var res check.Result
-	if err := json.Unmarshal(raw, &res); err != nil {
-		return nil, false
-	}
-	return &res, true
-}
-
-// jsonObject is the first JSON object in out that flai's --json printed,
-// indented, so beginning on a line that is "{" alone: build and log lines
-// may come before it or after it.
-func jsonObject(out string) (json.RawMessage, bool) {
-	for offset := 0; offset < len(out); {
-		line, _, _ := strings.Cut(out[offset:], "\n")
-		if strings.TrimSuffix(line, "\r") == "{" {
-			var raw json.RawMessage
-			if err := json.NewDecoder(strings.NewReader(out[offset:])).Decode(&raw); err == nil {
-				return raw, true
-			}
-		}
-		offset += len(line) + 1
-	}
-	return nil, false
 }
 
 // outputTail is the last maxOutput bytes of out, from a line's start, or

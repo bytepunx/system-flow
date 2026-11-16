@@ -1360,9 +1360,9 @@ func TestAPreflightFindingHoldsTheQueueUntilALookFindsMainClean(t *testing.T) {
 			verified = true
 			return verify.Report{}, nil
 		},
-		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+		Preflight: func(context.Context, *workitem.Repo) (PreflightReport, error) {
 			looks++
-			return slices.Clone(findings), nil
+			return PreflightReport{Findings: slices.Clone(findings)}, nil
 		}}
 	warns := func() int { return strings.Count(logs.String(), `"level":"WARN"`) }
 
@@ -1440,8 +1440,8 @@ func TestAPreflightThatCannotRunBuildsAndHoldsNothing(t *testing.T) {
 			verified = true
 			return verify.Report{}, nil
 		},
-		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
-			return nil, errors.New("run the merge queue's preflight: no git")
+		Preflight: func(context.Context, *workitem.Repo) (PreflightReport, error) {
+			return PreflightReport{}, errors.New("run the merge queue's preflight: no git")
 		}}
 	ran, err := RunBatch(context.Background(), d, repo)
 	if ran || verified || err == nil || !strings.Contains(err.Error(), "no git") {
@@ -1508,7 +1508,7 @@ func TestUnderAnotherWorkflowABatchSendsBackAConflictingStoryAlongTheSendBack(t 
 	// flai check, which the preflight runs on the main checkout, still judges
 	// a status by the baseline's states and would hold the queue on awaiting
 	// and doing: this test is of the send back, so its preflight is clean
-	d.Preflight = func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) { return nil, nil }
+	d.Preflight = func(context.Context, *workitem.Repo) (PreflightReport, error) { return PreflightReport{}, nil }
 
 	_, st := runBatch(t, d, repo)
 	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{c}) {

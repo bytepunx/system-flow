@@ -850,9 +850,9 @@ func (k *keptBatch) deps() Deps {
 			k.verified++
 			return verify.Report{Passed: true}, nil
 		},
-		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+		Preflight: func(context.Context, *workitem.Repo) (PreflightReport, error) {
 			k.looks++
-			return slices.Clone(k.findings), nil
+			return PreflightReport{Findings: slices.Clone(k.findings)}, nil
 		}}
 }
 
@@ -1020,9 +1020,9 @@ func TestALandingThatFailsWithMainCleanDropsTheBatch(t *testing.T) {
 		name      string
 		preflight Preflighter
 	}{
-		{name: "main clean", preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) { return nil, nil }},
-		{name: "preflight cannot run", preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
-			return nil, errors.New("run the merge queue's preflight: no git")
+		{name: "main clean", preflight: func(context.Context, *workitem.Repo) (PreflightReport, error) { return PreflightReport{}, nil }},
+		{name: "preflight cannot run", preflight: func(context.Context, *workitem.Repo) (PreflightReport, error) {
+			return PreflightReport{}, errors.New("run the merge queue's preflight: no git")
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
