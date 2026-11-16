@@ -2,12 +2,12 @@
 id: I-0385
 title: flai stream sync reports a rebased branch undoes main's line when the branch removes a closing brace elsewhere in a Go file main added a closing brace to, and the merge queue then never batches the story
 class: defect
-status: open
+status: closed
 count: 1
 cost: 45m
 first_reported: 2026-11-16T01:39:37Z
 last_reported: 2026-11-16T01:39:37Z
-updated: 2026-11-16T01:39:43Z
+updated: 2026-11-16T02:19:42Z
 ---
 
 # I-0385 flai stream sync reports a rebased branch undoes main's line when the branch removes a closing brace elsewhere in a Go file main added a closing brace to, and the merge queue then never batches the story
@@ -25,3 +25,4 @@ S-0739's sync on 2026-11-16T00:42Z recorded flai/internal/workitem/board.go as u
 The undone check does not count a line of main's that carries no change of its own. Proposed, for the story to settle in an ADR refining ADR-0155: a line main added is undone only when the branch removes it where main added it, by comparing the hunks' positions in main's file rather than the file's lines as one multiset; or, more narrowly, a line that holds only brackets, braces, or white space is never counted alone. The revert ADR-0155 was written for (I-0124) must still be caught.
 
 Story S-0800 remediates this issue, created from it at 2026-11-16T01:39:43Z.
+Closed 2026-11-16T02:19:42Z: S-0800 fixed it. ADR-0309 counts a line main added as undone only when the rebased branch removes the line of that number in main's file, read from the -U0 hunk headers, not a line of the same text elsewhere. FindUndone and RecordedUndone in flai/internal/storygit/undone.go apply it; RecordedUndone keeps only the record's lines, so S-0739's record for flai/internal/workitem/board.go drops out at its next read. TestSyncFindsNothingUndoneWhenTheBranchRemovesALineOfTheTextMainAddedElsewhere in flai/internal/storygit/sync_test.go reproduces the issue with real git and fails on the text compare; I-0124's revert is still caught.
