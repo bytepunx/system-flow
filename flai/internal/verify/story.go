@@ -18,6 +18,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -157,6 +158,15 @@ type Report struct {
 	// not reached, or the project has no kluster: block, and in a report
 	// stored before it was kept.
 	Kluster *kluster.Evidence `json:"kluster,omitempty"`
+	// Moved says the report's Commit is not the head of the story's branch
+	// that LastReportAt was given: the report is from before the head moved,
+	// as by a sync (I-0384). It is not stored; only LastReportAt sets it.
+	Moved bool `json:"moved,omitempty"`
+	// Running is the story's running close-out job, its id, start, head, and
+	// step, when the job runs at another commit than the report's, a job that
+	// has not written its head taken as running at the branch's head (I-0384).
+	// It is not stored; only LastReportAt sets it.
+	Running *closeout.Progress `json:"running,omitempty"`
 }
 
 // Step is what one step of Verify did.
@@ -592,12 +602,25 @@ func inListOrder(tiers []Tier, run, queued []Selected) []Selected {
 // reused, and was not skipped for a tier that covers it. A Queue tier the
 // report did not select is not named. A run with every selected tier, or
 // with the queue off, that passed at head answers nothing (ADR-0174, I-0203).
+// A report not at head, or none, whose Running LastReportAt set names the
+// close-out job that runs, where, and at which of its steps (I-0384).
 func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []string, why string) {
 	if !ok {
+		if rep.Running != nil {
+			return nil, "no flai verify has run on it, and " + jobText(*rep.Running, head, "at its head "+shortHash(head))
+		}
 		return nil, "no flai verify has run on it"
 	}
 	if rep.Commit != head {
-		return nil, fmt.Sprintf("its last flai verify ran at %s, not at its head %s", shortHash(rep.Commit), shortHash(head))
+		why := fmt.Sprintf("its last flai verify ran at %s, not at its head %s", shortHash(rep.Commit), shortHash(head))
+		if p := rep.Running; p != nil {
+			if p.Head == "" || p.Head == head {
+				why += ", where " + jobText(*p, head, "")
+			} else {
+				why += ", and " + jobText(*p, head, "")
+			}
+		}
+		return nil, why
 	}
 	queue := map[string]bool{}
 	for _, t := range tiers {
@@ -621,6 +644,23 @@ func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []s
 		return names, "its last flai verify did not run " + tierList(names) + ", marked queue"
 	}
 	return nil, ""
+}
+
+// jobText says that close-out job p runs, as "close-out job <id> runs, at its
+// step <step>": at its own head when that is not head, else with atHead, ""
+// or where head is; the step is left out when p has none.
+func jobText(p closeout.Progress, head, atHead string) string {
+	s := "close-out job " + p.ID + " runs"
+	switch {
+	case p.Head != "" && p.Head != head:
+		s += " at " + shortHash(p.Head)
+	case atHead != "":
+		s += " " + atHead
+	}
+	if p.Step != "" {
+		s += ", at its step " + p.Step
+	}
+	return s
 }
 
 // MainPathsSince are the paths the main branch, at the commit or branch main,
@@ -1222,6 +1262,8 @@ func ReportPath(project *workitem.Repo, story string) string {
 // before it in one step, so that a reader sees one whole report or the
 // other.
 func SaveReport(project *workitem.Repo, rep Report) error {
+	// what LastReportAt reads against the head is not the run's to store
+	rep.Moved, rep.Running = false, nil
 	path := ReportPath(project, rep.Story)
 	data, err := json.MarshalIndent(rep, "", "  ")
 	if err != nil {
@@ -1255,5 +1297,38 @@ func LastReport(project *workitem.Repo, story string) (Report, bool, error) {
 	if err := json.Unmarshal(data, &rep); err != nil {
 		return Report{}, false, fmt.Errorf("read the last verify report of %s at %s: %w; delete it and verify again", story, path, err)
 	}
+	rep.Moved, rep.Running = false, nil
 	return rep, true, nil
+}
+
+// LastReportAt is LastReport read against head, the head of the story's
+// branch: Moved says the report is not at head, and Running is the story's
+// running close-out job when it runs at another commit than the report's, a
+// job that has not written its head taken as running at head (I-0384). With
+// no report, ok is false and the report holds only Story and Running. An
+// empty head, from a caller that has none, leaves Moved false.
+func LastReportAt(project *workitem.Repo, story, head string) (Report, bool, error) {
+	if it, err := project.Get(story); err == nil {
+		story = it.ID
+	}
+	rep, ok, err := LastReport(project, story)
+	if err != nil {
+		return Report{}, false, err
+	}
+	p, running, err := closeout.Running(project.CacheDir(), story)
+	if err != nil {
+		return Report{}, false, err
+	}
+	if !ok {
+		rep.Story = story
+	}
+	rep.Moved = ok && head != "" && rep.Commit != head
+	at := p.Head
+	if at == "" {
+		at = head
+	}
+	if running && (!ok || at != rep.Commit) {
+		rep.Running = &p
+	}
+	return rep, ok, nil
 }

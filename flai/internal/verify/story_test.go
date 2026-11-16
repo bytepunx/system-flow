@@ -14,6 +14,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -878,6 +879,113 @@ func TestQueueTiersNotRun(t *testing.T) {
 		names, why := QueueTiersNotRun(rep, true, "0123abc", f.opts.Tiers)
 		if !reflect.DeepEqual(names, []string{"integration", "smoke"}) || why == "" {
 			t.Errorf("answered %q, %q", names, why)
+		}
+	})
+}
+
+// I-0384: a story's last report read against its branch's head says when it
+// is from before the head moved, as by a sync, and which close-out job runs
+// at the new head; neither is stored with the report.
+func TestLastReportAtSaysTheHeadMovedAndTheCloseOutRunning(t *testing.T) {
+	const reportAt, head = "aaaa111122223333", "bbbb444455556666"
+	started := time.Date(2026, 11, 16, 2, 0, 0, 0, time.UTC)
+	setup := func(t *testing.T, job *closeout.Job, log string) *workitem.Repo {
+		t.Helper()
+		repo := newVerifyFixture(t).opts.Project
+		rep := Report{Story: "S-004", Commit: reportAt, StoppedAt: "go-test", Steps: []Step{{Name: "go-test", Tier: true, State: Failed}}}
+		if err := SaveReport(repo, rep); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(closeout.Dir(repo.CacheDir()), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if job != nil {
+			if err := closeout.WriteJob(closeout.Dir(repo.CacheDir()), *job); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if log != "" {
+			if err := os.WriteFile(closeout.LogPath(repo.CacheDir(), "S-004"), []byte(log), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return repo
+	}
+	running := func(jobHead string) *closeout.Job {
+		return &closeout.Job{ID: "j-1", Story: "S-004", By: "agent", Started: started, Head: jobHead}
+	}
+	const verifying = "close-out: flai verify S-004 --message x\n"
+	atHead := &closeout.Progress{ID: "j-1", Started: started, Head: head, Step: closeout.StepVerify}
+
+	for _, tc := range []struct {
+		name    string
+		job     *closeout.Job
+		log     string
+		head    string
+		moved   bool
+		running *closeout.Progress
+		why     string
+	}{
+		{"failed before a sync moved the head", nil, "", head, true, nil,
+			"its last flai verify ran at aaaa111, not at its head bbbb444"},
+		{"a close-out runs at the new head", running(head), verifying, head, true, atHead,
+			"its last flai verify ran at aaaa111, not at its head bbbb444, where close-out job j-1 runs, at its step flai verify"},
+		{"a close-out that has not written its head", running(""), "", head, true, &closeout.Progress{ID: "j-1", Started: started},
+			"its last flai verify ran at aaaa111, not at its head bbbb444, where close-out job j-1 runs"},
+		{"a close-out at a third commit", running("cccc777788889999"), verifying, head, true,
+			&closeout.Progress{ID: "j-1", Started: started, Head: "cccc777788889999", Step: closeout.StepVerify},
+			"its last flai verify ran at aaaa111, not at its head bbbb444, and close-out job j-1 runs at cccc777, at its step flai verify"},
+		{"a close-out that ended", func() *closeout.Job { j := running(head); j.Ended = started.Add(time.Minute); return j }(), "", head, true, nil,
+			"its last flai verify ran at aaaa111, not at its head bbbb444"},
+		{"the report at the head", nil, "", reportAt, false, nil, "its last flai verify stopped at go-test"},
+		{"the report at the head with a close-out there", running(reportAt), verifying, reportAt, false, nil, "its last flai verify stopped at go-test"},
+		{"a close-out with the head unknown to it and the report at the head", running(""), "", reportAt, false, nil, "its last flai verify stopped at go-test"},
+		{"no head given", running(head), verifying, "", false, atHead, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := setup(t, tc.job, tc.log)
+			rep, ok, err := LastReportAt(repo, "s-4", tc.head)
+			if err != nil || !ok || rep.Commit != reportAt {
+				t.Fatalf("answered %+v, %v, %v", rep, ok, err)
+			}
+			if rep.Moved != tc.moved || !reflect.DeepEqual(rep.Running, tc.running) {
+				t.Errorf("moved %v, running %+v; want %v, %+v", rep.Moved, rep.Running, tc.moved, tc.running)
+			}
+			if tc.head != "" {
+				if _, why := QueueTiersNotRun(rep, ok, tc.head, queueTiers()); why != tc.why {
+					t.Errorf("QueueTiersNotRun says %q, want %q", why, tc.why)
+				}
+			}
+			last, _, err := LastReport(repo, "S-004")
+			if err != nil || last.Moved || last.Running != nil {
+				t.Errorf("LastReport answered moved %v, running %+v, %v", last.Moved, last.Running, err)
+			}
+			if err := SaveReport(repo, rep); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(ReportPath(repo, "S-004"))
+			if err != nil || strings.Contains(string(data), `"moved"`) || strings.Contains(string(data), `"running"`) {
+				t.Errorf("stored %s, %v", data, err)
+			}
+		})
+	}
+
+	t.Run("no report while a close-out runs", func(t *testing.T) {
+		repo := newVerifyFixture(t).opts.Project
+		if err := os.MkdirAll(closeout.Dir(repo.CacheDir()), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := closeout.WriteJob(closeout.Dir(repo.CacheDir()), *running(head)); err != nil {
+			t.Fatal(err)
+		}
+		rep, ok, err := LastReportAt(repo, "s-4", head)
+		want := &closeout.Progress{ID: "j-1", Started: started, Head: head}
+		if err != nil || ok || rep.Story != "S-004" || rep.Moved || !reflect.DeepEqual(rep.Running, want) {
+			t.Fatalf("answered %+v, %v, %v", rep, ok, err)
+		}
+		const why = "no flai verify has run on it, and close-out job j-1 runs at its head bbbb444"
+		if _, got := QueueTiersNotRun(rep, ok, head, queueTiers()); got != why {
+			t.Errorf("QueueTiersNotRun says %q, want %q", got, why)
 		}
 	})
 }
