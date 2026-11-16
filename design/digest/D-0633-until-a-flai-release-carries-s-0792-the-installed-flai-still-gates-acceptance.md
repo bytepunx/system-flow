@@ -9,7 +9,7 @@ date: 2026-11-15
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1237]
 ---
 
 # D-0633 Until a flai release carries S-0792, the installed flai still gates acceptance by ADR-0291, so a digest or docs commit on main sends a story in review back; its agent syncs and closes out again, changing no code

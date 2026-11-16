@@ -3,26 +3,41 @@ id: S-0798
 type: story
 nature: remediation
 title: A close-out asked for a story whose branch is behind main stops at sync without syncing, and the failed report makes a story the merge queue could batch not eligible
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T01:53:30Z
+updated: 2026-11-16T02:19:03Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:04Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-16T02:07:18Z
+    by: agent-S-0798
 tags: [flai, close-out, merge-queue, template]
 topics: [close-out, merge-queue]
-touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/closeout/script_test.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, design/adrs/0309-a-close-out-whose-first-flai-verify-stops-at-sync-syncs-and-verifies-again.md, design/adrs/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, scripts/README.md, template/root/scripts/README.md, design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md]
+touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/closeout/script_test.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, design/adrs/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, scripts/README.md, template/root/scripts/README.md, design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md, design/adrs/0310-a-close-out-whose-first-flai-verify-stops-at-sync-syncs-and-verifies-again.md, design/system/flai-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 701
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-16
+      ceremony: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 724
+      cache_read: 10436653
+      cache_write: 542104
+      cost: 4.1602
   strategic:
     - kind: planner
       seconds: 416

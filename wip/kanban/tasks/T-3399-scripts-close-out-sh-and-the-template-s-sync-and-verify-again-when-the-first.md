@@ -3,15 +3,36 @@ id: T-3399
 type: task
 nature: remediation
 title: scripts/close-out.sh and the template's sync and verify again when the first flai verify stops at sync, within the three rounds
-status: backlog
+status: done
 parent: S-0798
 owner: alex
 created: 2026-11-16T01:42:36Z
-updated: 2026-11-16T01:43:09Z
-transitions: []
+updated: 2026-11-16T02:16:47Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:08:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:08:24Z
+    by: system-flow
+  - to: done
+    at: 2026-11-16T02:16:47Z
+    by: agent-S-0798
 stream: S-0798
 tags: [flai, close-out, template]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/closeout/script_test.go]
+usage:
+  source: log
+  seconds: 503
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 232
+      cache_read: 3015681
+      cache_write: 255791
+      cost: 1.2397
 ---
 # T-3399 scripts/close-out.sh and the template's sync and verify again when the first flai verify stops at sync, within the three rounds
 

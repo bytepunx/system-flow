@@ -3,15 +3,36 @@ id: T-3401
 type: task
 nature: remediation
 title: "Write an ADR refining ADR-0156 and ADR-0291: a close-out whose first flai verify stops at sync syncs and verifies again within its three rounds"
-status: backlog
+status: done
 parent: S-0798
 owner: alex
 created: 2026-11-16T01:43:28Z
-updated: 2026-11-16T01:43:28Z
-transitions: []
+updated: 2026-11-16T02:17:44Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:08:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:08:25Z
+    by: system-flow
+  - to: done
+    at: 2026-11-16T02:17:43Z
+    by: agent-S-0798
 stream: S-0798
 tags: [close-out, merge-queue]
-touches: [design/adrs/0309-a-close-out-whose-first-flai-verify-stops-at-sync-syncs-and-verifies-again.md, design/adrs/README.md]
+touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 558
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 85
+      cache_read: 1504836
+      cache_write: 20553
+      cost: 0.578
 ---
 # T-3401 Write an ADR refining ADR-0156 and ADR-0291: a close-out whose first flai verify stops at sync syncs and verifies again within its three rounds
 

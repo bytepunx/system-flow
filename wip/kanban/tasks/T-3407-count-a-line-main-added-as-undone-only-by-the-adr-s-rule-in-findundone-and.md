@@ -3,11 +3,11 @@ id: T-3407
 type: task
 nature: remediation
 title: Count a line main added as undone only by the ADR's rule in FindUndone and RecordedUndone, with unit tests
-status: in-progress
+status: done
 parent: S-0800
 owner: alex
 created: 2026-11-16T01:44:51Z
-updated: 2026-11-16T01:48:55Z
+updated: 2026-11-16T02:09:41Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:31Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-16T01:48:55Z
     by: agent-S-0800
+  - to: done
+    at: 2026-11-16T02:09:41Z
+    by: agent-S-0800
 stream: S-0800
 tags: [storygit, go]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go]
 after: [T-3405]
+usage:
+  source: log
+  seconds: 1246
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 354
+      cache_read: 2691591
+      cache_write: 173665
+      cost: 1.0858
 ---
 # T-3407 Count a line main added as undone only by the ADR's rule in FindUndone and RecordedUndone, with unit tests
 

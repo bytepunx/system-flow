@@ -3,10 +3,10 @@ id: S-0796
 type: story
 nature: remediation
 title: The acceptance preview lists verify_behind_main while the merge queue batches, so the review page disables Accept and offers Rebase and resolve for a story the acceptance would enqueue
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-16T00:41:47Z
-updated: 2026-11-16T01:31:11Z
+updated: 2026-11-16T02:24:38Z
 transitions:
   - to: ready
     at: 2026-11-16T00:51:16Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-16T00:51:28Z
     by: agent-S-0796
+  - to: review
+    at: 2026-11-16T02:07:11Z
+    by: agent-S-0796
+  - to: done
+    at: 2026-11-16T02:24:38Z
+    by: orchestrator
 tags: [flai, acceptance, merge-queue]
 topics: [acceptance, merge-queue]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/adrs/0308-while-the-merge-queue-batches-and-is-not-held-the-acceptance-preview-lists.md, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0381-the-acceptance-preview-lists-verify-behind-main-while-the-merge-queue-batches.md, design/issues/summary.md]
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2368
-  estimated: true
-  priced_by: estimate
+  seconds: 4557
+  priced_by: harness
   turns:
     - day: 2026-11-16
-      ceremony: 1
-      work: 24
+      ceremony: 2
+      work: 146
   models:
     - model: claude-opus-5-5
-      input: 232
-      output: 1352
-      cache_read: 8848627
-      cache_write: 834270
-      cost: 3.6681
+      input: 492
+      output: 83079
+      cache_read: 45898617
+      cache_write: 885773
+      cost: 16.192
   strategic:
     - kind: planner
       seconds: 362
@@ -56,15 +61,21 @@ usage:
           cache_write: 169866
           cost: 2.2913
     - kind: orchestrator
-      seconds: 136
+      seconds: 175
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 332
-          cache_read: 1311343
-          cache_write: 198415
-          cost: 0.4586
+          input: 46
+          output: 453
+          cache_read: 1653318
+          cache_write: 274217
+          cost: 0.5859
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 13566
+          cache_write: 29666
+          cost: 0.0343
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -122,3 +133,14 @@ Figures:
 
 - Forecast 45m, raised from `flai forecast`'s 27m: the preview must read the merge queue's hold, which neither it nor `accept.preview` reads today, and a story under `flai/` closes out with the integration and smoke tiers, about twelve minutes (ADR-0291 Consequences). Delivery moved by the same 18 minutes.
 - Cost of delay 300 USD a week, as `flai cod` gives it from the inputs flai carried from I-0381 (2h a cycle at 150 USD an hour, one cycle a week). It stands: the inputs are the operator's, and I-0381 records three stories held on one day, so the figure is not high.
+
+### Accepted by the orchestrator
+
+- Verified: 9d2deecbbad7c46c04668c1fc96ed9623117032f
+- Batch: 20261116-021146
+- Enqueued verified: 9d2deecbbad7c46c04668c1fc96ed9623117032f
+- At: 2026-11-16T02:24:38Z
+
+Verdict: meets both criteria; verified at 9d2deecbbad7c46c04668c1fc96ed9623117032f, close-out passed every step
+- 1: flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/cmd/accept.go, flai/internal/hostapi/reads.go, flai/internal/preview/accept_test.go, flai/cmd/accept_queue_test.go, flai/internal/hostapi/reads_test.go, design/adrs/0308-while-the-merge-queue-batches-and-is-not-held-the-acceptance-preview-lists.md
+- 2: design/issues/I-0381-the-acceptance-preview-lists-verify-behind-main-while-the-merge-queue-batches.md, design/issues/summary.md

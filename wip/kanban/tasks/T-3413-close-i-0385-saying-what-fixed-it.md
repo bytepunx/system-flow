@@ -3,19 +3,37 @@ id: T-3413
 type: task
 nature: remediation
 title: Close I-0385 saying what fixed it
-status: ready
+status: done
 parent: S-0800
 owner: alex
 created: 2026-11-16T01:45:22Z
-updated: 2026-11-16T01:47:32Z
+updated: 2026-11-16T02:19:52Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:32Z
+    by: agent-S-0800
+  - to: in-progress
+    at: 2026-11-16T02:19:38Z
+    by: agent-S-0800
+  - to: done
+    at: 2026-11-16T02:19:52Z
     by: agent-S-0800
 stream: S-0800
 tags: [issues]
 touches: [design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-the-branch.md, design/issues/summary.md]
 after: [T-3410, T-3412]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 75
+      cache_read: 599472
+      cache_write: 1969
+      cost: 0.2279
 ---
 # T-3413 Close I-0385 saying what fixed it
 

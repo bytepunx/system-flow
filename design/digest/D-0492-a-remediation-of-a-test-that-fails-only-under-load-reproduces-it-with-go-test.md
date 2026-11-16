@@ -2,14 +2,14 @@
 id: D-0492
 title: "A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags"
 kind: decision
-sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309, S-0777, S-0779, I-0372]
+sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309, S-0777, S-0779, I-0372, S-0795, I-0369]
 topics: [testing, go, flai]
 paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release, flai/internal/channel, flai/cmd]
 date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0617, S-0653, S-0777, S-0779]
+cited: [S-0617, S-0653, S-0777, S-0779, S-0795, T-3393]
 ---
 
 # D-0492 A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags
@@ -34,4 +34,12 @@ S-0777, which fixed eight kluster tests that failed on macOS's symlinked temp di
 
 S-0779, which remediated I-0372 (D-0618), made it again, citing this entry: "T-3333's stress run calls `go test` by hand, as D-0492 records for load-dependent remediations: `flai test` takes no `-count` or `-run`. Pass or fail of each change was judged with `flai test`." Its fifty-count `-run 'MCP|TheHost'` race run passed beside the whole `flai/cmd` package looping under race as the load: 2050 passes in 779 s (I-0372). Its first two load runs each caught a test no planned task covered, so a stress run is worth making before the fix is called done, not only after (wip/archive/agents/S-0779.md, Decisions).
 
-Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309; S-0777 (wip/archive/agents/S-0777.md, Decisions); S-0779 (wip/archive/agents/S-0779.md, Decisions); I-0372.
+S-0795, which remediated I-0369 (D-0649), found the looser load too weak and S-0651's single-CPU load the one that reproduced, from its Decisions (`wip/archive/agents/S-0795.md`):
+
+```text
+The first load (CPUs 20-23, GOMAXPROCS=2, 8 loops) did not reproduce the failure on main's code in 20 counts, so the comparison used S-0651's tighter load, one CPU with GOMAXPROCS=1 and 40 busy loops, where main's code failed 22 of 100.
+```
+
+So when the CPU-pair load does not reproduce, try one CPU, `GOMAXPROCS=1`, and 40 busy loops before concluding the failure needs more. S-0795 also showed its new test failing on main's code without a scratch copy: "with `go test -overlay` mapping it to `git show main:` in bin/S-0795, as git.md allows", the overlay standing main's `agents_state.go` in for the worktree's. Its hand runs unset `FLAI_STORY` and `FLAI_STARTED_BY` and passed `-skip '^TestGateway'` (D-0451), as above.
+
+Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309; S-0777 (wip/archive/agents/S-0777.md, Decisions); S-0779 (wip/archive/agents/S-0779.md, Decisions); I-0372; S-0795 (wip/archive/agents/S-0795.md, Decisions); I-0369.

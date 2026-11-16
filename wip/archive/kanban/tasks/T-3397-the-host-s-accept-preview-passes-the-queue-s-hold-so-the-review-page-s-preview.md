@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1569
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 195
-      cache_read: 1080608
-      cache_write: 270227
-      cost: 0.5117
+      input: 14
+      output: 2417
+      cache_read: 1335186
+      cache_write: 25767
+      cost: 0.471
 ---
 # T-3397 The host's accept.preview passes the queue's hold, so the review page's preview lists no verify_behind_main for a story Accept would enqueue
 

@@ -32,7 +32,7 @@ usage:
       output: 104
       cache_read: 1372441
       cache_write: 6843
-      cost: 0.5226
+      cost: 0.5227
 ---
 # T-3405 Write the ADR refining ADR-0155 and ADR-0297 on which of main's lines a rebased branch undoes
 

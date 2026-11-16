@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 510
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 156
-      cache_read: 813716
-      cache_write: 50485
-      cost: 0.3274
+      input: 9
+      output: 1546
+      cache_read: 854188
+      cache_write: 16485
+      cost: 0.3013
 ---
 # T-3394 Write ADR-0308 refining ADR-0291: while the merge queue batches and is not held, the preview lists verify_behind_main only for an acceptance that lands by hand
 

@@ -3,15 +3,36 @@ id: T-3400
 type: task
 nature: remediation
 title: A container story's close-out syncs and verifies again when its first flai verify stops at sync, as the script does
-status: backlog
+status: done
 parent: S-0798
 owner: alex
 created: 2026-11-16T01:42:46Z
-updated: 2026-11-16T01:43:02Z
-transitions: []
+updated: 2026-11-16T02:17:02Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:08:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:08:24Z
+    by: system-flow
+  - to: done
+    at: 2026-11-16T02:17:02Z
+    by: agent-S-0798
 stream: S-0798
 tags: [flai, close-out]
 touches: [flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go]
+usage:
+  source: log
+  seconds: 518
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 133
+      cache_read: 2134127
+      cache_write: 39208
+      cost: 0.8235
 ---
 # T-3400 A container story's close-out syncs and verifies again when its first flai verify stops at sync, as the script does
 

@@ -24,16 +24,16 @@ touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.
 after: [T-3394, T-3396, T-3397]
 usage:
   source: log
-  seconds: 146
+  seconds: 152
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 239
-      cache_read: 1421019
-      cache_write: 61373
-      cost: 0.5616
+      input: 16
+      output: 2652
+      cache_read: 1465215
+      cache_write: 28276
+      cost: 0.5169
 ---
 # T-3398 The design and the guides say verify_behind_main holds only an acceptance that lands by hand, and I-0381 is closed
 

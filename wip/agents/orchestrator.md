@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2216.5911
-accrued_seconds: 1570146
-tasks_completed: 3702
-last_run: 2026-11-16T01:52:28Z
+accrued_cost: 2217.3922
+accrued_seconds: 1570249
+tasks_completed: 3706
+last_run: 2026-11-16T02:08:44Z
 ---
 
 # Orchestrator activity
@@ -25949,6 +25949,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 26
 - Cost: 0.1657 USD, estimated
+
+### 2026-11-16T01:54:32Z
+
+- Summary: release_evaluate met under threshold (count 1 of threshold 1, 25 USD/week, pending S-0795): ran flai formula run publish --ready --autocommit, instance S-0801 now ready (commit 2dd6d2aad); then flai order --by throughput --apply put S-0801 4th (no forecast duration) after S-0798 1h, S-0799 1h15m, S-0797 1h30m
+- Items: S-0795, S-0801
+- Seconds: 22
+- Cost: 0.1032 USD, estimated
+
+### 2026-11-16T01:54:54Z
+
+- Summary: I started the publish formula for the accepted S-0795, so a release is now queued as story S-0801. It sits fourth in the ready column and can't be picked up yet.
+- Items: none
+- Seconds: 22
+- Cost: 0.2497 USD, estimated
+
+### 2026-11-16T02:08:24Z
+
+- Summary: Enqueued S-0796 in the merge queue, first in the queue: close-out passed at the branch head 9d2deec, verifier matched criteria 1 and 2 to changed files; policy throughput, forecast 45m, cost of delay value 300/week
+- Items: S-0796
+- Seconds: 39
+- Cost: 0.1616 USD, estimated
+
+### 2026-11-16T02:08:44Z
+
+- Summary: I enqueued S-0796 in the merge queue. It is the only story in the queue, and the queue lands it once its batch passes.
+- Items: none
+- Seconds: 20
+- Cost: 0.2866 USD, estimated
 
 ## Refusals
 

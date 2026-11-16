@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1561
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 55
-      output: 303
-      cache_read: 2043186
-      cache_write: 91579
-      cost: 0.8087
+      input: 23
+      output: 3819
+      cache_read: 2110025
+      cache_write: 40720
+      cost: 0.7444
 ---
 # T-3396 flai accept's preview passes the queue's hold and the hand-landing flags, and its dry run says the batch runs the stale tiers
 

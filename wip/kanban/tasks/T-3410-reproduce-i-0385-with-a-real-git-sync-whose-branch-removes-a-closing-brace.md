@@ -3,19 +3,37 @@ id: T-3410
 type: task
 nature: remediation
 title: Reproduce I-0385 with a real-git sync whose branch removes a closing brace elsewhere in a Go file main added one to
-status: ready
+status: done
 parent: S-0800
 owner: alex
 created: 2026-11-16T01:45:03Z
-updated: 2026-11-16T01:47:32Z
+updated: 2026-11-16T02:19:26Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:32Z
+    by: agent-S-0800
+  - to: in-progress
+    at: 2026-11-16T02:10:11Z
+    by: agent-S-0800
+  - to: done
+    at: 2026-11-16T02:19:26Z
     by: agent-S-0800
 stream: S-0800
 tags: [storygit, go, test]
 touches: [flai/internal/storygit/sync_test.go]
 after: [T-3407]
+usage:
+  source: log
+  seconds: 555
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 192
+      cache_read: 1347680
+      cache_write: 125067
+      cost: 0.5581
 ---
 # T-3410 Reproduce I-0385 with a real-git sync whose branch removes a closing brace elsewhere in a Go file main added one to
 

@@ -18,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 11
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 33
+          cache_read: 141383
+          cache_write: 27936
+          cost: 0.0516
 formula: publish
 ---
 # S-0801 Publish what is accepted and not yet released

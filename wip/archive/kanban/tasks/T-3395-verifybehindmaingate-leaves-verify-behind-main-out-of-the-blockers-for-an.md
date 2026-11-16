@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 519
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 250
-      cache_read: 1294026
-      cache_write: 138891
-      cost: 0.5428
+      input: 15
+      output: 2564
+      cache_read: 1416311
+      cache_write: 27333
+      cost: 0.4996
 ---
 # T-3395 verifyBehindMainGate leaves verify_behind_main out of the blockers for an acceptance that would enqueue, and keeps the stale tiers and a reason
 

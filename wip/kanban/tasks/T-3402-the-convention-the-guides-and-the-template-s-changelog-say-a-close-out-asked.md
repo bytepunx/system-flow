@@ -3,16 +3,37 @@ id: T-3402
 type: task
 nature: remediation
 title: The convention, the guides, and the template's changelog say a close-out asked for a branch behind main syncs first, and I-0383 is closed
-status: backlog
+status: done
 parent: S-0798
 owner: alex
 created: 2026-11-16T01:43:38Z
-updated: 2026-11-16T01:43:38Z
-transitions: []
+updated: 2026-11-16T02:19:03Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:17:49Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:17:49Z
+    by: system-flow
+  - to: done
+    at: 2026-11-16T02:19:03Z
+    by: agent-S-0798
 stream: S-0798
 tags: [close-out, template]
-touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, scripts/README.md, template/root/scripts/README.md, design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md]
+touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, scripts/README.md, template/root/scripts/README.md, design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md, design/system/flai-cli.md]
 after: [T-3399, T-3400, T-3401]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 69
+      cache_read: 2414732
+      cache_write: 13361
+      cost: 0.92
 ---
 # T-3402 The convention, the guides, and the template's changelog say a close-out asked for a branch behind main syncs first, and I-0383 is closed
 

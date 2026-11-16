@@ -3,11 +3,11 @@ id: T-3412
 type: task
 nature: remediation
 title: Say in the design and the user guide which of main's lines a rebased branch undoes
-status: in-progress
+status: done
 parent: S-0800
 owner: alex
 created: 2026-11-16T01:45:14Z
-updated: 2026-11-16T01:48:55Z
+updated: 2026-11-16T02:09:58Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:32Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-16T01:48:55Z
     by: agent-S-0800
+  - to: done
+    at: 2026-11-16T02:09:58Z
+    by: agent-S-0800
 stream: S-0800
 tags: [docs, design]
 touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-3405]
+usage:
+  source: log
+  seconds: 1263
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 289
+      cache_read: 1990492
+      cache_write: 52539
+      cost: 0.7742
 ---
 # T-3412 Say in the design and the user guide which of main's lines a rebased branch undoes
 

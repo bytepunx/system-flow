@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 328.4972
-accrued_seconds: 36195
-tasks_completed: 221
-last_run: 2026-11-16T00:49:14Z
+accrued_cost: 329.5199
+accrued_seconds: 36306
+tasks_completed: 222
+last_run: 2026-11-16T01:55:28Z
 ---
 
 # Curator activity
@@ -1779,3 +1779,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 39
 - Cost: 0.3644 USD, estimated
+
+### 2026-11-16T01:55:28Z
+
+- Summary: Wrote D-0649 (I-0369's cause: flai serve now replaces a run held on its image job in one write); merged S-0795 into D-0492 (one CPU, GOMAXPROCS=1, 40 busy loops reproduced the failure where the looser load did not, plus showing a new test failing on main's code with `go test -overlay`) and D-0554 (worked its tasks itself); absorbed none, since no design document, convention, or ADR changed after the last run and none states the facts of these three entries; `flai digest compact` compacted none and recorded new citers on D-0451 and D-0633.
+- Trigger: accepted S-0795
+- Items: D-0451, D-0492, D-0554, D-0633, D-0649
+- Seconds: 111
+- Cost: 1.0227 USD, estimated

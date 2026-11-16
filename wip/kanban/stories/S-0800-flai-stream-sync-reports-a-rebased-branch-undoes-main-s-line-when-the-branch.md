@@ -6,7 +6,7 @@ title: flai stream sync reports a rebased branch undoes main's line when the bra
 status: in-progress
 owner: alex
 created: 2026-11-16T01:39:43Z
-updated: 2026-11-16T01:48:09Z
+updated: 2026-11-16T02:19:57Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:11Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0800
 tags: [storygit, sync, merge-queue]
 topics: [git, acceptance]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-the-branch.md, design/issues/summary.md, design/adrs/0309-a-line-main-added-is-undone-only-when-the-rebased-branch-removes-it-at-the-line.md]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-the-branch.md, design/issues/summary.md, design/adrs/0309-a-line-main-added-is-undone-only-when-the-rebased-branch-removes-it-at-the-line.md, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 193
+  seconds: 2070
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-16
       ceremony: 2
       hand_edits: 1
-      work: 16
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 305
-      cache_read: 3051861
-      cache_write: 225446
-      cost: 1.2418
+      input: 192
+      output: 1356
+      cache_read: 11519409
+      cache_write: 598397
+      cost: 4.592
   strategic:
     - kind: planner
       seconds: 63
@@ -87,8 +87,8 @@ This story remediates [I-0385](../../../design/issues/I-0385-flai-stream-sync-re
 The undone check does not count a line of main's that carries no change of its own. Proposed, for the story to settle in an ADR refining ADR-0155: a line main added is undone only when the branch removes it where main added it, by comparing the hunks' positions in main's file rather than the file's lines as one multiset; or, more narrowly, a line that holds only brackets, braces, or white space is never counted alone. The revert ADR-0155 was written for (I-0124) must still be caught.
 
 ## Acceptance criteria
-- [ ] The cause I-0385 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0385 is closed with `flai issue close I-0385 --reason` saying what fixed it
+- [x] The cause I-0385 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0385 is closed with `flai issue close I-0385 --reason` saying what fixed it
 
 ## Tasks
 - T-3405 Write the ADR refining ADR-0155 and ADR-0297 on which of main's lines a rebased branch undoes
