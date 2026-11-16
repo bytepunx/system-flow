@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2211.2478
-accrued_seconds: 1568928
-tasks_completed: 3660
-last_run: 2026-11-16T00:38:05Z
+accrued_cost: 2212.2655
+accrued_seconds: 1569156
+tasks_completed: 3667
+last_run: 2026-11-16T00:44:04Z
 ---
 
 # Orchestrator activity
@@ -25655,6 +25655,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0790, S-0755, S-0794, S-0241, S-0795
 - Seconds: 14
 - Cost: 0.0275 USD, estimated
+
+### 2026-11-16T00:38:38Z
+
+- Summary: I've acted on all three reasons and the run is ending. I started no new release and made no change to TH-1234. I started one planner run, for S-0795.
+- Items: none
+- Seconds: 33
+- Cost: 0.1612 USD, estimated
+
+### 2026-11-16T00:41:12Z
+
+- Summary: Enqueued S-0794 (publish formula instance) first in the merge queue at 36c0076 under accept_reviews: the close-out passed at the branch head and the verifier found T-3387, T-3388, and T-3389 done; it published flai 1.101.0 and template 1.1.43. Policy throughput: a formula instance has no forecast to rank by.
+- Items: S-0794
+- Seconds: 44
+- Cost: 0.1460 USD, estimated
+
+### 2026-11-16T00:41:33Z
+
+- Summary: S-0794 is now first in the merge queue, verified at `36c0076`. The queue will land it.
+- Items: none
+- Seconds: 21
+- Cost: 0.2454 USD, estimated
+
+### 2026-11-16T00:42:22Z
+
+- Summary: Answered TH-1235, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0795
+- Seconds: 28
+- Cost: 0.0770 USD, estimated
+
+### 2026-11-16T00:42:44Z
+
+- Summary: Approved planner-S-0795's plan on TH-1235 and resolved it under plan_backlog_stories: two tasks fit the two criteria; forecast 40m, value 25 USD/week.
+- Items: S-0795
+- Seconds: 22
+- Cost: 0.0286 USD, estimated
+
+### 2026-11-16T00:43:38Z
+
+- Summary: Finalized draft S-0795 under finalize_drafts (flai promote --drafts: complete, 40m forecast, 25 USD/week value, criteria and touches consistent); promoted it to ready under promote_to_ready as candidate 1 (0.67h); applied flai order --by throughput: S-0795 first.
+- Items: S-0795
+- Seconds: 54
+- Cost: 0.1175 USD, estimated
+
+### 2026-11-16T00:44:04Z
+
+- Summary: S-0795 is out of draft and in progress: I finalized it and moved it to ready, and its agent picked it up at 00:43:35Z.
+- Items: none
+- Seconds: 26
+- Cost: 0.2420 USD, estimated
 
 ## Refusals
 

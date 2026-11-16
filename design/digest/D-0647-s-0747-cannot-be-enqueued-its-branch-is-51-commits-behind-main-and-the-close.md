@@ -14,18 +14,4 @@ cited: []
 
 # D-0647 S-0747 cannot be enqueued: its branch is 51 commits behind main, and the close-out stops at sync: done
 
-The operator, alex, answered TH-1228 at 2026-11-16T00:28:30Z.
-
-What was asked:
-
-```text
-**Recommended:** run `flai stream sync S-0747` in its worktree, settle what it reports, and ask for the close-out again (the MCP tool `verify`). Then I enqueue it.
-```
-
-The answer:
-
-```text
-done
-```
-
-Source: TH-1228.
+Merged into D-0645: when a story in review cannot be enqueued because its branch is behind main and its close-out stops at `sync`, the operator brings the branch up to main, and the orchestrator asks for the close-out again and enqueues the story once it passes. Here the operator answered "done" on TH-1228, having synced S-0747. Read D-0645 for the whole fact.

@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1376.3404
-accrued_seconds: 162109
-tasks_completed: 266
-last_run: 2026-11-15T21:12:55Z
+accrued_cost: 1378.6397
+accrued_seconds: 162368
+tasks_completed: 267
+last_run: 2026-11-16T00:42:16Z
 ---
 
 # Planner activity
@@ -2122,3 +2122,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0790, T-3380, T-3381, T-3382, T-3383
 - Seconds: 568
 - Cost: 3.9589 USD, estimated
+
+### 2026-11-16T00:42:16Z
+
+- Summary: Planned S-0795: wrote its touches, a 40m forecast, a 25 USD/week cost of delay and `### Planning` notes; created tasks T-3392 (fix that writes the held run's replacement once) and T-3393 (loaded `-race` runs, then close I-0369, after T-3392); revisited no tasks; plan on TH-1235.
+- Trigger: orchestrator
+- Items: S-0795, T-3392, T-3393
+- Seconds: 259
+- Cost: 2.2993 USD, estimated
