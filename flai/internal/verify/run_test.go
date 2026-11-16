@@ -542,6 +542,41 @@ func TestRunStopsTheTiersAfterAFailureAndListsThemNotReached(t *testing.T) {
 	}
 }
 
+// S-0804: Run tells its hooks as each tier's command starts and comes back,
+// parallel tiers started together before any comes back: the tier that
+// passed first, the one that failed, and the one the failure stopped, not
+// reached. A tier that never starts is told nothing.
+func TestRunTellsItsHooksAsEachTierStartsAndEnds(t *testing.T) {
+	bEnded, cStarted := make(chan struct{}), make(chan struct{})
+	proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{
+		"a": func(context.Context, io.Writer) int {
+			if !awaitClose(bEnded) || !awaitClose(cStarted) {
+				return 2
+			}
+			time.Sleep(20 * time.Millisecond) // past the run seeing b pass
+			return 1
+		},
+		"b": func(context.Context, io.Writer) int { close(bEnded); return 0 },
+		"c": func(ctx context.Context, _ io.Writer) int {
+			close(cStarted)
+			<-ctx.Done()
+			return -1
+		},
+	}}
+	var told []string
+	opts := RunOptions{Proc: proc, FS: fstest.MapFS{}}
+	opts.TierStarted = func(tier string) { told = append(told, "started "+tier) }
+	opts.TierEnded = func(tier string, state State) { told = append(told, "ended "+tier+" "+string(state)) }
+	res, err := Run(context.Background(), "/repo", []Selected{psel("a"), psel("b"), psel("c"), sel("d", "", "d")}, opts)
+	if err != nil || !reflect.DeepEqual(resultStates(res), []State{Failed, NotReached, NotReached, NotReached}) {
+		t.Fatalf("run %+v, %v; events %q", res, err, proc.events)
+	}
+	want := []string{"started a", "started b", "started c", "ended b passed", "ended a failed", "ended c not-reached"}
+	if !reflect.DeepEqual(told, want) {
+		t.Errorf("told %q, want %q", told, want)
+	}
+}
+
 // S-0610, ADR-0266: over the same outcomes, a run with every tier marked
 // parallel answers what the serial run answers: the verdict, the states,
 // the tier it names, and the findings.

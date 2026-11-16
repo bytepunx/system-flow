@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -275,6 +276,9 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	if !o.syncOnly {
 		opts.KlusterOn, opts.ChecksOn = a.verifyKlusterActions(mainRootOf(repo))
 	}
+	if os.Getenv(closeout.ProgressEnv) == "1" {
+		a.reportVerifyProgress(&opts)
+	}
 	var rep verify.Report
 	stopped := false
 	if o.syncOnly {
@@ -320,6 +324,35 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		return &exitError{code: 1}
 	}
 	return nil
+}
+
+// reportVerifyProgress sets opts' hooks to write a progress line to stderr
+// as each step and tier of the story's run starts and ends, in the shape
+// closeout reads from a job's log (S-0804), stamped with the app's clock.
+// The lines are written one at a time, whole, whichever goroutine a hook is
+// called from. Stdout, whose last line the close-out script reads, is left
+// as it is.
+func (a *app) reportVerifyProgress(opts *verify.StoryOptions) {
+	story := opts.Story
+	var mu sync.Mutex
+	write := func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
+		fmt.Fprintln(a.errOut, line)
+	}
+	opts.StepStarted = func(name string) {
+		write(closeout.StartedLine(closeout.SourceVerify, story, closeout.LineStep, name, a.now()))
+	}
+	opts.Started = func(name string) {
+		write(closeout.StartedLine(closeout.SourceVerify, story, closeout.LineTier, name, a.now()))
+	}
+	opts.Ended = func(step verify.Step) {
+		kind := closeout.LineStep
+		if step.Tier {
+			kind = closeout.LineTier
+		}
+		write(closeout.EndedLine(closeout.SourceVerify, story, kind, string(step.State), step.Name, a.now()))
+	}
 }
 
 // verifyKlusterActions reports whether the kluster host action is on for the

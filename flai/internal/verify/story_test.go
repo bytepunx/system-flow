@@ -1962,3 +1962,72 @@ func TestStaleTiers(t *testing.T) {
 		}
 	})
 }
+
+// hooked sets the fixture's progress hooks to keep what each is told, in
+// order, as "started <step>", "started tier <tier>", "ended <step> <state>",
+// and "ended tier <tier> <state>".
+func (f *verifyFixture) hooked() *[]string {
+	var told []string
+	f.opts.StepStarted = func(step string) { told = append(told, "started "+step) }
+	f.opts.Started = func(tier string) { told = append(told, "started tier "+tier) }
+	f.opts.Ended = func(s Step) {
+		name := s.Name
+		if s.Tier {
+			name = "tier " + name
+		}
+		told = append(told, "ended "+name+" "+string(s.State))
+	}
+	return &told
+}
+
+// S-0804: Verify tells its hooks as each step before the tiers and each tier
+// that runs starts and ends, in order, and as each tier that does not run
+// ends: a reused tier, one skipped for the tier that covers it, and one left
+// to the merge queue, with no start; a step or tier not reached tells
+// nothing. SyncOnly tells its two steps.
+func TestVerifyTellsItsHooksAsEachStepAndTierStartsAndEnds(t *testing.T) {
+	steps := []string{"started rebase", "ended rebase passed", "started sync", "ended sync passed", "started narrative", "ended narrative passed", "started check"}
+
+	f := newVerifyFixture(t)
+	f.opts.Tiers, f.opts.LeaveToQueue = queueTiers(), true
+	told := f.hooked()
+	if rep, err := Verify(context.Background(), f.opts); err != nil || !rep.Passed {
+		t.Fatalf("first run %+v, %v", rep, err)
+	}
+	queued := []string{"ended tier integration queued", "ended tier smoke queued"}
+	if want := slices.Concat(steps, []string{"ended check passed", "started tier go-test", "ended tier go-test passed"}, queued); !reflect.DeepEqual(*told, want) {
+		t.Errorf("a first run told\n%q\nwant\n%q", *told, want)
+	}
+	// something uncommitted, so that the record does not answer and the run
+	// reuses go-test (ADR-0229)
+	f.git.out["status --porcelain --untracked-files=all"] = " M flai/internal/x/x.go"
+	*told = nil
+	if rep, err := Verify(context.Background(), f.opts); err != nil || !rep.Passed {
+		t.Fatalf("second run %+v, %v", rep, err)
+	}
+	if want := slices.Concat(steps, []string{"ended check passed", "ended tier go-test reused"}, queued); !reflect.DeepEqual(*told, want) {
+		t.Errorf("a resumed run told\n%q\nwant\n%q", *told, want)
+	}
+
+	f = newVerifyFixture(t)
+	f.opts.Tiers = slices.Clone(storyTiers)
+	f.opts.Tiers[2].Covers = []string{"go-test"}
+	f.editNarrative(t, "\n## Open questions\n", "\n")
+	told = f.hooked()
+	if rep, err := Verify(context.Background(), f.opts); err != nil || rep.StoppedAt != StepCheck {
+		t.Fatalf("a run whose check fails %+v, %v", rep, err)
+	}
+	if want := slices.Concat(steps, []string{"ended check failed", "ended tier go-test skipped"}); !reflect.DeepEqual(*told, want) {
+		t.Errorf("a run whose check fails told\n%q\nwant\n%q", *told, want)
+	}
+
+	f = newVerifyFixture(t)
+	f.git.out["rev-parse --git-path rebase-merge"] = t.TempDir()
+	told = f.hooked()
+	if rep, err := SyncOnly(f.opts); err != nil || rep.StoppedAt != StepRebase {
+		t.Fatalf("a sync check whose rebase is unfinished %+v, %v", rep, err)
+	}
+	if want := []string{"started rebase", "ended rebase failed"}; !reflect.DeepEqual(*told, want) {
+		t.Errorf("a sync check told %q, want %q", *told, want)
+	}
+}

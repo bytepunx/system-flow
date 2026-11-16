@@ -163,6 +163,9 @@ func schedule(ctx context.Context, root string, selected []Selected, opts RunOpt
 				continue
 			}
 			ran[i] = true
+			if opts.TierStarted != nil {
+				opts.TierStarted(s.Tier.Name)
+			}
 			tctx, cancel := context.WithCancel(ctx)
 			cancels[i] = cancel
 			running++
@@ -186,7 +189,24 @@ func schedule(ctx context.Context, root string, selected []Selected, opts RunOpt
 				}
 			}
 		}
+		if opts.TierEnded != nil {
+			opts.TierEnded(selected[e.i].Tier.Name, endedState(e.i, first))
+		}
 	}
+}
+
+// endedState is the state of the tier at index i of a run as its command
+// comes back, once first is the index of the first tier in list order that
+// failed: failed when it is that tier, not reached when it comes after it,
+// and passed when it comes before.
+func endedState(i, first int) State {
+	switch {
+	case i == first:
+		return Failed
+	case i > first:
+		return NotReached
+	}
+	return Passed
 }
 
 // passedBefore is what PassedEnv holds for a tier that waited for the

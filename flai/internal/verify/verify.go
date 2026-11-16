@@ -155,6 +155,16 @@ type RunOptions struct {
 	// as <tier>.log; relative to the run's root, or absolute. Empty writes
 	// nothing.
 	LogDir string
+	// TierStarted is called with a tier's name as its command starts, and
+	// TierEnded with its name and state as the command comes back: failed,
+	// passed, or not reached for one stopped, or come back, after a tier
+	// before it in the list failed. A tier that passed as it came back is
+	// told passed though a tier before it fails later and the result lists
+	// it not reached. Neither is called for a tier that does not run. Run
+	// calls them one at a time, from the goroutine that called it, while
+	// parallel tiers run; nil calls nothing.
+	TierStarted func(tier string)
+	TierEnded   func(tier string, state State)
 }
 
 // Options are what Test needs to answer for a checkout.

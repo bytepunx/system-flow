@@ -91,6 +91,19 @@ type StoryOptions struct {
 	// are on for the project, as the kluster step reads the story's
 	// namespace's record under them (ADR-0292 §6).
 	KlusterOn, ChecksOn bool
+	// StepStarted is called with the name of each step before the tiers as
+	// it starts, and Started with each tier's as its command starts, as
+	// TierOptions has it; Ended is called with each step and tier as it ends,
+	// a tier's with Tier set. A tier that runs ends with its name and its
+	// state as its command comes back, as RunOptions' TierEnded tells it,
+	// which Verify sets, with TierStarted, from these. A tier that ends
+	// without running, reused, skipped for the tier that covers it, or left
+	// to the merge queue, ends with its whole step and no start; a step or
+	// tier not reached calls neither. Parallel tiers run beside each other,
+	// and the hooks are called one at a time. Nil calls nothing.
+	StepStarted func(step string)
+	Started     func(tier string)
+	Ended       func(Step)
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -415,6 +428,9 @@ func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 			rep.Steps = append(rep.Steps, Step{Name: s.name, State: NotReached})
 			continue
 		}
+		if v.opts.StepStarted != nil {
+			v.opts.StepStarted(s.name)
+		}
 		began := v.opts.Now()
 		v.note = ""
 		found := s.run()
@@ -427,6 +443,25 @@ func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 			rep.Passed, rep.StoppedAt = false, s.name
 		}
 		rep.Steps = append(rep.Steps, step)
+		v.ended(step)
+	}
+}
+
+// ended calls the Ended hook, if any, with step.
+func (v *storyRun) ended(step Step) {
+	if v.opts.Ended != nil {
+		v.opts.Ended(step)
+	}
+}
+
+// endedUnrun calls the Ended hook with each of steps that ended without
+// running: reused, skipped, or queued; one not reached did not end, and one
+// that ran was told as its command came back.
+func (v *storyRun) endedUnrun(steps []Step) {
+	for _, step := range steps {
+		if step.State == Reused || step.State == Skipped || step.State == Queued {
+			v.ended(step)
+		}
 	}
 }
 
@@ -475,6 +510,7 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 			}
 		}
 		rep.Steps = append(rep.Steps, reused...)
+		v.endedUnrun(reused)
 		ro := v.opts.RunOptions
 		// the check step passed, as every step before the tiers did, and the
 		// reused tiers passed in the run they come from (S-0610)
@@ -485,6 +521,10 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 			}
 		}
 		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story, PassedEnv+"="+strings.Join(passed, " "))
+		ro.TierStarted, ro.TierEnded = v.opts.Started, nil
+		if v.opts.Ended != nil {
+			ro.TierEnded = func(tier string, state State) { v.opts.Ended(Step{Name: tier, Tier: true, State: state}) }
+		}
 		var res Result
 		res, runErr = Run(ctx, v.worktree, selected[len(reused):], ro)
 		for i, tr := range res.Tiers {
@@ -496,17 +536,22 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 				step.RanFor = selected[len(reused)+i].RanFor
 			}
 			rep.Steps = append(rep.Steps, step)
+			v.endedUnrun([]Step{step})
 			if tr.State == Failed && rep.Passed {
 				rep.Passed, rep.StoppedAt = false, tr.Name
 			}
 		}
 	} else {
 		for _, s := range selected {
-			rep.Steps = append(rep.Steps, unrunStep(s))
+			step := unrunStep(s)
+			rep.Steps = append(rep.Steps, step)
+			v.endedUnrun([]Step{step})
 		}
 	}
 	for _, s := range queued {
-		rep.Steps = append(rep.Steps, queuedStep(s))
+		step := queuedStep(s)
+		rep.Steps = append(rep.Steps, step)
+		v.ended(step)
 	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr

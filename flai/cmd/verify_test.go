@@ -1479,3 +1479,41 @@ func TestVerifyLastPrintsTheNamespacesDeployAndChecksRun(t *testing.T) {
 		t.Errorf("--last at an older commit lacks\n%s\n%s", want, out)
 	}
 }
+
+// S-0804: with FLAI_VERIFY_PROGRESS=1 flai verify writes a line to stderr as
+// each step and tier starts and ends, in the shape closeout reads from a job's log,
+// and its stdout, whose last line the close-out script reads, is the same
+// as without it, when it writes no such line.
+func TestVerifyWritesItsProgressToStderrOnlyWhenAsked(t *testing.T) {
+	root, _ := verifyFixture(t, "test -f \"$1\"")
+	// progress is stderr's lines of the story's flai verify, beside the
+	// log's events
+	progress := func(stderr string) string {
+		var lines strings.Builder
+		for line := range strings.Lines(stderr) {
+			if strings.HasPrefix(line, "verify: S-004 ") {
+				lines.WriteString(line)
+			}
+		}
+		return lines.String()
+	}
+	plain, plainErr, code := runVerify(t, root, verifyGit{}, "verify", "--fresh", "S-004")
+	if code != 0 || progress(plainErr) != "" {
+		t.Fatalf("without the variable: exit %d, stderr\n%s\n%s", code, plainErr, plain)
+	}
+	t.Setenv(closeout.ProgressEnv, "1")
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "--fresh", "S-004")
+	if code != 0 || out != plain {
+		t.Fatalf("with the variable: exit %d, stdout\n%s\nwant it as without\n%s", code, out, plain)
+	}
+	var want strings.Builder
+	for _, step := range []string{"rebase", "sync", "narrative", "check"} {
+		want.WriteString("verify: S-004 2026-09-17T01:00:00Z step started " + step + "\n")
+		want.WriteString("verify: S-004 2026-09-17T01:00:00Z step ended passed " + step + "\n")
+	}
+	want.WriteString("verify: S-004 2026-09-17T01:00:00Z tier started unit\n")
+	want.WriteString("verify: S-004 2026-09-17T01:00:00Z tier ended passed unit\n")
+	if got := progress(errOut); got != want.String() {
+		t.Errorf("stderr's progress\n%s\nwant\n%s", got, want.String())
+	}
+}
