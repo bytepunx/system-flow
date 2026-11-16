@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2220.1062
-accrued_seconds: 1570638
-tasks_completed: 3722
-last_run: 2026-11-16T04:13:23Z
+accrued_cost: 2221.0118
+accrued_seconds: 1570809
+tasks_completed: 3727
+last_run: 2026-11-16T04:16:51Z
 ---
 
 # Orchestrator activity
@@ -26089,6 +26089,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1509 USD, estimated
+
+### 2026-11-16T04:14:53Z
+
+- Summary: Board starvation (TH-1243 resolved by flai serve, TH-1244 its notice; not mine to answer). promote_candidates: none (all held by after or a draft). plan --candidates lists E-0034 only for TH-1228's "done", a confirmation, so no planner. S-0241 draft already threaded on TH-1165. S-0747's last close-out at head a4d66ac stopped at integration with "context canceled": asked for a new one (job S-0747-20261116T041425Z). S-0739 passed at head 7e66d35 but the queue refuses it as undone_main on flai/internal/workitem/board.go: opened TH-1245.
+- Items: S-0747, S-0739, E-0034, S-0241
+- Seconds: 72
+- Cost: 0.3505 USD, estimated
+
+### 2026-11-16T04:15:21Z
+
+- Summary: S-0747's new close-out (job S-0747-20261116T041425Z) stopped at sync: branch 43 commits behind main. Opened TH-1246 asking for flai stream sync S-0747 and a new close-out, then I enqueue it. S-0802 (publish formula instance) reached review; left for its accept_reviews run.
+- Items: S-0747
+- Seconds: 28
+- Cost: 0.0893 USD, estimated
+
+### 2026-11-16T04:15:43Z
+
+- Summary: The board is still starved. Nothing can be promoted, and the stories in review that would unblock the backlog need you or their agents. I opened two threads saying what each one needs.
+- Items: none
+- Seconds: 22
+- Cost: 0.1282 USD, estimated
+
+### 2026-11-16T04:16:30Z
+
+- Summary: Enqueued S-0802 (publish formula instance) in the merge queue at 56ca61e, place 2 of 2 behind S-0797; close-out passed at the branch head, evidence T-3423, T-3424, T-3425 done. policy throughput; S-0802 has no forecast. No acceptance this run, so no release_evaluate.
+- Items: S-0802
+- Seconds: 28
+- Cost: 0.1374 USD, estimated
+
+### 2026-11-16T04:16:51Z
+
+- Summary: S-0802 is in the merge queue, second in line behind S-0797, enqueued at commit 56ca61e.
+- Items: none
+- Seconds: 21
+- Cost: 0.2002 USD, estimated
 
 ## Refusals
 
