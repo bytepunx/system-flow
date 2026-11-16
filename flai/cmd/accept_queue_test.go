@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -497,4 +498,121 @@ func TestTheOperatorsAcceptanceLandsWhileTheQueueIsHeldOrWithoutTheQueueTiers(t 
 			assertLeftTheQueue(t, root)
 		})
 	}
+}
+
+// outranQueueProject is a project whose S-0001, in review, passed its
+// close-out over an older main, while main has since changed a file of the
+// story's Go package that its go-test tier selects, with the merge-queue host
+// action on and the queue batching: the fixture that flai accept refuses with
+// verify_behind_main when it lands the story by hand (ADR-0291).
+func outranQueueProject(t *testing.T) string {
+	t.Helper()
+	root, _ := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	m, err := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitOnMain(t, root, "system-flow.yaml", string(m)+"tests:\n  - name: go-test\n    command: [\"true\"]\n    paths: [\"cli/**\"]\n", "chore: the go-test tier")
+	commitOnMain(t, root, "go.mod", "module example.com/fixture\n", "chore: the Go module")
+	base := commitOnMain(t, root, "cli/conditions.go", "package cli\n\nconst Condition = \"the old words\"\n", "feat: a condition")
+	gitIn(t, filepath.Join(root, ".flai-cache", "worktrees", "S-0001"), "rebase", "-q", "main")
+	storeS0001PassingVerify(t, root, gitIn(t, root, "rev-parse", "story/S-0001"), base)
+	commitOnMain(t, root, "cli/conditions.go", "package cli\n\nconst Condition = \"the new words\"\n", "feat: reword the condition")
+	return root
+}
+
+// hasVerifyBehindMain reports whether res lists the blocker verify_behind_main.
+func hasVerifyBehindMain(res accepted) bool {
+	b := res.VerifyBehindMainBlocker
+	return b != nil && b.Code == preview.BlockVerifyBehindMain && slices.Contains(res.Blockers, b.Message)
+}
+
+// I-0381, ADR-0308, S-0796 criterion 1: while the merge queue batches and is
+// not held, the operator's acceptance preview of a story whose last passing
+// verify main has outrun lists no verify_behind_main, since the acceptance
+// enqueues the story and the batch runs every tier over the main it lands
+// on: --json names the stale tiers and stale_tiers_queued, the text says the
+// queue runs them, and the acceptance itself enqueues the story, as the
+// preview says.
+func TestAnAcceptanceThatEnqueuesPreviewsNoVerifyBehindMain(t *testing.T) {
+	root := outranQueueProject(t)
+	res := dryRunAccept(t, root)
+	if hasVerifyBehindMain(res) || res.VerifyBehindMainBlocker != nil || len(res.Blockers) > 0 {
+		t.Errorf("an acceptance that enqueues must not list verify_behind_main: %+v %q", res.VerifyBehindMainBlocker, res.Blockers)
+	}
+	if !slices.Equal(res.StaleTiers, []string{"go-test"}) || !strings.HasPrefix(res.StaleTiersQueued, "S-0001's verify does not cover the main branch it would land on: ") || !strings.Contains(res.StaleTiersQueued, "the acceptance enqueues it, and the merge queue's batch runs every tier again over the main it lands on (ADR-0291, ADR-0308)") {
+		t.Errorf("--json must name go-test and leave it to the batch: %q %q", res.StaleTiers, res.StaleTiersQueued)
+	}
+	out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--dry-run")
+	if code != 0 || !strings.Contains(out, "left to the merge queue: "+res.StaleTiersQueued+"\n") || strings.Contains(out, "blocked:") {
+		t.Errorf("the dry run's text must leave the stale tiers to the merge queue and list no blocker: %d %s\n%s", code, errOut, out)
+	}
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	js, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--json")
+	var got accepted
+	if code != 0 || json.Unmarshal([]byte(js), &got) != nil || got.Queue == nil || !got.Queue.Enqueued {
+		t.Fatalf("the acceptance the preview previewed must enqueue S-0001: %d %s\n%s", code, errOut, js)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+}
+
+// ADR-0308 §1 and §3: an acceptance that lands by hand keeps the gate: while
+// the queue is held, while its state cannot be read, which counts as held,
+// and with --without-queue-tiers, the preview lists verify_behind_main and no
+// stale_tiers_queued.
+func TestAnAcceptanceThatLandsByHandPreviewsVerifyBehindMain(t *testing.T) {
+	for name, c := range map[string]struct {
+		state func(t *testing.T, root string)
+		extra []string
+	}{
+		"held": {state: func(t *testing.T, root string) { queueUnderWay(t, root, true) }},
+		"state unreadable": {state: func(t *testing.T, root string) {
+			path := mergequeue.StatePath(filepath.Join(root, ".flai-cache"))
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(`{"enqueued": [`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		"--without-queue-tiers": {extra: []string{"--without-queue-tiers"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			root := outranQueueProject(t)
+			if c.state != nil {
+				c.state(t, root)
+			}
+			args := append([]string{"accept", "S-0001", "--by", "alex", "--dry-run", "--json"}, c.extra...)
+			out, errOut, code := runIn(t, root, args...)
+			var res accepted
+			if code != 0 || json.Unmarshal([]byte(out), &res) != nil {
+				t.Fatalf("flai %v: %d %s\n%s", args, code, errOut, out)
+			}
+			if !hasVerifyBehindMain(res) || !slices.Equal(res.StaleTiers, []string{"go-test"}) || res.StaleTiersQueued != "" {
+				t.Errorf("flai %v must list verify_behind_main naming go-test: %+v %q %q %q", args, res.VerifyBehindMainBlocker, res.StaleTiers, res.StaleTiersQueued, res.Blockers)
+			}
+		})
+	}
+}
+
+// ADR-0308 §1: the operator's acceptance, not as a dry run, of a story the
+// queue would take, while the queue's state cannot be read, is refused as
+// the enqueue's read is, and nothing lands.
+func TestAnAcceptanceThatWouldEnqueueIsRefusedWhileTheQueuesStateCannotBeRead(t *testing.T) {
+	root, _ := orchestratedQueueProject(t, true)
+	mergeQueueOn(t, root)
+	path := mergequeue.StatePath(filepath.Join(root, ".flai-cache"))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(`{"enqueued": [`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
+	if want := "enqueue S-0001, which the merge queue lands while it batches, in place of accepting it by hand: read the merge queue's state at " + path; code == 0 || !strings.Contains(errOut, want) {
+		t.Errorf("the acceptance must be refused with %q: %d\n%s", want, code, errOut)
+	}
+	assertNothingAccepted(t, root, mainBefore)
 }

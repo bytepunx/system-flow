@@ -434,16 +434,40 @@ type acceptQueued struct {
 
 // queuesInstead reports whether the acceptance of it with o, given opts, is
 // the operator's that the merge queue takes in place of a landing by hand
-// (S-0552): a story in the state w's acceptance leaves from, accepted by
-// neither the orchestrator nor the queue's landing, while the queue batches, not as a dry run, and without
-// --without-queue-tiers, --without-kluster, or --keep-removal, which land it
-// by hand, outside the queue, as before: the queue's landing waits for the
-// story's deploy, which --without-kluster lands it without (ADR-0254 §5a).
-// Whether the queue is held is read after.
+// (S-0552): a story in the state w's acceptance leaves from, not as a dry run,
+// whose opts enqueue it, as the preview reads them (opts.Enqueues, ADR-0308):
+// while the queue batches and is not held, accepted by neither the
+// orchestrator nor the queue's landing, and without --without-queue-tiers,
+// --without-kluster, or --keep-removal, which land it by hand, outside the
+// queue, as before: the queue's landing waits for the story's deploy, which
+// --without-kluster lands it without (ADR-0254 §5a).
 func queuesInstead(w workflow.Workflow, it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) bool {
 	accepts := workitem.Accepts(w, it.Type, it.Status, workitem.AcceptTarget(w, it.Type))
-	return it.Type == workitem.Story && accepts && opts.QueueBatches && !opts.Orchestrator &&
-		o.batch == "" && !o.dryRun && !o.withoutQueueTiers && !o.withoutKluster && len(opts.Keep) == 0
+	return it.Type == workitem.Story && accepts && !o.dryRun && opts.Enqueues()
+}
+
+// queueHeld reports whether the merge queue, which batches, is held, from its
+// state, for the operator's acceptance of it with o and opts (ADR-0308). A
+// state that cannot be read counts as held, so the preview's
+// verify_behind_main gate never opens unread; for an acceptance that would
+// enqueue the story it is the acceptance's error, as the enqueue's own read
+// would be.
+func queueHeld(repo *workitem.Repo, it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) (bool, error) {
+	st, err := mergequeue.ReadState(repo.CacheDir())
+	if err == nil {
+		return st.Held, nil
+	}
+	if queuesInstead(repo.Flow(), it, o, opts) {
+		return true, enqueueUnread(it.ID, err)
+	}
+	return true, nil
+}
+
+// enqueueUnread is the error of the operator's acceptance of story id, which
+// the merge queue lands while it batches, when the queue's state cannot be
+// read for it.
+func enqueueUnread(id string, err error) error {
+	return fmt.Errorf("enqueue %s, which the merge queue lands while it batches, in place of accepting it by hand: %w", id, err)
 }
 
 // enqueueAccepted is the operator's acceptance of story it, by by, while the
@@ -455,7 +479,7 @@ func queuesInstead(w workflow.Workflow, it *workitem.Item, o acceptOptions, opts
 func (a *app) enqueueAccepted(repo *workitem.Repo, it *workitem.Item, by string) (*accepted, error) {
 	st, err := mergequeue.ReadState(repo.CacheDir())
 	if err != nil {
-		return nil, fmt.Errorf("enqueue %s, which the merge queue lands while it batches, in place of accepting it by hand: %w", it.ID, err)
+		return nil, enqueueUnread(it.ID, err)
 	}
 	if st.Held {
 		return nil, nil
@@ -1304,8 +1328,16 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !orchestrator {
 		// the queue's landing is not gated, so the queue is not read for it
 		batches := o.batch == "" && a.queueBatches(mainRootOf(repo))
-		return preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers,
-			KlusterOn: klusterOn, ChecksOn: checksOn, WithoutKluster: o.withoutKluster}, none, nil
+		opts := preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers,
+			KlusterOn: klusterOn, ChecksOn: checksOn, WithoutKluster: o.withoutKluster}
+		if batches {
+			held, err := queueHeld(repo, it, o, opts)
+			if err != nil {
+				return preview.AcceptOptions{}, none, err
+			}
+			opts.QueueHeld = held
+		}
+		return opts, none, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: %w", err)
@@ -1662,6 +1694,11 @@ func (a *app) printAccept(acc *accepted) error {
 	if res.DryRun {
 		for _, b := range res.Blockers {
 			fmt.Fprintf(a.out, "blocked: %s\n", b)
+		}
+		// the stale tiers of an acceptance that enqueues the story are the
+		// batch's to run, not a blocker (ADR-0308)
+		if res.StaleTiersQueued != "" {
+			fmt.Fprintf(a.out, "left to the merge queue: %s\n", res.StaleTiersQueued)
 		}
 		// wip is committed as a matter of course and goes unlisted; the
 		// shared set's other files are named, as the operator may not expect
