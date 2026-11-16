@@ -25,10 +25,13 @@ import (
 // takes its git dir from the main checkout's record of the worktree, never
 // from the files the container can write, and runs the main checkout's hooks
 // alone, with no fsmonitor. It mirrors scripts/close-out.sh's steps and its
-// last line, at most closeOutRounds rounds (ADR-0156).
+// last line, at most closeOutRounds rounds (ADR-0156): a round whose verify or
+// whose sync check stops at sync, because the branch was behind main when the
+// close-out was asked for or main moved while it ran, syncs on the host and
+// verifies again (I-0383).
 
-// closeOutRounds is how many times a close-out syncs and verifies again when
-// main moved while it ran (ADR-0156).
+// closeOutRounds is how many rounds a close-out runs in all, syncing and
+// verifying again when the branch lacks main's commits (ADR-0156, I-0383).
 const closeOutRounds = 3
 
 // containerAgent is a story's agent that runs on the container harness and
@@ -86,7 +89,8 @@ func (c *containerCloseOut) verifyArgv() []string {
 }
 
 // run is the job's body: the verify in the container, the commit, the sync
-// check, and, when main moved, flai stream sync and the next round, each
+// check, and, when the verify or the sync check stops at sync, the commit,
+// flai stream sync, and the next round, each
 // written to out, which ends with one line naming the story, the outcome,
 // the step it stopped at, and the round, as the script's last line does. It
 // answers the exit code of the step it stopped at, 0 when every step passed,
@@ -126,6 +130,28 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 	base := closeOutEnv(withoutGitEnv(os.Environ()), c.req.By)
 	hostEnv := append(slices.Clone(base), hostGitConfig(root)...)
 	gitEnv := append(slices.Clone(hostEnv), storyGitDir(root, story, c.worktree)...)
+	// stoppedAtSync says whether a flai verify's output ends at the sync step:
+	// the branch lacks commits of main's.
+	stoppedAtSync := func(said string) bool {
+		return strings.HasPrefix(lastLine(said), "verify: "+story+" stopped at sync (")
+	}
+	commit := func() (int, error) {
+		step = "commit"
+		if err := gitPointers(root, story, c.worktree); err != nil {
+			return -1, err
+		}
+		return c.commit(ctx, out, gitEnv)
+	}
+	// sync starts the next round with the host's flai stream sync, saying why.
+	sync := func(why string) (int, error) {
+		round++
+		step = "flai stream sync"
+		fmt.Fprintf(out, "close-out: %s; flai stream sync %s (round %d of %d)\n", why, story, round, closeOutRounds)
+		if err := gitPointers(root, story, c.worktree); err != nil {
+			return -1, err
+		}
+		return p.run(ctx, c.worktree, hostEnv, out, []string{flai, "stream", "sync", story})
+	}
 	for {
 		step = "flai verify"
 		name := c.id
@@ -138,22 +164,36 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 			return end(-1, err)
 		}
 		fmt.Fprintf(out, "close-out: flai verify %s --record-issues in the container %s\n", story, cmd.Name)
-		if code, err := p.run(ctx, c.worktree, append(slices.Clone(base), cmd.Env...), out, cmd.Argv); err != nil || code != 0 {
+		var verified bytes.Buffer
+		code, err := p.run(ctx, c.worktree, append(slices.Clone(base), cmd.Env...), io.MultiWriter(out, &verified), cmd.Argv)
+		if err != nil {
 			return end(code, err)
 		}
-
-		step = "commit"
-		if err := gitPointers(root, story, c.worktree); err != nil {
-			return end(-1, err)
+		if code != 0 {
+			// The branch was behind main when the close-out was asked for, or
+			// main moved before this round's verify: it commits what is
+			// outstanding, which the sync refuses, syncs, and verifies again
+			// within the rounds (I-0383). At any other step it stops here.
+			if !stoppedAtSync(verified.String()) || round >= closeOutRounds {
+				return end(code, nil)
+			}
+			if code, err := commit(); err != nil || code != 0 {
+				return end(code, err)
+			}
+			if code, err := sync("the branch is behind main"); err != nil || code != 0 {
+				return end(code, err)
+			}
+			continue
 		}
-		if code, err := c.commit(ctx, out, gitEnv); err != nil || code != 0 {
+
+		if code, err := commit(); err != nil || code != 0 {
 			return end(code, err)
 		}
 
 		step = "the sync check"
 		fmt.Fprintf(out, "close-out: flai verify %s --sync-only\n", story)
 		var said bytes.Buffer
-		code, err := p.run(ctx, c.worktree, hostEnv, io.MultiWriter(out, &said), []string{flai, "verify", story, "--sync-only"})
+		code, err = p.run(ctx, c.worktree, hostEnv, io.MultiWriter(out, &said), []string{flai, "verify", story, "--sync-only"})
 		if err != nil {
 			return end(code, err)
 		}
@@ -162,16 +202,10 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 		}
 		// Main moved, such as by an acceptance, when it stopped at the sync
 		// step; at any other step, or after the last round, it stops here.
-		if !strings.HasPrefix(lastLine(said.String()), "verify: "+story+" stopped at sync (") || round >= closeOutRounds {
+		if !stoppedAtSync(said.String()) || round >= closeOutRounds {
 			return end(code, nil)
 		}
-		round++
-		step = "flai stream sync"
-		fmt.Fprintf(out, "close-out: main moved during the run; flai stream sync %s (round %d of %d)\n", story, round, closeOutRounds)
-		if err := gitPointers(root, story, c.worktree); err != nil {
-			return end(-1, err)
-		}
-		if code, err := p.run(ctx, c.worktree, hostEnv, out, []string{flai, "stream", "sync", story}); err != nil || code != 0 {
+		if code, err := sync("main moved during the run"); err != nil || code != 0 {
 			return end(code, err)
 		}
 	}

@@ -721,6 +721,113 @@ func TestAContainerStorysCloseOutCommitsAndSyncsOnTheHost(t *testing.T) {
 	}
 }
 
+// I-0383: a container story's close-out asked for while its branch is behind
+// main, whose first verify in the container stops at sync, commits what is
+// outstanding on the host, which flai stream sync refuses, syncs, and verifies
+// again in round 2, as the sync check's stop does. Before S-0798 it ended at
+// flai verify with the failed report as the story's last.
+func TestAContainerStorysCloseOutBehindMainSyncsAndVerifiesAgain(t *testing.T) {
+	t.Parallel()
+	lab, fake := newContainerLab(t, true)
+	statuses, verifies := []string{" M a.go\n", "", ""}, 0
+	fake.answer = func(argv []string, out io.Writer) int {
+		if argv[0] == "docker" {
+			verifies++
+			if verifies == 1 {
+				_, _ = io.WriteString(out, "verify: "+lab.story+" stopped at sync (main has 1 commit the branch lacks)\n")
+				return 1
+			}
+			return 0
+		}
+		if strings.Join(argv[1:], " ") == "status --porcelain" {
+			s := statuses[0]
+			statuses = statuses[1:]
+			_, _ = io.WriteString(out, s)
+		}
+		return 0
+	}
+	lab.start()
+	lab.ask(closeout.Request{Message: "close out"})
+	if e := lab.awaitVerified(1); e.To != closeout.VerdictPassed {
+		t.Errorf("the verified event: %+v", e)
+	}
+	var got []string
+	for _, c := range fake.ran() {
+		if c.argv[0] == "docker" {
+			got = append(got, "docker "+c.argv[4])
+			continue
+		}
+		got = append(got, strings.Join(c.argv, " "))
+	}
+	id := strings.TrimPrefix(lab.verified()[0].Fields[inbox.FieldJob], lab.story+"-")
+	want := []string{
+		"docker flai-closeout-" + lab.story + "-" + id,
+		"git status --porcelain", "git add -A", "git commit -m close out",
+		hostFlai + " stream sync " + lab.story,
+		"docker flai-closeout-" + lab.story + "-" + id + "-r2",
+		"git status --porcelain",
+		hostFlai + " verify " + lab.story + " --sync-only",
+		"git status --porcelain",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("the steps\n%q\nwant\n%q", got, want)
+	}
+	out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
+	if err != nil || !strings.Contains(string(out), "close-out: the branch is behind main; flai stream sync "+lab.story+" (round 2 of 3)\n") ||
+		!strings.HasSuffix(string(out), "close-out: "+lab.story+" passed every step in round 2 of 3; ready to move to review\n") {
+		t.Errorf("the job's log: %q %v", out, err)
+	}
+}
+
+// A container story's close-out whose every verify stops at sync stops at
+// flai verify after the last round, and one whose sync fails stops at flai
+// stream sync, in the round the sync began.
+func TestAContainerStorysCloseOutBehindMainStopsAfterTheRoundsOrAtAFailedSync(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		syncCode int
+		last     string
+		syncs    int
+	}{
+		{"every verify stops at sync", 0, "stopped at flai verify in round 3 of 3 (exit 1)", 2},
+		{"the sync fails", 1, "stopped at flai stream sync in round 2 of 3 (exit 1)", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			lab, fake := newContainerLab(t, true)
+			fake.answer = func(argv []string, out io.Writer) int {
+				switch {
+				case argv[0] == "docker":
+					_, _ = io.WriteString(out, "verify: "+lab.story+" stopped at sync (main has 1 commit the branch lacks)\n")
+					return 1
+				case strings.Join(argv[1:], " ") == "stream sync "+lab.story:
+					return tc.syncCode
+				}
+				return 0
+			}
+			lab.start()
+			lab.ask(closeout.Request{Message: "close out"})
+			if e := lab.awaitVerified(1); e.To == closeout.VerdictPassed {
+				t.Errorf("the verified event: %+v", e)
+			}
+			syncs := 0
+			for _, c := range fake.ran() {
+				if strings.Join(c.argv, " ") == hostFlai+" stream sync "+lab.story {
+					syncs++
+				}
+			}
+			if syncs != tc.syncs {
+				t.Errorf("the host synced %d times, want %d: %q", syncs, tc.syncs, argvs(fake.ran()))
+			}
+			out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
+			if err != nil || !strings.HasSuffix(string(out), "close-out: "+lab.story+" "+tc.last+"\n") {
+				t.Errorf("the job's log: %q %v", out, err)
+			}
+		})
+	}
+}
+
 // As the script does, a container story's close-out with something
 // outstanding and no message stops at the commit, and commits nothing.
 func TestAContainerStorysCloseOutWithChangesAndNoMessageStopsAtTheCommit(t *testing.T) {
