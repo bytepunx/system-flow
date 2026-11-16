@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -310,6 +311,87 @@ func TestAHandAcceptanceWhileTheQueueBatchesListsTheQueueTiersBlocker(t *testing
 	}
 }
 
+// writeRunningJob writes story id's close-out job j, running, under repo's
+// cache dir, with a log that says its flai verify began.
+func writeRunningJob(t *testing.T, repo *workitem.Repo, j closeout.Job) {
+	t.Helper()
+	dir := closeout.Dir(repo.CacheDir())
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := closeout.WriteJob(dir, j); err != nil {
+		t.Fatal(err)
+	}
+	log := "close-out: flai verify " + j.Story + " --message \"sync\"\n"
+	if err := os.WriteFile(closeout.LogPath(repo.CacheDir(), j.Story), []byte(log), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// I-0384: after a sync moved a story's head, the preview of its acceptance
+// names the close-out job that runs at the new head, its step, and that the
+// preview is as of the last finished report, whatever the blockers are, and
+// the queue_tiers blocker, which stays, names the job. With no job running,
+// or one running at the report's commit, there is no verify_running.
+func TestAPreviewAfterASyncNamesTheCloseOutRunningAtTheNewHead(t *testing.T) {
+	at := time.Date(2026, 11, 15, 3, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s := forgeRepo(t, "local", at)
+	git := withGit{gitAnswers{
+		"rev-parse --is-inside-work-tree":                        "true",
+		"rev-parse --verify --quiet refs/heads/story/" + s.ID:    forgeHead,
+		"rev-parse --verify --quiet story/" + s.ID + "^{commit}": forgeHead,
+	}}
+	// the report is from before the sync, at the old head
+	saveQueuedReport(t, repo, s.ID, forgeOther, verify.Passed)
+
+	res, err := AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{QueueBatches: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.VerifyRunning != nil || res.VerifyRunningWhy != "" {
+		t.Errorf("with no job running there is no verify_running: %+v %q", res.VerifyRunning, res.VerifyRunningWhy)
+	}
+
+	started := at.Add(-2 * time.Minute)
+	writeRunningJob(t, repo, closeout.Job{ID: "job-7", Story: s.ID, By: "agent-" + s.ID, Started: started, Head: forgeHead})
+	res, err = AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{QueueBatches: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := closeout.Progress{ID: "job-7", Started: started, Head: forgeHead, Step: closeout.StepVerify}
+	if res.VerifyRunning == nil || *res.VerifyRunning != want {
+		t.Errorf("verify_running must be the job at the new head at its step: %+v, want %+v", res.VerifyRunning, want)
+	}
+	why := "close-out job job-7 runs at " + s.ID + "'s head abc1234, at its step flai verify; this preview is as of " + s.ID + "'s last finished flai verify, at 0123456, until the job ends (I-0384)"
+	if res.VerifyRunningWhy != why {
+		t.Errorf("verify_running_why:\n got %q\nwant %q", res.VerifyRunningWhy, why)
+	}
+	queue := "its last flai verify ran at 0123456, not at its head abc1234, where close-out job job-7 runs, at its step flai verify"
+	if b := res.QueueTiersBlocker; res.QueueTiersWhy != queue || b == nil || !strings.Contains(b.Message, queue) || !slices.Contains(res.Blockers, b.Message) {
+		t.Errorf("queue_tiers stays and names the job: why %q, blocker %+v, blockers %q", res.QueueTiersWhy, b, res.Blockers)
+	}
+	if data, err := json.Marshal(res); err != nil || !strings.Contains(string(data), `"verify_running":{"id":"job-7",`) || !strings.Contains(string(data), `"verify_running_why":`) {
+		t.Errorf("--json must carry verify_running and verify_running_why: %s %v", data, err)
+	}
+
+	// whatever the blockers are: with the queue not batching there is no
+	// queue_tiers, and the job is named still
+	res, err = AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.QueueTiersBlocker != nil || res.VerifyRunning == nil || res.VerifyRunningWhy != why {
+		t.Errorf("the job is named without the queue gate: %+v %+v %q", res.QueueTiersBlocker, res.VerifyRunning, res.VerifyRunningWhy)
+	}
+
+	// a job running at the report's commit is what the report is about
+	writeRunningJob(t, repo, closeout.Job{ID: "job-8", Story: s.ID, By: "agent-" + s.ID, Started: started, Head: forgeOther})
+	if res, err = AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{QueueBatches: true}); err != nil || res.VerifyRunning != nil || res.VerifyRunningWhy != "" {
+		t.Errorf("a job at the report's commit gives no verify_running: %+v %q %v", res.VerifyRunning, res.VerifyRunningWhy, err)
+	}
+}
+
 // ADR-0221: a branch head that cannot be read, a report that cannot be read,
 // and a report at another commit are the blocker, saying why, so the gate
 // never opens unread.
@@ -318,7 +400,7 @@ func TestTheQueueTiersGateNeverOpensUnread(t *testing.T) {
 	repo, s := forgeRepo(t, "local", at)
 	gate := func(r gitAnswers) *Acceptance {
 		res := &Acceptance{ID: s.ID, Branch: "story/" + s.ID}
-		queueTiersGate(r, repo, s, res, AcceptOptions{QueueBatches: true})
+		queueTiersGate(repo, s, res, AcceptOptions{QueueBatches: true}, readLastVerify(r, repo, s.ID, res.Branch, slog.New(slog.NewTextHandler(io.Discard, nil))))
 		return res
 	}
 	head := gitAnswers{"rev-parse --verify --quiet story/" + s.ID + "^{commit}": forgeHead}

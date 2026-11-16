@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
@@ -121,6 +122,15 @@ type Acceptance struct {
 	QueueTiers        []string `json:"queue_tiers,omitempty"`
 	QueueTiersWhy     string   `json:"queue_tiers_why,omitempty"`
 	QueueTiersBlocker *Blocker `json:"queue_tiers_blocker,omitempty"`
+	// VerifyRunning is the story's close-out job, its id, start, head, and
+	// step, while it runs at another commit than the story's last flai verify
+	// report, as after a sync moved the story's head, whatever the blockers
+	// are, and VerifyRunningWhy says so and that the preview is as of the last
+	// finished report: the blockers stay as that report has them, since a
+	// running job is not a verify that passed (I-0384). Nil and "" while no
+	// job runs, or it runs at the report's commit.
+	VerifyRunning    *closeout.Progress `json:"verify_running,omitempty"`
+	VerifyRunningWhy string             `json:"verify_running_why,omitempty"`
 	// KlusterWhy is why the kluster gate holds the story while the kluster
 	// host action is on for the project and its manifest has a kluster:
 	// block (ADR-0254 §5a): its namespace's last job and that job's outcome,
@@ -262,7 +272,9 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // main has brought in, since the story's last passing flai verify, paths that
 // send back a tier it ran, save one the merge queue takes (opts.Enqueues),
 // whose batch runs every tier again over the main it lands on (ADR-0291,
-// ADR-0303, ADR-0308).
+// ADR-0303, ADR-0308). A story's close-out job running at another commit than
+// its last report is named beside the blockers, which it does not change
+// (I-0384).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -413,9 +425,16 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if it.Type == workitem.Story && repo.Manifest.Acceptance.PullRequest() && !res.Resumed {
 		forgeGate(r, repo, it.ID, res)
 	}
+	// the story's last report is read once against its branch's head, for the
+	// close-out running at another commit and the queue tiers (I-0384)
+	var last lastVerify
+	if it.Type == workitem.Story && res.Branch != "" && !res.Resumed {
+		last = readLastVerify(r, repo, it.ID, res.Branch, log)
+		res.VerifyRunning, res.VerifyRunningWhy = last.rep.Running, verifyRunningWhy(it.ID, last)
+	}
 	// while the merge queue batches, the operator's acceptance waits for the
 	// tiers it leaves to the batch to run at the story's head (ADR-0221)
-	queueTiersGate(r, repo, it, res, opts)
+	queueTiersGate(repo, it, res, opts, last)
 	// a verify main has outrun since does not vouch for the head the
 	// acceptance lands, whoever accepts but the queue (ADR-0291)
 	verifyBehindMainGate(r, repo, it, res, opts)
@@ -505,12 +524,12 @@ func DirtyMainMessage(id string, paths []string) string {
 // story with a branch, not done already, while the merge queue batches
 // (opts.QueueBatches), and neither the orchestrator's acceptance, which
 // enqueues the story instead (S-0403), nor the queue's landing, whose batch
-// ran every tier.
-func queueTiersGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
+// ran every tier. last is the story's last report read against that head.
+func queueTiersGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions, last lastVerify) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Orchestrator || opts.Batch != "" || !opts.QueueBatches {
 		return
 	}
-	res.QueueTiers, res.QueueTiersWhy = queueTiersNotRun(r, repo, it.ID, res.Branch)
+	res.QueueTiers, res.QueueTiersWhy = queueTiersNotRun(repo, it.ID, res.Branch, last)
 	if res.QueueTiersWhy == "" || opts.WithoutQueueTiers {
 		return
 	}
@@ -520,28 +539,93 @@ func queueTiersGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res 
 }
 
 // queueTiersNotRun is verify.QueueTiersNotRun for story id's last report
-// against the head of branch, with the tiers its worktree's manifest declares,
-// which its flai verify ran, or the main checkout's when it has no worktree.
-// A head, a report, or tiers that cannot be read is why, naming the error, so
-// the gate never opens unread.
-func queueTiersNotRun(r execx.Runner, repo *workitem.Repo, id, branch string) ([]string, string) {
-	head, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
-	if err != nil {
-		return nil, fmt.Sprintf("cannot read the head of %s: %v", branch, err)
+// against the head of branch, as last read them, with the tiers its
+// worktree's manifest declares, which its flai verify ran, or the main
+// checkout's when it has no worktree: a report not at the head names the
+// close-out job running (I-0384). A head, a report, or tiers that cannot be
+// read is why, naming the error, so the gate never opens unread.
+func queueTiersNotRun(repo *workitem.Repo, id, branch string, last lastVerify) ([]string, string) {
+	if last.headErr != nil {
+		return nil, fmt.Sprintf("cannot read the head of %s: %v", branch, last.headErr)
 	}
-	rep, ok, err := verify.LastReport(repo, id)
-	if err != nil {
-		return nil, fmt.Sprintf("cannot %v", err)
+	if last.err != nil {
+		return nil, fmt.Sprintf("cannot %v", last.err)
 	}
-	root := repo.WorktreePath(id)
-	if _, err := os.Stat(root); err != nil {
-		root = repo.MainRoot
-	}
+	root := storyRoot(repo, id)
 	tiers, err := verify.CheckoutTiers(root)
 	if err != nil {
 		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
 	}
-	return verify.QueueTiersNotRun(rep, ok, strings.TrimSpace(head), tiers)
+	return verify.QueueTiersNotRun(last.rep, last.ok, last.head, tiers)
+}
+
+// lastVerify is a story's last flai verify report read against the head of
+// its branch, with the close-out job that runs at another commit than the
+// report's (I-0384).
+type lastVerify struct {
+	// head is the branch's head, "" when headErr says why it cannot be read.
+	head    string
+	headErr error
+	// rep and ok are verify.LastReportAt's, err why the report cannot be read.
+	rep verify.Report
+	ok  bool
+	err error
+}
+
+// readLastVerify reads story id's last report against the head of branch,
+// read once with git rev-parse. A close-out job whose state cannot be read is
+// logged and taken as none, so that it moves no blocker: the report is read
+// again without it.
+func readLastVerify(r execx.Runner, repo *workitem.Repo, id, branch string, log *slog.Logger) lastVerify {
+	var last lastVerify
+	if head, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}"); err != nil {
+		last.headErr = err
+	} else {
+		last.head = strings.TrimSpace(head)
+	}
+	last.rep, last.ok, last.err = verify.LastReportAt(repo, id, last.head)
+	if last.err == nil {
+		return last
+	}
+	// LastReportAt fails on the report or on the job; the report alone says which
+	rep, ok, err := verify.LastReport(repo, id)
+	if err != nil {
+		last.err = err
+		return last
+	}
+	log.Warn("cannot tell whether a close-out job runs", "component", "accept", "item", id, "err", last.err)
+	last.rep, last.ok, last.err = rep, ok, nil
+	last.rep.Moved = ok && last.head != "" && rep.Commit != last.head
+	return last
+}
+
+// verifyRunningWhy says that story id's close-out job last found runs, at
+// which commit and step, and that the preview is as of the last finished
+// report, the one last read; "" when no job runs at another commit than the
+// report's (I-0384).
+func verifyRunningWhy(id string, last lastVerify) string {
+	p := last.rep.Running
+	if p == nil {
+		return ""
+	}
+	s := "close-out job " + p.ID + " runs"
+	switch {
+	case p.Head != "" && p.Head != last.head && last.head != "":
+		s += " at " + shortSHA(p.Head) + ", not at " + id + "'s head " + shortSHA(last.head)
+	case p.Head != "" && p.Head != last.head:
+		s += " at " + shortSHA(p.Head)
+	case last.head != "":
+		s += " at " + id + "'s head " + shortSHA(last.head)
+	default:
+		s += " on " + id
+	}
+	if p.Step != "" {
+		s += ", at its step " + p.Step
+	}
+	if !last.ok {
+		return s + "; no flai verify has finished on " + id + " yet, so this preview has no report to go by until the job ends (I-0384)"
+	}
+	return s + "; this preview is as of " + id + "'s last finished flai verify, at " + shortSHA(last.rep.Commit) + ", until the job ends (I-0384)"
 }
 
 // QueueTiersBlocker is why story id cannot be accepted by hand while the
