@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-16T04:11:47Z
+updated: 2026-11-16T04:11:51Z
 ---
 
 # Active streams
@@ -12,7 +12,6 @@ updated: 2026-11-16T04:11:47Z
 | [S-0747](S-0747.md) | The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name | review | agent-S-0747 | 2026-11-15T02:43:17Z |
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
 | [S-0797](S-0797.md) | The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed | review | agent-S-0797 | 2026-11-16T04:07:02Z |
-| [S-0801](S-0801.md) | Publish what is accepted and not yet released | review | agent-S-0801 | 2026-11-16T03:53:53Z |
 
 ## Strategic agents
 

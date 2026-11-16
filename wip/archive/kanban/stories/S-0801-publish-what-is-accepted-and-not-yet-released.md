@@ -3,10 +3,10 @@ id: S-0801
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-16T01:54:24Z
-updated: 2026-11-16T03:53:50Z
+updated: 2026-11-16T04:11:50Z
 transitions:
   - to: ready
     at: 2026-11-16T01:54:26Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-16T03:53:50Z
     by: agent-S-0801
+  - to: done
+    at: 2026-11-16T04:11:50Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0801-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -78,3 +81,15 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: 197555f5a8800481ce393e25ab75bdbf1bb097c7
+- Batch: 20261116-035615
+- Enqueued verified: f3d6d8711eaa34c1fcb9f72c256cfed51ceed358
+- At: 2026-11-16T04:11:50Z
+
+Verdict: pass at f3d6d8711eaa34c1fcb9f72c256cfed51ceed358
+- 1: T-3420 done
+- 2: T-3421 done
+- 3: T-3422 done
