@@ -6,7 +6,7 @@ title: A close-out asked for a story whose branch is behind main stops at sync w
 status: ready
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T01:51:07Z
+updated: 2026-11-16T01:53:30Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:04Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 593740
           cost: 6.2355
     - kind: orchestrator
-      seconds: 138
+      seconds: 143
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 290
-          cache_read: 1344019
-          cache_write: 187046
-          cost: 0.4657
+          input: 38
+          output: 310
+          cache_read: 1407072
+          cache_write: 201486
+          cost: 0.4893
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-16T01:44:42Z
 forecast:
   duration: 1h
-  delivery: 2026-11-16T03:08:00Z
+  delivery: 2026-11-16T03:11:00Z
   basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0750, S-0796 and S-0800."
   by: flai
-  at: 2026-11-16T01:51:07Z
+  at: 2026-11-16T01:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-16T01:46:42Z

@@ -6,7 +6,7 @@ title: After a sync moves a story's head, the review page, flai queue, and the a
 status: ready
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T01:51:07Z
+updated: 2026-11-16T01:53:30Z
 transitions:
   - to: ready
     at: 2026-11-16T01:51:03Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 34900
           cost: 0.6647
     - kind: orchestrator
-      seconds: 78
+      seconds: 120
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 216
-          cache_read: 792335
-          cache_write: 116387
-          cost: 0.2766
+          input: 31
+          output: 344
+          cache_read: 1311447
+          cache_write: 134631
+          cost: 0.4402
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-16T01:47:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-16T03:27:00Z
+  delivery: 2026-11-16T03:30:00Z
   basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 3, behind S-0750, S-0796, S-0800 and S-0798."
   by: flai
-  at: 2026-11-16T01:51:07Z
+  at: 2026-11-16T01:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-16T01:50:51Z
