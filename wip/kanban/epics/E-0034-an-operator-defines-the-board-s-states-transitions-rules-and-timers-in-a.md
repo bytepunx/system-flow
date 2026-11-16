@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-16T23:42:04Z
+updated: 2026-11-16T23:42:05Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -122,6 +122,7 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
 - S-0806 The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour
 - S-0807 A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need
 - S-0808 The acceptance's gates, the merge queue's eligibility, queue_tiers, and verify_behind_main, judge only the suites the accept transition's verify lists
+- S-0809 The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
 
 ## Notes
 
