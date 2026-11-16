@@ -3,10 +3,10 @@ id: S-0800
 type: story
 nature: remediation
 title: flai stream sync reports a rebased branch undoes main's line when the branch removes a closing brace elsewhere in a Go file main added a closing brace to, and the merge queue then never batches the story
-status: review
+status: done
 owner: alex
 created: 2026-11-16T01:39:43Z
-updated: 2026-11-16T02:42:42Z
+updated: 2026-11-16T02:59:21Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:11Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-16T02:42:42Z
     by: agent-S-0800
+  - to: done
+    at: 2026-11-16T02:59:21Z
+    by: orchestrator
 tags: [storygit, sync, merge-queue]
 topics: [git, acceptance]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-the-branch.md, design/issues/summary.md, design/adrs/0309-a-line-main-added-is-undone-only-when-the-rebased-branch-removes-it-at-the-line.md, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go]
@@ -126,3 +129,14 @@ Forecast 50m, delivery 2026-11-16T05:01:00Z. `flai forecast` gave 28m (137 s per
 Cost of delay 112.50 USD a week. `flai cod` works it from the operator's input, 45m lost per 168h cycle, at 150 USD an hour. It stands: the input is the operator's, and one occurrence so far is what it counts. The issue's record also keeps S-0739 out of the merge queue until the fix, which the input does not price.
 
 After: none. The story reads no output of another open story.
+
+### Accepted by the orchestrator
+
+- Verified: 5c72f96e215b4436183ee482323d688851c31528
+- Batch: 20261116-024719
+- Enqueued verified: e248416bda4c6bee74a718bccc6a7cb37ef20816
+- At: 2026-11-16T02:59:21Z
+
+Verdict: pass at e248416bda4c6bee74a718bccc6a7cb37ef20816
+- 1: flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/0309-a-line-main-added-is-undone-only-when-the-rebased-branch-removes-it-at-the-line.md
+- 2: design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-the-branch.md, design/issues/summary.md
