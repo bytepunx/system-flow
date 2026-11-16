@@ -2,6 +2,9 @@
 # Close out a story before review: flai verify, then the commit, then the
 # sync check, stopping at the first step that fails. When the main branch
 # moved during the run, it syncs and runs them again, at most three rounds.
+# A close-out asked for a branch already behind the main branch syncs first:
+# when a round's flai verify stops at sync, it commits what is outstanding,
+# runs flai stream sync, and verifies again within the same three rounds.
 # The close-out runs as a flai serve job: a story's agent asks for it with
 # the flai MCP tool verify, or flai verify S-nnnn --job -m "<message>" on the
 # host, and waits for its verified event rather than running this script in a
@@ -92,28 +95,67 @@ trap 'signal=terminated; exit 143' TERM
 branch="$(git rev-parse --abbrev-ref HEAD)"
 [ "$branch" = "story/$story" ] || { echo "close-out: this checkout is on $branch, not story/$story; run this in $story's worktree" >&2; exit 1; }
 
-# The sync check's output shows as it comes and is kept, to read its last
-# line; its status goes through a file, which the pipe would otherwise hide.
+# run runs a flai verify: its output shows as it comes and is kept, to read
+# its last line into $last, and its status goes through a file into $rc,
+# which the pipe would otherwise hide.
 tmp="$(mktemp -d)"
+run() {
+  { rc=0; flai verify "$@" || rc=$?; echo "$rc" >"$tmp/status"; } | tee "$tmp/out"
+  rc="$(cat "$tmp/status")"
+  last="$(tail -n 1 "$tmp/out")"
+}
+
+# commit_outstanding commits what is outstanding with the git commit options
+# given, and stops when there is something to commit and no options.
+commit_outstanding() {
+  status="$(git status --porcelain)"
+  [ -n "$status" ] || return 0
+  [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
+  echo "close-out: commit"
+  git add -A
+  git diff --cached --stat
+  git commit "$@"
+}
+
+# sync_round runs flai stream sync for the next round, saying why: the main
+# branch moved during the run, or the branch was behind it when the close-out
+# was asked for.
+sync_round() {
+  round=$((round + 1))
+  step="flai stream sync"
+  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run flai stream sync $story again, which continues the rebase, and run this again"
+  echo "close-out: $1; flai stream sync $story (round $round of $rounds)"
+  flai stream sync "$story"
+}
 
 while :; do
   step="flai verify"
   hint="; flai verify's last line above names the step it stopped at, or why it could not run"
   echo "close-out: $step $story --record-issues${fresh:+ --fresh}${all:+ --all}"
-  flai verify "$story" --record-issues ${fresh:+"--fresh"} ${all:+"--all"}
+  run "$story" --record-issues ${fresh:+"--fresh"} ${all:+"--all"}
   # Only the first round is fresh: a later one reuses what this run passed.
   fresh=""
+  if [ "$rc" -ne 0 ]; then
+    # The branch was behind the main branch when the close-out was asked for,
+    # or the main branch moved since the last round's sync, when it stopped at
+    # the sync step: it commits, since flai stream sync refuses uncommitted
+    # changes, syncs, and verifies again within the same rounds. At any other
+    # step, or after the last round, it stops here.
+    case "$last" in
+      "verify: $story stopped at sync ("*) ;;
+      *) exit "$rc" ;;
+    esac
+    [ "$round" -lt "$rounds" ] || exit "$rc"
+    step="commit"
+    hint=""
+    commit_outstanding "$@"
+    sync_round "the branch is behind main"
+    continue
+  fi
   hint=""
 
   step="commit"
-  status="$(git status --porcelain)"
-  if [ -n "$status" ]; then
-    [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
-    echo "close-out: commit"
-    git add -A
-    git diff --cached --stat
-    git commit "$@"
-  fi
+  commit_outstanding "$@"
 
   # The branch still contains the main branch flai verify checked it against,
   # which may have moved while the tiers ran: flai verify --sync-only asks again
@@ -122,22 +164,17 @@ while :; do
   step="the sync check"
   hint="; run flai stream sync $story, resolve what it reports, and run this again"
   echo "close-out: flai verify $story --sync-only"
-  { rc=0; flai verify "$story" --sync-only || rc=$?; echo "$rc" >"$tmp/status"; } | tee "$tmp/out"
-  rc="$(cat "$tmp/status")"
+  run "$story" --sync-only
   [ "$rc" -ne 0 ] || break
   # The main branch moved when it stopped at the sync step; at any other step,
   # or after the last round, the close-out stops here. Else it syncs and runs
   # every step again.
-  case "$(tail -n 1 "$tmp/out")" in
+  case "$last" in
     "verify: $story stopped at sync ("*) ;;
     *) exit "$rc" ;;
   esac
   [ "$round" -lt "$rounds" ] || exit "$rc"
-  round=$((round + 1))
-  step="flai stream sync"
-  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run flai stream sync $story again, which continues the rebase, and run this again"
-  echo "close-out: main moved during the run; flai stream sync $story (round $round of $rounds)"
-  flai stream sync "$story"
+  sync_round "main moved during the run"
 done
 hint=""
 

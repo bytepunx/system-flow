@@ -2,7 +2,10 @@
 # Close out a story before review: flai verify, then the commit, then the
 # sync check, stopping at the first step that fails (I-0012). When main moved
 # during the run, it syncs and runs them again, at most three rounds
-# (ADR-0156).
+# (ADR-0156). A close-out asked for a branch already behind main syncs first:
+# when a round's flai verify stops at sync, it commits what is outstanding,
+# runs flai stream sync, and verifies again within the same three rounds
+# (I-0383).
 # The close-out runs as a flai serve job (ADR-0229): a story's agent asks for
 # it with the flai MCP tool verify, or flai verify S-nnnn --job -m "<message>"
 # on the host, and waits for its verified event rather than running this
@@ -113,6 +116,29 @@ run() {
   last="$(tail -n 1 "$tmp/out")"
 }
 
+# commit_outstanding commits what is outstanding with the git commit options
+# given, and stops when there is something to commit and no options.
+commit_outstanding() {
+  status="$(git status --porcelain)"
+  [ -n "$status" ] || return 0
+  [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
+  echo "close-out: commit"
+  git add -A
+  git diff --cached --stat
+  git commit "$@"
+}
+
+# sync_round runs flai stream sync for the next round, saying why: main moved
+# during the run, or the branch was behind main when the close-out was asked
+# for.
+sync_round() {
+  round=$((round + 1))
+  step="flai stream sync"
+  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run flai stream sync $story again, which continues the rebase, and run this again"
+  echo "close-out: $1; flai stream sync $story (round $round of $rounds)"
+  "$ROOT/scripts/flai.sh" stream sync "$story"
+}
+
 while :; do
   step="flai verify"
   hint="; flai verify's last line above names the step it stopped at, or why it could not run"
@@ -128,18 +154,27 @@ while :; do
   case "$last" in
     "verify: $story "*" (reused "[0-9]*" tier"*")") reused=" (${last##*" ("}" ;;
   esac
-  [ "$rc" -eq 0 ] || exit "$rc"
+  if [ "$rc" -ne 0 ]; then
+    # The branch was behind main when the close-out was asked for, or main
+    # moved since the last round's sync, when it stopped at the sync step: it
+    # commits, since flai stream sync refuses uncommitted changes, syncs, and
+    # verifies again within the same rounds (I-0383). At any other step, or
+    # after the last round, it stops here.
+    case "$last" in
+      "verify: $story stopped at sync ("*) ;;
+      *) exit "$rc" ;;
+    esac
+    [ "$round" -lt "$rounds" ] || exit "$rc"
+    step="commit"
+    hint=""
+    commit_outstanding "$@"
+    sync_round "the branch is behind main"
+    continue
+  fi
   hint=""
 
   step="commit"
-  status="$(git status --porcelain)"
-  if [ -n "$status" ]; then
-    [ $# -gt 0 ] || { git status --short >&2; echo "close-out: uncommitted changes and no message; pass the message as git commit options (-m, or -F with a file outside the worktree)" >&2; exit 1; }
-    echo "close-out: commit"
-    git add -A
-    git diff --cached --stat
-    git commit "$@"
-  fi
+  commit_outstanding "$@"
 
   # The branch still contains the main branch flai verify checked it against,
   # which may have moved while the tiers ran: flai verify --sync-only asks again
@@ -158,11 +193,7 @@ while :; do
     *) exit "$rc" ;;
   esac
   [ "$round" -lt "$rounds" ] || exit "$rc"
-  round=$((round + 1))
-  step="flai stream sync"
-  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run flai stream sync $story again, which continues the rebase, and run this again"
-  echo "close-out: main moved during the run; flai stream sync $story (round $round of $rounds)"
-  "$ROOT/scripts/flai.sh" stream sync "$story"
+  sync_round "main moved during the run"
 done
 hint=""
 
