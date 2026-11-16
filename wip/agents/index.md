@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-16T00:36:18Z
+updated: 2026-11-16T00:36:32Z
 ---
 
 # Active streams
@@ -11,7 +11,6 @@ updated: 2026-11-16T00:36:18Z
 | [S-0742](S-0742.md) | flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name | review | agent-S-0742 | 2026-11-15T02:21:13Z |
 | [S-0747](S-0747.md) | The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name | review | agent-S-0747 | 2026-11-15T02:43:17Z |
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
-| [S-0755](S-0755.md) | flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board | review | agent-S-0755 | 2026-11-15T23:16:28Z |
 
 ## Strategic agents
 
