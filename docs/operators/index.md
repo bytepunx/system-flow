@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-15
+updated: 2026-11-16
 status: active
 ---
 
@@ -260,6 +260,15 @@ To free it, commit the files, or set them aside with the command shown, `git sta
 **When main moves.** A commit to main while a verified batch waits, such as your landing of a story by hand, drops the batch. The next look builds it again from the new main. Landing a story by hand also takes it out of the queue.
 
 **When your main checkout holds the queue.** Before it builds a batch, the queue runs the landing's preflight on your main checkout: the landing's lint over the uncommitted files a landing commits, after its fix, and `flai check`'s errors ([ADR-0234](../../design/adrs/0234-before-it-builds-a-batch-the-merge-queue-runs-the-landing-s-preflight-on-the.md)). It changes none of your files. On a finding, such as an uncommitted task note with a broken link, the queue holds itself: it builds no batch and runs no tier. `flai serve` opens one thread to you on `system-flow.yaml`, `The merge queue is held: the main checkout has files a landing would fail on`, naming each file, line, and rule. `flai queue` and the board's merge queue panel show the hold, its findings, and the thread, and the journal records it once. The **Hold** switch and `flai queue resume` do not clear it. To clear it, fix the named files in the main checkout, or commit or discard them. The queue goes on by itself: it looks again as the files change and as main's head moves, and the look that finds main clean resolves the thread and builds the batch ([When the main checkout holds the queue](../users/flai.md#when-the-main-checkout-holds-the-queue)).
+
+**When the hold names the installed flai.** The installed flai can be older than main's flai sources and report files that are right. Then the preflight checks main again with the manifest's `flai.command`, a flai built from main, and holds only on what that finds ([ADR-0311](../../design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md)). When that cannot settle it, the thread and `flai queue` say the findings may be the installed flai's rather than the files'. They name the installed flai's version and commit, how many of main's flai commits it lacks, the newest flai release, and why the second check did not settle it.
+
+1. Leave the named files as they are, unless you see they are wrong.
+2. Publish the release: `flai release --pending`.
+3. Install it: `flai host upgrade`.
+4. The first look after the install that finds main clean clears the hold and resolves the thread.
+
+A hold that names no such cause is a hold on the files: fix them, or commit or discard them, as above.
 
 **When a landing fails.** A landing `flai accept` refuses runs the preflight. When it finds something in your main checkout, the batch is kept and nothing lands: `flai queue` shows `landing waits on main at S-nnnn`, the queue holds itself as above, and you get the same thread. Fix the named files, or commit or discard them. Once a look finds main clean, the landing goes on from the commits the batch verified, with no tier run, and the journal says the batch landed again without a new verification. When the preflight finds nothing, the failure is the stories', and the batch is dropped: `serve.log` has `merge queue batch dropped` with `flai accept`'s last lines, and the next look builds a batch again from the stories not landed. While that cause stays, each look builds, verifies, and drops the batch again. Fix what the log names, or hold the queue until you have. A commit to main while the landing waits moves main, so it drops the batch, as under **When main moves** above: fixing or discarding the files keeps the batch, and committing them costs a new verification.
 
