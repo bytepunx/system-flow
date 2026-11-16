@@ -6,7 +6,7 @@ title: After a sync moves a story's head, the review page, flai queue, and the a
 status: ready
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T01:53:30Z
+updated: 2026-11-16T02:24:39Z
 transitions:
   - to: ready
     at: 2026-11-16T01:51:03Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-16T01:47:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-16T03:30:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 3, behind S-0750, S-0796, S-0800 and S-0798."
+  delivery: 2026-11-16T04:00:00Z
+  basis: "Its own forecast of 1h15m; 1st in the pull order with an in-progress limit of 3, behind S-0750, S-0798 and S-0800."
   by: flai
-  at: 2026-11-16T01:53:30Z
+  at: 2026-11-16T02:24:39Z
 finalized:
   by: orchestrator
   at: 2026-11-16T01:50:51Z
