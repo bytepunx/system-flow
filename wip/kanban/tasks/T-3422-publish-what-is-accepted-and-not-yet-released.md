@@ -3,12 +3,18 @@ id: T-3422
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0801
 owner: alex
 created: 2026-11-16T01:54:24Z
-updated: 2026-11-16T01:54:24Z
-transitions: []
+updated: 2026-11-16T03:53:06Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:53:06Z
+    by: agent-S-0801
+  - to: in-progress
+    at: 2026-11-16T03:53:06Z
+    by: agent-S-0801
 stream: S-0801
 tags: []
 after: [T-3421]

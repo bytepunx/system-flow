@@ -2,18 +2,39 @@
 id: T-3403
 type: task
 nature: remediation
-title: "Write ADR-0309 refining ADR-0234: the preflight judges main's files with a flai built from main when the running flai is behind main's flai sub-project, and otherwise holds naming the installed flai and the release to install"
-status: backlog
+title: "Write ADR-0311 refining ADR-0234 and ADR-0201: the preflight checks main again with a flai built from main when the running flai is behind, else holds naming the release to install"
+status: done
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:44:13Z
-updated: 2026-11-16T01:44:13Z
-transitions: []
+updated: 2026-11-16T03:14:19Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:03:03Z
+    by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-16T03:03:04Z
+    by: agent-S-0797
+  - to: done
+    at: 2026-11-16T03:14:19Z
+    by: agent-S-0797
 stream: S-0797
 tags: [adr, merge-queue]
-touches: [design/adrs/0309-the-merge-queue-s-preflight-judges-main-s-files-with-a-flai-built-from-main-when.md, design/adrs/README.md]
+touches: [design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 675
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 21
+      cache_read: 491405
+      cache_write: 5650
+      cost: 0.1884
 ---
-# T-3403 Write ADR-0309 refining ADR-0234: the preflight judges main's files with a flai built from main when the running flai is behind main's flai sub-project, and otherwise holds naming the installed flai and the release to install
+# T-3403 Write ADR-0311 refining ADR-0234 and ADR-0201: the preflight checks main again with a flai built from main when the running flai is behind, else holds naming the release to install
 
 ## Work
 

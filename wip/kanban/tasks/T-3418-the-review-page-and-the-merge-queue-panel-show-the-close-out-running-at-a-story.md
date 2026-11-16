@@ -3,19 +3,37 @@ id: T-3418
 type: task
 nature: remediation
 title: The review page and the merge queue panel show the close-out running at a story's new head, its job and step, beside a last report from before the head moved
-status: ready
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:46:36Z
-updated: 2026-11-16T02:43:42Z
+updated: 2026-11-16T03:36:10Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:42Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-16T03:30:47Z
+    by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:36:10Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flaiover, merge-queue, verify]
-touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json]
+touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, "flaiover/src/routes/api/items/[id]/verify/+server.ts"]
 after: [T-3415, T-3416, T-3417]
+usage:
+  source: log
+  seconds: 323
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 20774
+      cache_read: 3166460
+      cache_write: 153500
+      cost: 1.9254
 ---
 # T-3418 The review page and the merge queue panel show the close-out running at a story's new head, its job and step, beside a last report from before the head moved
 

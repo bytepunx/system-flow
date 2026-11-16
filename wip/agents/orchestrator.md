@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2218.2706
-accrued_seconds: 1570351
-tasks_completed: 3710
-last_run: 2026-11-16T02:44:26Z
+accrued_cost: 2218.7525
+accrued_seconds: 1570422
+tasks_completed: 3713
+last_run: 2026-11-16T03:52:46Z
 ---
 
 # Orchestrator activity
@@ -26005,6 +26005,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 22
 - Cost: 0.2607 USD, estimated
+
+### 2026-11-16T02:59:57Z
+
+- Summary: release-due S-0798, S-0800: release_evaluate met under threshold (count 4 >= 1; 737.5 USD/week, value threshold 1000). Started no new publish formula: instance S-0801 (made 2026-11-16T01:54Z, in ready, top-but-one of pull order) publishes everything accepted and unreleased when it runs, so it already covers S-0795, S-0796, S-0798, and S-0800.
+- Items: S-0798, S-0800, S-0801
+- Seconds: 10
+- Cost: 0.0798 USD, estimated
+
+### 2026-11-16T03:00:16Z
+
+- Summary: I didn't start a new release: a publish story for this batch, S-0801, already exists and is waiting to be picked up.
+- Items: none
+- Seconds: 19
+- Cost: 0.2266 USD, estimated
+
+### 2026-11-16T03:52:46Z
+
+- Summary: Enqueued S-0799 in the merge queue at 368e8d3, 1st of 1 enqueued: close-out passed at the branch head, verifier passed both criteria, accept preview shows no blockers; value 50 USD/week over a 1h15m forecast (throughput policy).
+- Items: S-0799
+- Seconds: 42
+- Cost: 0.1755 USD, estimated
 
 ## Refusals
 

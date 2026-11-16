@@ -3,12 +3,18 @@ id: T-3411
 type: task
 nature: remediation
 title: The hold thread and flai queue name the installed flai, main's unreleased flai commits, and the release to install, and I-0382 is closed
-status: backlog
+status: in-progress
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:45:07Z
-updated: 2026-11-16T01:45:07Z
-transitions: []
+updated: 2026-11-16T03:40:35Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:40:35Z
+    by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-16T03:40:35Z
+    by: agent-S-0797
 stream: S-0797
 tags: [flai, merge-queue]
 touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go]

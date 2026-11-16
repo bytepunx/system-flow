@@ -3,10 +3,10 @@ id: S-0799
 type: story
 nature: remediation
 title: After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T02:42:48Z
+updated: 2026-11-16T03:51:29Z
 transitions:
   - to: ready
     at: 2026-11-16T01:51:03Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-16T02:42:48Z
     by: agent-S-0799
+  - to: review
+    at: 2026-11-16T03:51:29Z
+    by: agent-S-0799
 tags: [flai, flaiover, merge-queue, verify]
 topics: [acceptance, merge-queue, verify]
-touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md]
+touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, "flaiover/src/routes/api/items/[id]/verify/+server.ts", design/system/flaiover-dashboard.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 627
-  estimated: true
-  priced_by: estimate
+  seconds: 4136
+  priced_by: harness
   turns:
     - day: 2026-11-16
-      ceremony: 1
-      work: 11
+      ceremony: 4
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 349
-      cache_read: 2751107
-      cache_write: 300504
-      cost: 1.1567
+      input: 500
+      output: 170866
+      cache_read: 26043647
+      cache_write: 1262512
+      cost: 15.8359
   strategic:
     - kind: planner
       seconds: 80
@@ -50,15 +52,21 @@ usage:
           cache_write: 34900
           cost: 0.6647
     - kind: orchestrator
-      seconds: 120
+      seconds: 162
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 344
-          cache_read: 1311447
-          cache_write: 134631
-          cost: 0.4402
+          input: 43
+          output: 436
+          cache_read: 1697614
+          cache_write: 206329
+          cost: 0.5799
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 48
+          cache_read: 14076
+          cache_write: 30888
+          cost: 0.0358
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -86,8 +94,8 @@ This story remediates [I-0384](../../../design/issues/I-0384-after-a-sync-moves-
 While a close-out job runs for a story at a head other than its last report's, `flai queue`, the acceptance preview, and the review page say so, naming the job and its step, in place of or beside the last finished report's failure: the job's state is in `.flai-cache/verify/jobs/<S-nnnn>.job.json`. A `verify_failed` whose report's commit is not the branch's head says the report is from before the head moved.
 
 ## Acceptance criteria
-- [ ] The cause I-0384 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0384 is closed with `flai issue close I-0384 --reason` saying what fixed it
+- [x] The cause I-0384 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0384 is closed with `flai issue close I-0384 --reason` saying what fixed it
 
 ## Tasks
 - T-3409 A running close-out job records the head it runs at, and closeout reads a story's running job with that head and the step it is on

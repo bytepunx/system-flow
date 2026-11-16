@@ -3,19 +3,37 @@ id: T-3416
 type: task
 nature: remediation
 title: The acceptance preview says a close-out runs at the story's new head, naming the job and its step, beside a last report from before the head moved
-status: ready
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:56Z
-updated: 2026-11-16T02:43:41Z
+updated: 2026-11-16T03:16:01Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:41Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-16T03:06:20Z
+    by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:16:01Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, acceptance, verify]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
 after: [T-3414]
+usage:
+  source: log
+  seconds: 581
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 8466
+      cache_read: 1290467
+      cache_write: 62558
+      cost: 0.7847
 ---
 # T-3416 The acceptance preview says a close-out runs at the story's new head, naming the job and its step, beside a last report from before the head moved
 

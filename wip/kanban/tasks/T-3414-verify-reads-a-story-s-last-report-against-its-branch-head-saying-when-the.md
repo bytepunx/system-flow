@@ -3,11 +3,11 @@ id: T-3414
 type: task
 nature: remediation
 title: verify reads a story's last report against its branch head, saying when the report is from before the head moved and which close-out job runs at the new head
-status: in-progress
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:32Z
-updated: 2026-11-16T02:53:27Z
+updated: 2026-11-16T03:05:59Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:41Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-16T02:53:27Z
     by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:05:59Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, verify]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go]
 after: [T-3409]
+usage:
+  source: log
+  seconds: 752
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 9531
+      cache_read: 1452751
+      cache_write: 70425
+      cost: 0.8833
 ---
 # T-3414 verify reads a story's last report against its branch head, saying when the report is from before the head moved and which close-out job runs at the new head
 

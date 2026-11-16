@@ -3,19 +3,37 @@ id: T-3417
 type: task
 nature: remediation
 title: flai verify --last and the host's verify.status say a report is from before the head moved and name the close-out job running at the head
-status: ready
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:46:07Z
-updated: 2026-11-16T02:43:42Z
+updated: 2026-11-16T03:30:34Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:42Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-16T03:16:06Z
+    by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:30:34Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, verify]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go]
 after: [T-3414]
+usage:
+  source: log
+  seconds: 868
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 121
+      output: 41189
+      cache_read: 6278139
+      cache_write: 304344
+      cost: 3.8174
 ---
 # T-3417 flai verify --last and the host's verify.status say a report is from before the head moved and name the close-out job running at the head
 

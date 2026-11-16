@@ -3,16 +3,37 @@ id: T-3408
 type: task
 nature: remediation
 title: Document the preflight's second check and the hold that names the installed flai and the release to install
-status: backlog
+status: done
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:44:52Z
-updated: 2026-11-16T01:44:52Z
-transitions: []
+updated: 2026-11-16T03:34:03Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:14:36Z
+    by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-16T03:14:36Z
+    by: agent-S-0797
+  - to: done
+    at: 2026-11-16T03:34:03Z
+    by: agent-S-0797
 stream: S-0797
 tags: [docs, merge-queue]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-3403]
+usage:
+  source: log
+  seconds: 1159
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 376
+      cache_read: 2411078
+      cache_write: 73497
+      cost: 0.9419
 ---
 # T-3408 Document the preflight's second check and the hold that names the installed flai and the release to install
 

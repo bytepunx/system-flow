@@ -6,8 +6,8 @@ sources: [TH-1228]
 topics: [cli, dashboard, template, flai, go, code, all]
 paths: [flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/people.go, flai/internal/hostapi/people_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md]
 date: 2026-11-16
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: design/adrs/0310-a-close-out-whose-first-flai-verify-stops-at-sync-syncs-and-verifies-again.md
 asked_again: []
 cited: []
 ---

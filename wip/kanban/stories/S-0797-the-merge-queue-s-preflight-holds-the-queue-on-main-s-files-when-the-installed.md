@@ -3,26 +3,41 @@ id: S-0797
 type: story
 nature: remediation
 title: The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-16T00:41:48Z
-updated: 2026-11-16T02:59:13Z
+updated: 2026-11-16T03:33:56Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:13Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-16T02:59:50Z
+    by: agent-S-0797
 tags: [merge-queue, flai]
 topics: [merge-queue, release]
-touches: [design/adrs/0309-the-merge-queue-s-preflight-judges-main-s-files-with-a-flai-built-from-main-when.md, design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
+touches: [design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2071
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-16
+      ceremony: 1
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 204
+      output: 1126
+      cache_read: 10742235
+      cache_write: 658264
+      cost: 4.3216
   strategic:
     - kind: planner
       seconds: 36
@@ -75,7 +90,7 @@ Proposed, for the story to settle in an ADR: the preflight tells a finding the i
 - [ ] I-0382 is closed with `flai issue close I-0382 --reason` saying what fixed it
 
 ## Tasks
-- T-3403 Write ADR-0309 refining ADR-0234: the preflight judges main's files with a flai built from main when the running flai is behind main's flai sub-project, and otherwise holds naming the installed flai and the release to install
+- T-3403 Write ADR-0311 refining ADR-0234 and ADR-0201: the preflight checks main again with a flai built from main when the running flai is behind, else holds naming the release to install
 - T-3404 Tell whether the running flai is behind main's flai sub-project, by its build commit or else by the newest flai release tag
 - T-3406 The preflight checks main again with the manifest's flai.command when the running flai is behind, and records the cause on a hold it cannot clear that way
 - T-3408 Document the preflight's second check and the hold that names the installed flai and the release to install

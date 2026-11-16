@@ -3,19 +3,37 @@ id: T-3415
 type: task
 nature: remediation
 title: flai queue names the close-out job running at a story's new head, and says a verify_failed report is from before the head moved
-status: ready
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:44Z
-updated: 2026-11-16T02:43:41Z
+updated: 2026-11-16T03:15:53Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:41Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-16T03:06:20Z
+    by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:15:53Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, merge-queue, verify]
-touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go]
+touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue_test.go]
 after: [T-3414]
+usage:
+  source: log
+  seconds: 573
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 8971
+      cache_read: 1367447
+      cache_write: 66289
+      cost: 0.8315
 ---
 # T-3415 flai queue names the close-out job running at a story's new head, and says a verify_failed report is from before the head moved
 

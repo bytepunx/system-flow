@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-16T02:59:21Z
+updated: 2026-11-16T03:53:06Z
 ---
 
 # Active streams
@@ -11,13 +11,15 @@ updated: 2026-11-16T02:59:21Z
 | [S-0742](S-0742.md) | flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name | review | agent-S-0742 | 2026-11-15T02:21:13Z |
 | [S-0747](S-0747.md) | The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name | review | agent-S-0747 | 2026-11-15T02:43:17Z |
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
-| [S-0799](S-0799.md) | After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head | in-progress | agent-S-0799 | 2026-11-16T02:53:12Z |
+| [S-0797](S-0797.md) | The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed | in-progress | agent-S-0797 | 2026-11-16T03:34:04Z |
+| [S-0799](S-0799.md) | After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head | review | agent-S-0799 | 2026-11-16T03:51:29Z |
+| [S-0801](S-0801.md) | Publish what is accepted and not yet released | in-progress | agent-S-0801 | 2026-11-16T03:53:02Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 272 | 1389.4979 USD | 163325 | 2026-11-16T01:48:21Z |
-| [orchestrator](orchestrator.md) | 3710 | 2218.2706 USD | 1570351 | 2026-11-16T02:44:26Z |
+| [orchestrator](orchestrator.md) | 3713 | 2218.7525 USD | 1570422 | 2026-11-16T03:52:46Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 223 | 330.2174 USD | 36368 | 2026-11-16T02:25:49Z |
+| [curator](curator.md) | 225 | 332.5480 USD | 36557 | 2026-11-16T03:02:41Z |

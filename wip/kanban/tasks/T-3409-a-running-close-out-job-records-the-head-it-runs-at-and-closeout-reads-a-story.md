@@ -23,16 +23,16 @@ tags: [flai, verify]
 touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go]
 usage:
   source: log
-  seconds: 569
+  seconds: 570
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 214
-      cache_read: 2005672
-      cache_write: 97362
-      cost: 0.7971
+      input: 40
+      output: 13499
+      cache_read: 2057471
+      cache_write: 99740
+      cost: 1.2511
 ---
 # T-3409 A running close-out job records the head it runs at, and closeout reads a story's running job with that head and the step it is on
 

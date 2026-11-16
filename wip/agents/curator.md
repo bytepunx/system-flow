@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 330.2174
-accrued_seconds: 36368
-tasks_completed: 223
-last_run: 2026-11-16T02:25:49Z
+accrued_cost: 332.5480
+accrued_seconds: 36557
+tasks_completed: 225
+last_run: 2026-11-16T03:02:41Z
 ---
 
 # Curator activity
@@ -1795,3 +1795,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 62
 - Cost: 0.6975 USD, estimated
+
+### 2026-11-16T03:01:31Z
+
+- Summary: Wrote D-0650 (S-0800, S-0798: a story's planned ADR number is not reserved); merged S-0798's fix (ADR-0310) into D-0645; absorbed D-0645, D-0646, and D-0647 by ADR-0310; `flai digest compact` compacted none; flai guard refused a second S-0800 entry on RecordedUndone test fixtures, which I did not retry, and I left out the other nine candidates as progress notes or facts the ADRs already state.
+- Trigger: accepted S-0798
+- Items: D-0645, D-0646, D-0647, D-0650
+- Seconds: 134
+- Cost: 1.8542 USD, estimated
+
+### 2026-11-16T03:02:41Z
+
+- Summary: I found nothing to take in: the harvest since 2026-11-16T03:01:31Z was empty, no design or ADR change landed since that run, so I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none.
+- Trigger: accepted S-0800
+- Items: none
+- Seconds: 55
+- Cost: 0.4764 USD, estimated

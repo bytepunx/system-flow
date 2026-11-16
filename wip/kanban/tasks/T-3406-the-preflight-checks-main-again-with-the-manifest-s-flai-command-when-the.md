@@ -3,16 +3,37 @@ id: T-3406
 type: task
 nature: remediation
 title: The preflight checks main again with the manifest's flai.command when the running flai is behind, and records the cause on a hold it cannot clear that way
-status: backlog
+status: done
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:44:46Z
-updated: 2026-11-16T01:44:46Z
-transitions: []
+updated: 2026-11-16T03:33:56Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:14:36Z
+    by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-16T03:14:36Z
+    by: agent-S-0797
+  - to: done
+    at: 2026-11-16T03:33:56Z
+    by: agent-S-0797
 stream: S-0797
 tags: [flai, merge-queue]
-touches: [flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
+touches: [flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
 after: [T-3404]
+usage:
+  source: log
+  seconds: 1159
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 390
+      cache_read: 4016000
+      cache_write: 242221
+      cost: 1.6142
 ---
 # T-3406 The preflight checks main again with the manifest's flai.command when the running flai is behind, and records the cause on a hold it cannot clear that way
 

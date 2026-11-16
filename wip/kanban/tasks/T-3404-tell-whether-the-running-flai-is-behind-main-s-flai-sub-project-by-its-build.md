@@ -3,15 +3,36 @@ id: T-3404
 type: task
 nature: remediation
 title: Tell whether the running flai is behind main's flai sub-project, by its build commit or else by the newest flai release tag
-status: backlog
+status: done
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:44:19Z
-updated: 2026-11-16T01:44:19Z
-transitions: []
+updated: 2026-11-16T03:14:29Z
+transitions:
+  - to: ready
+    at: 2026-11-16T03:03:04Z
+    by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-16T03:03:04Z
+    by: agent-S-0797
+  - to: done
+    at: 2026-11-16T03:14:29Z
+    by: agent-S-0797
 stream: S-0797
 tags: [flai, release]
 touches: [flai/internal/release/outdated.go, flai/internal/release/outdated_test.go]
+usage:
+  source: log
+  seconds: 685
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 100
+      cache_read: 1040566
+      cache_write: 107366
+      cost: 0.4351
 ---
 # T-3404 Tell whether the running flai is behind main's flai sub-project, by its build commit or else by the newest flai release tag
 

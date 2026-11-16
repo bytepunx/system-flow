@@ -3,19 +3,37 @@ id: T-3419
 type: task
 nature: remediation
 title: The design and the guides describe the running close-out's head and step, the verify_running reason, and a report from before the head moved, and I-0384 is closed
-status: ready
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:47:02Z
-updated: 2026-11-16T02:43:42Z
+updated: 2026-11-16T03:40:27Z
 transitions:
   - to: ready
     at: 2026-11-16T02:43:42Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-16T03:36:19Z
+    by: agent-S-0799
+  - to: done
+    at: 2026-11-16T03:40:27Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, docs, verify]
-touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md]
+touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md, design/system/flaiover-dashboard.md]
 after: [T-3409, T-3415, T-3416, T-3417, T-3418]
+usage:
+  source: log
+  seconds: 248
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 32225
+      cache_read: 4911769
+      cache_write: 238107
+      cost: 2.9866
 ---
 # T-3419 The design and the guides describe the running close-out's head and step, the verify_running reason, and a report from before the head moved, and I-0384 is closed
 
