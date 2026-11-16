@@ -3,10 +3,10 @@ id: S-0790
 type: story
 nature: improvement
 title: "flai check finds `board.order` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-11-15T01:56:43Z
-updated: 2026-11-15T22:38:19Z
+updated: 2026-11-16T00:36:17Z
 transitions:
   - to: ready
     at: 2026-11-15T21:11:49Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-15T22:38:19Z
     by: agent-S-0790
+  - to: done
+    at: 2026-11-16T00:36:17Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/accept.go, flai/cmd/board.go, flai/cmd/order_test.go, design/system/workflow.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md, design/adrs/0306-every-write-of-board-md-takes-one-board-lock-reads-the-board-again-inside-it.md, design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md]
 agent:
@@ -134,3 +137,14 @@ The story declared no touches, so all of them are predicted. No folder touch. No
 Forecast: flai gave 26m (108 s per unit, size 14). Raised to 1h. Similar remediations, S-0767, S-0730, S-0781, and S-0761, took 48 to 67 minutes of agent time, and a close-out of `flai/` changes runs about 11 minutes. Delivery moved later by the same 34 minutes, to 2026-11-16T00:25Z.
 
 Cost of delay: 5 USD a week, from `flai cod`. That is 2m of time lost per 168h cycle at 150 USD an hour, the input the orchestrator set on TH-1225. It stands as computed.
+
+### Accepted by the orchestrator
+
+- Verified: 72897e27f7f60572a7bc08a46c231f93f91b7850
+- Batch: 20261116-002222
+- Enqueued verified: 697d56d48cf525c6e9b0cdb4530ca16ef81aae0c
+- At: 2026-11-16T00:36:17Z
+
+Verdict: S-0790 meets both criteria at 697d56d; the close-out passed every step there and every changed file is inside its touches.
+- 1: flai/internal/workitem/board.go, flai/internal/workitem/transition.go, flai/internal/workitem/board_update_test.go, flai/cmd/order.go, flai/cmd/order_test.go, flai/cmd/accept.go, flai/cmd/board.go, design/adrs/0306-every-write-of-board-md-takes-one-board-lock-reads-the-board-again-inside-it.md
+- 2: design/issues/I-0375-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md

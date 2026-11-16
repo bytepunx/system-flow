@@ -4,10 +4,10 @@ title: T-3390 of S-0755 changed paths S-0790's claim covers
 from: S-0755
 to: S-0790
 about: [flai/cmd/accept.go, design/system/flai-cli.md, design/system/workflow.md]
-status: open
-participants: [agent-S-0755]
+status: closed
+participants: [agent-S-0755, orchestrator]
 created: 2026-11-15T22:58:55Z
-updated: 2026-11-15T22:59:42Z
+updated: 2026-11-16T00:36:17Z
 ---
 
 # MS-0585 T-3390 of S-0755 changed paths S-0790's claim covers
@@ -25,3 +25,6 @@ T-3390, The MCP server, flai serve, and the commands that still read the baselin
 T-3262 of S-0755 changed paths S-0790's claim covers.
 
 T-3262, A runbook says how to change the board, and the guides and design say where the workflow file is and how flai reads it, committed c7c9457 on story/S-0755, `docs: [S-0755] a runbook says how to change the board, and the guides and design say how flai reads the workflow file`, changing `design/system/flai-cli.md`, `design/system/workflow.md`. It reaches the main branch when S-0755 is accepted; `git show c7c9457` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-16T00:36:17Z orchestrator
+Closed: S-0790 was accepted

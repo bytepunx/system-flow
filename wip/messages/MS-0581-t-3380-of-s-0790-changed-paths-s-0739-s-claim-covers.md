@@ -4,10 +4,10 @@ title: T-3380 of S-0790 changed paths S-0739's claim covers
 from: S-0790
 to: S-0739
 about: [design/system/flai-cli.md, flai/internal/workitem/board.go]
-status: open
-participants: [agent-S-0790]
+status: closed
+participants: [agent-S-0790, orchestrator]
 created: 2026-11-15T21:20:01Z
-updated: 2026-11-15T22:07:40Z
+updated: 2026-11-16T00:36:17Z
 ---
 
 # MS-0581 T-3380 of S-0790 changed paths S-0739's claim covers
@@ -30,3 +30,6 @@ T-3381, workitem writes board.md under a lock, reloaded and normalised inside it
 T-3382 of S-0790 changed paths S-0739's claim covers.
 
 T-3382, flai order, flai accept, and flai board limit write board.md through the locked update, committed 04b3d86 on story/S-0790, `fix: [S-0790] flai order, flai accept, and flai board limit write board.md under the board lock`, changing `flai/internal/workitem/board.go`. It reaches the main branch when S-0790 is accepted; `git show 04b3d86` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-16T00:36:17Z orchestrator
+Closed: S-0790 was accepted
