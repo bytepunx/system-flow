@@ -1,9 +1,9 @@
 ---
 kind: analyzer
-accrued_cost: 20.4997
-accrued_seconds: 1247
-tasks_completed: 2
-last_run: 2026-11-07T08:18:10Z
+accrued_cost: 31.8290
+accrued_seconds: 2136
+tasks_completed: 3
+last_run: 2026-11-16T06:17:09Z
 ---
 
 # Analyzer activity
@@ -27,3 +27,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: I-0230, I-0246, I-0257, I-0268, I-0284, I-0285, I-0286, I-0287, I-0288, I-0289, I-0290, I-0291, I-0292, I-0293, I-0294, I-0295, I-0296, I-0297, I-0298
 - Seconds: 793
 - Cost: 15.4957 USD, estimated
+
+### 2026-11-16T06:17:09Z
+
+- Summary: All links resolve, `flai check` reports nothing on the analysis folder, and the markdown lint passes with 0 errors. The report is `active`, indexed, and its nine issues are filed and linked. (report design/analysis/2026-11-16-all.md)
+- Trigger: formula analysis-cadence S-0803
+- Items: I-0386, I-0387, I-0388, I-0389, I-0390, I-0391, I-0392, I-0393, I-0394
+- Seconds: 889
+- Cost: 11.3293 USD, estimated

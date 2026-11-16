@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 333.5454
-accrued_seconds: 36652
-tasks_completed: 226
-last_run: 2026-11-16T04:13:28Z
+accrued_cost: 334.7766
+accrued_seconds: 36934
+tasks_completed: 227
+last_run: 2026-11-16T04:24:44Z
 ---
 
 # Curator activity
@@ -1819,3 +1819,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0470
 - Seconds: 95
 - Cost: 0.9974 USD, estimated
+
+### 2026-11-16T04:24:44Z
+
+- Summary: I found nothing to take in: the one candidate since 2026-11-16T04:13:28Z (S-0802's decision that its tasks are the publish formula's steps, worked in three layers in the main checkout) is already stated in ADR-0239 § "1. The instance's agent works the steps", so I wrote and merged no entries; no design, docs, or ADR file changed since the last run and none states an active entry's fact, so I absorbed none; and `flai digest compact` compacted none.
+- Trigger: accepted S-0802
+- Items: none
+- Seconds: 282
+- Cost: 1.2312 USD, estimated
