@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 332.5480
-accrued_seconds: 36557
-tasks_completed: 225
-last_run: 2026-11-16T03:02:41Z
+accrued_cost: 333.5454
+accrued_seconds: 36652
+tasks_completed: 226
+last_run: 2026-11-16T04:13:28Z
 ---
 
 # Curator activity
@@ -1811,3 +1811,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 55
 - Cost: 0.4764 USD, estimated
+
+### 2026-11-16T04:13:28Z
+
+- Summary: I merged S-0799 into D-0470 and wrote, absorbed, and compacted nothing: of 7 candidates since 2026-11-16T03:02:41Z, only S-0799's decision to run its two `flai/cmd` tasks one after the other was new; the others were progress notes or already in the design (S-0799's verify_running docs), no active entry is stated by the two design files changed since the last run (`flai-cli.md`, `flaiover-dashboard.md`), and `flai digest compact` found no uncited entry.
+- Trigger: accepted S-0799
+- Items: D-0470
+- Seconds: 95
+- Cost: 0.9974 USD, estimated

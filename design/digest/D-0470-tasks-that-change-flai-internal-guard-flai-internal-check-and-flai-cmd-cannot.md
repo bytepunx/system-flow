@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver, flai/internal/mergequeue]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -102,4 +102,12 @@ The planner put T-3204 and T-3205 in one layer, but both change and test package
 
 So a planner that splits a change to `check` into two tasks puts them in two layers, or the story's agent gives the second its own task worktree.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741.
+S-0799 met it in `flai/cmd`. Its planner put T-3415 (`mergequeue` and `cmd/queue.go`) and T-3416 (`preview`) in one layer, as they share no file, and T-3417 (`cmd/verify.go`) after them, alone (`wip/archive/agents/S-0799.md`):
+
+```text
+T-3417 runs after them, alone, because it changes flai/cmd beside T-3415's cmd/queue.go and one package's half-done edit would fail the other's build
+```
+
+So a task that changes a file of `flai/cmd` waits for any other task of its layer that changes `flai/cmd`, even when they share no file, or runs in a task worktree of its own.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799.
