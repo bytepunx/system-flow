@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 685
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 100
-      cache_read: 1040566
-      cache_write: 107366
-      cost: 0.4351
+      input: 18
+      output: 6726
+      cache_read: 1123988
+      cache_write: 43170
+      cost: 0.6254
 ---
 # T-3404 Tell whether the running flai is behind main's flai sub-project, by its build commit or else by the newest flai release tag
 

@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md
 after: [T-3403]
 usage:
   source: log
-  seconds: 1159
+  seconds: 1167
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 376
-      cache_read: 2411078
-      cache_write: 73497
-      cost: 0.9419
+      input: 40
+      output: 14557
+      cache_read: 2432754
+      cache_write: 93438
+      cost: 1.3536
 ---
 # T-3408 Document the preflight's second check and the hold that names the installed flai and the release to install
 

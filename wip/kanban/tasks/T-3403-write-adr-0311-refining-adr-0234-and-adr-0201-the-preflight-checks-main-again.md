@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 675
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 21
-      cache_read: 491405
-      cache_write: 5650
-      cost: 0.1884
+      input: 8
+      output: 2912
+      cache_read: 486680
+      cache_write: 18692
+      cost: 0.2708
 ---
 # T-3403 Write ADR-0311 refining ADR-0234 and ADR-0201: the preflight checks main again with a flai built from main when the running flai is behind, else holds naming the release to install
 

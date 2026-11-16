@@ -3,10 +3,10 @@ id: S-0799
 type: story
 nature: remediation
 title: After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head
-status: review
+status: done
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T03:51:29Z
+updated: 2026-11-16T04:11:47Z
 transitions:
   - to: ready
     at: 2026-11-16T01:51:03Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-16T03:51:29Z
     by: agent-S-0799
+  - to: done
+    at: 2026-11-16T04:11:47Z
+    by: orchestrator
 tags: [flai, flaiover, merge-queue, verify]
 topics: [acceptance, merge-queue, verify]
 touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, "flaiover/src/routes/api/items/[id]/verify/+server.ts", design/system/flaiover-dashboard.md]
@@ -128,3 +131,14 @@ Figures:
 
 - Forecast 1h15m, raised from `flai forecast`'s 58m: the job must newly record the head it runs at and the step it is on, which nothing reads today, and the change spans flai and flaiover, so the close-out runs the flaiover tiers, svelte-check among them, beside integration and smoke, about twelve minutes. Delivery moved by the same 17 minutes.
 - Cost of delay 50 USD a week, as `flai cod` gives it from the inputs flai carried from I-0384 (20m a cycle at 150 USD an hour, one cycle a week). It stands: the inputs are the operator's, and I-0384 records one occurrence.
+
+### Accepted by the orchestrator
+
+- Verified: 197555f5a8800481ce393e25ab75bdbf1bb097c7
+- Batch: 20261116-035615
+- Enqueued verified: 368e8d37b6371106cf994ecadd307077771b7828
+- At: 2026-11-16T04:11:47Z
+
+Verdict: pass — both criteria are met by the diff, which stays within the story's touches and carries tests for each layer, and the close-out passed at head 368e8d3.
+- 1: flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, flaiover/src/routes/api/items/[id]/verify/+server.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json
+- 2: design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md

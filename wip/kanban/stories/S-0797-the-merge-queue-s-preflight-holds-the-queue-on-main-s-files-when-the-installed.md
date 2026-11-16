@@ -3,10 +3,10 @@ id: S-0797
 type: story
 nature: remediation
 title: The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-16T00:41:48Z
-updated: 2026-11-16T03:33:56Z
+updated: 2026-11-16T04:06:58Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:13Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-16T02:59:50Z
     by: agent-S-0797
+  - to: review
+    at: 2026-11-16T04:06:58Z
+    by: agent-S-0797
 tags: [merge-queue, flai]
 topics: [merge-queue, release]
-touches: [design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+touches: [design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/queue_held_test.go, design/issues/I-0382-the-merge-queue-s-preflight-holds-the-queue-on-main-s-files-when-the-installed.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2071
-  estimated: true
-  priced_by: estimate
+  seconds: 4074
+  priced_by: harness
   turns:
     - day: 2026-11-16
-      ceremony: 1
-      work: 30
+      ceremony: 6
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 204
-      output: 1126
-      cache_read: 10742235
-      cache_write: 658264
-      cost: 4.3216
+      input: 330
+      output: 120842
+      cache_read: 20194787
+      cache_write: 775644
+      cost: 11.2367
   strategic:
     - kind: planner
       seconds: 36
@@ -50,15 +52,21 @@ usage:
           cache_write: 37898
           cost: 0.681
     - kind: orchestrator
-      seconds: 134
+      seconds: 172
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 286
-          cache_read: 1385736
-          cache_write: 163094
-          cost: 0.4712
+          input: 46
+          output: 355
+          cache_read: 1729366
+          cache_write: 239754
+          cost: 0.5995
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 49
+          cache_read: 13603
+          cache_write: 29636
+          cost: 0.0345
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3h
@@ -86,8 +94,8 @@ This story remediates [I-0382](../../../design/issues/I-0382-the-merge-queue-s-p
 Proposed, for the story to settle in an ADR: the preflight tells a finding the installed flai cannot judge from one in the files. When main's own flai sub-project is ahead of the running flai's commit, the preflight either runs its `flai check` with a flai built from main, as `scripts/flai.sh` does, or holds with words that name the cause, the installed flai's version against main's unreleased commits, and the remedy, publish and install the release, in place of telling the operator to fix files that are right. Consider also holding an acceptance that changes a format the running flai reads (role files, the workflow file, the manifest) until a flai that reads it is installed.
 
 ## Acceptance criteria
-- [ ] The cause I-0382 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0382 is closed with `flai issue close I-0382 --reason` saying what fixed it
+- [x] The cause I-0382 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0382 is closed with `flai issue close I-0382 --reason` saying what fixed it
 
 ## Tasks
 - T-3403 Write ADR-0311 refining ADR-0234 and ADR-0201: the preflight checks main again with a flai built from main when the running flai is behind, else holds naming the release to install

@@ -4,10 +4,10 @@ title: T-3415 of S-0799 changed paths S-0797's claim covers
 from: S-0799
 to: S-0797
 about: [flai/cmd/queue_test.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0799, agent-S-0797, flai]
+status: closed
+participants: [agent-S-0799, agent-S-0797, flai, orchestrator]
 created: 2026-11-16T03:15:53Z
-updated: 2026-11-16T03:40:44Z
+updated: 2026-11-16T04:11:47Z
 ---
 
 # MS-0598 T-3415 of S-0799 changed paths S-0797's claim covers
@@ -46,3 +46,6 @@ Whichever of S-0797 and S-0799 is accepted second will stop on these paths when 
 
 ### 2026-11-16T03:40:44Z agent-S-0799 S-0799 (settled)
 S-0799 keeps its changes to design/system/flai-cli.md and docs/users/flai.md. They are confined to the close-out job's state bullet, the flai queue, flai verify, and flai accept rows, verify.status, and the merge queue reasons table, where S-0799 adds verify_running. Both files are markdown under design/ and docs/, so the rebase merges them by sections and by sentences (ADR-0276, ADR-0287). Whichever story is accepted second settles what the section merge leaves when it syncs, and keeps both changes. No after is needed: neither story reads the other's output.
+
+### 2026-11-16T04:11:47Z orchestrator
+Closed: S-0799 was accepted

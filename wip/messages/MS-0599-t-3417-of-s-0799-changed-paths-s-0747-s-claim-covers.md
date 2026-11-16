@@ -4,10 +4,10 @@ title: T-3417 of S-0799 changed paths S-0747's claim covers
 from: S-0799
 to: S-0747
 about: [flai/internal/hostapi/writes_test.go, design/system/flaiover-dashboard.md]
-status: open
-participants: [agent-S-0799, flai]
+status: closed
+participants: [agent-S-0799, flai, orchestrator]
 created: 2026-11-16T03:30:34Z
-updated: 2026-11-16T03:40:46Z
+updated: 2026-11-16T04:11:47Z
 ---
 
 # MS-0599 T-3417 of S-0799 changed paths S-0747's claim covers
@@ -37,3 +37,6 @@ Whichever of S-0747 and S-0799 is accepted second will stop on these paths when 
 
 ### 2026-11-16T03:40:46Z agent-S-0799 S-0799 (settled)
 S-0799 changes design/system/flaiover-dashboard.md in one place: the /review/:id row, in the Verification section's sentences, where it adds the moved and close-out running lines. That row is one long table line, so a section merge may not split it. Whichever story is accepted second keeps both changes when it syncs: S-0747's own edits to the row, and S-0799's two sentences after "they do not fail it." No after is needed: neither story reads the other's output.
+
+### 2026-11-16T04:11:47Z orchestrator
+Closed: S-0799 was accepted

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2218.7525
-accrued_seconds: 1570422
-tasks_completed: 3713
-last_run: 2026-11-16T03:52:46Z
+accrued_cost: 2219.8031
+accrued_seconds: 1570580
+tasks_completed: 3719
+last_run: 2026-11-16T04:08:29Z
 ---
 
 # Orchestrator activity
@@ -26026,6 +26026,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0799
 - Seconds: 42
 - Cost: 0.1755 USD, estimated
+
+### 2026-11-16T03:53:04Z
+
+- Summary: I added S-0799 to the merge queue at commit `368e8d3`. The queue lands it once its batch passes.
+- Items: none
+- Seconds: 18
+- Cost: 0.2605 USD, estimated
+
+### 2026-11-16T03:55:00Z
+
+- Summary: Enqueued S-0801 (publish formula instance) in the merge queue at f3d6d87, 2nd after S-0799: close-out passed at the branch head, verifier matched criteria 1-3 to T-3420, T-3421, T-3422 done; a formula instance carries no throughput figure of its own.
+- Items: S-0801
+- Seconds: 34
+- Cost: 0.1749 USD, estimated
+
+### 2026-11-16T03:55:24Z
+
+- Summary: Ready-empty and TH-1243: nothing to act on. promote_candidates lists no candidate by throughput (S-0752..S-0758 held by after on S-0739/S-0742/S-0747 in review and S-0750 in progress; S-0241 a draft). S-0241 stays a draft: complete but blocked, TH-1165 already says why. No planner started for E-0034: alex's TH-1228 entry ('done') confirms a sync and asks no plan change. TH-1243 left alone: its last entry is flai serve's notice.
+- Items: TH-1243, S-0241, E-0034
+- Seconds: 24
+- Cost: 0.0606 USD, estimated
+
+### 2026-11-16T03:55:49Z
+
+- Summary: S-0801 is in the merge queue, second after S-0799, and the queue lands it. Nothing else could move: no story can be promoted, so the board stays starved until the stories in review land.
+- Items: none
+- Seconds: 25
+- Cost: 0.0991 USD, estimated
+
+### 2026-11-16T04:08:10Z
+
+- Summary: Enqueued S-0797 in the merge queue at 224241a (close-out passed every step at the head; verifier matched both criteria to changed files, all within touches); third in the queue, behind batch 20261116-035615 (S-0799, S-0801); cost of delay value 450 USD/week, forecast 1h30m
+- Items: S-0797
+- Seconds: 38
+- Cost: 0.1628 USD, estimated
+
+### 2026-11-16T04:08:29Z
+
+- Summary: I put S-0797 in the merge queue at commit 224241a. It is third in line, behind the batch now running (S-0799 and S-0801). The queue will land it.
+- Items: none
+- Seconds: 19
+- Cost: 0.2927 USD, estimated
 
 ## Refusals
 

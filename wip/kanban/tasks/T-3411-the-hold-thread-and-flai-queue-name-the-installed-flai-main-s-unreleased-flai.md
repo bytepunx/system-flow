@@ -3,11 +3,11 @@ id: T-3411
 type: task
 nature: remediation
 title: The hold thread and flai queue name the installed flai, main's unreleased flai commits, and the release to install, and I-0382 is closed
-status: in-progress
+status: done
 parent: S-0797
 owner: alex
 created: 2026-11-16T01:45:07Z
-updated: 2026-11-16T03:40:35Z
+updated: 2026-11-16T03:54:29Z
 transitions:
   - to: ready
     at: 2026-11-16T03:40:35Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-16T03:40:35Z
     by: agent-S-0797
+  - to: done
+    at: 2026-11-16T03:54:29Z
+    by: agent-S-0797
 stream: S-0797
 tags: [flai, merge-queue]
-touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go]
+touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_held_test.go]
 after: [T-3406]
+usage:
+  source: log
+  seconds: 834
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 18115
+      cache_read: 3027343
+      cache_write: 116275
+      cost: 1.6845
 ---
 # T-3411 The hold thread and flai queue name the installed flai, main's unreleased flai commits, and the release to install, and I-0382 is closed
 
