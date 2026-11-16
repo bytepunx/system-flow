@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- S-0798 A close-out asked for a story whose branch is behind main stops at sync without syncing (patch).
+- S-0798 The template's `scripts/close-out.sh` syncs and verifies again when a round's first `flai verify` stops at sync, committing what is outstanding first, within the same three rounds, and the close-out rule in `work-management.md` and the scripts' README say so (patch, ADR-0310, I-0383).
+
 ## 1.1.43 - 2026-11-16
 
 - S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board (patch).
