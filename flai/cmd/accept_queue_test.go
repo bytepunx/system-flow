@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -555,6 +556,44 @@ func TestAnAcceptanceThatEnqueuesPreviewsNoVerifyBehindMain(t *testing.T) {
 		t.Fatalf("the acceptance the preview previewed must enqueue S-0001: %d %s\n%s", code, errOut, js)
 	}
 	assertNothingAccepted(t, root, mainBefore)
+}
+
+// I-0384: after a sync moved a story's head past its last flai verify,
+// while a close-out job runs at the new head, the acceptance preview's text
+// says so, in the words of --json's verify_running_why, and --json names the
+// job in verify_running.
+func TestADryRunAfterASyncSaysTheCloseOutRunningAtTheNewHead(t *testing.T) {
+	root := outranQueueProject(t)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	if err := os.WriteFile(filepath.Join(wt, "cli", "synced.go"), []byte("package cli\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, wt, "add", "--", "cli/synced.go")
+	gitIn(t, wt, "commit", "-q", "-m", "feat: what the sync brought", "--", "cli/synced.go")
+	head := gitIn(t, root, "rev-parse", "story/S-0001")
+	cache := openProject(t, root).CacheDir()
+	dir := closeout.Dir(cache)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Date(2026, 9, 15, 20, 58, 0, 0, time.UTC)
+	if err := closeout.WriteJob(dir, closeout.Job{ID: "job-7", Story: "S-0001", By: "agent-S-0001", Started: started, Head: head}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(closeout.LogPath(cache, "S-0001"), []byte("close-out: flai verify S-0001 --message \"sync\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := dryRunAccept(t, root)
+	want := closeout.Progress{ID: "job-7", Started: started, Head: head, Step: closeout.StepVerify}
+	if res.VerifyRunning == nil || *res.VerifyRunning != want ||
+		!strings.HasPrefix(res.VerifyRunningWhy, "close-out job job-7 runs at S-0001's head "+head[:7]+", at its step flai verify; this preview is as of S-0001's last finished flai verify, at ") {
+		t.Fatalf("--json must name the job at the new head: %+v %q", res.VerifyRunning, res.VerifyRunningWhy)
+	}
+	out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--dry-run")
+	if code != 0 || !strings.Contains(out, "\nclose-out running: "+res.VerifyRunningWhy+"\n") && !strings.HasPrefix(out, "close-out running: "+res.VerifyRunningWhy+"\n") {
+		t.Errorf("the dry run's text must say the close-out runs at the new head: %d %s\n%s", code, errOut, out)
+	}
 }
 
 // ADR-0308 §1 and §3: an acceptance that lands by hand keeps the gate: while

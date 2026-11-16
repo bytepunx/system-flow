@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
@@ -2810,6 +2811,104 @@ func TestVerifyStatusAnswersTheLastReportOrNull(t *testing.T) {
 	}
 	if len(rec.runs) != 0 || len(journal) != 0 {
 		t.Errorf("a read ran %d commands and journalled %+v", len(rec.runs), journal)
+	}
+}
+
+// I-0384: after a sync moved a story's head, verify.status, which the review
+// page's Verification row reads, answers the story's last report with moved,
+// as it is from before the head moved, and running, the close-out job that
+// runs at the new head and its step, rather than the old commit and its
+// verdict alone; with no report, the story and the job. While the head cannot
+// be read, the report is answered as before, with a warning, and once the job
+// ended there is no running.
+func TestVerifyStatusSaysTheReportIsFromBeforeTheHeadMovedAndTheCloseOutRunning(t *testing.T) {
+	p := withDocs(t)
+	host := Host{Enabled: func(string, string) bool { return false }, Record: func(Entry) {}}
+	const head, older = "c0ffee000000000000000000000000000000beef", "0dd000000000000000000000000000000000c0de"
+	git := queueGit{"rev-parse --verify --quiet refs/heads/story/S-0001^{commit}": head}
+	was := verifyGit
+	verifyGit = func(context.Context) execx.Runner { return git }
+	t.Cleanup(func() { verifyGit = was })
+	rec := &recorder{}
+	call := func() Written {
+		t.Helper()
+		res, e := writeMethods(rec.run, time.Now, host)["verify.status"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
+		if e != nil {
+			t.Fatalf("verify.status: %+v", e)
+		}
+		w, _ := res.(Written)
+		return w
+	}
+	type answered struct {
+		Story     string             `json:"story"`
+		Commit    string             `json:"commit"`
+		StoppedAt string             `json:"stopped_at"`
+		Moved     bool               `json:"moved"`
+		Running   *closeout.Progress `json:"running"`
+	}
+	decoded := func(w Written) answered {
+		t.Helper()
+		var a answered
+		if err := json.Unmarshal(w.Data, &a); err != nil {
+			t.Fatalf("answer %s: %v", w.Data, err)
+		}
+		return a
+	}
+
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := closeout.Dir(repo.CacheDir())
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Date(2026, 11, 15, 3, 0, 0, 0, time.UTC)
+	job := closeout.Job{ID: "job-7", Story: "S-0001", By: "agent-S-0001", Started: started, Head: head}
+	if err := closeout.WriteJob(dir, job); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(closeout.LogPath(repo.CacheDir(), "S-0001"), []byte("close-out: flai verify S-0001 --message \"sync\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want := closeout.Progress{ID: "job-7", Started: started, Head: head, Step: closeout.StepVerify}
+
+	w := call()
+	if a := decoded(w); a.Story != "S-0001" || a.Commit != "" || a.Moved || a.Running == nil || *a.Running != want ||
+		!strings.Contains(string(w.Data), `"running":{"id":"job-7",`) || strings.Contains(string(w.Data), `"commit"`) {
+		t.Errorf("no report while a close-out runs: %s; want the story and the job alone", w.Data)
+	}
+
+	// the report is from before the sync, stopped at sync at the old head
+	if err := verify.SaveReport(repo, verify.Report{Story: "S-0001", Commit: older, Base: "main", RanAt: started.Add(-time.Hour), StoppedAt: "sync",
+		Steps: []verify.Step{{Name: "sync", State: verify.Failed, DurationMS: 3}}}); err != nil {
+		t.Fatal(err)
+	}
+	w = call()
+	if a := decoded(w); a.Commit != older || a.StoppedAt != "sync" || !a.Moved || a.Running == nil || *a.Running != want || len(w.Warnings) != 0 {
+		t.Errorf("a report from before the head moved: %s, warnings %q; want moved and the job running at the head", w.Data, w.Warnings)
+	}
+	if !strings.Contains(string(w.Data), `"moved":true`) || !strings.Contains(string(w.Data), `"running":{"id":"job-7","started":"2026-11-15T03:00:00Z","head":"`+head+`","step":"flai verify"}`) {
+		t.Errorf("the answer must carry moved and running: %s", w.Data)
+	}
+
+	verifyGit = func(context.Context) execx.Runner { return queueGit{} }
+	w = call()
+	if a := decoded(w); a.Commit != older || a.Moved || a.Running == nil || len(w.Warnings) != 1 || !strings.Contains(w.Warnings[0], "cannot tell whether S-0001's last verify is from before its head moved") {
+		t.Errorf("a head that cannot be read: %s, warnings %q; want the report as before and a warning", w.Data, w.Warnings)
+	}
+	verifyGit = func(context.Context) execx.Runner { return git }
+
+	code := 0
+	job.Ended, job.ExitCode, job.Commit = started.Add(time.Minute), &code, head
+	if err := closeout.WriteJob(dir, job); err != nil {
+		t.Fatal(err)
+	}
+	if a := decoded(call()); !a.Moved || a.Running != nil {
+		t.Errorf("once the job ended: moved %v, running %+v; want moved and no job", a.Moved, a.Running)
+	}
+	if len(rec.runs) != 0 {
+		t.Errorf("a read ran %d commands", len(rec.runs))
 	}
 }
 

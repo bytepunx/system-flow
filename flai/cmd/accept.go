@@ -1700,6 +1700,11 @@ func (a *app) printAccept(acc *accepted) error {
 		if res.StaleTiersQueued != "" {
 			fmt.Fprintf(a.out, "left to the merge queue: %s\n", res.StaleTiersQueued)
 		}
+		// a close-out running at the new head, after a sync, is not yet a
+		// verify the preview can go by (I-0384)
+		if res.VerifyRunningWhy != "" {
+			fmt.Fprintf(a.out, "close-out running: %s\n", res.VerifyRunningWhy)
+		}
 		// wip is committed as a matter of course and goes unlisted; the
 		// shared set's other files are named, as the operator may not expect
 		// them in the commit

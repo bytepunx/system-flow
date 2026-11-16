@@ -377,6 +377,73 @@ func TestVerifyLastPrintsTheStoredReport(t *testing.T) {
 	}
 }
 
+// I-0384: after a sync moved a story's head, flai verify --last says, after
+// the verdict, that the stored report is from before the head moved, naming
+// both commits, and names the close-out job running at the head, its step,
+// and since when; --json carries them as moved and running. With no stored
+// result, the story and the job alone; at the head, with no job, neither.
+func TestVerifyLastSaysTheReportIsFromBeforeTheHeadMovedAndTheCloseOutRunning(t *testing.T) {
+	t.Parallel()
+	root, _ := verifyFixture(t, "exit 3")
+	const head = "fedcba9876543210fedcba9876543210fedcba98"
+	moved := verifyKlusterGit{head: head}
+	cache := openProject(t, root).CacheDir()
+	dir := closeout.Dir(cache)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Date(2026, 11, 15, 3, 0, 0, 0, time.UTC)
+	job := closeout.Job{ID: "job-7", Story: "S-004", By: "agent-S-004", Started: started, Head: head}
+	if err := closeout.WriteJob(dir, job); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(closeout.LogPath(cache, "S-004"), []byte("close-out: flai verify S-004 --message \"sync\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runningLine := "close-out running: job job-7 at fedcba9, at its step flai verify, since 2026-11-15T03:00:00Z\n"
+
+	out, errOut, code := runVerify(t, root, moved, "verify", "S-004", "--last")
+	if code != 0 || out != "verify: S-004 has no stored result yet\n"+runningLine {
+		t.Errorf("none stored while a close-out runs: exit %d %q %s", code, out, errOut)
+	}
+	out, errOut, code = runVerify(t, root, moved, "verify", "S-004", "--last", "--json")
+	if code != 0 || !strings.Contains(out, `"story": "S-004"`) || !strings.Contains(out, `"running": {`) || strings.Contains(out, `"commit"`) {
+		t.Errorf("none stored while a close-out runs, as data: exit %d\n%s%s", code, out, errOut)
+	}
+
+	verifyReport(t, root, 1, "S-004")
+	out, errOut, code = runVerify(t, root, moved, "verify", "S-004", "--last")
+	want := "verify: S-004 stopped at unit (exit 3)\n" +
+		"from before the head moved: this report is at 0123abc, the head of story/S-004 is fedcba9\n" + runningLine
+	if code != 0 || !strings.HasSuffix(out, want) {
+		t.Errorf("--last after the head moved: exit %d, want it to end\n%s\ngot\n%s%s", code, want, out, errOut)
+	}
+	out, errOut, code = runVerify(t, root, moved, "verify", "S-004", "--last", "--json")
+	var last verify.Report
+	if err := json.Unmarshal([]byte(out), &last); err != nil || code != 0 {
+		t.Fatalf("--last --json: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	wantRunning := closeout.Progress{ID: "job-7", Started: started, Head: head, Step: closeout.StepVerify}
+	if last.Commit != "0123abc4567" || !last.Moved || last.Running == nil || *last.Running != wantRunning {
+		t.Errorf("--last --json: commit %s, moved %v, running %+v; want moved and %+v", last.Commit, last.Moved, last.Running, wantRunning)
+	}
+
+	// a job that has not written its head yet is taken as running at the
+	// branch's head: named while the report is not at the head, and not once
+	// the head is the report's commit
+	job.Head = ""
+	if err := closeout.WriteJob(dir, job); err != nil {
+		t.Fatal(err)
+	}
+	if out, _, _ = runVerify(t, root, moved, "verify", "S-004", "--last"); !strings.HasSuffix(out, runningLine) {
+		t.Errorf("a job with no head yet must be named at the branch's head: want it to end %q\n%s", runningLine, out)
+	}
+	out, errOut, code = runVerify(t, root, verifyKlusterGit{head: "0123abc4567"}, "verify", "S-004", "--last")
+	if code != 0 || strings.Contains(out, "from before the head moved") || strings.Contains(out, "close-out running") || lastLine(out) != "verify: S-004 stopped at unit (exit 3)" {
+		t.Errorf("--last at the head: exit %d\n%s%s", code, out, errOut)
+	}
+}
+
 // roleTierEnv, set to 1, has the test binary run as roleTier's command.
 const roleTierEnv = "FLAI_TEST_ROLE_TIER"
 

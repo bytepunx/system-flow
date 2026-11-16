@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
@@ -352,6 +353,32 @@ func hostSpecs() map[string]spec {
 // the story branch's head with: this host's, timed on ctx.
 var verifyGit = systemGit
 
+// runningOnly is verify.status's answer for a story with no report while
+// its close-out job runs: the story and the job (I-0384).
+type runningOnly struct {
+	Story   string             `json:"story"`
+	Running *closeout.Progress `json:"running"`
+}
+
+// lastReportAt is verify.LastReportAt, or, while the story's close-out job
+// cannot be read, verify.LastReport read against head without a job, with a
+// warning, so that a job's state alone does not keep the report from the
+// review page.
+func lastReportAt(repo *workitem.Repo, id, head string, log *slog.Logger) (verify.Report, bool, error) {
+	rep, ok, err := verify.LastReportAt(repo, id, head)
+	if err == nil {
+		return rep, ok, nil
+	}
+	// LastReportAt fails on the report or on the job; the report alone says which
+	rep, ok, repErr := verify.LastReport(repo, id)
+	if repErr != nil {
+		return verify.Report{}, false, repErr
+	}
+	log.Warn(fmt.Sprintf("the review page cannot tell whether a close-out job runs for %s: %v", id, err))
+	rep.Moved = ok && head != "" && rep.Commit != head
+	return rep, ok, nil
+}
+
 // verifyStatusOf is the story verify.status is asked of.
 func verifyStatusOf(raw json.RawMessage) (string, *channel.Error) {
 	in, e := decode[struct {
@@ -365,6 +392,12 @@ func verifyStatusOf(raw json.RawMessage) (string, *channel.Error) {
 
 // verifyStatus answers verify.status in flai serve's process, as flai
 // verify --last would: the story's stored report, or null when it has none.
+// The report is read against the story branch's head, so that it carries
+// moved when it is from before the head moved and running, the close-out job
+// that runs at another commit than the report's (I-0384); with no report but
+// a close-out job running, the answer is the story and that job alone. A
+// head, or a job's state, that cannot be read is taken as none, with a
+// warning while there is a report.
 // Its kluster part is read now, from the namespace's record in the main
 // checkout, against the story branch's head, with the kluster and checks
 // host actions as the host has them (ADR-0292 §6): a close-out in a story's
@@ -380,17 +413,28 @@ func verifyStatus(ctx context.Context, host Host, p channel.Project, raw json.Ra
 		if err := repo.RequireMain("flai verify"); err != nil {
 			return nil, err
 		}
-		rep, ok, err := verify.LastReport(repo, id)
+		if it, err := repo.Get(id); err == nil {
+			id = it.ID
+		}
+		git := verifyGit(ctx)
+		head, headErr := kluster.StoryHead(git, p.Root, id)
+		rep, ok, err := lastReportAt(repo, id, head, log)
 		if err != nil {
 			return nil, err
 		}
+		if ok && headErr != nil {
+			log.Warn(fmt.Sprintf("the review page cannot tell whether %s's last verify is from before its head moved: %v", id, headErr))
+		}
 		if !ok {
+			if rep.Running != nil {
+				return runningOnly{Story: rep.Story, Running: rep.Running}, nil
+			}
 			return json.RawMessage("null"), nil
 		}
 		rep.Kluster = nil
 		klusterOn := host.enabled(ActionKluster, p.Root)
 		checksOn := klusterOn && host.enabled(ActionChecks, p.Root)
-		ev, err := kluster.ReadEvidence(verifyGit(ctx), p.Root, repo.Manifest, rep.Story, klusterOn, checksOn)
+		ev, err := kluster.ReadEvidence(git, p.Root, repo.Manifest, rep.Story, klusterOn, checksOn)
 		switch {
 		case err != nil:
 			log.Warn(fmt.Sprintf("the review page shows no kluster evidence for %s: %v; run flai kluster status in the project on the host to see the namespace's record", rep.Story, err))

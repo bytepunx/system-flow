@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -371,32 +373,87 @@ func (a *app) recordNotes(worktree string, rep verify.Report) ([]recordedIssue, 
 }
 
 // printLastVerify prints the story's stored last report, or that it has
-// none, and answers success whatever the report holds.
+// none, and answers success whatever the report holds. The report is read
+// against the head of the story's branch: after the verdict a line says when
+// it is from before the head moved, and another names the close-out job
+// running at another commit than the report's; --json carries them as moved
+// and running, and with no report, but a job running, the story and the job
+// alone (I-0384). A head, or a job's state, that cannot be read is taken as
+// none, with a warning.
 func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) error {
-	rep, ok, err := verify.LastReport(repo, story)
+	id := story
+	if it, err := repo.Get(story); err == nil {
+		id = it.ID
+	}
+	head, headErr := kluster.StoryHead(a.runner, repo.MainRoot, id)
+	rep, ok, err := verify.LastReportAt(repo, id, head)
 	if err != nil {
-		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
+		// LastReportAt fails on the report or on the job; the report alone says which
+		var repErr error
+		if rep, ok, repErr = verify.LastReport(repo, id); repErr != nil {
+			return &exitError{code: exitVerifyUnusable, msg: repErr.Error()}
+		}
+		a.logger().Warn("close-out job unreadable, so none is named as running", "component", "verify", "story", id, "err", err.Error())
+		rep.Moved = ok && head != "" && rep.Commit != head
+	}
+	if ok && headErr != nil {
+		a.logger().Warn("branch head unreadable, so the report is not judged against it", "component", "verify", "story", id, "err", headErr.Error())
 	}
 	if a.jsonOut {
-		if !ok {
-			return a.printJSON(nil)
+		switch {
+		case ok:
+			return a.printJSON(rep)
+		case rep.Running != nil:
+			return a.printJSON(lastRunningOnly{Story: rep.Story, Running: rep.Running})
 		}
-		return a.printJSON(rep)
+		return a.printJSON(nil)
 	}
 	if !ok {
-		id := story
-		if it, err := repo.Get(story); err == nil {
-			id = it.ID
+		if rep.Running != nil {
+			fmt.Fprintf(a.out, "verify: %s has no stored result yet\n", id)
+			fmt.Fprint(a.out, lastMovedText(rep, head))
+			return nil
 		}
 		fmt.Fprintf(a.out, "verify: %s has no stored result; run flai verify %s\n", id, id)
 		return nil
 	}
 	fmt.Fprintf(a.out, "last verified %s at %s against %s\n", rep.RanAt.Format(time.RFC3339), shortCommit(rep.Commit), rep.Base)
 	fmt.Fprint(a.out, verifyText(rep, nil, false, maxNotes))
+	fmt.Fprint(a.out, lastMovedText(rep, head))
 	if rep.Kluster != nil {
 		fmt.Fprint(a.out, verifyKlusterText(*rep.Kluster))
 	}
 	return nil
+}
+
+// lastRunningOnly is flai verify --last --json for a story with no stored
+// result while its close-out job runs: the story and the job (I-0384).
+type lastRunningOnly struct {
+	Story   string             `json:"story"`
+	Running *closeout.Progress `json:"running"`
+}
+
+// lastMovedText is what flai verify --last prints after the verdict of a
+// report read against head, the head of the story's branch (I-0384): a line
+// naming both commits when the report is from before the head moved, and a
+// line naming the close-out job running at another commit, where, at which
+// step, and since when; "" when neither applies.
+func lastMovedText(rep verify.Report, head string) string {
+	var b strings.Builder
+	if rep.Moved {
+		fmt.Fprintf(&b, "from before the head moved: this report is at %s, the head of %s is %s\n", shortCommit(rep.Commit), storygit.Branch(rep.Story), shortCommit(head))
+	}
+	if p := rep.Running; p != nil {
+		b.WriteString("close-out running: job " + p.ID)
+		if at := cmp.Or(p.Head, head); at != "" {
+			b.WriteString(" at " + shortCommit(at))
+		}
+		if p.Step != "" {
+			b.WriteString(", at its step " + p.Step)
+		}
+		b.WriteString(", since " + p.Started.UTC().Format(time.RFC3339) + "\n")
+	}
+	return b.String()
 }
 
 // verifyKlusterText is the kluster part of a stored report as flai verify
