@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 518
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 133
-      cache_read: 2134127
-      cache_write: 39208
-      cost: 0.8235
+      input: 20
+      output: 5249
+      cache_read: 2164679
+      cache_write: 71725
+      cost: 1.0029
 ---
 # T-3400 A container story's close-out syncs and verifies again when its first flai verify stops at sync, as the script does
 

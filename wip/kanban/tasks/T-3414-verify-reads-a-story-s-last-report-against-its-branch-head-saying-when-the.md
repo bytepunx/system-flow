@@ -3,12 +3,18 @@ id: T-3414
 type: task
 nature: remediation
 title: verify reads a story's last report against its branch head, saying when the report is from before the head moved and which close-out job runs at the new head
-status: backlog
+status: in-progress
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:32Z
-updated: 2026-11-16T01:45:32Z
-transitions: []
+updated: 2026-11-16T02:53:27Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:41Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:53:27Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, verify]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go]

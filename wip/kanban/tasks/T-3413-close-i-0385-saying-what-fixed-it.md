@@ -24,16 +24,16 @@ touches: [design/issues/I-0385-flai-stream-sync-reports-a-rebased-branch-undoes-
 after: [T-3410, T-3412]
 usage:
   source: log
-  seconds: 9
+  seconds: 14
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 75
-      cache_read: 599472
-      cache_write: 1969
-      cost: 0.2279
+      input: 8
+      output: 2099
+      cache_read: 586209
+      cache_write: 21680
+      cost: 0.2995
 ---
 # T-3413 Close I-0385 saying what fixed it
 

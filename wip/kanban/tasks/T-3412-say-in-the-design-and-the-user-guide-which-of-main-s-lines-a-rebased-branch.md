@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1263
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 289
-      cache_read: 1990492
-      cache_write: 52539
-      cost: 0.7742
+      input: 28
+      output: 7132
+      cache_read: 1991302
+      cache_write: 73644
+      cost: 1.0172
 ---
 # T-3412 Say in the design and the user guide which of main's lines a rebased branch undoes
 

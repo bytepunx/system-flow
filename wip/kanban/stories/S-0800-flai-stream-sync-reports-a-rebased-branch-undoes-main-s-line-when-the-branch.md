@@ -3,16 +3,19 @@ id: S-0800
 type: story
 nature: remediation
 title: flai stream sync reports a rebased branch undoes main's line when the branch removes a closing brace elsewhere in a Go file main added a closing brace to, and the merge queue then never batches the story
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-16T01:39:43Z
-updated: 2026-11-16T02:19:57Z
+updated: 2026-11-16T02:42:42Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:11Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-16T01:45:20Z
+    by: agent-S-0800
+  - to: review
+    at: 2026-11-16T02:42:42Z
     by: agent-S-0800
 tags: [storygit, sync, merge-queue]
 topics: [git, acceptance]
@@ -24,21 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2070
-  estimated: true
-  priced_by: estimate
+  seconds: 3455
+  priced_by: harness
   turns:
     - day: 2026-11-16
-      ceremony: 2
+      ceremony: 4
       hand_edits: 1
-      work: 40
+      work: 53
   models:
     - model: claude-opus-5-5
-      input: 192
-      output: 1356
-      cache_read: 11519409
-      cache_write: 598397
-      cost: 4.592
+      input: 230
+      output: 59615
+      cache_read: 16645810
+      cache_write: 615606
+      cost: 8.5032
   strategic:
     - kind: planner
       seconds: 63
@@ -51,15 +53,21 @@ usage:
           cache_write: 25172
           cost: 0.4411
     - kind: orchestrator
-      seconds: 82
+      seconds: 105
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 19
-          output: 163
-          cache_read: 727458
-          cache_write: 72931
-          cost: 0.2436
+          input: 28
+          output: 237
+          cache_read: 1105110
+          cache_write: 121358
+          cost: 0.3735
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 830
+          cache_read: 80699
+          cache_write: 32579
+          cost: 0.0906
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m

@@ -3,14 +3,17 @@ id: S-0799
 type: story
 nature: remediation
 title: After a sync moves a story's head, the review page, flai queue, and the acceptance preview report the verify failure from before the sync while a new close-out runs at the new head
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T02:24:39Z
+updated: 2026-11-16T02:42:48Z
 transitions:
   - to: ready
     at: 2026-11-16T01:51:03Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-16T02:42:48Z
+    by: agent-S-0799
 tags: [flai, flaiover, merge-queue, verify]
 topics: [acceptance, merge-queue, verify]
 touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md]
@@ -20,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 627
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-16
+      ceremony: 1
+      work: 11
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 349
+      cache_read: 2751107
+      cache_write: 300504
+      cost: 1.1567
   strategic:
     - kind: planner
       seconds: 80

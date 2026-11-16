@@ -3,10 +3,10 @@ id: S-0798
 type: story
 nature: remediation
 title: A close-out asked for a story whose branch is behind main stops at sync without syncing, and the failed report makes a story the merge queue could batch not eligible
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-16T00:41:49Z
-updated: 2026-11-16T02:19:03Z
+updated: 2026-11-16T02:59:12Z
 transitions:
   - to: ready
     at: 2026-11-16T01:47:04Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-16T02:07:18Z
     by: agent-S-0798
+  - to: review
+    at: 2026-11-16T02:42:40Z
+    by: agent-S-0798
+  - to: done
+    at: 2026-11-16T02:59:12Z
+    by: orchestrator
 tags: [flai, close-out, merge-queue, template]
 topics: [close-out, merge-queue]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/closeout/script_test.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, design/adrs/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, scripts/README.md, template/root/scripts/README.md, design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md, design/adrs/0310-a-close-out-whose-first-flai-verify-stops-at-sync-syncs-and-verifies-again.md, design/system/flai-cli.md]
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 701
-  estimated: true
-  priced_by: estimate
+  seconds: 2131
+  priced_by: harness
   turns:
     - day: 2026-11-16
-      ceremony: 1
-      work: 29
+      ceremony: 2
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 724
-      cache_read: 10436653
-      cache_write: 542104
-      cost: 4.1602
+      input: 156
+      output: 40918
+      cache_read: 16875029
+      cache_write: 559142
+      cost: 7.818
   strategic:
     - kind: planner
       seconds: 416
@@ -56,15 +61,21 @@ usage:
           cache_write: 593740
           cost: 6.2355
     - kind: orchestrator
-      seconds: 143
+      seconds: 167
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 310
-          cache_read: 1407072
-          cache_write: 201486
-          cost: 0.4893
+          input: 47
+          output: 385
+          cache_read: 1784724
+          cache_write: 249913
+          cost: 0.6192
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 830
+          cache_read: 80699
+          cache_write: 32580
+          cost: 0.0906
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -92,8 +103,8 @@ This story remediates [I-0383](../../../design/issues/I-0383-a-close-out-asked-f
 The close-out a story is asked for when its branch is behind main syncs first: `scripts/close-out.sh` runs `flai stream sync` when its first `flai verify` stops at sync, as it already does when main moves during the run (ADR-0156), within the same three rounds, and stops with the conflicts when the sync does. Until then a close-out that stops at sync before any tier ran should not replace a passing report as the story's last, or the queue's `verify_failed` should tell that case apart. Bring ADR-0291 §4's words and the `verify_behind_main` blocker's in step with what the close-out does.
 
 ## Acceptance criteria
-- [ ] The cause I-0383 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0383 is closed with `flai issue close I-0383 --reason` saying what fixed it
+- [x] The cause I-0383 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0383 is closed with `flai issue close I-0383 --reason` saying what fixed it
 
 ## Tasks
 - T-3399 scripts/close-out.sh and the template's sync and verify again when the first flai verify stops at sync, within the three rounds
@@ -122,3 +133,14 @@ Figures:
 
 - Forecast 1h, raised from `flai forecast`'s 33m. The fix spans two shell scripts and a Go loop. The script needs a stub harness for its first test. A story that changes `flai/` and `template/` closes out with the integration and smoke tiers, about twelve minutes (ADR-0291, Consequences). Delivery moved by the same 27 minutes, from 04:29Z to 04:56Z.
 - Cost of delay 300 USD a week, as `flai cod` gives it from the input flai carried from I-0383: 2h a cycle at 150 USD an hour, one cycle a week. It stands. The input is the operator's, and I-0383 has one recorded occurrence, which held three stories on one day. That is no basis for more cycles a week.
+
+### Accepted by the orchestrator
+
+- Verified: d77e74f5e6aac75671559f15ba31e0a486df9caf
+- Batch: 20261116-024719
+- Enqueued verified: d77e74f5e6aac75671559f15ba31e0a486df9caf
+- At: 2026-11-16T02:59:12Z
+
+Verdict: pass at d77e74f5e6aac75671559f15ba31e0a486df9caf
+- 1: scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/serve/verifyjob_container.go, flai/internal/closeout/script_test.go, flai/internal/serve/verifyjob_test.go
+- 2: design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md, design/issues/summary.md

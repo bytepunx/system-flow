@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 50
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 104
-      cache_read: 1372441
-      cache_write: 6843
-      cost: 0.5227
+      input: 19
+      output: 4815
+      cache_read: 1344354
+      cache_write: 49718
+      cost: 0.6867
 ---
 # T-3405 Write the ADR refining ADR-0155 and ADR-0297 on which of main's lines a rebased branch undoes
 

@@ -3,15 +3,36 @@ id: T-3409
 type: task
 nature: remediation
 title: A running close-out job records the head it runs at, and closeout reads a story's running job with that head and the step it is on
-status: backlog
+status: done
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:03Z
-updated: 2026-11-16T01:45:03Z
-transitions: []
+updated: 2026-11-16T02:53:12Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:41Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-16T02:43:42Z
+    by: system-flow
+  - to: done
+    at: 2026-11-16T02:53:12Z
+    by: agent-S-0799
 stream: S-0799
 tags: [flai, verify]
 touches: [flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go]
+usage:
+  source: log
+  seconds: 569
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 214
+      cache_read: 2005672
+      cache_write: 97362
+      cost: 0.7971
 ---
 # T-3409 A running close-out job records the head it runs at, and closeout reads a story's running job with that head and the step it is on
 

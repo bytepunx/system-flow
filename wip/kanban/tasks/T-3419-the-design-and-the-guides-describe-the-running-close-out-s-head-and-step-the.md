@@ -3,12 +3,15 @@ id: T-3419
 type: task
 nature: remediation
 title: The design and the guides describe the running close-out's head and step, the verify_running reason, and a report from before the head moved, and I-0384 is closed
-status: backlog
+status: ready
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:47:02Z
-updated: 2026-11-16T01:47:02Z
-transitions: []
+updated: 2026-11-16T02:43:42Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:42Z
+    by: system-flow
 stream: S-0799
 tags: [flai, docs, verify]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md, design/issues/summary.md]

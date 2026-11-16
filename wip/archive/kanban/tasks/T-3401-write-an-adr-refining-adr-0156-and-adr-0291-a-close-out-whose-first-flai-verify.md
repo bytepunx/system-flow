@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 558
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 85
-      cache_read: 1504836
-      cache_write: 20553
-      cost: 0.578
+      input: 14
+      output: 3684
+      cache_read: 1519313
+      cache_write: 50341
+      cost: 0.7039
 ---
 # T-3401 Write an ADR refining ADR-0156 and ADR-0291: a close-out whose first flai verify stops at sync syncs and verifies again within its three rounds
 

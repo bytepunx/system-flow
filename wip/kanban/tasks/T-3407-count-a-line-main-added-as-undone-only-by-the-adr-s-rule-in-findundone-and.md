@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1246
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 354
-      cache_read: 2691591
-      cache_write: 173665
-      cost: 1.0858
+      input: 39
+      output: 10002
+      cache_read: 2792721
+      cache_write: 103282
+      cost: 1.4266
 ---
 # T-3407 Count a line main added as undone only by the ADR's rule in FindUndone and RecordedUndone, with unit tests
 

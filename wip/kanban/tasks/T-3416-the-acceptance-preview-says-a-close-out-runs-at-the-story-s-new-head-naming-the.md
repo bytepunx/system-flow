@@ -3,12 +3,15 @@ id: T-3416
 type: task
 nature: remediation
 title: The acceptance preview says a close-out runs at the story's new head, naming the job and its step, beside a last report from before the head moved
-status: backlog
+status: ready
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:45:56Z
-updated: 2026-11-16T01:45:56Z
-transitions: []
+updated: 2026-11-16T02:43:41Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:41Z
+    by: system-flow
 stream: S-0799
 tags: [flai, acceptance, verify]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]

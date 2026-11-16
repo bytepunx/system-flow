@@ -3,12 +3,15 @@ id: T-3417
 type: task
 nature: remediation
 title: flai verify --last and the host's verify.status say a report is from before the head moved and name the close-out job running at the head
-status: backlog
+status: ready
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:46:07Z
-updated: 2026-11-16T01:46:07Z
-transitions: []
+updated: 2026-11-16T02:43:42Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:42Z
+    by: system-flow
 stream: S-0799
 tags: [flai, verify]
 touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go]

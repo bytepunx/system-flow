@@ -24,16 +24,16 @@ touches: [design/conventions/work-management.md, template/root/design/convention
 after: [T-3399, T-3400, T-3401]
 usage:
   source: log
-  seconds: 68
+  seconds: 74
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 69
-      cache_read: 2414732
-      cache_write: 13361
-      cost: 0.92
+      input: 22
+      output: 5864
+      cache_read: 2418421
+      cache_write: 80133
+      cost: 1.1204
 ---
 # T-3402 The convention, the guides, and the template's changelog say a close-out asked for a branch behind main syncs first, and I-0383 is closed
 

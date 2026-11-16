@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 503
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 232
-      cache_read: 3015681
-      cache_write: 255791
-      cost: 1.2397
+      input: 30
+      output: 7901
+      cache_read: 3258442
+      cache_write: 107966
+      cost: 1.5096
 ---
 # T-3399 scripts/close-out.sh and the template's sync and verify again when the first flai verify stops at sync, within the three rounds
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 555
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 192
-      cache_read: 1347680
-      cache_write: 125067
-      cost: 0.5581
+      input: 20
+      output: 5141
+      cache_read: 1435471
+      cache_write: 53088
+      cost: 0.7333
 ---
 # T-3410 Reproduce I-0385 with a real-git sync whose branch removes a closing brace elsewhere in a Go file main added one to
 

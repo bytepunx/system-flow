@@ -3,12 +3,15 @@ id: T-3418
 type: task
 nature: remediation
 title: The review page and the merge queue panel show the close-out running at a story's new head, its job and step, beside a last report from before the head moved
-status: backlog
+status: ready
 parent: S-0799
 owner: alex
 created: 2026-11-16T01:46:36Z
-updated: 2026-11-16T01:46:36Z
-transitions: []
+updated: 2026-11-16T02:43:42Z
+transitions:
+  - to: ready
+    at: 2026-11-16T02:43:42Z
+    by: system-flow
 stream: S-0799
 tags: [flaiover, merge-queue, verify]
 touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json]

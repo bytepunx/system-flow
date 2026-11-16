@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2217.3922
-accrued_seconds: 1570249
-tasks_completed: 3706
-last_run: 2026-11-16T02:08:44Z
+accrued_cost: 2218.2706
+accrued_seconds: 1570351
+tasks_completed: 3710
+last_run: 2026-11-16T02:44:26Z
 ---
 
 # Orchestrator activity
@@ -25977,6 +25977,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2866 USD, estimated
+
+### 2026-11-16T02:25:29Z
+
+- Summary: release-due S-0796: release_evaluate met under threshold (count 2 >= 1; value 325 USD/week, threshold 1000), pending S-0795 and S-0796. Started no new publish run: publish instance S-0801 is already ready, not yet worked, and its publish step releases everything accepted and unreleased when it runs, S-0796 included.
+- Items: S-0796, S-0795, S-0801
+- Seconds: 14
+- Cost: 0.0722 USD, estimated
+
+### 2026-11-16T02:25:48Z
+
+- Summary: I started no new publish run, because one is already waiting: publish story S-0801 is in ready and hasn't been picked up.
+- Items: none
+- Seconds: 19
+- Cost: 0.1045 USD, estimated
+
+### 2026-11-16T02:44:04Z
+
+- Summary: Enqueued S-0798 (1st in the merge queue) at d77e74f5e6aa and S-0800 (2nd) at e248416bda4c under accept_reviews: each close-out passed at its branch head, the verifier matched both criteria to changed files, and the accept preview showed no blockers. Policy throughput: forecasts 1h (S-0798, value 300/wk) and 50m (S-0800, value 112.5/wk).
+- Items: S-0798, S-0800
+- Seconds: 47
+- Cost: 0.4410 USD, estimated
+
+### 2026-11-16T02:44:26Z
+
+- Summary: I added S-0798 and S-0800 to the merge queue, which will land them. Neither is merged yet.
+- Items: none
+- Seconds: 22
+- Cost: 0.2607 USD, estimated
 
 ## Refusals
 
