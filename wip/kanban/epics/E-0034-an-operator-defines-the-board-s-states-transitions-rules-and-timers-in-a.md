@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-14T17:39:57Z
+updated: 2026-11-16T23:41:56Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -54,15 +54,15 @@ usage:
           cache_write: 106104
           cost: 1.6447
     - kind: orchestrator
-      seconds: 3442
+      seconds: 3495
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 929
-          output: 6558
-          cache_read: 34836005
-          cache_write: 4516729
-          cost: 11.7207
+          input: 955
+          output: 6706
+          cache_read: 35703690
+          cache_write: 4642061
+          cost: 12.0247
         - model: claude-sonnet-5-5
           input: 132
           output: 2091
@@ -118,6 +118,7 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
 - S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
 - S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
 - S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
+- S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke
 
 ## Notes
 
