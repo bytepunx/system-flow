@@ -75,6 +75,11 @@ type AcceptOptions struct {
 	// blocker it brings (ADR-0221).
 	QueueBatches      bool
 	WithoutQueueTiers bool
+	// QueueHeld says the merge queue is held (mergequeue.State.Held), which
+	// the caller reads, as the operator's acceptance does before it enqueues;
+	// a caller that cannot read the queue's state sets it, so that the
+	// verify_behind_main gate never opens unread (ADR-0308).
+	QueueHeld bool
 	// KlusterOn says the kluster host action is on for the project, and
 	// ChecksOn the checks host action, which the caller reads from the
 	// configuration: while KlusterOn and the manifest has a kluster: block,
@@ -86,6 +91,13 @@ type AcceptOptions struct {
 	KlusterOn      bool
 	ChecksOn       bool
 	WithoutKluster bool
+}
+
+// Enqueues reports whether the operator's acceptance with o is one the merge
+// queue takes in place of a landing by hand (S-0552, ADR-0225).
+func (o AcceptOptions) Enqueues() bool {
+	return o.QueueBatches && !o.QueueHeld && !o.Orchestrator && o.Batch == "" &&
+		!o.WithoutQueueTiers && !o.WithoutKluster && len(o.Keep) == 0
 }
 
 // Evidence is the markdown an orchestrator writes from its verifier's report:

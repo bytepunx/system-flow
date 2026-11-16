@@ -134,10 +134,15 @@ type Acceptance struct {
 	// the paths the main branch brought in since and that overlap the story's
 	// change set send back, and VerifyBehindMainBlocker the blocker
 	// verify_behind_main they bring, also in Blockers, in every acceptance but
-	// the merge queue's landing (ADR-0291, ADR-0303); empty and nil when no
-	// such path selects one.
+	// the merge queue's landing and one the queue takes (ADR-0291, ADR-0303,
+	// ADR-0308); empty and nil when no such path selects one.
 	StaleTiers              []string `json:"stale_tiers,omitempty"`
 	VerifyBehindMainBlocker *Blocker `json:"verify_behind_main_blocker,omitempty"`
+	// StaleTiersQueued is, for an acceptance that enqueues the story
+	// (AcceptOptions.Enqueues), why its verify does not cover the main branch
+	// and that the merge queue's batch runs every tier again over the main it
+	// lands on, in place of the blocker (ADR-0291, ADR-0308); "" otherwise.
+	StaleTiersQueued string `json:"stale_tiers_queued,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -252,7 +257,12 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // story, the operator's, the orchestrator's, and the queue's landing, has the
 // blocker kluster until its namespace's deploy, and with opts.ChecksOn its
 // checks run against it, passed at its branch's head, which
-// opts.WithoutKluster lifts for the operator's alone (ADR-0254 §5a).
+// opts.WithoutKluster lifts for the operator's alone (ADR-0254 §5a). Every
+// acceptance but the queue's landing has the blocker verify_behind_main while
+// main has brought in, since the story's last passing flai verify, paths that
+// send back a tier it ran, save one the merge queue takes (opts.Enqueues),
+// whose batch runs every tier again over the main it lands on (ADR-0291,
+// ADR-0303, ADR-0308).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -545,7 +555,10 @@ func QueueTiersBlocker(id, why string) Blocker {
 // ran that the main paths overlapping its change set, brought in since, send
 // back, and the blocker verify_behind_main they bring (ADR-0291, ADR-0303). It
 // gates a story with a branch, not done already, in every acceptance but the
-// merge queue's landing, whose batch ran every tier over the main it lands on.
+// merge queue's landing, whose batch ran every tier over the main it lands on,
+// and the operator's acceptance that enqueues the story (opts.Enqueues), whose
+// batch will: that one has res.StaleTiersQueued in place of the blocker, for
+// a why that is an error too, which the enqueue does not read (ADR-0308).
 // The blocker is among the acceptance's blockers, not the orchestrator's own:
 // the orchestrator's enqueue vouches with those alone, and the batch runs
 // every tier.
@@ -556,6 +569,10 @@ func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	var why string
 	res.StaleTiers, why = verifyBehindMain(r, repo, it.ID)
 	if why == "" {
+		return
+	}
+	if opts.Enqueues() {
+		res.StaleTiersQueued = fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; the acceptance enqueues it, and the merge queue's batch runs every tier again over the main it lands on (ADR-0291, ADR-0308)", it.ID, why)
 		return
 	}
 	b := VerifyBehindMainBlocker(it.ID, why)

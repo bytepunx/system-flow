@@ -631,20 +631,14 @@ func TestStepsUndoneTakesATaskAStopCancelled(t *testing.T) {
 	}
 }
 
-// ADR-0291, ADR-0303, I-0229, S-0792: a story whose last passing flai verify
-// ran go-test over a main that has since reworded flai/internal/roles, which
-// go-test selects and the story's guard test imports, is refused with
-// verify_behind_main by the operator's acceptance, the orchestrator's, and a
-// hand acceptance while the queue batches, among the acceptance's blockers and
-// not the orchestrator's own; not by the queue's landing, nor when main
-// brought in only wip paths, nor only paths that do not overlap the story's
-// change set, nor when the verify did not pass. Only the overlapping paths
-// send tiers back. A report that recorded no change set counts every path of
-// main's. A main whose paths cannot be listed is the blocker too.
-func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
-	at := time.Date(2026, 11, 12, 16, 0, 0, 0, time.UTC)
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	repo, s := forgeRepo(t, "local", at)
+// behindMainFixture is a story whose branch changes a guard test importing
+// flai/internal/roles, with the tiers go-test and markdown, and git answers
+// whose main brought in a change to flai/internal/roles since its merge base,
+// under the key diff; report saves its last flai verify, passed or not, with
+// changed as its change set, having run both tiers.
+func behindMainFixture(t *testing.T, at time.Time) (repo *workitem.Repo, s *workitem.Item, answers gitAnswers, diff string, report func(passed bool, changed []string)) {
+	t.Helper()
+	repo, s = forgeRepo(t, "local", at)
 	f, err := os.OpenFile(filepath.Join(repo.MainRoot, "system-flow.yaml"), os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -669,17 +663,15 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	diff := "diff --no-renames --name-only " + forgeOther + " main"
-	answers := gitAnswers{
+	diff = "diff --no-renames --name-only " + forgeOther + " main"
+	answers = gitAnswers{
 		"rev-parse --is-inside-work-tree":                        "true",
 		"rev-parse --verify --quiet refs/heads/story/" + s.ID:    forgeHead,
 		"rev-parse --verify --quiet story/" + s.ID + "^{commit}": forgeHead,
 		"rev-parse --abbrev-ref HEAD":                            "main",
 		diff:                                                     "flai/internal/roles/conditions.go\nwip/kanban/stories/S-0099.md",
 	}
-	git := withGit{answers}
-	changed := []string{"flai/internal/guard/roles_test.go"}
-	report := func(passed bool) {
+	report = func(passed bool, changed []string) {
 		t.Helper()
 		rep := verify.Report{Story: s.ID, Commit: forgeHead, MergeBase: forgeOther, Passed: passed, Paths: changed, Steps: []verify.Step{
 			{Name: "go-test", Tier: true, State: verify.Passed},
@@ -688,6 +680,29 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 		if err := verify.SaveReport(repo, rep); err != nil {
 			t.Fatal(err)
 		}
+	}
+	return repo, s, answers, diff, report
+}
+
+// ADR-0291, ADR-0303, I-0229, S-0792: a story whose last passing flai verify
+// ran go-test over a main that has since reworded flai/internal/roles, which
+// go-test selects and the story's guard test imports, is refused with
+// verify_behind_main by the operator's acceptance, the orchestrator's, and a
+// hand acceptance while the queue batches, among the acceptance's blockers and
+// not the orchestrator's own; not by the queue's landing, nor when main
+// brought in only wip paths, nor only paths that do not overlap the story's
+// change set, nor when the verify did not pass. Only the overlapping paths
+// send tiers back. A report that recorded no change set counts every path of
+// main's. A main whose paths cannot be listed is the blocker too.
+func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
+	at := time.Date(2026, 11, 12, 16, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s, answers, diff, save := behindMainFixture(t, at)
+	git := withGit{answers}
+	changed := []string{"flai/internal/guard/roles_test.go"}
+	report := func(passed bool) {
+		t.Helper()
+		save(passed, changed)
 	}
 	report(true)
 	want := s.ID + "'s verify does not cover the main branch it would land on: its last flai verify, at abc1234, ran over main at 0123456, and 1 of the 1 path main brought in since overlap its change set and send back go-test, which that verify ran: flai/internal/roles/conditions.go; ask for its close-out again"
@@ -752,5 +767,83 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 	}
 	if b := res.VerifyBehindMainBlocker; b == nil || !strings.Contains(b.Message, "cannot list what changed from "+forgeOther+" to main") {
 		t.Errorf("a main whose paths cannot be listed is the blocker, naming why: %+v", b)
+	}
+}
+
+// I-0381, ADR-0308: while the merge queue batches and is not held, the
+// operator's acceptance enqueues the story and the batch runs every tier over
+// the main it lands on, so its preview names the stale tiers and that the batch
+// runs them, in place of the blocker verify_behind_main, for a main whose
+// paths cannot be listed too. A held queue, --without-queue-tiers,
+// --without-kluster, and --keep-removal land the story by hand, and keep the
+// blocker.
+func TestAnAcceptanceTheQueueTakesLeavesAVerifyBehindMainToTheBatch(t *testing.T) {
+	at := time.Date(2026, 11, 16, 1, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s, answers, diff, report := behindMainFixture(t, at)
+	git := withGit{answers}
+	report(true, []string{"flai/internal/guard/roles_test.go"})
+	behind := func(b string) bool { return strings.HasPrefix(b, s.ID+"'s verify does not cover") }
+	queued := func(name, want string) {
+		t.Helper()
+		res, err := AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{QueueBatches: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.VerifyBehindMainBlocker != nil || slices.ContainsFunc(res.Blockers, behind) {
+			t.Errorf("%s: an acceptance the queue takes is not refused on verify_behind_main: %+v %q", name, res.VerifyBehindMainBlocker, res.Blockers)
+		}
+		if !strings.Contains(res.StaleTiersQueued, want) || !strings.HasSuffix(res.StaleTiersQueued, "the merge queue's batch runs every tier again over the main it lands on (ADR-0291, ADR-0308)") {
+			t.Errorf("%s: the preview must say the batch runs the stale tiers again, naming %q: %q", name, want, res.StaleTiersQueued)
+		}
+	}
+	queued("a main that sends go-test back", "send back go-test, which that verify ran: flai/internal/roles/conditions.go;")
+	res, err := AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{QueueBatches: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(res.StaleTiers, []string{"go-test"}) {
+		t.Errorf("an acceptance the queue takes still names the stale tiers: %q", res.StaleTiers)
+	}
+	for name, opts := range map[string]AcceptOptions{
+		"a held queue":          {QueueBatches: true, QueueHeld: true},
+		"--without-queue-tiers": {QueueBatches: true, WithoutQueueTiers: true},
+		"--without-kluster":     {QueueBatches: true, WithoutKluster: true},
+		"--keep-removal":        {QueueBatches: true, Keep: []KeptRemoval{{Path: "flai/internal/metrics/m.go", Reason: "kept"}}},
+	} {
+		res, err := AcceptWith(git, repo, s, "alex", at, log, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b := res.VerifyBehindMainBlocker; b == nil || b.Code != BlockVerifyBehindMain || !slices.Contains(res.Blockers, b.Message) || res.StaleTiersQueued != "" {
+			t.Errorf("%s lands the story by hand, so verify_behind_main stays: %+v %q %q", name, b, res.StaleTiersQueued, res.Blockers)
+		}
+	}
+	delete(answers, diff)
+	queued("a main whose paths cannot be listed", "cannot list what changed from "+forgeOther+" to main")
+}
+
+// S-0552, ADR-0225: only the operator's acceptance while the queue batches,
+// is not held, and with none of the overrides that land a story by hand is
+// one the merge queue takes.
+func TestAcceptOptionsEnqueues(t *testing.T) {
+	keep := []KeptRemoval{{Path: "a.go", Reason: "kept"}}
+	for name, c := range map[string]struct {
+		opts AcceptOptions
+		want bool
+	}{
+		"the queue batches":       {AcceptOptions{QueueBatches: true}, true},
+		"the queue does not":      {AcceptOptions{}, false},
+		"the queue is held":       {AcceptOptions{QueueBatches: true, QueueHeld: true}, false},
+		"the orchestrator's":      {AcceptOptions{QueueBatches: true, Orchestrator: true}, false},
+		"the queue's landing":     {AcceptOptions{QueueBatches: true, Batch: "20261116-010000"}, false},
+		"--without-queue-tiers":   {AcceptOptions{QueueBatches: true, WithoutQueueTiers: true}, false},
+		"--without-kluster":       {AcceptOptions{QueueBatches: true, WithoutKluster: true}, false},
+		"--keep-removal":          {AcceptOptions{QueueBatches: true, Keep: keep}, false},
+		"the kluster host action": {AcceptOptions{QueueBatches: true, KlusterOn: true, ChecksOn: true}, true},
+	} {
+		if got := c.opts.Enqueues(); got != c.want {
+			t.Errorf("%s: Enqueues() = %v, want %v", name, got, c.want)
+		}
 	}
 }
