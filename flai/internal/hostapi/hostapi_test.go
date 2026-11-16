@@ -631,13 +631,17 @@ func undoing(t *testing.T) channel.Project {
 	git("add", "-A")
 	git("commit", "-q", "-m", "one")
 	git("branch", storygit.Branch("S-0001"))
+	base, err := r.Run(p.Root, "git", "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"quay.md", "berth.md"} {
 		write(name, "line\nmain's\n")
 	}
 	git("commit", "-q", "-am", "main's lines")
 	rec := storygit.UndoneRecord{Story: "S-0001", Paths: []storygit.UndoneEntry{}}
 	for _, name := range []string{"berth.md", "quay.md", "restored.md"} {
-		rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: name, Lines: []string{"main's"}, OldBase: "b0"}, FoundAt: t0})
+		rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: name, Lines: []string{"main's"}, OldBase: base}, FoundAt: t0})
 	}
 	data, err := json.Marshal(rec)
 	if err != nil {

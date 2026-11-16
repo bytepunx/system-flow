@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -23,8 +24,11 @@ import (
 // revert cleanly over main's change. No conflict shows, so after a clean
 // rebase the sync compares, for each path main changed since the branch's old
 // base and the branch still changes against main, the lines main added with
-// the lines the branch's net change removes, as a multiset of line text. Each
-// path where the branch removes any of them is recorded per story in
+// the lines the branch's net change removes, by their position in main's file
+// (ADR-0309): a line of main's is undone only when the branch removes the line
+// of the number main added it at, not a line of the same text elsewhere
+// (I-0385), and a markdown line a line the branch adds keeps is not (ADR-0297).
+// Each path where the branch removes any of them is recorded per story in
 // .flai-cache/undone/S-nnnn.json in the main checkout, beside flai verify's
 // last result, because a later rebase starts past main's change and can no
 // longer find it. The record is host-local.
@@ -58,9 +62,11 @@ func UndoneRecordPath(cacheDir, story string) string {
 // FindUndone is the paths where the branch checked out in the worktree at dir,
 // rebased onto onto, the main branch's commit the rebase took, removes lines
 // main added between oldBase, the branch's merge base with main before the
-// rebase, and onto. A commit main gains after onto is not counted, so a line
-// only it adds is none the branch removes (I-0338). It finds none when oldBase
-// is onto, since main then added nothing the branch did not already have.
+// rebase, and onto, each at the line main added it in onto's file
+// (ADR-0309), in the order of their numbers. A commit main gains after onto
+// is not counted, so a line only it adds is none the branch removes (I-0338).
+// It finds none when oldBase is onto, since main then added nothing the
+// branch did not already have.
 func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 	found := []Undone{}
 	if onto == oldBase {
@@ -78,16 +84,15 @@ func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 		if !slices.Contains(branch, p) {
 			continue
 		}
-		out, err := r.Run(dir, "git", diffArgs(oldBase, onto, p)...)
+		added, mainRemoved, err := readHunks(r, dir, oldBase, onto, p)
 		if err != nil {
 			return nil, fmt.Errorf("read what the main branch added to %s between %s and %s: %w", p, oldBase, onto, err)
 		}
-		added, mainRemoved := diffLines(out)
-		if out, err = r.Run(dir, "git", diffArgs(onto, "HEAD", p)...); err != nil {
+		branchAdded, removed, err := readHunks(r, dir, onto, "HEAD", p)
+		if err != nil {
 			return nil, fmt.Errorf("read what the branch in %s removes from %s against %s: %w", dir, p, onto, err)
 		}
-		branchAdded, removed := diffLines(out)
-		if lines := notKept(p, undoneLines(added, removed), branchAdded, mainRemoved); len(lines) > 0 {
+		if lines := notKept(p, atPositions(added, removed), texts(branchAdded), texts(mainRemoved)); len(lines) > 0 {
 			found = append(found, Undone{Path: p, Lines: lines, OldBase: oldBase})
 		}
 	}
@@ -96,9 +101,12 @@ func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 
 // RecordedUndone is the paths story's record holds that its branch still
 // undoes, each checked against the main branch now and given with the
-// recorded lines the branch still removes. A path whose branch removes none
-// of its recorded lines, as after it is restored, drops out, and the record
-// is written again without it. A story with no record has none.
+// recorded lines the branch still removes at the line main added them in
+// main's file now (ADR-0309), counted as a multiset of the record's text, so
+// a line the sync did not record is not counted (I-0338). A path whose branch
+// removes none of its recorded lines there, as after it is restored or when
+// the text compare before ADR-0309 recorded it, drops out, and the record is
+// written again without it. A story with no record has none.
 func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone, error) {
 	cacheDir := repo.CacheDir()
 	rec, err := readUndone(cacheDir, story)
@@ -115,20 +123,19 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 	}
 	kept := []UndoneEntry{}
 	for _, e := range rec.Paths {
-		diff, err := r.Run(repo.MainRoot, "git", diffArgs(main, Branch(story), e.Path)...)
+		branchAdded, removed, err := readHunks(r, repo.MainRoot, main, Branch(story), e.Path)
 		if err != nil {
 			return nil, fmt.Errorf("check whether %s still undoes %s's change to %s: %w; a story with no branch has nothing to undo, so delete %s", Branch(story), main, e.Path, err, UndoneRecordPath(cacheDir, story))
 		}
-		branchAdded, removed := diffLines(diff)
-		lines := undoneLines(e.Lines, removed)
-		var mainRemoved []string
-		if mayKeep(e.Path, lines, branchAdded) {
-			if diff, err = r.Run(repo.MainRoot, "git", diffArgs(e.OldBase, main, e.Path)...); err != nil {
-				return nil, fmt.Errorf("read what %s removed from %s since %s: %w; delete %s and run flai stream sync %s again", main, e.Path, e.OldBase, err, UndoneRecordPath(cacheDir, story), story)
-			}
-			_, mainRemoved = diffLines(diff)
+		if len(removed) == 0 {
+			continue
 		}
-		if e.Lines = notKept(e.Path, lines, branchAdded, mainRemoved); len(e.Lines) == 0 {
+		added, mainRemoved, err := readHunks(r, repo.MainRoot, e.OldBase, main, e.Path)
+		if err != nil {
+			return nil, fmt.Errorf("read what %s changed in %s since %s: %w; delete %s and run flai stream sync %s again", main, e.Path, e.OldBase, err, UndoneRecordPath(cacheDir, story), story)
+		}
+		lines := undoneLines(e.Lines, atPositions(added, removed))
+		if e.Lines = notKept(e.Path, lines, texts(branchAdded), texts(mainRemoved)); len(e.Lines) == 0 {
 			continue
 		}
 		kept = append(kept, e)
@@ -267,25 +274,103 @@ func diffArgs(from, to, path string) []string {
 	return []string{"diff", "--no-ext-diff", "--no-color", "--no-renames", "-U0", from, to, "--", path}
 }
 
-// diffLines is the lines a unified diff adds and removes, as text, each with
-// its trailing white space left out, since the runner trims the end of what
-// git prints. File headers are not lines.
-func diffLines(diff string) (added, removed []string) {
+// numbered is a line of a file a diff adds or removes, with its number in
+// the file it is in.
+type numbered struct {
+	n    int
+	text string
+}
+
+// readHunks is the lines of path that git, run in dir, says differ between
+// from and to: what to adds, numbered in to's file, and what it removes,
+// numbered in from's file.
+func readHunks(r execx.Runner, dir, from, to, path string) (added, removed []numbered, err error) {
+	out, err := r.Run(dir, "git", diffArgs(from, to, path)...)
+	if err != nil {
+		return nil, nil, err
+	}
+	return diffHunks(out)
+}
+
+// diffHunks is the lines a unified diff adds, numbered in the new file, and
+// removes, numbered in the old one, from each hunk's header, @@ -a,b +c,d @@,
+// in the diff's order; a context line counts on both sides. Each line's text
+// has its trailing white space left out, since the runner trims the end of
+// what git prints. File headers and git's "\ No newline at end of file" are
+// not lines.
+func diffHunks(diff string) (added, removed []numbered, err error) {
 	inHunk := false
+	oldN, newN := 0, 0
 	for _, l := range strings.Split(diff, "\n") {
 		switch {
 		case strings.HasPrefix(l, "diff "):
 			inHunk = false
 		case strings.HasPrefix(l, "@@"):
+			if oldN, newN, err = hunkStarts(l); err != nil {
+				return nil, nil, err
+			}
 			inHunk = true
-		case !inHunk:
+		case !inHunk, strings.HasPrefix(l, `\`):
 		case strings.HasPrefix(l, "+"):
-			added = append(added, strings.TrimRight(l[1:], " \t\r"))
+			added = append(added, numbered{newN, strings.TrimRight(l[1:], " \t\r")})
+			newN++
 		case strings.HasPrefix(l, "-"):
-			removed = append(removed, strings.TrimRight(l[1:], " \t\r"))
+			removed = append(removed, numbered{oldN, strings.TrimRight(l[1:], " \t\r")})
+			oldN++
+		default:
+			oldN++
+			newN++
 		}
 	}
-	return added, removed
+	return added, removed, nil
+}
+
+// hunkStarts is the first line numbers of the old and the new side that the
+// hunk header @@ -a[,b] +c[,d] @@ names, a and c.
+func hunkStarts(header string) (oldN, newN int, err error) {
+	f := strings.Fields(header)
+	if len(f) < 3 || !strings.HasPrefix(f[1], "-") || !strings.HasPrefix(f[2], "+") {
+		return 0, 0, fmt.Errorf("read the git diff hunk header %q: it is not @@ -a,b +c,d @@", header)
+	}
+	if oldN, err = rangeStart(f[1][1:]); err != nil {
+		return 0, 0, fmt.Errorf("read the git diff hunk header %q: %w", header, err)
+	}
+	if newN, err = rangeStart(f[2][1:]); err != nil {
+		return 0, 0, fmt.Errorf("read the git diff hunk header %q: %w", header, err)
+	}
+	return oldN, newN, nil
+}
+
+// rangeStart is the first line number of a hunk header's range, a or a,b.
+func rangeStart(rng string) (int, error) {
+	start, _, _ := strings.Cut(rng, ",")
+	return strconv.Atoi(start)
+}
+
+// atPositions is the text of the lines of added that removed removes at the
+// same number, in added's order: main's lines the branch removes where main
+// added them, both numbered in the same file (ADR-0309).
+func atPositions(added, removed []numbered) []string {
+	at := make(map[int]bool, len(removed))
+	for _, l := range removed {
+		at[l.n] = true
+	}
+	out := []string{}
+	for _, l := range added {
+		if at[l.n] {
+			out = append(out, l.text)
+		}
+	}
+	return out
+}
+
+// texts is the text of lines, in their order.
+func texts(lines []numbered) []string {
+	out := make([]string, 0, len(lines))
+	for _, l := range lines {
+		out = append(out, l.text)
+	}
+	return out
 }
 
 // undoneLines is the lines of added that removed holds, counted as a
@@ -307,7 +392,8 @@ func undoneLines(added, removed []string) []string {
 }
 
 // notKept is the lines of undone, main's lines the branch removes from the
-// file at path, that no line the branch adds keeps (I-0360). In a markdown
+// file at path where main added them (ADR-0309), that no line the branch
+// adds keeps (I-0360, ADR-0297). In a markdown
 // file, a line of main's is kept, not undone, when a line the branch adds
 // holds every word of it, as a multiset of the words split on white space
 // with the punctuation at each word's ends left out, in any order: so a
@@ -318,8 +404,8 @@ func undoneLines(added, removed []string) []string {
 // since the branch's old base, keeps none: the branch restores main's old
 // line, which is the revert ADR-0155 catches. A line with no words, and every
 // line of a file that is not markdown, where a line that keeps every word,
-// such as one commented out, can still undo main's change, is kept only by
-// the multiset of whole lines (ADR-0155).
+// such as one commented out, can still undo main's change, is undone as the
+// position compare found it (ADR-0155, ADR-0309).
 func notKept(path string, undone, branchAdded, mainRemoved []string) []string {
 	if !mayKeep(path, undone, branchAdded) {
 		return undone

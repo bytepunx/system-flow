@@ -645,7 +645,10 @@ func (g *undoneGit) Run(_, _ string, args ...string) (string, error) {
 	g.mu.Unlock()
 	time.Sleep(5 * time.Millisecond)
 	defer func() { g.mu.Lock(); g.now--; g.mu.Unlock() }()
-	// diff --no-ext-diff --no-color --no-renames -U0 main story/S-nnnn -- path
+	// diff --no-ext-diff --no-color --no-renames -U0 from to -- path
+	if args[5] == "b0" { // main's diff since the old base: it added its line at line 2
+		return "@@ -1,0 +2 @@\n+main's", nil
+	}
 	story, path := strings.TrimPrefix(args[6], "story/"), args[8]
 	if slices.Contains(g.undoes[story], path) {
 		return "@@ -2 +1,0 @@\n-main's", nil

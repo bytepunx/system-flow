@@ -338,6 +338,7 @@ func recordUndone(t *testing.T, repo *workitem.Repo, g scriptedGit, story string
 	for _, p := range paths {
 		rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: p, Lines: []string{"main's line"}, OldBase: "b0"}, FoundAt: t0})
 		g.script("diff --git a/"+p+" b/"+p+"\n@@ -1 +0,0 @@\n-main's line", "diff", "--no-ext-diff", "--no-color", "--no-renames", "-U0", "main", storygit.Branch(story), "--", p)
+		g.script("diff --git a/"+p+" b/"+p+"\n@@ -0,0 +1 @@\n+main's line", "diff", "--no-ext-diff", "--no-color", "--no-renames", "-U0", "b0", "main", "--", p)
 	}
 	data, err := json.Marshal(rec)
 	if err != nil {

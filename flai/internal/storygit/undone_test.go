@@ -51,12 +51,45 @@ func TestUndoneLinesCountsMainsAddedLinesTheBranchRemoves(t *testing.T) {
 	}
 }
 
-func TestDiffLinesReadsHunksAndSkipsHeaders(t *testing.T) {
+// ADR-0309: each hunk's lines are numbered from its header, with or without
+// a count, removed lines in the old file and added ones in the new; file
+// headers and git's note of a missing newline are not lines.
+func TestDiffHunksNumbersLinesFromEachHunksHeader(t *testing.T) {
 	diff := "diff --git a/a.md b/a.md\nindex 1..2 100644\n--- a/a.md\n+++ b/a.md\n" +
-		"@@ -1 +1,2 @@\n-old  \n+--- new\n+++ also\n\\ No newline at end of file"
-	added, removed := diffLines(diff)
-	if !reflect.DeepEqual(added, []string{"--- new", "++ also"}) || !reflect.DeepEqual(removed, []string{"old"}) {
-		t.Errorf("added %q, removed %q", added, removed)
+		"@@ -1 +1,2 @@\n-old  \n+--- new\n+++ also\n" +
+		"@@ -7,2 +8,0 @@ func f() {\n-\t}\n-}\n" +
+		"@@ -20,0 +20 @@\n+last\n\\ No newline at end of file"
+	added, removed, err := diffHunks(diff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []numbered{{1, "--- new"}, {2, "++ also"}, {20, "last"}}; !reflect.DeepEqual(added, want) {
+		t.Errorf("added %v, want %v", added, want)
+	}
+	if want := []numbered{{1, "old"}, {7, "\t}"}, {8, "}"}}; !reflect.DeepEqual(removed, want) {
+		t.Errorf("removed %v, want %v", removed, want)
+	}
+	if _, _, err := diffHunks("@@ -x +1 @@\n+a"); err == nil || !strings.Contains(err.Error(), "@@ -x +1 @@") {
+		t.Errorf("a header with no line number read: %v", err)
+	}
+}
+
+// ADR-0309: main's line is undone only where the branch removes the line of
+// the number main added it at, whatever the text the branch removes elsewhere.
+func TestAtPositionsCountsMainsLinesTheBranchRemovesWhereMainAddedThem(t *testing.T) {
+	for _, c := range []struct {
+		name           string
+		added, removed []numbered
+		want           []string
+	}{
+		{"removes main's line", []numbered{{4, "two"}}, []numbered{{4, "two"}}, []string{"two"}},
+		{"same text elsewhere", []numbered{{12, "\t}"}}, []numbered{{30, "\t}"}}, []string{}},
+		{"removes some of main's lines", []numbered{{1, "a"}, {2, "b"}, {3, "c"}}, []numbered{{3, "c"}, {1, "a"}}, []string{"a", "c"}},
+		{"keeps main's change", []numbered{{1, "a"}}, nil, []string{}},
+	} {
+		if got := atPositions(c.added, c.removed); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
 	}
 }
 
@@ -292,6 +325,8 @@ func TestRecordedUndoneDropsAPathTheBranchNoLongerRemoves(t *testing.T) {
 		t.Fatal(err)
 	}
 	g.script("@@ -1 +0,0 @@\n-y", diffArgs("main", "story/S-0001", "a.md")...)
+	g.script("@@ -0,0 +1,2 @@\n+y\n+x", diffArgs("b0", "main", "a.md")...)
+	// b.md's branch removes nothing, so main's diff of it, unscripted, is not read
 	g.script("", diffArgs("main", "story/S-0001", "b.md")...)
 
 	got, err := RecordedUndone(g, repo, "S-0001")
@@ -311,5 +346,65 @@ func TestRecordedUndoneDropsAPathTheBranchNoLongerRemoves(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(repo.CacheDir(), "undone", "S-0001.json")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("the empty record is left: %v", err)
+	}
+}
+
+// The Go file of I-0385 and I-0124: board.go's old base holds a loop, and
+// main adds a function after it, at lines 8 to 13 of its file, ending in a
+// tab and a brace and in a brace.
+const (
+	goMainAdds    = "@@ -7,0 +8,6 @@\n+\n+func a() {\n+\tif ok {\n+\t\treturn\n+\t}\n+}"
+	goLoopReplace = "@@ -4,3 +4 @@\n-\tfor _, x := range xs {\n-\t\tuse(x)\n-\t}\n+\tuseAll(xs)"
+	goRevert      = "@@ -8,6 +7,0 @@\n-\n-func a() {\n-\tif ok {\n-\t\treturn\n-\t}\n-}"
+)
+
+// goMainLines are the lines goMainAdds adds, as text.
+var goMainLines = []string{"", "func a() {", "\tif ok {", "\t\treturn", "\t}", "}"}
+
+// I-0385, ADR-0309: a branch that replaces board.go's loop removes the loop's
+// closing brace, a tab and a brace, at line 6, which the text compare matched
+// to the one main added at line 12: it undoes nothing. I-0124: a branch whose
+// revert, replayed over main's change, removes main's function from
+// revert.go, at the lines main added it, undoes every line of it.
+func TestFindUndoneCountsMainsLinesByTheirPosition(t *testing.T) {
+	g := undoneGit("c1", "b0", []string{"board.go", "revert.go"}, []string{"board.go", "revert.go"})
+	g.script(goMainAdds, diffArgs("b0", "c1", "board.go")...)
+	g.script(goLoopReplace, diffArgs("c1", "HEAD", "board.go")...)
+	g.script(goMainAdds, diffArgs("b0", "c1", "revert.go")...)
+	g.script(goRevert, diffArgs("c1", "HEAD", "revert.go")...)
+
+	got, err := FindUndone(g, "/wt", "c1", "b0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Undone{{Path: "revert.go", Lines: goMainLines, OldBase: "b0"}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("found %+v, want %+v", got, want)
+	}
+}
+
+// I-0385, ADR-0309: board.go, recorded by the text compare for the brace the
+// branch removes at another line than main added it, drops out of the record
+// at its next read; revert.go, whose branch removes main's lines where main
+// added them, stays.
+func TestRecordedUndoneDropsAPathTheTextCompareRecorded(t *testing.T) {
+	repo, g := undoneRepo(t)
+	found := []Undone{{Path: "board.go", Lines: []string{"\t}"}, OldBase: "b0"}, {Path: "revert.go", Lines: goMainLines, OldBase: "b0"}}
+	if err := recordUndone(repo.CacheDir(), "S-0002", found, time.Date(2026, 11, 15, 18, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	g.script(goLoopReplace, diffArgs("main", "story/S-0002", "board.go")...)
+	g.script(goMainAdds, diffArgs("b0", "main", "board.go")...)
+	g.script(goRevert, diffArgs("main", "story/S-0002", "revert.go")...)
+	g.script(goMainAdds, diffArgs("b0", "main", "revert.go")...)
+
+	got, err := RecordedUndone(g, repo, "S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := found[1:]; !reflect.DeepEqual(got, want) {
+		t.Errorf("still undone %+v, want %+v", got, want)
+	}
+	if rec := readRecord(t, repo, "S-0002"); len(rec.Paths) != 1 || rec.Paths[0].Path != "revert.go" {
+		t.Errorf("record not rewritten without board.go: %+v", rec)
 	}
 }
