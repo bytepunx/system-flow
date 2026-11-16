@@ -35,3 +35,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0806: the publish reads verify_at.publish, which S-0806 parses.

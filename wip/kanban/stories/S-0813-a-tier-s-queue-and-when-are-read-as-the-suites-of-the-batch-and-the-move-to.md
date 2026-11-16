@@ -35,3 +35,6 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0808: the acceptance's gates must read the file before queue stops deciding them.
+- After S-0809: the batch must read the file before queue stops deciding what it runs.

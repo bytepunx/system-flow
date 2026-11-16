@@ -34,3 +34,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0806: the batch reads verify_at.batch, which S-0806 parses.

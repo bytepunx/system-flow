@@ -36,3 +36,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0805: the checks of the file's suites read the suite S-0805 gives each tier.

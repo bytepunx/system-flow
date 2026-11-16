@@ -36,3 +36,12 @@ The end-to-end proof of [ADR-0312](../../../design/adrs/0312-a-tier-belongs-to-a
 ## Tasks
 
 ## Notes
+
+- After S-0807: the proof moves a story by a transition's verify.
+- After S-0808: the proof accepts a story under the file's gates.
+- After S-0809: the proof's batch runs the file's suites.
+- After S-0810: the proof enters a state with runs.
+- After S-0811: the proof publishes with verify_at.publish.
+- After S-0812: the proof's CI command reads verify_at.ci.
+- After S-0814: the proof reads what the dashboard is given for the new state.
+- After S-0756: the proof adds a state as S-0756 shows one can be added.

@@ -36,3 +36,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0806: the rule and the close-out read the transition's verify key S-0806 parses.

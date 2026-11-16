@@ -36,3 +36,6 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0806: the job is started from a state's runs key, which S-0806 parses.
+- After S-0804: the job is the one S-0804 makes for Rebase and resolve, with its record and its send-back.

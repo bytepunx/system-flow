@@ -35,3 +35,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0807: the gates read the suites the verify report records, which S-0807 adds.

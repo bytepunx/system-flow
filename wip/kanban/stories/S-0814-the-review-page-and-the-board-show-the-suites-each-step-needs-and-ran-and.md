@@ -35,3 +35,6 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0810: the page follows the job a state's runs key starts, which S-0810 adds.
+- After S-0804: the stream is the component S-0804 adds to the review page.

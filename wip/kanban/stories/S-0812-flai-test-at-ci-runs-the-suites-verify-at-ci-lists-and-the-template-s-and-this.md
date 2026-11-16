@@ -35,3 +35,5 @@ draft: true
 ## Tasks
 
 ## Notes
+
+- After S-0806: the command reads verify_at, which S-0806 parses.
