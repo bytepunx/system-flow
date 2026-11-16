@@ -6,7 +6,7 @@ title: The merge queue's preflight holds the queue on main's files when the inst
 status: ready
 owner: alex
 created: 2026-11-16T00:41:48Z
-updated: 2026-11-16T02:24:39Z
+updated: 2026-11-16T02:59:13Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:13Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-16T01:43:27Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-16T04:30:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0750, S-0798, S-0800 and S-0799."
+  delivery: 2026-11-16T04:55:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0750 and S-0799."
   by: flai
-  at: 2026-11-16T02:24:39Z
+  at: 2026-11-16T02:59:13Z
 finalized:
   by: orchestrator
   at: 2026-11-16T01:44:45Z
