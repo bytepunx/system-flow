@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-16T23:42:07Z
+updated: 2026-11-16T23:42:08Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -125,6 +125,7 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
 - S-0809 The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
 - S-0810 flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails
 - S-0811 The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
+- S-0812 flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
 
 ## Notes
 
