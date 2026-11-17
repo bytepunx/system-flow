@@ -3,10 +3,10 @@ id: S-0820
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T02:48:43Z
-updated: 2026-11-17T03:23:30Z
+updated: 2026-11-17T03:29:08Z
 transitions:
   - to: ready
     at: 2026-11-17T02:48:46Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T03:23:30Z
     by: agent-S-0820
+  - to: review
+    at: 2026-11-17T03:27:43Z
+    by: agent-S-0820
+  - to: done
+    at: 2026-11-17T03:29:08Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0820-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,19 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 160
-  estimated: true
-  priced_by: estimate
+  seconds: 260
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      work: 17
+      ceremony: 1
+      work: 27
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 285
-      cache_read: 2087829
-      cache_write: 154930
-      cost: 0.8535
+      input: 60
+      output: 7699
+      cache_read: 4183720
+      cache_write: 163519
+      cost: 2.2991
   strategic:
     - kind: orchestrator
       seconds: 39
@@ -57,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3500 Fetch the remote's branch and tags
@@ -69,3 +75,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: f703b97112becbf3f896577f5d2c95c603d4faf3
+- At: 2026-11-17T03:29:08Z
+
+Verdict: S-0820 meets all three criteria; the close-out passed at f703b97112becbf3f896577f5d2c95c603d4faf3.
+- 1: T-3500 done
+- 2: T-3501 done
+- 3: T-3502 done
