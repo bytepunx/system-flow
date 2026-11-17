@@ -1497,6 +1497,8 @@ func TestVerifyWritesItsProgressToStderrOnlyWhenAsked(t *testing.T) {
 		}
 		return lines.String()
 	}
+	// A close-out job runs the tests with the variable set (I-0395).
+	t.Setenv(closeout.ProgressEnv, "")
 	plain, plainErr, code := runVerify(t, root, verifyGit{}, "verify", "--fresh", "S-004")
 	if code != 0 || progress(plainErr) != "" {
 		t.Fatalf("without the variable: exit %d, stderr\n%s\n%s", code, plainErr, plain)
