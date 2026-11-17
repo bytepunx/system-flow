@@ -502,7 +502,9 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		},
 
 		// board.get: the board as flai board --json gives it, the merge queue
-		// as queue included (S-0398). all adds epics and tasks.
+		// as queue included (S-0398), with the workflow's columns as lanes and
+		// its moves as transitions, from which the dashboard draws the board
+		// (ADR-0301 §2, §3, S-0753). all adds epics and tasks.
 		"board.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				All bool `json:"all"`

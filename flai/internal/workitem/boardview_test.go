@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // S-0087, found in T-0318's end-to-end review: acceptance archives a story
@@ -239,7 +241,7 @@ func storiesIn(first, n int, state string) []*Item {
 // the fixture the renamed and the added state are columns in their places.
 func TestBoardViewLanesAreTheWorkflowsColumns(t *testing.T) {
 	baseline := []Lane{
-		{Name: Backlog, Title: Backlog, Kind: "queue", Ordered: true},
+		{Name: Backlog, Title: Backlog, Kind: "queue", Ordered: true, Initial: true},
 		{Name: Ready, Title: Ready, Kind: "queue", WIPLimit: 5, TakesLimit: true, Ordered: true},
 		{Name: InProgress, Title: InProgress, Kind: "active", WIPLimit: 2, TakesLimit: true},
 		{Name: Review, Title: Review, Kind: "waiting", WIPLimit: 3, TakesLimit: true},
@@ -264,9 +266,111 @@ func TestBoardViewLanesAreTheWorkflowsColumns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lanes := `"lanes":[{"name":"backlog","title":"backlog","kind":"queue","ordered":true},{"name":"ready","title":"ready","kind":"queue","takes_limit":true,"ordered":true},{"name":"in-progress","title":"in-progress","kind":"active","takes_limit":true},`; !strings.Contains(string(data), lanes) {
+	if lanes := `"lanes":[{"name":"backlog","title":"backlog","kind":"queue","ordered":true,"initial":true},{"name":"ready","title":"ready","kind":"queue","takes_limit":true,"ordered":true},{"name":"in-progress","title":"in-progress","kind":"active","takes_limit":true},`; !strings.Contains(string(data), lanes) {
 		t.Errorf("JSON:\n%s\nwant it to hold\n%s", data, lanes)
 	}
+}
+
+// S-0753, ADR-0301 §3: the view gives the workflow's transitions in its
+// order, each with its from, to, types, by, and effects as the workflow
+// gives them, whether it needs a reason, and whether a person may make it
+// from the board, so a reader needs no list of states, makers, or rules of
+// its own; under the fixture the renamed and the added state's moves are
+// there in their places.
+func TestBoardViewTransitionsAreTheWorkflows(t *testing.T) {
+	baseline := []string{
+		"backlog > ready, epic story task, by anyone, commit",
+		"ready > in-progress, epic story task, by anyone, pull",
+		"in-progress > review, epic story task, by anyone",
+		"review > done, epic story, by acceptance, accept",
+		"review > done, task, by anyone",
+		"in-progress > done, task, by anyone",
+		"review > in-progress, epic story task, by anyone, send-back, reason",
+		"in-progress > ready, epic story task, by anyone",
+		"ready > backlog, epic story task, by anyone",
+		"backlog ready in-progress > cancelled, epic story task, by anyone, cancel, reason",
+		"review > cancelled, epic story task, by cascade, cancel, reason, not the operator's",
+		"cancelled > backlog, epic story task, by anyone, reopen",
+	}
+	fixture := []string{
+		"backlog > ready, epic story task, by anyone, commit",
+		"ready > doing, epic story task, by anyone, pull",
+		"doing > testing, epic story task, by anyone",
+		"doing testing > review, epic story task, by anyone",
+		"review > done, epic story, by acceptance, accept",
+		"review > done, task, by anyone",
+		"doing testing > done, task, by anyone",
+		"review > doing, epic story task, by anyone, send-back, reason",
+		"testing > doing, epic story task, by anyone",
+		"doing > ready, epic story task, by anyone",
+		"ready > backlog, epic story task, by anyone",
+		"backlog ready doing testing > cancelled, epic story task, by anyone, cancel, reason",
+		"review > cancelled, epic story task, by cascade, cancel, reason, not the operator's",
+		"cancelled > backlog, epic story task, by anyone, reopen",
+	}
+	want := map[string][]string{"baseline": baseline, "fixture": fixture}
+	for _, f := range boardFlows(t) {
+		v := NewBoardView(nil, f.board, time.Now(), true, nil, nil)
+		if got := moveLines(v.Transitions); !slices.Equal(got, want[f.name]) {
+			t.Errorf("%s: transitions\n%s\nwant\n%s", f.name, strings.Join(got, "\n"), strings.Join(want[f.name], "\n"))
+		}
+		flow := f.board.Flow()
+		if len(v.Transitions) != len(flow.Transitions) {
+			t.Fatalf("%s: %d transitions, the workflow has %d", f.name, len(v.Transitions), len(flow.Transitions))
+		}
+		for i, m := range v.Transitions {
+			w := flow.Transitions[i]
+			if !slices.Equal(m.From, w.From) || m.To != w.To || !slices.Equal(m.Types, w.Types) || !slices.Equal(m.By, w.By) || !slices.Equal(m.Effects, w.Effects) {
+				t.Errorf("%s: transition %d %+v, the workflow's %+v", f.name, i, m, w)
+			}
+		}
+		// the view's lists are its own: changing one leaves the workflow
+		v.Transitions[0].From[0] = "changed"
+		if f.board.Flow().Transitions[0].From[0] == "changed" {
+			t.Errorf("%s: the view shares the workflow's lists", f.name)
+		}
+	}
+
+	// only a move a person may make is the operator's: agent and flai alone
+	// are not; a reason-given at warn needs no reason; and the JSON gives
+	// every list, empty when the workflow's is
+	flow := workflow.Baseline()
+	flow.Transitions = []workflow.Transition{
+		{From: []string{Backlog}, To: Ready, Types: []string{"story"}, By: []string{workflow.ByAgent, workflow.ByFlai}, Rules: []workflow.RuleRef{{Rule: workflow.RuleReasonGiven, Severity: workflow.SeverityWarn}}, Effects: []string{}},
+		{From: []string{Ready}, To: Backlog, Types: []string{"story"}, By: []string{workflow.ByAgent, workflow.ByOperator}},
+	}
+	v := NewBoardView(nil, &Board{Workflow: &flow}, time.Now(), true, nil, nil)
+	if got, want := moveLines(v.Transitions), []string{
+		"backlog > ready, story, by agent flai, not the operator's",
+		"ready > backlog, story, by agent operator",
+	}; !slices.Equal(got, want) {
+		t.Errorf("transitions\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	data, err := json.Marshal(v.Transitions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `[{"from":["backlog"],"to":"ready","types":["story"],"by":["agent","flai"],"effects":[],"reason":false,"operator":false},{"from":["ready"],"to":"backlog","types":["story"],"by":["agent","operator"],"effects":[],"reason":false,"operator":true}]`; string(data) != want {
+		t.Errorf("JSON:\n%s\nwant\n%s", data, want)
+	}
+}
+
+// moveLines are moves as one line each: from > to, types, by, effects, and
+// whether each needs a reason and is not the operator's to make.
+func moveLines(moves []BoardMove) []string {
+	var out []string
+	for _, m := range moves {
+		parts := []string{strings.Join(m.From, " ") + " > " + m.To, strings.Join(m.Types, " "), "by " + strings.Join(m.By, " ")}
+		parts = append(parts, m.Effects...)
+		if m.Reason {
+			parts = append(parts, "reason")
+		}
+		if !m.Operator {
+			parts = append(parts, "not the operator's")
+		}
+		out = append(out, strings.Join(parts, ", "))
+	}
+	return out
 }
 
 // S-0739: the pull holds, review holds, and breaches read limited states by

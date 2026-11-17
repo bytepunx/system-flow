@@ -166,6 +166,117 @@ func TestBoardGet(t *testing.T) {
 	}
 }
 
+// S-0753, ADR-0301 §2, §3: board.get answers the workflow's columns, each
+// with its kind, WIP limit, and whether it is ordered and initial, and its
+// transitions, each with who may make it and whether it needs a reason, so
+// the dashboard draws the board from the answer alone. On the baseline
+// these are its six columns and twelve moves; on a project whose workflow
+// file adds testing between in-progress and review, renamed
+// acceptance-review, testing is a column in its place with the limit the
+// board sets it, and its moves are there, the one only the story's agent
+// makes not the operator's.
+func TestBoardGetAnswersTheWorkflow(t *testing.T) {
+	type answer struct {
+		Lanes       []workitem.Lane
+		Transitions []workitem.BoardMove
+	}
+	find := func(t *testing.T, v answer, from, to string, types ...string) workitem.BoardMove {
+		t.Helper()
+		for _, m := range v.Transitions {
+			if slices.Contains(m.From, from) && m.To == to && (types == nil || slices.Equal(m.Types, types)) {
+				return m
+			}
+		}
+		t.Fatalf("no transition from %s to %s in %+v", from, to, v.Transitions)
+		return workitem.BoardMove{}
+	}
+	names := func(lanes []workitem.Lane) []string {
+		var out []string
+		for _, l := range lanes {
+			out = append(out, l.Name)
+		}
+		return out
+	}
+
+	p := harbour(t)
+	var v answer
+	if err := call(t, p, "board.get", `{}`, &v); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(v.Lanes), []string{"backlog", "ready", "in-progress", "review", "done", "cancelled"}; !slices.Equal(got, want) {
+		t.Errorf("baseline lanes %v, want %v", got, want)
+	}
+	if l := v.Lanes[0]; !l.Initial || !l.Ordered || l.Kind != "queue" {
+		t.Errorf("backlog lane %+v", l)
+	}
+	if l := v.Lanes[2]; l.Initial || l.Kind != "active" || l.WIPLimit != 2 || !l.TakesLimit {
+		t.Errorf("in-progress lane %+v", l)
+	}
+	if len(v.Transitions) != 12 {
+		t.Errorf("baseline has %d transitions, want 12", len(v.Transitions))
+	}
+	if m := find(t, v, "review", "in-progress"); !m.Reason || !m.Operator || !slices.Equal(m.Effects, []string{"send-back"}) {
+		t.Errorf("send back %+v", m)
+	}
+	if m := find(t, v, "review", "cancelled"); !m.Reason || m.Operator || !slices.Equal(m.By, []string{"cascade"}) {
+		t.Errorf("review's cancellation %+v", m)
+	}
+	if m := find(t, v, "review", "done", "epic", "story"); m.Reason || !m.Operator || !slices.Equal(m.By, []string{"acceptance"}) {
+		t.Errorf("acceptance %+v", m)
+	}
+	if m := find(t, v, "ready", "backlog"); m.Reason || !m.Operator || m.Effects == nil {
+		t.Errorf("ready to backlog %+v", m)
+	}
+
+	p = harbour(t)
+	file := filepath.Join(p.Root, "design", "workflows", "board.md")
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(testingWorkflow), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	board, err := repo.LoadBoard()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := board.SetLimit("testing", 4); err != nil {
+		t.Fatal(err)
+	}
+	if err := board.Save("2026-11-16"); err != nil {
+		t.Fatal(err)
+	}
+	v = answer{}
+	if err := call(t, p, "board.get", `{}`, &v); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(v.Lanes), []string{"backlog", "ready", "in-progress", "testing", "acceptance-review", "shipped", "dropped"}; !slices.Equal(got, want) {
+		t.Errorf("the project's lanes %v, want %v", got, want)
+	}
+	if l := v.Lanes[3]; l.Kind != "active" || l.WIPLimit != 4 || !l.TakesLimit || l.Ordered || l.Initial {
+		t.Errorf("testing lane %+v", l)
+	}
+	if len(v.Transitions) != 13 {
+		t.Errorf("the project's workflow has %d transitions, want 13", len(v.Transitions))
+	}
+	if m := find(t, v, "in-progress", "testing"); m.Reason || !m.Operator {
+		t.Errorf("into testing %+v", m)
+	}
+	if m := find(t, v, "testing", "acceptance-review"); m.Operator || !slices.Equal(m.By, []string{"agent"}) {
+		t.Errorf("testing to acceptance-review %+v: only the story's agent makes it", m)
+	}
+	if m := find(t, v, "testing", "dropped"); !m.Reason || !m.Operator {
+		t.Errorf("testing's cancellation %+v", m)
+	}
+	if m := find(t, v, "acceptance-review", "in-progress"); !m.Reason || !m.Operator {
+		t.Errorf("send back %+v", m)
+	}
+}
+
 func TestItemsListAndGet(t *testing.T) {
 	p := harbour(t)
 	var items []workitem.Item

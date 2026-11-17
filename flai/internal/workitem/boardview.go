@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -65,6 +66,46 @@ type Lane struct {
 	TakesLimit bool `json:"takes_limit,omitempty"`
 	// Ordered says the column reads in the pull order.
 	Ordered bool `json:"ordered,omitempty"`
+	// Initial says the column is the workflow's initial state, the one a new
+	// item is made in (ADR-0301 §2, S-0753).
+	Initial bool `json:"initial,omitempty"`
+}
+
+// BoardMove is one of the workflow's transitions as the board offers it
+// (ADR-0301 §3, S-0753): the states it leaves and the one it enters, the
+// item types that make it, who may, and what flai does at it, as the
+// workflow gives them, with whether it needs a reason and whether a person
+// may make it from the board, so that a reader of the view draws its moves
+// with no list of states, makers, or rules of its own.
+type BoardMove struct {
+	From    []string `json:"from"`
+	To      string   `json:"to"`
+	Types   []string `json:"types"`
+	By      []string `json:"by"`
+	Effects []string `json:"effects"`
+	// Reason says the move is refused without a reason: its rules name
+	// reason-given at the refuse severity.
+	Reason bool `json:"reason"`
+	// Operator says a person may make the move: its by names anyone, the
+	// operator, or an acceptance, which the dashboard's accept makes.
+	Operator bool `json:"operator"`
+}
+
+// boardMove is t as the board offers it.
+func boardMove(t workflow.Transition) BoardMove {
+	m := BoardMove{
+		From: slices.Clone(t.From), To: t.To, Types: slices.Clone(t.Types), By: slices.Clone(t.By), Effects: slices.Clone(t.Effects),
+		Reason: slices.ContainsFunc(t.Rules, func(r workflow.RuleRef) bool {
+			return r.Rule == workflow.RuleReasonGiven && r.SeverityOf() == workflow.SeverityRefuse
+		}),
+		Operator: t.Allows(workflow.ByAnyone) || t.Allows(workflow.ByOperator) || t.Allows(workflow.ByAcceptance),
+	}
+	for _, list := range []*[]string{&m.From, &m.Types, &m.By, &m.Effects} {
+		if *list == nil {
+			*list = []string{}
+		}
+	}
+	return m
 }
 
 // BoardView is the board with its cards: one reading of the repository for
@@ -72,11 +113,14 @@ type Lane struct {
 type BoardView struct {
 	// Lanes are the board's columns in the workflow's order, each with its
 	// kind and WIP limit (ADR-0301 §2).
-	Lanes     []Lane                 `json:"lanes"`
-	Columns   map[string][]BoardCard `json:"columns"`
-	WIPLimits map[string]int         `json:"wip_limits"`
-	Order     []string               `json:"order"`
-	Breaches  []string               `json:"breaches"`
+	Lanes []Lane `json:"lanes"`
+	// Transitions are the workflow's moves in its order, each with who may
+	// make it and whether it needs a reason (ADR-0301 §3, S-0753).
+	Transitions []BoardMove            `json:"transitions"`
+	Columns     map[string][]BoardCard `json:"columns"`
+	WIPLimits   map[string]int         `json:"wip_limits"`
+	Order       []string               `json:"order"`
+	Breaches    []string               `json:"breaches"`
 	// Unpublished names the accepted items no release has covered yet, by ID:
 	// what publishing would send to the remote, which is the operator's to
 	// do or to ask for (ADR-0067).
@@ -116,11 +160,15 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 	w := board.Flow()
 	v := BoardView{Columns: map[string][]BoardCard{}, WIPLimits: board.WIPLimits, Order: board.Order, Counts: map[string]int{}, flow: w}
 	for _, s := range w.States {
-		lane := Lane{Name: s.Name, Title: s.Title, Kind: s.Kind, TakesLimit: s.Limit, Ordered: s.Order}
+		lane := Lane{Name: s.Name, Title: s.Title, Kind: s.Kind, TakesLimit: s.Limit, Ordered: s.Order, Initial: s.Initial}
 		if s.Limit {
 			lane.WIPLimit = board.WIPLimits[s.Name]
 		}
 		v.Lanes = append(v.Lanes, lane)
+	}
+	v.Transitions = make([]BoardMove, 0, len(w.Transitions))
+	for _, t := range w.Transitions {
+		v.Transitions = append(v.Transitions, boardMove(t))
 	}
 	source := pullSource(w)
 	if holds == nil {
