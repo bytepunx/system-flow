@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -440,10 +441,12 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 	}
 	if len(plans) > 0 {
 		if status, _ := a.runner.Run(root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {
-			if _, err := a.runner.Run(root, "git", "add", "-A"); err != nil {
+			// Another git process (flai serve's replan, an agent's commit) may
+			// hold the index lock for a moment: wait it out (I-0359).
+			if _, err := storygit.RunPastIndexLock(a.runner, root, "add", "-A"); err != nil {
 				return nil, nil, err
 			}
-			if _, err := a.runner.Run(root, "git", "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
+			if _, err := storygit.RunPastIndexLock(a.runner, root, "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
 				return nil, nil, err
 			}
 		}
