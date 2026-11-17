@@ -2,6 +2,10 @@
 // of tasks that can run at once, as flai works it out from each task's `after`. flai's item.get
 // gives the plan beside the item and its children; board.get gives a story's card the counts.
 
+/**
+ * A task's state in flai's plan: the plan's own words (internal/workitem taskplan.go), which flai
+ * reads from the kind of the task's status under the workflow, never a status itself.
+ */
 export type TaskState = 'ready' | 'waiting' | 'in-progress' | 'done' | 'cancelled';
 
 /** One task of the plan: `after` and `waiting_for` are absent when empty. */

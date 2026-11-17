@@ -77,6 +77,7 @@ import {
 	hasOrder,
 	orderSummary,
 	withoutValueNow,
+	STATE_SLOT,
 	type Bucket,
 	type Claims,
 	type CodDay,
@@ -94,15 +95,7 @@ import {
 	type StrategicDay,
 	type WaitWeek
 } from './charts';
-import {
-	CATEGORICAL,
-	modelSlot,
-	modelSymbol,
-	ORDER_SLOT,
-	STATE_SLOT,
-	theme,
-	TYPE_SLOT
-} from './palette';
+import { CATEGORICAL, modelSlot, modelSymbol, ORDER_SLOT, theme, TYPE_SLOT } from './palette';
 
 // Spend over time as flai lays it out (S-0163): stories on 3 August (two models) and on
 // 5 August, the day between them empty, and tasks on 3 August.

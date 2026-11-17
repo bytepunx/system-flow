@@ -9,16 +9,7 @@ export const CATEGORICAL = {
 	dark: ['#3f86d9', '#e05a52', '#1e9fbb', '#b88b1f', '#d55f9d', '#33a646', '#8b7ce6', '#c27a3c']
 } as const;
 
-// The workflow states get fixed slots so a state keeps its colour across charts.
-export const STATE_SLOT: Record<string, number> = {
-	backlog: 6,
-	ready: 3,
-	'in-progress': 0,
-	review: 7,
-	done: 5,
-	cancelled: 1
-};
-// Natures likewise.
+// Natures get fixed slots so a nature keeps its colour across charts.
 export const NATURE_SLOT: Record<string, number> = {
 	feature: 0,
 	improvement: 5,

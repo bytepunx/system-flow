@@ -4,8 +4,10 @@
 // hold (S-0129), and so is a story in progress that this host has had no agent for, with where it was
 // begun (S-0177).
 
+import type { Flow } from '$lib/lanes';
 import { splitLogPaths } from '$lib/logs';
 import { settingsPage, type SettingsPageSlug } from '$lib/settingspages';
+import { isActive, isPullable } from '$lib/workflow';
 
 export type AgentRun = {
 	story: string;
@@ -322,41 +324,51 @@ export function stoppable(a: StoryActivity | undefined): a is StoryActivity {
 }
 
 // What a writer may have flai do for a story's agent, with the agent action on (S-0115, S-0116,
-// S-0177): one rule for the story page and the card's menu (S-0202).
+// S-0177): one rule for the story page and the card's menu (S-0202), read from the kind of the
+// story's status and the moves from it in the workflow's flow (S-0758); with no flow given, no
+// status allows any of it.
 
-/** Whether a writer may retry a story in ready or in progress whose agent failed (S-0116). */
+const noFlow: Flow = { lanes: [], transitions: [] };
+
+/**
+ * Whether a writer may retry a story whose agent failed (S-0116): one an agent may pull, or one
+ * being worked.
+ */
 export function retryable(
 	a: StoryActivity | undefined,
 	enabled: boolean,
 	status: string,
-	writable: boolean
+	writable: boolean,
+	flow: Flow = noFlow
 ): a is StoryActivity {
 	return (
 		writable &&
 		enabled &&
 		(a?.state === 'failed' || (!!a?.hold && a.run.outcome === 'failed')) &&
-		(status === 'ready' || status === 'in-progress')
+		(isPullable(flow, status) || isActive(flow, status))
 	);
 }
 
-/** Whether a writer may start the agent of a story in ready that has had none (S-0115, S-0129). */
+/** Whether a writer may start the agent of a pullable story that has had none (S-0115, S-0129). */
 export function startable(
 	a: StoryActivity | undefined,
 	enabled: boolean,
 	status: string,
-	writable: boolean
+	writable: boolean,
+	flow: Flow = noFlow
 ): boolean {
-	return writable && enabled && status === 'ready' && (!a || (!!a.hold && !a.run.started));
+	return writable && enabled && isPullable(flow, status) && (!a || (!!a.hold && !a.run.started));
 }
 
-/** Whether a writer may start an agent here for a story in progress begun elsewhere (S-0177). */
+/** Whether a writer may start an agent here for a story being worked, begun elsewhere (S-0177). */
 export function startableHere(
 	a: StoryActivity | undefined,
 	enabled: boolean,
 	status: string,
-	writable: boolean
+	writable: boolean,
+	flow: Flow = noFlow
 ): boolean {
-	return writable && enabled && status === 'in-progress' && !!a?.elsewhere;
+	return writable && enabled && isActive(flow, status) && !!a?.elsewhere;
 }
 
 /** The one thing a writer may have flai do for a story's agent, Retry first, or null. */
@@ -364,12 +376,14 @@ export function agentAction(
 	activity: StoryActivity | undefined,
 	enabled: boolean,
 	status: string,
-	writable: boolean
+	writable: boolean,
+	flow: Flow = noFlow
 ): { action: 'start' | 'restart'; label: 'Start agent' | 'Retry' } | null {
-	if (retryable(activity, enabled, status, writable)) return { action: 'restart', label: 'Retry' };
-	if (startable(activity, enabled, status, writable))
+	if (retryable(activity, enabled, status, writable, flow))
+		return { action: 'restart', label: 'Retry' };
+	if (startable(activity, enabled, status, writable, flow))
 		return { action: 'start', label: 'Start agent' };
-	if (startableHere(activity, enabled, status, writable))
+	if (startableHere(activity, enabled, status, writable, flow))
 		return { action: 'restart', label: 'Start agent' };
 	return null;
 }

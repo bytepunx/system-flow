@@ -21,6 +21,7 @@ import {
 	storyActivity,
 	type StoryActivity
 } from './activity';
+import { addedStateFlow, baselineFlow, testingFlow } from './lanes.fixture';
 
 const run = {
 	story: 'S-0104',
@@ -306,6 +307,7 @@ describe("a story's agent action", () => {
 	const standIn = { story: 'S-0104', command: '', agent: '', started: '' };
 	const held: StoryActivity = { state: 'waiting', run: standIn, hold };
 	const heldFailed: StoryActivity = { ...held, run: failed.run };
+	const working: StoryActivity = { state: 'working', run };
 	const begun: StoryActivity = {
 		state: 'waiting',
 		run: { ...standIn, agent: 'agent-S-0104' },
@@ -316,11 +318,11 @@ describe("a story's agent action", () => {
 	const startHere = { action: 'restart', label: 'Start agent' };
 
 	it('retries a failed agent of a story in ready or in progress, held or not', () => {
-		expect(agentAction(failed, true, 'ready', true)).toEqual(retry);
-		expect(agentAction(failed, true, 'in-progress', true)).toEqual(retry);
-		expect(agentAction(heldFailed, true, 'ready', true)).toEqual(retry);
-		expect(retryable(failed, true, 'review', true)).toBe(false);
-		expect(retryable({ state: 'working', run }, true, 'in-progress', true)).toBe(false);
+		expect(agentAction(failed, true, 'ready', true, baselineFlow)).toEqual(retry);
+		expect(agentAction(failed, true, 'in-progress', true, baselineFlow)).toEqual(retry);
+		expect(agentAction(heldFailed, true, 'ready', true, baselineFlow)).toEqual(retry);
+		expect(retryable(failed, true, 'review', true, baselineFlow)).toBe(false);
+		expect(retryable(working, true, 'in-progress', true, baselineFlow)).toBe(false);
 	});
 	it('retries an agent the operator stopped, for a story in progress (I-0278)', () => {
 		const stopped: StoryActivity = {
@@ -334,21 +336,21 @@ describe("a story's agent action", () => {
 				stopped: '2026-11-07T06:24:57Z'
 			}
 		};
-		expect(retryable(stopped, true, 'in-progress', true)).toBe(true);
-		expect(agentAction(stopped, true, 'in-progress', true)).toEqual(retry);
+		expect(retryable(stopped, true, 'in-progress', true, baselineFlow)).toBe(true);
+		expect(agentAction(stopped, true, 'in-progress', true, baselineFlow)).toEqual(retry);
 	});
 	it('starts the agent of a story in ready that has had none, held or not', () => {
-		expect(agentAction(undefined, true, 'ready', true)).toEqual(start);
-		expect(agentAction(held, true, 'ready', true)).toEqual(start);
-		expect(startable(undefined, true, 'backlog', true)).toBe(false);
-		expect(startable(undefined, true, 'in-progress', true)).toBe(false);
-		expect(startable({ state: 'working', run }, true, 'ready', true)).toBe(false);
-		expect(startable(heldFailed, true, 'ready', true)).toBe(false);
+		expect(agentAction(undefined, true, 'ready', true, baselineFlow)).toEqual(start);
+		expect(agentAction(held, true, 'ready', true, baselineFlow)).toEqual(start);
+		expect(startable(undefined, true, 'backlog', true, baselineFlow)).toBe(false);
+		expect(startable(undefined, true, 'in-progress', true, baselineFlow)).toBe(false);
+		expect(startable(working, true, 'ready', true, baselineFlow)).toBe(false);
+		expect(startable(heldFailed, true, 'ready', true, baselineFlow)).toBe(false);
 	});
 	it('starts one here for a story in progress begun elsewhere', () => {
-		expect(agentAction(begun, true, 'in-progress', true)).toEqual(startHere);
-		expect(startableHere(begun, true, 'ready', true)).toBe(false);
-		expect(startableHere(undefined, true, 'in-progress', true)).toBe(false);
+		expect(agentAction(begun, true, 'in-progress', true, baselineFlow)).toEqual(startHere);
+		expect(startableHere(begun, true, 'ready', true, baselineFlow)).toBe(false);
+		expect(startableHere(undefined, true, 'in-progress', true, baselineFlow)).toBe(false);
 	});
 	it('offers nothing to a reader, with the action off, or for a story in another status', () => {
 		for (const [a, status] of [
@@ -356,12 +358,21 @@ describe("a story's agent action", () => {
 			[undefined, 'ready'],
 			[begun, 'in-progress']
 		] as const) {
-			expect(agentAction(a, true, status, false)).toBeNull();
-			expect(agentAction(a, false, status, true)).toBeNull();
+			expect(agentAction(a, true, status, false, baselineFlow)).toBeNull();
+			expect(agentAction(a, false, status, true, baselineFlow)).toBeNull();
 		}
-		expect(agentAction(failed, true, 'done', true)).toBeNull();
-		expect(agentAction(undefined, true, 'backlog', true)).toBeNull();
-		expect(agentAction({ state: 'working', run }, true, 'in-progress', true)).toBeNull();
+		expect(agentAction(failed, true, 'done', true, baselineFlow)).toBeNull();
+		expect(agentAction(undefined, true, 'backlog', true, baselineFlow)).toBeNull();
+		expect(agentAction(working, true, 'in-progress', true, baselineFlow)).toBeNull();
+	});
+	it("reads the status's kind and moves from the flow, not its name (S-0758)", () => {
+		expect(agentAction(failed, true, 'testing', true, addedStateFlow)).toEqual(retry);
+		expect(agentAction(begun, true, 'testing', true, addedStateFlow)).toEqual(startHere);
+		expect(startable(undefined, true, 'testing', true, addedStateFlow)).toBe(false);
+		expect(agentAction(undefined, true, 'ready', true, addedStateFlow)).toEqual(start);
+		expect(agentAction(begun, true, 'doing', true, testingFlow)).toEqual(startHere);
+		expect(agentAction(failed, true, 'review', true, addedStateFlow)).toBeNull();
+		expect(agentAction(undefined, true, 'ready', true)).toBeNull();
 	});
 });
 

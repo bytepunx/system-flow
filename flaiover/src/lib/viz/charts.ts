@@ -11,7 +11,6 @@ import {
 	NATURE_SLOT,
 	ORDER_SLOT,
 	ORDER_SYMBOL,
-	STATE_SLOT,
 	STRATEGIC_SLOT,
 	TYPE_SLOT,
 	TYPE_SYMBOL,
@@ -32,6 +31,19 @@ import {
 	type Kind,
 	type PlanningKind
 } from './catalog';
+
+/**
+ * The baseline's states' colour slots, until the charts draw the workflow's own states (S-0754);
+ * a view takes a state's colour from workflow.ts's stateSlot.
+ */
+export const STATE_SLOT: Record<string, number> = {
+	backlog: 6,
+	ready: 3,
+	'in-progress': 0,
+	review: 7,
+	done: 5,
+	cancelled: 1
+};
 
 export type Distribution = {
 	count: number;
