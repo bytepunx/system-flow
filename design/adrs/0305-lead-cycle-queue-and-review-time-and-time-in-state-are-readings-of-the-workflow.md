@@ -1,8 +1,8 @@
 ---
 id: ADR-0305
 title: "Lead, cycle, queue, and review time and time in state are readings of the workflow's timers over an item's created and its transitions, and a closed item's last interval is not counted"
-status: proposed
-date: 2026-11-15
+status: accepted
+date: 2026-11-17
 supersedes: []
 superseded_by: []
 refines: [ADR-0004, ADR-0055, ADR-0190, ADR-0301]
