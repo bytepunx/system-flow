@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2221.6690
-accrued_seconds: 1570938
-tasks_completed: 3731
-last_run: 2026-11-16T06:21:05Z
+accrued_cost: 2227.0069
+accrued_seconds: 1571922
+tasks_completed: 3763
+last_run: 2026-11-16T23:59:11Z
 ---
 
 # Orchestrator activity
@@ -26153,6 +26153,230 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 21
 - Cost: 0.2121 USD, estimated
 
+### 2026-11-16T23:13:55Z
+
+- Summary: TH-1247 (board starved, flai serve's notice, not mine to answer): checked plan candidates; S-0804 had already gone to ready at 23:13:32Z and agent-S-0804 pulled it, so no planner was asked (flai refused plan: not a backlog story). Skipped E-0034's replan: alex's "done" on TH-1228 confirms a sync and changes no plan. Applied throughput order (ready empty). No promote candidates: S-0241 a draft blocked on TH-1165; S-0752/3/4/6/8 held by after on S-0739, S-0742, S-0747 (review, waiting on TH-1245, TH-1233, TH-1246) and S-0750 (blocked on TH-1223).
+- Items: S-0804, E-0034, S-0752, S-0753, S-0754, S-0756, S-0758
+- Seconds: 43
+- Cost: 0.2378 USD, estimated
+
+### 2026-11-16T23:14:22Z
+
+- Summary: The board is moving again: S-0804 is in progress under agent-S-0804. One lane in progress is still idle, and only you can free it.
+- Items: none
+- Seconds: 27
+- Cost: 0.2986 USD, estimated
+
+### 2026-11-16T23:14:53Z
+
+- Summary: TH-1248 (board starved): nothing to act on. promote --candidates lists none (S-0752, S-0753, S-0754, S-0756, S-0758 held by after; S-0241 a draft). S-0241, the only complete draft, stays a draft (blocked; TH-1165 awaits the operator). plan --candidates lists E-0034 only for alex's "done" on TH-1228, a confirmation, so no planner. Review roots S-0739, S-0742, S-0747 unchanged since my threads TH-1245, TH-1233, TH-1246 (heads 7e66d35, 84ee285, a4d66ac match their last verify). S-0797 waits in the queue on shared paths. TH-1248 is flai serve's notice: left alone.
+- Items: S-0241, S-0739, S-0742, S-0747, S-0797, E-0034
+- Seconds: 26
+- Cost: 0.1498 USD, estimated
+
+### 2026-11-16T23:15:15Z
+
+- Summary: I took no action on TH-1248. My permissions let me do nothing that would get a story moving. I left the thread alone because it is a flai serve notice, not a question from a story's agent or a planner.
+- Items: none
+- Seconds: 22
+- Cost: 0.1730 USD, estimated
+
+### 2026-11-16T23:43:14Z
+
+- Summary: Started the planner for S-0805 under plan_backlog_stories: flai plan --candidates lists it in the backlog without a plan (no touches, forecast, cost of delay value, or tasks); the board is starved (TH-1248). Did not start E-0034's planner: the operator's entry on TH-1228 ("done") confirms a sync and asks for no change to the plan.
+- Items: S-0805, E-0034
+- Seconds: 41
+- Cost: 0.1522 USD, estimated
+
+### 2026-11-16T23:44:46Z
+
+- Summary: Started the planners for S-0806 through S-0815 under plan_backlog_stories: flai plan --candidates lists each in the backlog without a plan (no touches, forecast, cost of delay value, or tasks). On TH-1248: promote_candidates lists no candidate (S-0752, S-0753, S-0754, S-0756, S-0758 held by after on S-0739, S-0742, S-0747, S-0750; S-0241 a draft TH-1165 covers); nothing to finalize or promote; TH-1248 is flai serve's notice, so no reply.
+- Items: S-0806, S-0807, S-0808, S-0809, S-0810, S-0811, S-0812, S-0813, S-0814, S-0815
+- Seconds: 92
+- Cost: 0.3899 USD, estimated
+
+### 2026-11-16T23:45:15Z
+
+- Summary: The board is still starved: nothing in backlog can be promoted yet. I started planners for the 11 new E-0034 drafts, S-0805 to S-0815, so they can be promoted once they're finalized and their `after` waits clear.
+- Items: none
+- Seconds: 29
+- Cost: 0.1446 USD, estimated
+
+### 2026-11-16T23:47:03Z
+
+- Summary: Left draft S-0808 as it is: flai promote --drafts lists it incomplete (no forecast duration, no forecast delivery, no cost of delay value), and its planner is still running (pid 1605098, since 23:43:49Z), so no thread opened; I finalize it once the planner's run makes it complete.
+- Items: S-0808
+- Seconds: 21
+- Cost: 0.0975 USD, estimated
+
+### 2026-11-16T23:47:25Z
+
+- Summary: I left S-0808 as a draft and did not finalize it. `flai promote --drafts` lists it as incomplete: it has no forecast duration, no forecast delivery and no cost of delay value.
+- Items: none
+- Seconds: 22
+- Cost: 0.1862 USD, estimated
+
+### 2026-11-16T23:48:17Z
+
+- Summary: Finalized drafts S-0811 (forecast 34m, value 90.11 USD/week) and S-0808 (forecast 1h15m, value 185.64 USD/week) under finalize_drafts: flai promote --drafts lists both complete, and their criteria, touches, forecast, and value fit together.
+- Items: S-0811, S-0808
+- Seconds: 41
+- Cost: 0.1869 USD, estimated
+
+### 2026-11-16T23:48:42Z
+
+- Summary: I finalized both drafts, S-0811 and S-0808. Neither can go to ready yet.
+- Items: none
+- Seconds: 25
+- Cost: 0.1794 USD, estimated
+
+### 2026-11-16T23:50:46Z
+
+- Summary: Answered TH-1249, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0808
+- Seconds: 119
+- Cost: 0.7033 USD, estimated
+
+### 2026-11-16T23:51:01Z
+
+- Summary: Answered TH-1251, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0812
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:51:15Z
+
+- Summary: Answered TH-1252, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0805
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:51:39Z
+
+- Summary: Recommended an answer on TH-1250, citing design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+- Items: S-0811
+- Seconds: 24
+- Cost: 0.0611 USD, estimated
+
+### 2026-11-16T23:52:07Z
+
+- Summary: Approved and resolved the planner threads TH-1249 (S-0808), TH-1251 (S-0812), and TH-1252 (S-0805) under plan_backlog_stories: each plan's tasks cover the criteria, touches are files, and figures are flai's or reasoned. On TH-1250 (S-0811) I recommended the failure path for a suite failing at publish, not a stop (ADR-0271), since no record decides it; the thread stays open.
+- Items: S-0808, S-0811, S-0812, S-0805
+- Seconds: 28
+- Cost: 0.2599 USD, estimated
+
+### 2026-11-16T23:52:22Z
+
+- Summary: Finalized S-0805 (2h30m, 275.40 USD/week) and S-0812 (50m, 115.74 USD/week) under finalize_drafts: flai promote --drafts listed both complete and their planners had ended. Promoted S-0805 to ready under promote_to_ready (rank 1 of 1 candidates, throughput 2.5h) and applied flai order --by throughput, which relieves TH-1248's starvation. Left S-0807, S-0809, and S-0813 for their planners to end; S-0806, S-0810, S-0814, and S-0815 are still being planned; S-0241 stays a draft as TH-1165 says. E-0034's plan candidate on TH-1228 is a confirmation, so no planner was started.
+- Items: S-0805, S-0812, S-0807, S-0809, S-0813, E-0034
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:52:49Z
+
+- Summary: I've worked through all the reasons I was started for. The new planner threads that arrived while I ran will start the next run.
+- Items: none
+- Seconds: 27
+- Cost: 0.2931 USD, estimated
+
+### 2026-11-16T23:54:52Z
+
+- Summary: Answered TH-1253, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0809
+- Seconds: 117
+- Cost: 0.6226 USD, estimated
+
+### 2026-11-16T23:55:05Z
+
+- Summary: Answered TH-1254, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0807
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:55:18Z
+
+- Summary: Answered TH-1255, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0806
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:55:31Z
+
+- Summary: Answered TH-1260, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0810
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:55:50Z
+
+- Summary: Answered TH-1256, citing design/adrs/0307-flai-reads-the-workflow-file-of-the-checkout-it-opens-refuses-to-open-a.md § 4. Upgrade keeps the project's file
+- Items: S-0813
+- Seconds: 19
+- Cost: 0.0703 USD, estimated
+
+### 2026-11-16T23:56:03Z
+
+- Summary: Answered TH-1259, citing design/conventions/work-management.md
+- Items: S-0814
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:56:37Z
+
+- Summary: Recommended an answer on TH-1257, citing design/conventions/work-management.md
+- Items: S-0815
+- Seconds: 34
+- Cost: 0.2244 USD, estimated
+
+### 2026-11-16T23:56:53Z
+
+- Summary: Recommended an answer on TH-1258, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0805
+- Seconds: 16
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:57:17Z
+
+- Summary: Approved and resolved six planner threads under plan_backlog_stories (TH-1253 S-0809, TH-1254 S-0807, TH-1255 S-0806, TH-1256 S-0813, TH-1259 S-0814, TH-1260 S-0810): tasks cover the criteria, touches are files, forecasts and values are flai's (41m/64.20, 1h30m/140.92, 1h20m/110.09, 1h30m/137.06, 1h1m/71.32, 2h30m/175.37 USD a week)
+- Items: S-0809, S-0807, S-0806, S-0813, S-0814, S-0810
+- Seconds: 24
+- Cost: 0.1576 USD, estimated
+
+### 2026-11-16T23:57:32Z
+
+- Summary: Finalized six drafts under finalize_drafts that flai promote --drafts lists complete (S-0809 41m, S-0814 1h1m, S-0806 1h20m, S-0807 1h30m, S-0813 1h30m, S-0810 2h30m); all stay in backlog held by after. promote --candidates lists none, so the ready column and its order are unchanged
+- Items: S-0809, S-0814, S-0806, S-0807, S-0813, S-0810
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:57:45Z
+
+- Summary: Recommended on TH-1257 dropping S-0809 and S-0812 from S-0815's after (a scope question for the operator) and left S-0815 a draft until it is settled; recommended on TH-1258 accepting ADR-0312 as written (the operator's decision). TH-1248, TH-1251, TH-1252 were already resolved; TH-1250 holds my pending recommendation
+- Items: S-0815, S-0805
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-16T23:58:12Z
+
+- Summary: I approved six E-0034 plans and finalized their stories. Two questions now need your decision: S-0815's dependencies and accepting ADR-0312. Nothing moved to ready: every backlog story is either still a draft or waiting on another story (`after`).
+- Items: none
+- Seconds: 27
+- Cost: 0.3889 USD, estimated
+
+### 2026-11-16T23:58:51Z
+
+- Summary: Reasons TH-1259, TH-1260, planned S-0814 and S-0810 found already settled: both plans approved and threads resolved, both stories finalized and held in backlog by after (S-0810 on S-0806, S-0804; S-0814 on S-0810, S-0807, S-0753); nothing further done.
+- Items: S-0814, S-0810
+- Seconds: 16
+- Cost: 0.0970 USD, estimated
+
+### 2026-11-16T23:59:11Z
+
+- Summary: All four reasons were already settled by the run before this one, so this run changed nothing.
+- Items: none
+- Seconds: 20
+- Cost: 0.2638 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -26883,4 +27107,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-13T23:01:26Z
 
 - Call: `git cherry -v main $b`
+- Needs: none
+
+### 2026-11-16T23:49:18Z
+
+- Call: `flai serve agents --json`
 - Needs: none

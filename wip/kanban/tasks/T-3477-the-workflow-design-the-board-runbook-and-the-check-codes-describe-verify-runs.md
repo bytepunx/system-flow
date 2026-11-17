@@ -1,0 +1,35 @@
+---
+id: T-3477
+type: task
+nature: feature
+title: The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
+status: backlog
+parent: S-0806
+owner: alex
+created: 2026-11-16T23:50:55Z
+updated: 2026-11-16T23:50:55Z
+transitions: []
+stream: S-0806
+tags: [flai, docs]
+touches: [design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, design/system/flai-cli.md, design/system/work-hierarchy.md]
+after: [T-3471, T-3473, T-3474]
+---
+# T-3477 The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
+
+## Work
+
+Describe what the story built, linking ADR-0312 rather than copying it:
+
+- `design/system/workflow.md`, under `## The workflow file`: the three keys, their forms, the baseline's values, and that nothing reads them to decide a run until the stories after this one.
+- `docs/operators/runbooks/change-the-board.md`: how an operator names suites on a move, a state, and `verify_at`, what `all` means, the two suite findings in `## Before the story is accepted`, and that an older flai stops on `flai.minimum` once a publish raises it.
+- `docs/users/flai.md` and `design/system/flai-cli.md`: the two new codes in their tables of `flai check`'s workflow codes.
+- `design/system/work-hierarchy.md`, under `### Fields an older flai does not know`: the fields file lists the workflow file's keys too.
+
+It waits for T-3471, T-3473, and T-3474, whose values, codes, and minimum it describes.
+
+## Done when
+
+- Each document says what this story built, and the markdown lint passes on them.
+- `flai test` on the changed paths passes.
+
+## Notes

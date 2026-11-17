@@ -1,0 +1,131 @@
+---
+id: S-0804
+type: story
+nature: improvement
+title: Rebase and resolve rebases the story's branch and runs its close-out as a job, with its progress shown on the review page, and sends the story back to its agent only when the rebase stops on conflicts or a step fails
+status: done
+owner: alex
+created: 2026-11-16T23:12:36Z
+updated: 2026-11-17T01:32:53Z
+transitions:
+  - to: ready
+    at: 2026-11-16T23:13:32Z
+    by: claude
+  - to: in-progress
+    at: 2026-11-16T23:13:43Z
+    by: agent-S-0804
+  - to: review
+    at: 2026-11-17T01:30:51Z
+    by: agent-S-0804
+  - to: done
+    at: 2026-11-17T01:32:53Z
+    by: orchestrator
+tags: [flai, flaiover]
+topics: [acceptance, verify]
+touches: [flai/cmd/accept_resolve.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/internal/closeout, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go, flai/internal/hostapi, flai/internal/verify, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/api/items, flaiover/src/lib/review.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/workflow.md, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/adrs/README.md, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/verifyjob_test.go, flai/cmd/accept_resolve_test.go, flai/internal/guard/guard_tables.go, flaiover/src/lib/server/agent.ts, design/adrs/0302-the-operator-sends-a-review-story-that-cannot-be-accepted-back-to-its-agent-to.md, design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.test.ts, docs/operators/settings.md]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+usage:
+  source: log
+  seconds: 8246
+  priced_by: harness
+  turns:
+    - day: 2026-11-16
+      ceremony: 4
+      work: 35
+    - day: 2026-11-17
+      ceremony: 3
+      test_runs: 1
+      work: 42
+  models:
+    - model: claude-haiku-5-5
+      input: 34
+      output: 23885
+      cache_read: 1120770
+      cache_write: 111605
+      cost: 0.09
+    - model: claude-opus-5-5
+      input: 730
+      output: 308215
+      cache_read: 55605451
+      cache_write: 2089427
+      cost: 28.9456
+  strategic:
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 15
+          cache_read: 96858
+          cache_write: 14225
+          cost: 0.034
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 6h
+    by: alex
+    at: 2026-11-16T23:12:36Z
+---
+# S-0804 Rebase and resolve rebases the story's branch and runs its close-out as a job, with its progress shown on the review page, and sends the story back to its agent only when the rebase stops on conflicts or a step fails
+
+## Goal
+
+The operator asked for this on 2026-11-16, to raise throughput. Today `flai accept <S-nnnn> --resolve` and the review page's Rebase and resolve button send a review story straight back to in-progress and start its agent ([ADR-0302](../../../design/adrs/0302-the-operator-sends-a-review-story-that-cannot-be-accepted-back-to-its-agent-to.md)), though most such stories need only a rebase onto main and their tiers run again, which no agent has to do. On 2026-11-15 five stories were sent back so in one day.
+
+Rebase and resolve first does the work itself, with no agent:
+
+1. it rebases the story's branch onto the main branch, as `flai stream sync` does;
+2. it runs the story's close-out at the rebased head, with the output captured;
+3. only when the rebase stops on conflicts, or a step of the close-out fails, does it send the story back to in-progress and open the send-back thread for its agent, naming the conflicting paths or the step that failed and where its output is.
+
+A story whose rebase is clean and whose close-out passes stays in review, ready to accept. While the job runs, the review page shows what it is doing and its output in a collapsible stream, as it shows an agent's activity, so that the operator can see it has not hung.
+
+## Acceptance criteria
+
+- [x] `flai accept <S-nnnn> --resolve`, and the host method `accept.resolve`, start a job in flai serve for a story in review and answer at once with the job; the story stays in review and no agent is started while the job runs.
+- [x] The job rebases the story's branch onto the main branch as `flai stream sync` does, then runs the story's close-out at the rebased head, with all of its output kept in the job's log.
+- [x] A rebase that stops on conflicts is aborted, and the story is sent back to in-progress with the send-back thread naming the conflicting paths, which flai serve starts its agent on.
+- [x] A close-out that stops at a step or fails sends the story back to in-progress with the send-back thread naming the step, its findings, and the job's log, which flai serve starts its agent on.
+- [x] A clean rebase and a passing close-out leave the story in review, with nothing sent back and no agent started, and the acceptance preview no longer lists what the rebase and the close-out settled.
+- [x] The job's record says which step it is on, the rebase, each step and tier of the close-out as it starts and ends, and how it ended, and flai gives it to the dashboard while the job runs.
+- [x] The review page shows a running Rebase and resolve job in a collapsible activity stream with its current step, its elapsed time, and its output as it is written, follows it to its end without a reload, and then shows whether the story stayed in review or was sent back and why.
+- [x] A second request while a job runs for the story answers with the job under way and starts nothing; a job flai serve's restart interrupts is recorded as interrupted and sends nothing back.
+- [x] An ADR records the change and what of ADR-0302 it replaces, and the design, the user guide, and `flai accept`'s help describe it.
+
+## Tasks
+- T-3428 flai verify reports each step and tier as it starts and ends, and the closeout package reads them, the resolve request, and the resolve job's outcome
+- T-3429 flai serve runs a resolve job: it rebases the story's branch, runs its close-out, and sends the story back only on conflicts or a failed step
+- T-3430 flai accept --resolve asks flai serve for the resolve job and answers at once, and the host method resolve.status gives the job to the dashboard
+- T-3431 The review page follows a Rebase and resolve job in a collapsible activity stream to its end and shows whether the story stayed in review or was sent back and why
+- T-3432 An ADR records the resolve job and what of ADR-0302 it replaces, and the design and the user guide describe it
+
+## Notes
+
+What exists to build on, read on 2026-11-16:
+
+- The close-out job: `flai verify <S-nnnn> --job` asks flai serve through request files under `.flai-cache/verify/jobs` (`flai/internal/closeout`), and `flai/internal/serve/verifyjob.go` runs `scripts/close-out.sh` on the host, or `verifyjob_container.go` its steps for a story whose agent runs in a container, with the output in `<S-nnnn>.log` and the record in `<S-nnnn>.job.json`. It announces a `verified` event at its end, and a job a restart interrupts is swept as `interrupted`.
+- The close-out syncs only when its verify stops at sync ([I-0383](../../../design/issues/I-0383-a-close-out-asked-for-a-story-whose-branch-is-behind-main-stops-at-sync-without.md)); this job syncs first.
+- The job's step is derived from its log by `closeout.Running`, and names only `flai verify` while every tier runs, because flai verify prints its steps once it has ended. `verify.TierOptions.Started` and `Ended` exist and only the merge queue's batch uses them.
+- The send-back: `sendBackBlocked` and `sendBackThread` in `flai/cmd`, and `sendBackUnsettled`, which aborts a stopped rebase (ADR-0248). flai serve starts the agent on a thread by `flai` whose title begins `Acceptance sent back:` and resolves it once the story is back in review (`flai/internal/serve/agents_restart.go`).
+- The dashboard: `Review.svelte` posts to `/api/items/[id]/resolve`, which calls `accept.resolve`. `LogFeed.svelte` is a collapsible live log that reads through `log.read`, which may read a `.log` under `.flai-cache/verify/jobs`. The verification section shows a running close-out as one sentence, from `verify.status`, and does not follow it.
+- Related: [I-0384](../../../design/issues/I-0384-after-a-sync-moves-a-story-s-head-the-review-page-flai-queue-and-the-acceptance.md), the stale report shown while a close-out runs, and [I-0381](../../../design/issues/I-0381-the-acceptance-preview-lists-verify-behind-main-while-the-merge-queue-batches.md), the preview's blocker while the queue batches, each with its own story.
+
+### Accepted by the orchestrator
+
+- Verified: 83391696cf615c554603365c2c9afd484c401393
+- At: 2026-11-17T01:32:53Z
+
+Verdict: pass — all nine criteria are met by the diff at 83391696, every changed file is within the story's touches, and the close-out passed every step at that commit.
+- 1: flai/cmd/accept_resolve.go, flai/cmd/accept.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_host.go, flai/internal/serve/resolvejob.go, flai/internal/closeout/closeout.go
+- 2: flai/internal/serve/resolvejob.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go
+- 3: flai/internal/serve/resolvejob.go, flai/internal/sendback/sendback.go
+- 4: flai/internal/serve/resolvejob.go, flai/internal/sendback/sendback.go, flai/internal/closeout/closeout.go
+- 5: flai/internal/serve/resolvejob.go, flai/internal/closeout/closeout.go, flai/cmd/accept.go
+- 6: flai/internal/verify/run.go, flai/internal/verify/story.go, flai/internal/verify/verify.go, flai/cmd/verify.go, flai/internal/closeout/closeout.go, flai/internal/hostapi/resolve_status.go
+- 7: flaiover/src/lib/components/Review.svelte, flaiover/src/lib/review.ts, flaiover/src/routes/api/items/[id]/resolve/+server.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.test.ts
+- 8: flai/internal/serve/resolvejob.go, flai/internal/serve/verifyjob.go, flai/cmd/accept_resolve.go
+- 9: design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md, design/adrs/0302-the-operator-sends-a-review-story-that-cannot-be-accepted-back-to-its-agent-to.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, flai/cmd/accept.go
