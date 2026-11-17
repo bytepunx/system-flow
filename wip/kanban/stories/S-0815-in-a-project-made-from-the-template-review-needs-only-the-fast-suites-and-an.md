@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:11Z
-updated: 2026-11-17T07:46:44Z
+updated: 2026-11-17T07:47:11Z
 transitions: []
 tags: [flai, template, flaiover]
 topics: [verify, workflow]
@@ -43,7 +43,6 @@ usage:
           cache_read: 1026213
           cache_write: 22654
           cost: 0.3215
-draft: true
 cost_of_delay:
   value: 63.98
   by: planner-S-0815
@@ -54,6 +53,9 @@ forecast:
   basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819, S-0241, S-0752, S-0754, S-0756, S-0758, S-0806, S-0807, S-0808, S-0809, S-0810, S-0811, S-0812, S-0813 and S-0814."
   by: flai
   at: 2026-11-17T07:46:44Z
+finalized:
+  by: alex
+  at: 2026-11-17T07:47:11Z
 ---
 # S-0815 In a project made from the template, review needs only the fast suites and an integration state between review and done deploys where a cluster is configured and runs the integration and smoke suites
 
