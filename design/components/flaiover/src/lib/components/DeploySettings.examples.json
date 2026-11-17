@@ -23,7 +23,8 @@
           },
           { "key": "kluster.deploy", "kind": "command", "meaning": "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names.", "value": ["scripts/kluster-deploy.sh"], "set": true },
           { "key": "kluster.teardown", "kind": "command", "meaning": "The command that removes what deploy made outside the namespace.", "value": ["scripts/kluster-teardown.sh"], "set": true },
-          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false }
+          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false },
+          { "key": "kluster.agent_namespaces", "kind": "number", "whole": true, "default": "2", "meaning": "The most stories in progress that hold a kluster namespace at once from deploys their agents asked for; 0 turns deploys before review off.", "value": 3, "set": true }
         ]
       }
     },
@@ -40,7 +41,8 @@
           { "key": "kluster.components", "kind": "components", "meaning": "The project's components, each a name and the command that builds its images.", "set": false },
           { "key": "kluster.deploy", "kind": "command", "meaning": "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names.", "set": false },
           { "key": "kluster.teardown", "kind": "command", "meaning": "The command that removes what deploy made outside the namespace.", "set": false },
-          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false }
+          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false },
+          { "key": "kluster.agent_namespaces", "kind": "number", "whole": true, "default": "2", "meaning": "The most stories in progress that hold a kluster namespace at once from deploys their agents asked for; 0 turns deploys before review off.", "set": false }
         ]
       },
       "width": 375

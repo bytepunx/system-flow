@@ -489,18 +489,20 @@ export type KlusterSetting = {
 	key: string;
 	/**
 	 * text for config and namespace, command for build, deploy, and teardown, duration for timeout,
-	 * components for components, a list of {name, build} (ADR-0263).
+	 * components for components, a list of {name, build} (ADR-0263), number for agent_namespaces.
 	 */
-	kind: 'text' | 'command' | 'duration' | 'components';
+	kind: 'text' | 'command' | 'duration' | 'components' | 'number';
+	/** A number setting's: whether it takes only a whole number. */
+	whole?: boolean;
 	/** The value in effect when the key is unset, as it would be written. */
 	default?: string;
 	/** A sentence on what the setting does. */
 	meaning: string;
 	/**
-	 * The value as the manifest has it, a command as its argument list, components as their list;
-	 * absent when unset.
+	 * The value as the manifest has it, a command as its argument list, components as their list,
+	 * a number as a JSON number; absent when unset.
 	 */
-	value?: string | string[] | KlusterComponent[];
+	value?: string | number | string[] | KlusterComponent[];
 	set: boolean;
 };
 

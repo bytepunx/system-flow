@@ -1,6 +1,6 @@
 // S-0595, ADR-0263: DeploySettings edits the kluster: block's deploy setup through settings.manifest:
 // the namespace, one build command or one build per component, the deploy and teardown commands,
-// and the timeout, each command one argument a line. Components are rows, added, removed, and moved,
+// the timeout, and kluster.agent_namespaces (S-0830, I-0356), each command one argument a line. Components are rows, added, removed, and moved,
 // saved as the JSON list flai manifest set takes; switching between one build and components unsets
 // the other, since a block takes one. flai's refusals are shown beside their field. With settings
 // off nothing can be saved. After a save it reads kluster.status again and gives it to saved.
@@ -33,7 +33,8 @@ const KIND: Record<string, KlusterSetting['kind']> = {
 	'kluster.deploy': 'command',
 	'kluster.teardown': 'command',
 	'kluster.timeout': 'duration',
-	'kluster.components': 'components'
+	'kluster.components': 'components',
+	'kluster.agent_namespaces': 'number'
 };
 const setting = (key: string, over: Partial<KlusterSetting> = {}): KlusterSetting => ({
 	key,
@@ -49,7 +50,8 @@ const SETTINGS = [
 	setting('kluster.components'),
 	setting('kluster.deploy', { value: ['scripts/kluster-deploy.sh'], set: true }),
 	setting('kluster.teardown'),
-	setting('kluster.timeout', { default: '30m' })
+	setting('kluster.timeout', { default: '30m' }),
+	setting('kluster.agent_namespaces', { default: '2', whole: true, value: 3, set: true })
 ];
 const COMPONENTS = SETTINGS.map((s) =>
 	s.key === 'kluster.build'
@@ -161,6 +163,31 @@ describe('DeploySettings (S-0595, ADR-0263)', () => {
 		buttonNamed('Save')!.click();
 		await settle();
 		expect(sent('/api/settings')).toEqual({ kind: 'manifest', unset: ['kluster.deploy'] });
+	});
+
+	// I-0356: the form showed no field for kluster.agent_namespaces, so the operator had to run
+	// flai manifest set to change how many stories in progress may hold a namespace.
+	it('shows kluster.agent_namespaces as its digits, saves a change, and unsets it emptied (I-0356)', async () => {
+		await show();
+		const f = fieldOf('kluster.agent_namespaces') as HTMLInputElement;
+		expect(f.value).toBe('3');
+		expect(f.placeholder).toBe('2');
+		expect(f.getAttribute('inputmode')).toBe('numeric');
+		type(f, ' 5 ');
+		writes['/api/settings'] = answer({});
+		buttonNamed('Save')!.click();
+		await settle();
+		expect(sent('/api/settings')).toEqual({
+			kind: 'manifest',
+			set: { 'kluster.agent_namespaces': '5' }
+		});
+		type(f, '');
+		buttonNamed('Save')!.click();
+		await settle();
+		expect(sent('/api/settings', 1)).toEqual({
+			kind: 'manifest',
+			unset: ['kluster.agent_namespaces']
+		});
 	});
 
 	it('shows the components as rows and saves them as the JSON list', async () => {

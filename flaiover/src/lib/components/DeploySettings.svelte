@@ -2,7 +2,8 @@
 	// The kluster: block's deploy setup (S-0586, S-0595, ADR-0263), as the Klusters page's step 4 and
 	// the Deployments page's Setup pane show it: the default namespace, what builds the images (one
 	// build command, or one per component, since a block takes one), the deploy and teardown commands,
-	// and the timeout. Each is saved through settings.manifest, which runs flai manifest set on the host
+	// the timeout, and agent_namespaces, how many stories in progress may hold a namespace from their
+	// agents' deploys (S-0830). Each is saved through settings.manifest, which runs flai manifest set on the host
 	// and needs the settings host action; flai's refusals are shown beside the field they name. A
 	// command is typed one argument a line. Write these with an agent makes a backlog story for an
 	// agent to write the project's scripts. After a save the component reads kluster.status again and
@@ -47,7 +48,13 @@
 	const button = 'rounded px-3 py-1 text-sm disabled:opacity-50';
 	const field = 'w-full rounded border border-line bg-surface px-2 py-1 font-mono text-sm';
 	// The keys saved as they are typed; the build is kluster.build or kluster.components by the mode.
-	const PLAIN_KEYS = ['kluster.namespace', 'kluster.deploy', 'kluster.teardown', 'kluster.timeout'];
+	const PLAIN_KEYS = [
+		'kluster.namespace',
+		'kluster.deploy',
+		'kluster.teardown',
+		'kluster.timeout',
+		'kluster.agent_namespaces'
+	];
 	const AGENT_TITLE =
 		"Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block";
 
@@ -80,7 +87,9 @@
 			? lines(Array.isArray(s.value) ? (s.value as string[]) : undefined)
 			: typeof s.value === 'string'
 				? s.value
-				: '';
+				: typeof s.value === 'number'
+					? String(s.value)
+					: '';
 
 	// The form follows the settings flai answers: read again whenever they change, as after a save.
 	let shown = '';
@@ -287,7 +296,13 @@
 					placeholder={s.default ?? ''}
 					bind:value={form[key]}></textarea>
 			{:else}
-				<input class={field} {disabled} placeholder={s.default ?? ''} bind:value={form[key]} />
+				<input
+					class={field}
+					{disabled}
+					inputmode={s.kind === 'number' ? (s.whole ? 'numeric' : 'decimal') : undefined}
+					placeholder={s.default ?? ''}
+					bind:value={form[key]}
+				/>
 			{/if}
 			{#if refusalOf(key)}
 				<span class="block text-xs text-danger" data-testid="refused-{key}">{refusalOf(key)}</span>
