@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 905
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 252
-      cache_read: 4742791
-      cache_write: 34368
-      cost: 1.8246
+      input: 36
+      output: 7241
+      cache_read: 4718125
+      cache_write: 59038
+      cost: 1.5609
 ---
 # T-3529 mdlint and markdownlint-cli2 agree on D-0592's line 17 in both its wordings, pinned by the code span fixture
 

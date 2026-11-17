@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 538
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 251
-      cache_read: 5448596
-      cache_write: 17189
-      cost: 2.0876
+      input: 42
+      output: 8285
+      cache_read: 5398236
+      cache_write: 67548
+      cost: 1.7859
 ---
 # T-3558 flai digest new and edit refuse an entry whose markdown the project's lint rejects
 

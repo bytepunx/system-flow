@@ -29,21 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1639
-  estimated: true
-  priced_by: estimate
+  seconds: 2886
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 2
+      ceremony: 3
       test_runs: 2
-      work: 60
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 134
-      output: 801
-      cache_read: 15273479
-      cache_write: 291959
-      cost: 5.9452
+      input: 200
+      output: 39703
+      cache_read: 25868381
+      cache_write: 323689
+      cost: 8.558
   strategic:
     - kind: planner
       seconds: 2
@@ -62,15 +61,21 @@ usage:
           cache_write: 19703
           cost: 0.3238
     - kind: orchestrator
-      seconds: 32
+      seconds: 93
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 112
-          cache_read: 761633
-          cache_write: 22062
-          cost: 0.2439
+          input: 25
+          output: 231
+          cache_read: 1371340
+          cache_write: 114075
+          cost: 0.4631
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 56
+          cache_read: 48764
+          cache_write: 36075
+          cost: 0.0684
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

@@ -24,16 +24,16 @@ touches: [design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span
 after: [T-3529, T-3558]
 usage:
   source: log
-  seconds: 9
+  seconds: 12
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 32
-      cache_read: 611907
-      cache_write: 1075
-      cost: 0.2341
+      input: 5
+      output: 929
+      cache_read: 605406
+      cache_write: 7575
+      cost: 0.2003
 ---
 # T-3531 Close I-0363 with the cause and the fix T-3529 found
 
