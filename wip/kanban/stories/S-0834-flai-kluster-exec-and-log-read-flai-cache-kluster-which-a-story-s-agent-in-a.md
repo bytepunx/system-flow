@@ -3,11 +3,14 @@ id: S-0834
 type: story
 nature: remediation
 title: flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T11:17:04Z
-transitions: []
+updated: 2026-11-17T11:48:16Z
+transitions:
+  - to: ready
+    at: 2026-11-17T11:48:13Z
+    by: orchestrator
 tags: [flai, kluster, container]
 topics: [kluster, harness]
 touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-11-17T08:31:46Z
 forecast:
   duration: 3h
-  delivery: 2026-11-17T21:30:00Z
-  basis: "Its own forecast of 3h; 15th in the pull order with an in-progress limit of 3, behind S-0756, S-0806, S-0836, S-0811, S-0809, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0828 and S-0829."
+  delivery: 2026-11-17T17:35:00Z
+  basis: "Its own forecast of 3h; 8th in the pull order with an in-progress limit of 3, behind S-0806, S-0836, S-0811, S-0809, S-0812, S-0828, S-0808, S-0807 and S-0810."
   by: flai
-  at: 2026-11-17T11:17:04Z
+  at: 2026-11-17T11:48:16Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z

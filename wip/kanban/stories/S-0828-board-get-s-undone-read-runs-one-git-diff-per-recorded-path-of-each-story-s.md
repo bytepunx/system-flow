@@ -3,11 +3,14 @@ id: S-0828
 type: story
 nature: improvement
 title: board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:19Z
-updated: 2026-11-17T11:17:04Z
-transitions: []
+updated: 2026-11-17T11:48:16Z
+transitions:
+  - to: ready
+    at: 2026-11-17T11:48:10Z
+    by: orchestrator
 tags: [flai, git, performance]
 topics: [performance]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T08:28:36Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T17:56:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0756, S-0806, S-0836, S-0811, S-0809, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
+  delivery: 2026-11-17T13:39:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0836, S-0811, S-0809 and S-0812."
   by: flai
-  at: 2026-11-17T11:17:04Z
+  at: 2026-11-17T11:48:16Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:56Z
