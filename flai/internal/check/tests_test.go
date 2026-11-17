@@ -72,3 +72,25 @@ func TestTestTierWhenIsChecked(t *testing.T) {
 		t.Errorf("finding: %+v, want an error naming tests[0].when and the tier", f)
 	}
 }
+
+// ADR-0312: a suite that is not kebab-case is an error on the tests key,
+// naming its index and the tier; a kebab-case suite, and a tier that gives
+// none, are not reported.
+func TestTestTierSuiteIsChecked(t *testing.T) {
+	for _, extra := range []string{
+		"tests:\n  - name: unit\n    command: [scripts/test.sh]\n    paths: [\"**\"]\n    suite: static\n",
+		"tests:\n  - name: Unit_Tests\n    command: [scripts/test.sh]\n    paths: [\"**\"]\n",
+	} {
+		if got := findings(t, planningProject(t, extra), "manifest.tests"); len(got) != 0 {
+			t.Errorf("valid tests %q: %+v", extra, got)
+		}
+	}
+	repo := planningProject(t, "tests:\n  - name: unit\n    command: [scripts/test.sh]\n    paths: [\"**\"]\n    suite: Static\n")
+	got := findings(t, repo, "manifest.tests")
+	if len(got) != 1 {
+		t.Fatalf("want one error, the suite: %+v", got)
+	}
+	if f := got[0]; f.Level != Error || f.Path != "system-flow.yaml" || !strings.Contains(f.Message, `tests[0].suite (tier "unit") "Static" is not kebab-case`) {
+		t.Errorf("finding: %+v, want an error naming tests[0].suite and the tier", f)
+	}
+}

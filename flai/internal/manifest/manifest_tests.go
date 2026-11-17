@@ -41,6 +41,11 @@ type TestTier struct {
 	// Format is how the command's output becomes findings: one of
 	// TestFormats; empty means FormatPlain.
 	Format string `yaml:"format,omitempty" json:"format,omitempty"`
+	// Suite is the suite the tier belongs to, a kebab-case label several
+	// tiers may share, such as static or behavior; empty means the suite of
+	// the tier's own name. flai gives no suite a meaning, and a Manual tier
+	// still runs only when it is named (ADR-0312).
+	Suite string `yaml:"suite,omitempty" json:"suite,omitempty"`
 	// AllOnly runs the tier only when every tier is asked for, as flai test
 	// --all does, never for paths.
 	AllOnly bool `yaml:"all_only,omitempty" json:"all_only,omitempty"`
@@ -128,6 +133,16 @@ func (t TestTier) FormatOrDefault() string {
 		return s
 	}
 	return FormatPlain
+}
+
+// SuiteOrDefault is the tier's suite, or its name when the suite is empty,
+// each trimmed. It does not say whether the suite is kebab-case; TestErrors
+// does.
+func (t TestTier) SuiteOrDefault() string {
+	if s := strings.TrimSpace(t.Suite); s != "" {
+		return s
+	}
+	return strings.TrimSpace(t.Name)
 }
 
 // TestTiers are the project's test tiers, cheapest first: the tests key's
@@ -228,6 +243,11 @@ func (m Manifest) TestErrors() []string {
 		}
 		if f := t.FormatOrDefault(); !slices.Contains(TestFormats, f) {
 			errs = append(errs, fmt.Sprintf("%s %q is not a format flai reads; write %s, or remove it for plain", at("format"), t.Format, strings.Join(TestFormats, ", ")))
+		}
+		// A suite is kebab-case, as a role's name is; a tier's name is not
+		// held to it, so only a suite the tier gives is checked.
+		if s := strings.TrimSpace(t.Suite); s != "" && !roleName.MatchString(s) {
+			errs = append(errs, fmt.Sprintf("%s %q is not kebab-case; write a lower-case label of letters, digits, and single dashes, such as static or behavior, or remove it for the tier's own name", at("suite"), t.Suite))
 		}
 		named := map[string]bool{}
 		for _, c := range t.Covers {

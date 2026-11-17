@@ -1706,8 +1706,8 @@ func TestDesignStylesheet(t *testing.T) {
 }
 
 // S-0273: tests is an ordered list of tiers that loads with every field,
-// queue (S-0405), manual (S-0548), and parallel (S-0610) among them, reads back the same through
-// YAML and JSON, and is valid.
+// queue (S-0405), manual (S-0548), parallel (S-0610), and suite (ADR-0312) among them, reads
+// back the same through YAML and JSON, and is valid.
 func TestTestsRoundTrip(t *testing.T) {
 	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
 		"tests:\n" +
@@ -1716,6 +1716,7 @@ func TestTestsRoundTrip(t *testing.T) {
 		"  dir: flai\n" +
 		"  paths: [\"flai/**\", \"!flai/testdata/**\"]\n" +
 		"  format: go-test-json\n" +
+		"  suite: static\n" +
 		"  all_command: [go, test, -json, ./...]\n" +
 		"  fix_command: [gofmt, -w, \"{files}\"]\n" +
 		"- name: smoke\n" +
@@ -1729,7 +1730,7 @@ func TestTestsRoundTrip(t *testing.T) {
 	m := loaded(t, []byte(body))
 	want := []TestTier{
 		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
-			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."},
+			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, Suite: "static", AllCommand: []string{"go", "test", "-json", "./..."},
 			FixCommand: []string{"gofmt", "-w", PlaceholderFiles}},
 		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true, Parallel: true},
 		{Name: "gateway", Command: []string{"scripts/gateway-smoke.sh"}, Manual: true},
@@ -1742,6 +1743,9 @@ func TestTestsRoundTrip(t *testing.T) {
 	}
 	if m.Tests[1].FormatOrDefault() != FormatPlain || m.Tests[0].FormatOrDefault() != FormatGoTestJSON {
 		t.Errorf("formats in effect: %q, %q", m.Tests[0].FormatOrDefault(), m.Tests[1].FormatOrDefault())
+	}
+	if m.Tests[0].SuiteOrDefault() != "static" || m.Tests[1].SuiteOrDefault() != "smoke" {
+		t.Errorf("suites in effect: %q, %q, want static and the tier's own name, smoke", m.Tests[0].SuiteOrDefault(), m.Tests[1].SuiteOrDefault())
 	}
 	data, err := yaml.Marshal(Manifest{Tests: m.Tests})
 	if err != nil {
@@ -1759,7 +1763,7 @@ func TestTestsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
 		t.Errorf("JSON round trip: %v\n%s", err, js)
 	}
-	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) || !strings.Contains(string(js), `"manual":true`) || !strings.Contains(string(js), `"parallel":true`) {
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) || !strings.Contains(string(js), `"manual":true`) || !strings.Contains(string(js), `"parallel":true`) || !strings.Contains(string(js), `"suite":"static"`) {
 		t.Errorf("JSON keys are not snake_case: %s", js)
 	}
 }
@@ -1788,6 +1792,24 @@ func TestEditSettingsWritesFixCommand(t *testing.T) {
 	unfixed[0].FixCommand = nil
 	if sameTiers(m.Tests, unfixed) {
 		t.Error("tiers that differ in fix_command are the same")
+	}
+}
+
+// ADR-0312: a tier's suite in effect is the one it gives, trimmed, or else
+// its own name, trimmed.
+func TestSuiteOrDefault(t *testing.T) {
+	for _, c := range []struct {
+		tier TestTier
+		want string
+	}{
+		{TestTier{Name: "go-test", Suite: "static"}, "static"},
+		{TestTier{Name: "go-test", Suite: " behavior "}, "behavior"},
+		{TestTier{Name: " go-test "}, "go-test"},
+		{TestTier{Name: "go-test", Suite: " "}, "go-test"},
+	} {
+		if got := c.tier.SuiteOrDefault(); got != c.want {
+			t.Errorf("%+v: got %q, want %q", c.tier, got, c.want)
+		}
 	}
 }
 
@@ -1842,6 +1864,10 @@ func TestTestErrors(t *testing.T) {
 		// S-0610: a manual tier runs alone, so it has nothing to run beside.
 		{"manual and parallel", []TestTier{with(func(x *TestTier) { x.Manual, x.Parallel = true, true })}, `tests[0].manual (tier "unit") is true with parallel, but a manual tier runs alone`},
 		{"no paths names manual", []TestTier{with(func(x *TestTier) { x.Paths = nil })}, "or manual for one that runs only by its name"},
+		// ADR-0312: a suite the tier gives is kebab-case.
+		{"a suite in capitals", []TestTier{with(func(x *TestTier) { x.Suite = "Static" })}, `tests[0].suite (tier "unit") "Static" is not kebab-case; write a lower-case label of letters, digits, and single dashes, such as static or behavior, or remove it for the tier's own name`},
+		{"a suite with an underscore", []TestTier{with(func(x *TestTier) { x.Suite = "a_b" })}, `tests[0].suite (tier "unit") "a_b" is not kebab-case`},
+		{"a suite with a double dash", []TestTier{with(func(x *TestTier) { x.Suite = "be--havior" })}, `tests[0].suite (tier "unit") "be--havior" is not kebab-case`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			errs := Manifest{Tests: c.tiers}.TestErrors()
@@ -1871,6 +1897,11 @@ func TestTestErrors(t *testing.T) {
 		// S-0610: parallel is accepted on any tier but a manual one.
 		with(func(x *TestTier) { x.Parallel = true }),
 		with(func(x *TestTier) { x.Parallel, x.Paths, x.AllOnly, x.Queue = true, nil, true, true }),
+		// ADR-0312: a kebab-case suite is accepted, on a manual tier too, and
+		// a tier's name is not held to kebab-case when it gives no suite.
+		with(func(x *TestTier) { x.Suite = "static" }),
+		with(func(x *TestTier) { x.Suite, x.Manual = "integration-2", true }),
+		with(func(x *TestTier) { x.Name = "Go_Test" }),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)

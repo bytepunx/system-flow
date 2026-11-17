@@ -304,7 +304,7 @@ func buildCatalog() []Setting {
 				return count(m.Kluster.AgentNamespaces)
 			}},
 		Setting{Key: "tests", Kind: KindTests,
-			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
+			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, the format of its output, and the suite it belongs to, which defaults to its name; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {
 				if m.Tests == nil {
 					return nil, false
@@ -1031,6 +1031,9 @@ func testsLines(tiers []TestTier, indent, key, old string) []string {
 		if t.Format != "" {
 			field("format", yamlScalar(t.Format))
 		}
+		if t.Suite != "" {
+			field("suite", yamlScalar(t.Suite))
+		}
 		if t.AllOnly {
 			field("all_only", "true")
 		}
@@ -1073,7 +1076,7 @@ func flowList(items []string) string {
 // absent and one empty alike.
 func sameTiers(a, b []TestTier) bool {
 	return slices.EqualFunc(a, b, func(x, y TestTier) bool {
-		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.AllOnly == y.AllOnly && x.Queue == y.Queue && x.Manual == y.Manual && x.Parallel == y.Parallel &&
+		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.Suite == y.Suite && x.AllOnly == y.AllOnly && x.Queue == y.Queue && x.Manual == y.Manual && x.Parallel == y.Parallel &&
 			slices.Equal(x.Command, y.Command) && slices.Equal(x.Paths, y.Paths) && slices.Equal(x.AllCommand, y.AllCommand) &&
 			slices.Equal(x.FixCommand, y.FixCommand) && slices.Equal(x.Covers, y.Covers) && slices.Equal(x.When, y.When)
 	})
