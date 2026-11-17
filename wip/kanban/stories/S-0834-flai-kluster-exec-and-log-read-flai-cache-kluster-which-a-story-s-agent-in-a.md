@@ -3,14 +3,17 @@ id: S-0834
 type: story
 nature: remediation
 title: flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T11:48:47Z
+updated: 2026-11-17T12:03:23Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T12:03:23Z
+    by: agent-S-0834
 tags: [flai, kluster, container]
 topics: [kluster, harness]
 touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md]
@@ -35,15 +38,15 @@ usage:
           cache_write: 76790
           cost: 2.9372
     - kind: orchestrator
-      seconds: 109
+      seconds: 114
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 324
-          cache_read: 1744222
-          cache_write: 168825
-          cost: 0.5944
+          input: 35
+          output: 333
+          cache_read: 1772806
+          cache_write: 176678
+          cost: 0.6058
         - model: claude-sonnet-5-5
           input: 3
           output: 21

@@ -3,12 +3,18 @@ id: T-3525
 type: task
 nature: improvement
 title: RecordedUndone runs one git diff for all of a record's paths and one per old base, not one or two per path
-status: backlog
+status: in-progress
 parent: S-0828
 owner: alex
 created: 2026-11-17T08:28:54Z
-updated: 2026-11-17T08:28:54Z
-transitions: []
+updated: 2026-11-17T11:50:13Z
+transitions:
+  - to: ready
+    at: 2026-11-17T11:50:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T11:50:13Z
+    by: system-flow
 stream: S-0828
 tags: [flai, git, performance]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go]

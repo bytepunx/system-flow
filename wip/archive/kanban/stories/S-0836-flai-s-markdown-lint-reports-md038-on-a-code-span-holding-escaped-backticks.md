@@ -3,10 +3,10 @@ id: S-0836
 type: story
 nature: remediation
 title: flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T11:42:33Z
+updated: 2026-11-17T12:04:42Z
 transitions:
   - to: ready
     at: 2026-11-17T10:05:44Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-17T11:15:21Z
     by: agent-S-0836
+  - to: review
+    at: 2026-11-17T12:03:13Z
+    by: agent-S-0836
+  - to: done
+    at: 2026-11-17T12:04:42Z
+    by: orchestrator
 tags: [flai, mdlint]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt, design/adrs/0318-flai-digest-new-and-edit-refuse-an-entry-whose-markdown-the-project-s-lint.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/internal/digest/write.go, flai/internal/digest/write_test.go, design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md, design/issues/summary.md]
+touches: [flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt, design/adrs/0318-flai-digest-new-and-edit-refuse-an-entry-whose-markdown-the-project-s-lint.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/internal/digest/write.go, flai/internal/digest/write_test.go, design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -90,8 +96,8 @@ finalized:
 This story remediates [I-0363](../../../design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md), "flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0363 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0363 is closed with `flai issue close I-0363 --reason` saying what fixed it
+- [x] The cause I-0363 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0363 is closed with `flai issue close I-0363 --reason` saying what fixed it
 
 ## Tasks
 - T-3529 mdlint and markdownlint-cli2 agree on D-0592's line 17 in both its wordings, pinned by the code span fixture
@@ -101,6 +107,10 @@ This story remediates [I-0363](../../../design/issues/I-0363-flai-s-markdown-lin
 ## Notes
 
 Cost of delay inputs set by flai from I-0363. time_lost_per_cycle 5m: 5m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-11-13T16:00:01Z, 3.7 days before this story; under one cycle counts as one).
+
+### Outcome
+
+The planned fix, in mdlint's parser, was not needed. markdownlint-cli2 0.20.0 reports the same MD038 as mdlint on D-0592's line 17 as the curator wrote it, and neither reports one on main's wording, which was hand-edited after the issue was filed. So mdlint's finding was true, and the issue's account of a false positive was wrong. The cause was that `flai digest new` and `edit` never linted an entry's markdown, so an entry markdownlint rejects could reach main and fail `TestRepositoryLintsClean`. Criterion 1 is met against that cause: digest writes now refuse such an entry ([ADR-0318](../../../design/adrs/0318-flai-digest-new-and-edit-refuse-an-entry-whose-markdown-the-project-s-lint.md)), with `TestWritesRefuseWhatTheMarkdownLintRejects` in `flai/internal/digest/write_test.go` using the original line, and the code span fixture pins the two tools' agreement on both wordings. The story's touches were narrowed from the planned mdlint files to what the branch changes.
 
 ### Planning
 
@@ -121,3 +131,12 @@ No folder touches. No `after`: the story reads no other open story's output.
 Forecast: 45m, adjusted from flai forecast's 18m (147 s per unit of size over 68 done medium remediation stories, size 7). The cause must be found against markdownlint-cli2 before the fix, the fixtures regenerated, and the close-out runs the integration tier, `TestRepositoryLintsClean` among it, since the story changes mdlint's code.
 
 Cost of delay value: 12.50 USD a week, as flai cod works it out from the operator's input of 5m lost per 168h cycle at 150 USD an hour. It stands: the one occurrence fails only the integration and race tiers outside a close-out, which is what the input already prices.
+
+### Accepted by the orchestrator
+
+- Verified: 4d3eef401daab04573f90f029bec8e24f8e641b8
+- At: 2026-11-17T12:04:42Z
+
+Verdict: meets both criteria (1 and 2), with no convention breach, at commit 4d3eef401daab04573f90f029bec8e24f8e641b8.
+- 1: flai/internal/digest/write.go, flai/internal/digest/write_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt, flai/cmd/digest.go, design/adrs/0318-flai-digest-new-and-edit-refuse-an-entry-whose-markdown-the-project-s-lint.md
+- 2: design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md, design/issues/summary.md

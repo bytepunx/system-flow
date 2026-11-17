@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2251.2647
-accrued_seconds: 1576596
-tasks_completed: 3935
-last_run: 2026-11-17T11:48:50Z
+accrued_cost: 2251.8795
+accrued_seconds: 1576711
+tasks_completed: 3940
+last_run: 2026-11-17T11:51:01Z
 ---
 
 # Orchestrator activity
@@ -27580,6 +27580,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0756
 - Seconds: 31
 - Cost: 0.1342 USD, estimated
+
+### 2026-11-17T11:49:13Z
+
+- Summary: publish: released S-0756 under threshold (count 1 >= 1, value 80.17 USD/wk vs 1000): flai 1.105.4 -> 1.106.0 (flai/v1.106.0), flaiover 0.64.0 -> 0.64.1 (flaiover/v0.64.1), pushed
+- Items: S-0756
+- Seconds: 23
+- Cost: 0.0932 USD, estimated
+
+### 2026-11-17T11:49:39Z
+
+- Summary: I accepted S-0756, released it, and refilled the ready column. Nothing is waiting on you.
+- Items: none
+- Seconds: 26
+- Cost: 0.2229 USD, estimated
+
+### 2026-11-17T11:50:28Z
+
+- Summary: Reordered (S-0834 entered ready): applied flai order --by throughput; ready order unchanged, S-0811 34m, S-0809 41m, S-0812 50m, S-0808 1h15m, S-0807 1h30m, S-0810 2h30m, S-0834 3h. promote_candidates lists none (drafts and after-holds); ready 7/10.
+- Items: S-0834, S-0811, S-0809, S-0812, S-0808, S-0807, S-0810
+- Seconds: 33
+- Cost: 0.0797 USD, estimated
+
+### 2026-11-17T11:50:39Z
+
+- Summary: release-due S-0756: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD, nothing pending); S-0756 is already released, so no publish.
+- Items: S-0756
+- Seconds: 11
+- Cost: 0.0253 USD, estimated
+
+### 2026-11-17T11:51:01Z
+
+- Summary: I handled both reasons for this run and published nothing.
+- Items: none
+- Seconds: 22
+- Cost: 0.1937 USD, estimated
 
 ## Refusals
 
