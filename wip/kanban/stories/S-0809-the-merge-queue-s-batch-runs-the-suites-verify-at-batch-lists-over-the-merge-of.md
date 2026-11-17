@@ -7,7 +7,7 @@ status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:05Z
-updated: 2026-11-17T12:55:13Z
+updated: 2026-11-17T12:57:33Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:02Z
@@ -52,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:48:51Z
 forecast:
   duration: 41m
-  delivery: 2026-11-17T14:34:00Z
-  basis: "Its own forecast of 41m; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0841, S-0811, S-0829 and S-0840."
+  delivery: 2026-11-17T14:25:00Z
+  basis: "Its own forecast of 41m; 3rd in the pull order with an in-progress limit of 3, behind S-0806, S-0829, S-0834, S-0811 and S-0840."
   by: flai
-  at: 2026-11-17T12:55:13Z
+  at: 2026-11-17T12:57:33Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:25Z
