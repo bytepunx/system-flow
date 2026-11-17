@@ -3,14 +3,17 @@ id: S-0830
 type: story
 nature: remediation
 title: The dashboard's kluster setup form does not show kluster.agent_namespaces
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:22Z
-updated: 2026-11-17T10:04:46Z
+updated: 2026-11-17T10:04:54Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T10:04:54Z
+    by: agent-S-0830
 tags: [flaiover, kluster]
 topics: [kluster]
 touches: [flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, flaiover/src/lib/server/repo.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json, design/system/flaiover-dashboard.md, design/system/kluster.md, docs/operators/settings.md, docs/users/flaiover.md]

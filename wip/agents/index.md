@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T10:04:46Z
+updated: 2026-11-17T10:04:54Z
 ---
 
 # Active streams
@@ -9,6 +9,7 @@ updated: 2026-11-17T10:04:46Z
 |--------|-------|--------|------------|---------|
 | [S-0754](S-0754.md) | The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time | in-progress | agent-S-0754 | 2026-11-17T09:59:37Z |
 | [S-0806](S-0806.md) | The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour | in-progress | agent-S-0806 | 2026-11-17T09:43:30Z |
+| [S-0830](S-0830.md) | The dashboard's kluster setup form does not show kluster.agent_namespaces | in-progress | agent-S-0830 | 2026-11-17T10:04:54Z |
 
 ## Strategic agents
 
