@@ -24,14 +24,14 @@ usage:
   source: log
   seconds: 27
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 136
-      cache_read: 524043
-      cache_write: 3523
-      cost: 0.2018
+      input: 7
+      output: 1205
+      cache_read: 501169
+      cache_write: 26396
+      cost: 0.3355
 ---
 # T-3593 Confirm S-0781's fix keeps I-0370's cause from occurring, and record the evidence in the story's Notes
 

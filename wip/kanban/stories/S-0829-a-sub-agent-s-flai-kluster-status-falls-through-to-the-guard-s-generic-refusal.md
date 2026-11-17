@@ -3,14 +3,17 @@ id: S-0829
 type: story
 nature: remediation
 title: A sub-agent's flai kluster status falls through to the guard's generic refusal, against kluster.md's rule that status is a read every agent may run
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:21Z
-updated: 2026-11-17T12:55:13Z
+updated: 2026-11-17T12:56:17Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T12:56:17Z
+    by: agent-S-0829
 tags: []
 topics: [guard, kluster]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/kluster_test.go, design/system/flai-cli.md, design/system/kluster.md, design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md]

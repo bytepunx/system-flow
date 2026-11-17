@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0805, T-2560, TH-1172]
+cited: [S-0805, S-0839, T-2560, TH-1172, TH-1298]
 ---
 
 # D-0449 flai manifest set tests= rewrites system-flow.yaml's tiers but requotes unrelated paths lines, so a story that changes one tier hand-edits the manifest and validates it with flai check

@@ -2,9 +2,9 @@
 id: D-0637
 title: A test of a package moved onto a state's kind runs it on a workflow that renames in-progress and review with no alias and adds an active state between them, as serve's flow_test.go renamedFlow does, so that no comparison by name passes by accident
 kind: decision
-sources: [S-0743, S-0739, S-0747]
-topics: [flai, go, code]
-paths: [flai/internal/serve/flow_test.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/writes_test.go]
+sources: [S-0743, S-0739, S-0747, S-0838, I-0399]
+topics: [flai, go, code, flaiover, dashboard]
+paths: [flai/internal/serve/flow_test.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/lanes.fixture.ts, "flaiover/src/routes/api/items/[id]/move/kinds.test.ts"]
 date: 2026-11-15
 status: active
 absorbed_by: ""
@@ -34,4 +34,10 @@ Every host API method opens its repository through `openRepo(root)` in `flai/int
 
 So a later E-0034 story that moves a package onto kinds tests it on a board of that shape, not only on the baseline. In `workitem` it uses `withTestFlow`; in `hostapi` it opens the repository through `openRepo` and uses `withWorkflow`, and adds no second hook. Elsewhere it renames the waiting state too, as `renamedFlow` does, and does not lean on `repoWithWorkflow`'s fixture in `flai/internal/workitem/rules_test.go` alone (D-0627), whose `review` alias would let a name comparison pass. The `workitem` and `hostapi` fixtures keep that alias too.
 
-Sources: S-0743's, S-0739's, and S-0747's narratives, `wip/archive/agents/S-0743.md`, `wip/archive/agents/S-0739.md`, and `wip/archive/agents/S-0747.md`, § Decisions.
+The dashboard has fixtures of the same kind, in `flaiover/src/lib/lanes.fixture.ts`, the lanes and transitions `board.get` answers: `baselineFlow`, `testingFlow` (in-progress renamed `doing`, `testing` added after it, S-0739), `addedStateFlow` (`testing` added after in-progress, which keeps its name, S-0758), and, since S-0838, `renamedFlow`, the baseline with its pullable queue, accepted, and cancelled lanes renamed `queued`, `shipped`, and `dropped`. S-0838 fixed [I-0399](../issues/I-0399-flaiover-still-compares-state-names-in-the-epic-filters-and-the-move-route-so.md), where the epic filters and the move route still compared names with ready, done, and cancelled, and its narrative (`wip/archive/agents/S-0838.md`, § Decisions) records that T-3568 added the renamed-lane fixture first, "since it adds the renamed-lane fixture flow the later tests read". The issue's fix says:
+
+> renamedFlow in lanes.fixture.ts, with ready, done, and cancelled renamed, reproduces the cause in kinds.test.ts and in each view's test.
+
+So a flaiover view or route moved onto a state's kind (`$lib/workflow`, [flaiover-dashboard.md § A state's kind](../system/flaiover-dashboard.md#a-states-kind-s-0758)) is tested on `renamedFlow` when it reads ready, done, or cancelled, and on `testingFlow` or `addedStateFlow` when it reads in-progress or an added state, rather than on a fixture of its own.
+
+Sources: S-0743's, S-0739's, S-0747's, and S-0838's narratives, `wip/archive/agents/S-0743.md`, `wip/archive/agents/S-0739.md`, `wip/archive/agents/S-0747.md`, and `wip/archive/agents/S-0838.md`, § Decisions; I-0399's fix.

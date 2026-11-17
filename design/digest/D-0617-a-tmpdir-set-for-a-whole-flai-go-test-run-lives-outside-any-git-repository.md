@@ -9,7 +9,7 @@ date: 2026-11-13
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0841, T-3593, TH-1302]
 ---
 
 # D-0617 A TMPDIR set for a whole flai go test run lives outside any git repository, under /tmp from mktemp -d, never under the worktree's bin/, since about 150 tests fail when their temp folders sit inside a git repository and under a system-flow.yaml

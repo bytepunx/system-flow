@@ -9,7 +9,7 @@ date: 2026-11-14
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0841, T-3593, TH-1302]
 ---
 
 # D-0625 May I delete story/S-0001, S-0002, S-0003, and S-0005 and prune their worktrees: Recommended: yes. agent-S-0781 may run, in the main checkout, `git worktree prune` and then `git branch -D…

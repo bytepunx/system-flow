@@ -3,11 +3,11 @@ id: T-3594
 type: task
 nature: remediation
 title: Close I-0370 with a reason naming S-0781's fix and the branches deleted on TH-1190
-status: in-progress
+status: done
 parent: S-0841
 owner: alex
 created: 2026-11-17T12:35:26Z
-updated: 2026-11-17T12:55:25Z
+updated: 2026-11-17T12:55:42Z
 transitions:
   - to: ready
     at: 2026-11-17T12:55:25Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T12:55:25Z
     by: agent-S-0841
+  - to: done
+    at: 2026-11-17T12:55:42Z
+    by: agent-S-0841
 stream: S-0841
 tags: [issues]
 touches: [design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md, design/issues/summary.md]
 after: [T-3593]
+usage:
+  source: log
+  seconds: 17
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 881
+      cache_read: 366350
+      cache_write: 19295
+      cost: 0.2453
 ---
 # T-3594 Close I-0370 with a reason naming S-0781's fix and the branches deleted on TH-1190
 

@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-1172]
+cited: [S-0839, TH-1172, TH-1298]
 ---
 
 # D-0593 No flai command writes a sub-project's install block, so a story that changes projects[].install edits system-flow.yaml by hand and validates it with flai check

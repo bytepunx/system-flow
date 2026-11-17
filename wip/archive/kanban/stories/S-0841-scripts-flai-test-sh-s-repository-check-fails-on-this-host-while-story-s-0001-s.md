@@ -3,10 +3,10 @@ id: S-0841
 type: story
 nature: remediation
 title: scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:32:52Z
-updated: 2026-11-17T12:55:02Z
+updated: 2026-11-17T12:57:32Z
 transitions:
   - to: ready
     at: 2026-11-17T12:39:16Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T12:53:43Z
     by: agent-S-0841
+  - to: review
+    at: 2026-11-17T12:56:07Z
+    by: agent-S-0841
+  - to: done
+    at: 2026-11-17T12:57:32Z
+    by: orchestrator
 tags: [issues, testing]
 topics: [testing]
 touches: [design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md, design/issues/summary.md]
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 84
-  estimated: true
-  priced_by: estimate
+  seconds: 154
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 2
-      work: 12
+      ceremony: 3
+      work: 20
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 339
-      cache_read: 1670864
-      cache_write: 165392
-      cost: 0.7023
+      input: 52
+      output: 8730
+      cache_read: 3631784
+      cache_write: 191284
+      cost: 2.4314
   strategic:
     - kind: planner
       seconds: 60
@@ -90,8 +95,8 @@ finalized:
 This story remediates [I-0370](../../../design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md), "scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0370 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0370 is closed with `flai issue close I-0370 --reason` saying what fixed it
+- [x] The cause I-0370 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0370 is closed with `flai issue close I-0370 --reason` saying what fixed it
 
 ## Tasks
 - T-3593 Confirm S-0781's fix keeps I-0370's cause from occurring, and record the evidence in the story's Notes
@@ -140,3 +145,12 @@ What the story's agent observed on 2026-11-17, in the main checkout and on `stor
 | Reproducer test | `TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch` in `flai/cmd/story_start_test.go`: runs `flai story start` in a temporary project inside an outer repository and fails if the outer repository gains a `story/*` branch; it needs real git, so it skips under `-short` and runs in the integration tier |
 
 S-0781 was accepted at cafa1f05c, so every close-out since that touches `flai/` runs the reproducer in its integration tier. The cause no longer occurs, and no package needs a change.
+
+### Accepted by the orchestrator
+
+- Verified: 8e81a39f21f0613a9a1f47115925dd466120520a
+- At: 2026-11-17T12:57:32Z
+
+Verdict: pass. Both criteria are met at 8e81a39f21f0613a9a1f47115925dd466120520a; S-0781's fix already removed I-0370's cause and the story closes the issue.
+- 1: design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md
+- 2: design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md, design/issues/summary.md
