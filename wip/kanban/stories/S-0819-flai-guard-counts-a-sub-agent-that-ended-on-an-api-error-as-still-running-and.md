@@ -6,7 +6,7 @@ title: flai guard counts a sub-agent that ended on an API error as still running
 status: ready
 owner: alex
 created: 2026-11-17T02:47:36Z
-updated: 2026-11-17T04:28:19Z
+updated: 2026-11-17T04:46:05Z
 transitions:
   - to: ready
     at: 2026-11-17T03:37:47Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 159623
           cost: 2.5463
     - kind: orchestrator
-      seconds: 155
+      seconds: 162
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 44
-          output: 350
-          cache_read: 1680242
-          cache_write: 250934
-          cost: 0.5956
+          input: 48
+          output: 378
+          cache_read: 1804091
+          cache_write: 274775
+          cost: 0.6412
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T03:34:18Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T06:24:00Z
-  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0750, S-0753 and S-0805."
+  delivery: 2026-11-17T06:42:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0750, S-0805 and S-0817."
   by: flai
-  at: 2026-11-17T04:28:19Z
+  at: 2026-11-17T04:46:05Z
 finalized:
   by: orchestrator
   at: 2026-11-17T03:37:13Z
