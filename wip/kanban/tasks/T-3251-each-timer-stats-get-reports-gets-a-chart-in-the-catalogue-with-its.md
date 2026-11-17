@@ -22,6 +22,18 @@ stream: S-0754
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/src/lib/components/ChartExplainer.svelte]
 after: [T-3245]
+usage:
+  source: log
+  seconds: 861
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 626
+      cache_read: 8434747
+      cache_write: 188536
+      cost: 3.2905
 ---
 # T-3251 Each timer stats.get reports gets a chart in the catalogue with its distribution over the window
 

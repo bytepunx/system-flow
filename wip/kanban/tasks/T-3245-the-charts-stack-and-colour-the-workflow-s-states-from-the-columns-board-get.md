@@ -23,7 +23,7 @@ tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 usage:
   source: log
-  seconds: 666
+  seconds: 667
   estimated: true
   priced_by: estimate
   models:
