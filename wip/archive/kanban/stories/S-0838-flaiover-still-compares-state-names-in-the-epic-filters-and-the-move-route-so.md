@@ -3,13 +3,22 @@ id: S-0838
 type: story
 nature: remediation
 title: flaiover still compares state names in the epic filters and the move route, so an operator's own accepted or cancelled lane is not seen as closed there
-status: ready
+status: done
 owner: alex
 created: 2026-11-17T08:32:49Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:55:12Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:53Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T12:36:02Z
+    by: agent-S-0838
+  - to: review
+    at: 2026-11-17T12:53:34Z
+    by: agent-S-0838
+  - to: done
+    at: 2026-11-17T12:55:12Z
     by: orchestrator
 tags: [flaiover, workflow]
 topics: [dashboard]
@@ -20,20 +29,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1067
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 234
+      output: 56913
+      cache_read: 12335818
+      cache_write: 463150
+      cost: 6.707
   strategic:
     - kind: orchestrator
-      seconds: 14
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 17
-          cache_read: 124457
-          cache_write: 4105
-          cost: 0.0402
+          input: 4
+          output: 29
+          cache_read: 261894
+          cache_write: 5342
+          cost: 0.0836
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -59,8 +79,8 @@ finalized:
 This story remediates [I-0399](../../../design/issues/I-0399-flaiover-still-compares-state-names-in-the-epic-filters-and-the-move-route-so.md), "flaiover still compares state names in the epic filters and the move route, so an operator's own accepted or cancelled lane is not seen as closed there". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0399 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0399 is closed with `flai issue close I-0399 --reason` saying what fixed it
+- [x] The cause I-0399 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0399 is closed with `flai issue close I-0399 --reason` saying what fixed it
 
 ## Tasks
 - T-3568 The move route judges a cancellation's preview and an acceptance's timeout by the target lane's kind
@@ -95,3 +115,12 @@ Forecast 34m, delivery 2026-11-17T20:20:00Z, kept as `flai forecast` gives it. T
 Cost of delay value 25 USD a week, kept as `flai cod` works it out from the inputs flai set from I-0399: 10m lost per 168h cycle at 150 USD an hour. One instance gives no reason to adjust.
 
 Tasks form three layers: T-3568 first, since it adds the fixture the others' tests read; T-3571 and T-3575 together, sharing no file; T-3579 last, since it documents and closes what those changed. Topic `dashboard` is added, since the tasks change flaiover and its design document.
+
+### Accepted by the orchestrator
+
+- Verified: ed7255c1e0f8182e7312b4b83b72ce702dfc480a
+- At: 2026-11-17T12:55:12Z
+
+Verdict: pass
+- 1: flaiover/src/routes/api/items/[id]/move/+server.ts, flaiover/src/routes/api/items/[id]/move/kinds.test.ts, flaiover/src/lib/lanes.fixture.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, design/components/flaiover/src/lib/components/design/ProposeChange.examples.json, flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md
+- 2: design/issues/I-0399-flaiover-still-compares-state-names-in-the-epic-filters-and-the-move-route-so.md, design/issues/summary.md

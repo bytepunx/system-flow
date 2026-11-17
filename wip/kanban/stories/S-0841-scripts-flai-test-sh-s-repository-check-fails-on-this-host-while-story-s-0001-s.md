@@ -3,14 +3,17 @@ id: S-0841
 type: story
 nature: remediation
 title: scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:52Z
-updated: 2026-11-17T12:39:22Z
+updated: 2026-11-17T12:55:02Z
 transitions:
   - to: ready
     at: 2026-11-17T12:39:16Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T12:53:43Z
+    by: agent-S-0841
 tags: [issues, testing]
 topics: [testing]
 touches: [design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md, design/issues/summary.md]
@@ -20,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 84
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      ceremony: 2
+      work: 12
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 339
+      cache_read: 1670864
+      cache_write: 165392
+      cost: 0.7023
   strategic:
     - kind: planner
       seconds: 60
@@ -41,15 +56,15 @@ usage:
           cache_write: 52718
           cost: 1.3929
     - kind: orchestrator
-      seconds: 19
+      seconds: 44
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 48
-          cache_read: 320670
-          cache_write: 5680
-          cost: 0.1022
+          input: 9
+          output: 93
+          cache_read: 990545
+          cache_write: 30423
+          cost: 0.3197
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -111,3 +126,17 @@ Tasks: T-3593 in layer 1, then T-3594 in layer 2, after T-3593, because the clos
 Forecast 11m, kept as `flai forecast` gave it. The figure is the median of 24 done remediation stories, times size 4 (2 criteria, 2 touches). The story writes no code, and those medians already include a close-out. Delivery 2026-11-17T20:32:00Z, as flai gave it from the pull order.
 
 Cost of delay 12.50 USD a week, as `flai cod` worked it out from flai's input: 5m of time lost per 168h cycle at 150 USD an hour. The input is the operator's, so it stands. Since S-0781, the cause no longer recurs, so the delay costs less than the figure says. Changing the input is the operator's call.
+
+### Verification (T-3593)
+
+What the story's agent observed on 2026-11-17, in the main checkout and on `story/S-0841`:
+
+| Check | Result |
+|-------|--------|
+| `git branch --list 'story/S-000*'` in the main checkout | none |
+| `git worktree list`, entries marked `prunable` | none |
+| `scripts/flai.sh check --strict`, unscoped, in the main checkout | 0 `story.unaccepted`; exit 1 only on `threads.archived` for TH-1232, outside I-0370 |
+| `GIT_CEILING_DIRECTORIES` in the test setup | set in `flai/cmd/cmd_test.go` (TestMain) and `flai/internal/mcpserver/server_test.go` (TestMain), both from S-0781's commit 637bed28f |
+| Reproducer test | `TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch` in `flai/cmd/story_start_test.go`: runs `flai story start` in a temporary project inside an outer repository and fails if the outer repository gains a `story/*` branch; it needs real git, so it skips under `-short` and runs in the integration tier |
+
+S-0781 was accepted at cafa1f05c, so every close-out since that touches `flai/` runs the reproducer in its integration tier. The cause no longer occurs, and no package needs a change.

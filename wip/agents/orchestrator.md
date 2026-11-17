@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2253.5251
-accrued_seconds: 1576957
-tasks_completed: 3949
-last_run: 2026-11-17T12:25:24Z
+accrued_cost: 2257.9245
+accrued_seconds: 1577958
+tasks_completed: 3986
+last_run: 2026-11-17T12:43:08Z
 ---
 
 # Orchestrator activity
@@ -27679,6 +27679,265 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 51
 - Cost: 0.3009 USD, estimated
 
+### 2026-11-17T12:25:46Z
+
+- Summary: Published flai 1.106.1 → 1.106.2 (tag flai/v1.106.2, pushed) under threshold policy: count 1 at or over threshold 1, value 5 USD/week; bundled S-0828.
+- Items: S-0828
+- Seconds: 22
+- Cost: 0.0648 USD, estimated
+
+### 2026-11-17T12:27:04Z
+
+- Summary: ready-empty: started planners (plan_backlog_stories) for the 12 backlog stories flai plan --candidates lists without a plan, S-0829, S-0837 to S-0847; S-0822's planner already runs. E-0034 not replanned: alex's TH-1258 entry is a confirmation that changes no plan. promote_candidates lists none (ready stories held by after on S-0806/S-0807), so no promotion or reorder. Left drafts S-0241 (held by TH-1165) and S-0824 (plan awaits the operator on TH-1287, my recommendation pending). flai guard refused me flai serve agents --json; not retried.
+- Items: S-0829, S-0837, S-0838, S-0839, S-0840, S-0841, S-0842, S-0843, S-0844, S-0845, S-0846, S-0847, E-0034, S-0241, S-0824
+- Seconds: 78
+- Cost: 0.1998 USD, estimated
+
+### 2026-11-17T12:27:18Z
+
+- Summary: TH-1291 left alone: its only entry is flai serve's board-starvation notice, not a story's agent's or a planner's, so answer_threads (autonomous) does not cover it; the planners just started address the starvation it lists.
+- Items: TH-1291
+- Seconds: 14
+- Cost: 0.0348 USD, estimated
+
+### 2026-11-17T12:27:39Z
+
+- Summary: I acted on all three reasons and the run is over. The board is still starved until the planners finish.
+- Items: none
+- Seconds: 21
+- Cost: 0.0784 USD, estimated
+
+### 2026-11-17T12:28:42Z
+
+- Summary: Answered TH-1292, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0837
+- Seconds: 47
+- Cost: 0.2344 USD, estimated
+
+### 2026-11-17T12:28:58Z
+
+- Summary: TH-1292 (plan_backlog_stories): set S-0837's first cost of delay input, penalty_per_week 30 USD, the planner's listed alternative for when the stopgap is applied, since commit 4052fc603 already removed design/workflows/formulas/publish.md on main; no value set, the planner works it out. Replied and resolved the thread.
+- Items: S-0837, TH-1292
+- Seconds: 16
+- Cost: 0.0742 USD, estimated
+
+### 2026-11-17T12:29:10Z
+
+- Summary: release-due S-0828: did not publish. release_evaluate under threshold is not met: count 0 of 1, value 0 of 1000 USD/week, nothing pending; S-0828 already went out in flai 1.106.2. TH-1291 left alone: its entries are flai serve's notices, outside answer_threads; promote_candidates lists none (ready held by after on S-0806, backlog drafts held or unplanned), planners run for S-0822, S-0829, S-0837 to S-0847; S-0241 (TH-1165) and S-0824 (TH-1287, my recommendation pending) stay drafts; E-0034 not replanned, since TH-1258 is a confirmation that changes no plan.
+- Items: S-0828, TH-1291
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:29:30Z
+
+- Summary: I handled all three reasons. I published nothing and promoted nothing.
+- Items: none
+- Seconds: 20
+- Cost: 0.2244 USD, estimated
+
+### 2026-11-17T12:32:41Z
+
+- Summary: Answered TH-1293, citing design/system/kluster.md
+- Items: S-0829
+- Seconds: 183
+- Cost: 0.2568 USD, estimated
+
+### 2026-11-17T12:32:58Z
+
+- Summary: Answered TH-1294, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0840
+- Seconds: 17
+- Cost: 0.0440 USD, estimated
+
+### 2026-11-17T12:33:21Z
+
+- Summary: Recommended an answer on TH-1294, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0840
+- Seconds: 23
+- Cost: 0.0453 USD, estimated
+
+### 2026-11-17T12:33:37Z
+
+- Summary: Approved S-0829's plan on TH-1293 and resolved it, under plan_backlog_stories. The 3 tasks over 2 layers meet both criteria. Forecast 40m, value 12.50 USD/week.
+- Items: S-0829, TH-1293
+- Seconds: 16
+- Cost: 0.0920 USD, estimated
+
+### 2026-11-17T12:33:48Z
+
+- Summary: Approved S-0840's plan on TH-1294: 3 tasks in 3 layers, forecast 40m, value 75 USD/week. Recommended to the operator that the planner's two proposed extra stories wait, since they are a change of scope. TH-1294 is left open for that recommendation.
+- Items: S-0840, TH-1294
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:34:10Z
+
+- Summary: Answered TH-1295, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0843
+- Seconds: 22
+- Cost: 0.0971 USD, estimated
+
+### 2026-11-17T12:34:21Z
+
+- Summary: Answered TH-1296, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0842
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:34:32Z
+
+- Summary: Answered TH-1298, citing design/conventions/documentation.md § Project additions
+- Items: S-0839
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:34:43Z
+
+- Summary: Answered TH-1299, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0847
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:34:54Z
+
+- Summary: Answered TH-1297, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0838
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:35:14Z
+
+- Summary: Approved and resolved five planner threads under plan_backlog_stories. Each plan's tasks, touches, and flai figures fit its story: S-0843 on TH-1295 (1h, 37.50 USD/week), S-0842 on TH-1296 (45m, 37.50), S-0839 on TH-1298 (1h, 25), S-0847 on TH-1299 (1h, 75), and S-0838 on TH-1297 (34m, 25).
+- Items: S-0843, S-0842, S-0839, S-0847, S-0838, TH-1295, TH-1296, TH-1298, TH-1299, TH-1297
+- Seconds: 20
+- Cost: 0.0536 USD, estimated
+
+### 2026-11-17T12:35:38Z
+
+- Summary: Finalized seven drafts that flai promote --drafts lists as complete. Each has approved plans, file touches, and consistent figures (throughput forecast): S-0838 34m, S-0829 40m, S-0840 40m, S-0842 45m, S-0839 1h, S-0843 1h, and S-0847 1h.
+- Items: S-0838, S-0829, S-0840, S-0842, S-0839, S-0843, S-0847
+- Seconds: 24
+- Cost: 0.1133 USD, estimated
+
+### 2026-11-17T12:36:00Z
+
+- Summary: Promoted four stories to ready, the top flai promote --candidates entries under throughput: S-0838 (rank 1, 34m), S-0829 (rank 2, 40m), S-0840 (rank 3, 40m), and S-0842 (rank 4, 45m). That fills ready to its limit of 10. Then ran flai order --by throughput --apply.
+- Items: S-0838, S-0829, S-0840, S-0842
+- Seconds: 22
+- Cost: 0.1736 USD, estimated
+
+### 2026-11-17T12:36:22Z
+
+- Summary: All 15 reasons are handled. The board is moving again: S-0838's agent has already pulled it into in-progress.
+- Items: none
+- Seconds: 22
+- Cost: 0.2750 USD, estimated
+
+### 2026-11-17T12:37:56Z
+
+- Summary: Answered TH-1300, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0846
+- Seconds: 80
+- Cost: 0.3560 USD, estimated
+
+### 2026-11-17T12:38:07Z
+
+- Summary: Answered TH-1301, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0845
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:38:18Z
+
+- Summary: Answered TH-1302, citing design/digest/D-0625-may-i-delete-story-s-0001-s-0002-s-0003-and-s-0005-and-prune-their-worktrees.md
+- Items: S-0841
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:38:37Z
+
+- Summary: Approved and resolved the planner's plans for S-0846 (TH-1300, 1h30m, 300 USD/wk), S-0845 (TH-1301, 3h, 4500 USD/wk), and S-0841 (TH-1302, 11m, 12.50 USD/wk) under plan_backlog_stories: tasks, touches, and figures fit each story
+- Items: S-0846, S-0845, S-0841
+- Seconds: 19
+- Cost: 0.0651 USD, estimated
+
+### 2026-11-17T12:38:59Z
+
+- Summary: Finalized drafts S-0841 (11m, 12.50 USD/wk), S-0846 (1h30m, 300 USD/wk), and S-0845 (3h, 4500 USD/wk): flai promote --drafts lists each complete, and its criteria, touches, forecast, and value are consistent with its approved plan
+- Items: S-0841, S-0846, S-0845
+- Seconds: 22
+- Cost: 0.2015 USD, estimated
+
+### 2026-11-17T12:39:24Z
+
+- Summary: Promoted S-0841 to ready, rank 1 of flai promote --candidates by throughput (11m), filling the ready column to 10 of 10; then applied flai order --by throughput, which puts S-0841 first. S-0839, S-0843, S-0847, S-0846, S-0845 stay in backlog until ready has room
+- Items: S-0841
+- Seconds: 25
+- Cost: 0.2175 USD, estimated
+
+### 2026-11-17T12:39:47Z
+
+- Summary: I've handled every reason in this run, and flai says the run is done.
+- Items: none
+- Seconds: 23
+- Cost: 0.5581 USD, estimated
+
+### 2026-11-17T12:40:36Z
+
+- Summary: Answered TH-1303, citing design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md
+- Items: S-0844
+- Seconds: 43
+- Cost: 0.2121 USD, estimated
+
+### 2026-11-17T12:40:48Z
+
+- Summary: Answered TH-1304, citing design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md
+- Items: S-0837
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:41:24Z
+
+- Summary: Approved and resolved the planners' threads under plan_backlog_stories. TH-1303: S-0844's plan of five tasks in two layers, forecast 1h30m, value 37.50 USD a week. TH-1304: S-0837's plan of eight tasks in four layers, forecast 1h38m, value 30.00 USD a week. Resolved TH-1292 after the planner took penalty_per_week 30.
+- Items: S-0844, S-0837, TH-1303, TH-1304, TH-1292
+- Seconds: 36
+- Cost: 0.1499 USD, estimated
+
+### 2026-11-17T12:41:36Z
+
+- Summary: Finalized the drafts S-0844 (throughput rank 1, 1h30m, 37.50 USD a week) and S-0837 (rank 2, 1h38m, 30.00 USD a week). flai promote --drafts lists both as complete, and their criteria, touches, forecast, and value are consistent. Neither is promoted: ready is full at 10 of 10. They are promote_candidates 4 and 6 by throughput.
+- Items: S-0844, S-0837
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:41:50Z
+
+- Summary: Ran flai order --by throughput --apply after the pull order changed. Ready is now S-0841 (11m), S-0811, S-0829, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, then S-0810 (2h30m). S-0841's plan (T-3593, T-3594) needs nothing: S-0841 is already ready and finalized.
+- Items: S-0841
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:42:16Z
+
+- Summary: I acted on all seven reasons. Nothing is left for the operator from this run.
+- Items: none
+- Seconds: 26
+- Cost: 0.2127 USD, estimated
+
+### 2026-11-17T12:42:53Z
+
+- Summary: TH-1304 and planned:S-0837 were already settled by the earlier run: S-0837's plan approved and TH-1304 resolved, S-0837 finalized under finalize_drafts. S-0837 stays in backlog: the ready column is full (10 of 10), so promote_to_ready has no room.
+- Items: S-0837
+- Seconds: 18
+- Cost: 0.0962 USD, estimated
+
+### 2026-11-17T12:43:08Z
+
+- Summary: Nothing needed doing this run: an earlier orchestrator run had already settled both reasons.
+- Items: none
+- Seconds: 15
+- Cost: 0.2688 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -28422,6 +28681,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-11-17T08:29:07Z
+
+- Call: `flai serve agents --json`
+- Needs: none
+
+### 2026-11-17T12:26:02Z
 
 - Call: `flai serve agents --json`
 - Needs: none
