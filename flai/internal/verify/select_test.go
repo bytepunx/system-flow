@@ -574,10 +574,11 @@ func TestRepositoryManifestRunsTheGatewayChecksOnlyByName(t *testing.T) {
 	}
 }
 
+// I-0327: this repository's manifest has flai test lint, unit-test, and
+// type-check a changed flaiover file. It reads only system-flow.yaml and the
+// file tree, so it is not gated under -short: make test and flai test catch a
+// tier it must list, rather than the close-out's integration tier.
 func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration: reads the monorepo")
-	}
 	root := filepath.Join("..", "..", "..")
 	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
 		t.Skip("monorepo not present")
