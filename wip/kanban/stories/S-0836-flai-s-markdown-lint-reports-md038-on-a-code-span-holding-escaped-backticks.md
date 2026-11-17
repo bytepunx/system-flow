@@ -3,11 +3,14 @@ id: S-0836
 type: story
 nature: remediation
 title: flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T10:04:15Z
-transitions: []
+updated: 2026-11-17T10:05:47Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:05:44Z
+    by: orchestrator
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]
 agent:
@@ -56,10 +59,10 @@ cost_of_delay:
   at: 2026-11-17T08:29:08Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T18:39:00Z
-  basis: "Its own forecast of 45m; 21st in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0830, S-0811, S-0823, S-0832, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0828, S-0829, S-0834 and S-0835."
+  delivery: 2026-11-17T12:11:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0830, S-0811, S-0823, S-0832, S-0809 and S-0756."
   by: flai
-  at: 2026-11-17T10:04:15Z
+  at: 2026-11-17T10:05:47Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:55Z
