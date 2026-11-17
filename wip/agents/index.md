@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T13:23:37Z
+updated: 2026-11-17T13:23:53Z
 ---
 
 # Active streams
@@ -9,7 +9,7 @@ updated: 2026-11-17T13:23:37Z
 |--------|-------|--------|------------|---------|
 | [S-0806](S-0806.md) | The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour | in-progress | agent-S-0806 | 2026-11-17T11:37:01Z |
 | [S-0834](S-0834.md) | flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount | in-progress | agent-S-0834 | 2026-11-17T12:07:53Z |
-| [S-0840](S-0840.md) | flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it | in-progress | agent-S-0840 | 2026-11-17T13:22:14Z |
+| [S-0840](S-0840.md) | flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it | in-progress | agent-S-0840 | 2026-11-17T13:23:53Z |
 
 ## Strategic agents
 
