@@ -1,8 +1,11 @@
 <script lang="ts">
 	// Cancelling an item cancels everything open under it (S-0070, ADR-0028):
 	// show what goes with it, and take the reason, before it happens.
-	// Closing the dialog changes nothing.
+	// Closing the dialog changes nothing. The lane it cancels to, and which of what goes with it waits
+	// on review, are the workflow's (S-0758).
 	import { api } from '$lib/api';
+	import type { Flow } from '$lib/lanes';
+	import { cancelledState, isWaiting } from '$lib/workflow';
 
 	type Cascaded = { id: string; type: string; title: string; from: string };
 	type Left = { id: string; narrative?: string; branch?: string; worktree?: string };
@@ -10,10 +13,13 @@
 
 	let {
 		id,
+		flow,
 		onconfirm,
 		oncancel
 	}: {
 		id: string;
+		/** The board's lanes and moves; read from the board when not given. */
+		flow?: Flow;
 		onconfirm: (reason: string) => void | Promise<void>;
 		oncancel: () => void;
 	} = $props();
@@ -22,23 +28,39 @@
 	let error = $state<string | null>(null);
 	let busy = $state(false);
 	let reason = $state('');
+	// The flow the preview was made with: the one given, or the board's.
+	let known = $state<Flow>({ lanes: [], transitions: [] });
 
 	const items = $derived(preview?.cancelled ?? []);
-	const inReview = $derived(items.filter((c) => c.from === 'review'));
+	const inReview = $derived(items.filter((c) => isWaiting(known, c.from)));
 	const kept = (l: Left) =>
 		[l.narrative && 'narrative', l.branch && `branch ${l.branch}`, l.worktree && 'worktree']
 			.filter(Boolean)
 			.join(', ');
 
+	async function boardFlow(): Promise<Flow> {
+		const r = await api('/api/board');
+		const b = await r.json();
+		if (!r.ok) throw new Error(b.error ?? r.statusText);
+		return { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+	}
+
 	$effect(() => {
 		const target = id;
+		const given = flow;
 		preview = null;
 		error = null;
-		api(`/api/items/${target}/move`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ to: 'cancelled', dry_run: true })
-		})
+		(given ? Promise.resolve(given) : boardFlow())
+			.then((f) => {
+				known = f;
+				const to = cancelledState(f);
+				if (!to) throw new Error('the workflow has no lane that cancels');
+				return api(`/api/items/${target}/move`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ to, dry_run: true })
+				});
+			})
 			.then(async (r) => {
 				const data = await r.json();
 				if (!r.ok) error = data.error ?? r.statusText;

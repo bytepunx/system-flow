@@ -29,6 +29,8 @@
 		type StoryActivity
 	} from '$lib/activity';
 	import { tasksLine, tasksTitle, type TaskSummary } from '$lib/taskplan';
+	import type { Flow } from '$lib/lanes';
+	import { isWaiting } from '$lib/workflow';
 	import AgentDot from './AgentDot.svelte';
 	import type { QueueMark } from './MergeQueue.svelte';
 
@@ -50,6 +52,7 @@
 
 	let {
 		card,
+		flow = { lanes: [], transitions: [] },
 		draggable = false,
 		dragging = false,
 		waiting = false,
@@ -60,6 +63,9 @@
 		onkeydown
 	}: {
 		card: Card;
+		/** The board's lanes and moves (S-0758): a story in a lane of kind waiting links to its review
+		 * page and carries its merge-queue mark; with none given, no lane is. */
+		flow?: Flow;
 		draggable?: boolean;
 		dragging?: boolean;
 		/** Merged to main but not yet published (S-0087); the done column's own state, meaningless
@@ -86,7 +92,8 @@
 	const undoesLine = $derived(
 		`undoes main on ${undoes.length} ${undoes.length === 1 ? 'path' : 'paths'}`
 	);
-	const queueMark = $derived(card.type === 'story' && card.status === 'review' ? queue : undefined);
+	const inReview = $derived(card.type === 'story' && isWaiting(flow, card.status));
+	const queueMark = $derived(inReview ? queue : undefined);
 	const queueReasons = $derived(
 		queueMark && 'reasons' in queueMark ? queueMark.reasons.map((r) => r.text) : []
 	);
@@ -101,7 +108,7 @@
 </script>
 
 <a
-	href={card.type === 'story' && card.status === 'review'
+	href={inReview
 		? resolve('/review/[id]', { id: card.id })
 		: resolve('/items/[id]', { id: card.id })}
 	{draggable}

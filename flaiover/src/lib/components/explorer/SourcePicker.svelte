@@ -4,18 +4,26 @@
 	its branch changes are listed here, before the catalogue, each marked and picked as in the list.
 -->
 <script lang="ts" module>
+	import type { Flow } from '$lib/lanes';
 	import type { Component } from '$lib/server/repo';
+	import { isUnderway } from '$lib/workflow';
 
 	/** A story the picker offers, as the board's card gives it. */
 	export type SourceStory = { id: string; title: string; status: string };
 	/** A component the story's branch changes, with its sub-project's manifest name. */
 	export type ChangedComponent = { project: string; component: Component };
 
-	/** The board's stories in progress, then those in review: the sources besides Main. */
+	/**
+	 * The board's stories underway, being worked or waiting on review, lane by lane in board order
+	 * (S-0758): the sources besides Main. With no flow given, no lane is underway.
+	 */
 	export function openStories(
-		columns: Partial<Record<string, readonly (SourceStory & { type: string })[]>>
+		columns: Partial<Record<string, readonly (SourceStory & { type: string })[]>>,
+		flow: Flow = { lanes: [], transitions: [] }
 	): SourceStory[] {
-		return [...(columns['in-progress'] ?? []), ...(columns.review ?? [])]
+		return flow.lanes
+			.filter((l) => isUnderway(flow, l.name))
+			.flatMap((l) => columns[l.name] ?? [])
 			.filter((c) => c.type === 'story')
 			.map(({ id, title, status }) => ({ id, title, status }));
 	}

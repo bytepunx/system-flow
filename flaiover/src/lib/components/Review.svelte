@@ -6,6 +6,8 @@
 	import WorktreeUncommitted, { otherBlockers } from './WorktreeUncommitted.svelte';
 	import AcceptFindings, { findingsOf, unsavedFiles, type Finding } from './AcceptFindings.svelte';
 	import { api } from '$lib/api';
+	import type { Flow } from '$lib/lanes';
+	import { isUnderway, isWaiting, sendBackMove, stateTitle } from '$lib/workflow';
 	import { resolve } from '$app/paths';
 	import {
 		criteriaOf,
@@ -150,6 +152,9 @@
 	let previewError = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let writable = $state(false);
+	// The board's lanes and moves, as board.get answers them (S-0758): whether the story waits on
+	// review, and where sending it back takes it, are the workflow's.
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 
 	let running = $state(false);
 	let progress = $state<Progress[]>([]);
@@ -255,7 +260,10 @@
 	const v = (x: Version) => (typeof x === 'string' ? x : `${x.Major}.${x.Minor}.${x.Patch}`);
 	const criteria = $derived(item ? criteriaOf(item.body) : []);
 	const ticked = $derived(criteria.filter((c) => c.checked).length);
-	const inReview = $derived(item?.status === 'review');
+	const inReview = $derived(isWaiting(flow, item?.status));
+	// Where the send-back moves the story; none when the workflow offers a person no such move.
+	const backTo = $derived(item ? sendBackMove(flow, item.status, item.type)?.to : undefined);
+	const backToTitle = $derived(stateTitle(flow, backTo));
 	const chosen = $derived(issues.filter((r) => r.checked));
 	// Another refusal's text, each file it names opening the editor on the story's branch.
 	const refusal = $derived(failure ? linkSegments(failure, { story: id }) : []);
@@ -316,7 +324,7 @@
 		writable && inReview && !result && queueEnabled && !!queueState && !queueState.off
 	);
 	const undoneActive = $derived(
-		writable && inReview && !result && !running && !restoring && !sendingUndone
+		writable && inReview && !!backTo && !result && !running && !restoring && !sendingUndone
 	);
 
 	// a line of the branch's change, as DiffView colours it
@@ -504,15 +512,20 @@
 		queueEnabled = false;
 		queueState = null;
 		queueRefusal = null;
+		// The board is read beside the item: what loads next depends on the item's state's kind.
+		type Board = Partial<Flow> & { writable?: boolean };
+		const board: Promise<Board> = api('/api/board')
+			.then(async (r) => (r.ok ? await r.json() : {}))
+			.catch(() => ({}));
 		try {
 			item = (await get<{ item: Item }>(`/api/items/${target}`)).item;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 			return;
 		}
-		api('/api/board')
-			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
-			.catch(() => (writable = false));
+		const b = await board;
+		writable = b.writable === true;
+		flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
 		get<{ body: string }>(`/api/docs/file?path=${encodeURIComponent(`wip/agents/${target}.md`)}`)
 			.then(async (d) => {
 				narrative = d.body;
@@ -520,8 +533,8 @@
 			})
 			.catch(() => (narrative = ''));
 		void loadDiff(target).then(() => openArrived(target));
-		if (item.status === 'in-progress' || item.status === 'review') void loadCatalogue(target);
-		if (item.status === 'review') {
+		if (isUnderway(flow, item.status)) void loadCatalogue(target);
+		if (isWaiting(flow, item.status)) {
 			void loadPreview(target);
 			void loadIssues(target);
 			void loadQueue(target);
@@ -602,6 +615,8 @@
 	// Two calls in order: a thread on the story naming the paths, for its agent; then the move back,
 	// its reason naming them too. The page is loaded again as a send-back does.
 	async function sendBackUndone() {
+		if (!backTo) return;
+		const to = backTo;
 		const paths = undone.map((u) => u.path).join(', ');
 		const branch = preview?.branch ?? `story/${id}`;
 		sendingUndone = true;
@@ -625,7 +640,7 @@
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
-					to: 'in-progress',
+					to,
 					reason: `${branch} undoes main's change to ${paths}: restore main's version or redo the change (ADR-0155)`
 				})
 			});
@@ -724,7 +739,7 @@
 		const fresh = await get<{ item: Item }>(`/api/items/${target}`).catch(() => null);
 		if (target !== id) return;
 		if (fresh) item = fresh.item;
-		if (item?.status === 'review') void loadPreview(target);
+		if (inReview) void loadPreview(target);
 		void loadVerify(target);
 	}
 
@@ -1035,12 +1050,12 @@
 	}
 
 	async function sendBack() {
-		if (!reason.trim()) return;
+		if (!reason.trim() || !backTo) return;
 		failure = null;
 		const r = await api(`/api/items/${id}/move`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ to: 'in-progress', reason: reason.trim() })
+			body: JSON.stringify({ to: backTo, reason: reason.trim() })
 		});
 		const data = await r.json().catch(() => ({}));
 		if (!r.ok) failure = data.error ?? r.statusText;
@@ -1923,7 +1938,7 @@
 					<button
 						type="button"
 						class="rounded border border-line-strong px-3 py-1"
-						disabled={running}
+						disabled={running || !backTo}
 						onclick={() => (sendingBack = !sendingBack)}>Send back</button
 					>
 					{#if queueOffered}
@@ -1965,7 +1980,7 @@
 				{#if sendingBack}
 					<div class="mt-2">
 						<label class="block text-xs text-muted" for="send-back-reason"
-							>Why it goes back to in-progress (recorded in the story's notes)</label
+							>Why it goes back to {backToTitle} (recorded in the story's notes)</label
 						>
 						<textarea
 							id="send-back-reason"
@@ -1975,7 +1990,7 @@
 							type="button"
 							class="mt-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
 							disabled={!reason.trim()}
-							onclick={sendBack}>Send back to in-progress</button
+							onclick={sendBack}>Send back to {backToTitle}</button
 						>
 					</div>
 				{/if}

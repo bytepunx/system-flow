@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import Review from './Review.svelte';
+import type { Flow } from '$lib/lanes';
+import { addedStateFlow, baselineFlow, testingFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -66,6 +68,8 @@ const DIFF = {
 
 function backend(over: {
 	item?: Record<string, unknown>;
+	/** The board's lanes and moves, GET /api/board; the baseline's when absent. */
+	flow?: Flow;
 	/** The acceptance preview, or a function giving it afresh on each read. */
 	preview?: unknown;
 	accept?: () => unknown;
@@ -175,7 +179,8 @@ function backend(over: {
 					}
 				}
 			);
-		if (url.startsWith('/api/board')) return json({ writable: true });
+		if (url.startsWith('/api/board'))
+			return json({ writable: true, ...(over.flow ?? baselineFlow) });
 		if (url.startsWith('/api/docs/file')) return json({ body: over.narrative ?? NARRATIVE });
 		if (url.startsWith('/api/threads')) return json([]);
 		if (url.startsWith('/api/items/')) return json({ item: over.item ?? STORY, children: [] });
@@ -1246,6 +1251,38 @@ describe('Review', () => {
 		await settle();
 		expect(document.body.textContent).toContain('is in-progress, not in review');
 		expect(button('Accept')).toBeUndefined();
+	});
+
+	// S-0758: the page reads a state's kind from the board, so a state the workflow adds is treated
+	// by its kind, and the send-back goes where the workflow's send-back move goes.
+	it('treats a story in a state added between in-progress and review as in progress', async () => {
+		backend({ flow: addedStateFlow, item: { ...STORY, status: 'testing' } });
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		expect(document.body.textContent).toContain('is testing, not in review');
+		expect(button('Accept')).toBeUndefined();
+		expect(button('Send back')).toBeUndefined();
+		const read = api.mock.calls.map((call) => String(call[0]));
+		expect(read).toContain('/api/components?story=S-0041');
+		expect(read.some((u) => u.endsWith('/acceptance'))).toBe(false);
+	});
+
+	it('sends a story back to the state the workflow’s send-back move names', async () => {
+		backend({ flow: testingFlow });
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		button('Send back').click();
+		flushSync();
+		const box = document.querySelector('textarea#send-back-reason') as HTMLTextAreaElement;
+		box.value = 'the tests miss a case';
+		box.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		button('Send back to doing').click();
+		await settle();
+		expect(JSON.parse(calls('/move')[0][1].body)).toEqual({
+			to: 'doing',
+			reason: 'the tests miss a case'
+		});
 	});
 
 	it('shows why there is no diff when the story has no branch', async () => {

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 import BoardCard from './BoardCard.svelte';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 
 const goto = vi.fn();
 vi.mock('$app/paths', () => ({
@@ -21,7 +22,10 @@ const base = {
 type Props = ComponentProps<typeof BoardCard>;
 
 function render(card: Props['card'], props: Partial<Props> = {}) {
-	const component = mount(BoardCard, { target: document.body, props: { card, ...props } });
+	const component = mount(BoardCard, {
+		target: document.body,
+		props: { card, flow: baselineFlow, ...props }
+	});
 	flushSync();
 	return component;
 }
@@ -547,6 +551,32 @@ describe('BoardCard', () => {
 		it('marks nothing in review without a mark from the queue', () => {
 			component = render(inReview);
 			expect(mark()).toBeNull();
+		});
+	});
+
+	// S-0758: whether a story waits on review is its lane's kind, not its state's name
+	describe('a lane’s kind', () => {
+		const mark = () => document.querySelector<HTMLElement>('[data-testid="queue-mark"]');
+		const href = () => document.querySelector('a')!.getAttribute('href');
+
+		it('links a story in review to its review page and marks its place, under the baseline', () => {
+			component = render({ ...base, status: 'review' }, { queue: { place: 1 } });
+			expect(href()).toBe('/review/S-0048');
+			expect(mark()!.textContent).toBe('queue 1');
+		});
+
+		it('links a story in a state added before review to its item page, with no mark', () => {
+			component = render(
+				{ ...base, status: 'testing' },
+				{ flow: addedStateFlow, queue: { place: 1 } }
+			);
+			expect(href()).toBe('/items/S-0048');
+			expect(mark()).toBeNull();
+		});
+
+		it('links a story in review under the added state’s workflow to its review page', () => {
+			component = render({ ...base, status: 'review' }, { flow: addedStateFlow });
+			expect(href()).toBe('/review/S-0048');
 		});
 	});
 });
