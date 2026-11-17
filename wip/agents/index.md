@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T07:12:21Z
+updated: 2026-11-17T07:13:45Z
 ---
 
 # Active streams
@@ -9,7 +9,6 @@ updated: 2026-11-17T07:12:21Z
 |--------|-------|--------|------------|---------|
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
 | [S-0805](S-0805.md) | A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke | in-progress | agent-S-0805 | 2026-11-17T02:48:50Z |
-| [S-0817](S-0817.md) | Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle | review | agent-S-0817 | 2026-11-17T03:23:24Z |
 | [S-0819](S-0819.md) | flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out | in-progress | agent-S-0819 | 2026-11-17T07:12:21Z |
 
 ## Strategic agents
