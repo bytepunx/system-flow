@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T12:55:13Z
+updated: 2026-11-17T12:55:25Z
 ---
 
 # Active streams
@@ -9,7 +9,7 @@ updated: 2026-11-17T12:55:13Z
 |--------|-------|--------|------------|---------|
 | [S-0806](S-0806.md) | The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour | in-progress | agent-S-0806 | 2026-11-17T11:37:01Z |
 | [S-0834](S-0834.md) | flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount | in-progress | agent-S-0834 | 2026-11-17T12:07:53Z |
-| [S-0841](S-0841.md) | scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged | in-progress | agent-S-0841 | 2026-11-17T12:55:06Z |
+| [S-0841](S-0841.md) | scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged | in-progress | agent-S-0841 | 2026-11-17T12:55:24Z |
 
 ## Strategic agents
 
