@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-11-14
+updated: 2026-11-17
 status: active
 topics: [all]
 ---
@@ -235,6 +235,7 @@ The flai installed on the host serves MCP and starts agents, and it lags the tre
 - `flai check` stays strict: each unknown key is an error, `item.unknown-field`, `threads.unknown-field`, or `issues.unknown-field`, on the key's line.
 - Reading past a field is not acting on it: a flai that does not know `after` does not hold the story. What keeps the host's flai current is the version check and the minimum: `flai serve`, the MCP `inbox`, and the dashboard say when the host's flai is older than the newest flai release in the project's history, and `flai.minimum` in `system-flow.yaml` stops an older flai before it reads any item ([project-manifest.md](project-manifest.md), [flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)).
 - The fields flai reads are listed in `flai/internal/workitem/front-matter-fields.txt`, which a test keeps equal to the code, with the keys of a story's `agent` block and of each of its roles too (S-0189): the lenient read ignores a key it does not know inside `agent`, and a write would drop it. Its `item.types` line names the types of item that carry each field only some types carry (S-0176), from the table `Validate` refuses the others by: a flai that lets a known field onto a new type, as S-0176 did a task's `after`, is one an older flai disagrees with. A story that adds or removes a front-matter field, or changes which types carry one, changes it, and the first publish from the flai release that carries the change, or from a newer flai, raises `flai.minimum` to that release: a publish never raises it past the flai that publishes (I-0107, S-0321).
+- The fields file lists the workflow file's keys too, and those of each mapping in it: a state, its `runs`, a transition, its rule entries and `verify`, a timer, its points, and `verify_at` (S-0806). `workflow.Fields()` takes them from the types the decoders use, and the same test keeps the file equal to it. flai reads the workflow file strictly, so an older flai refuses a file with a key it does not know, with a parse error that names no release. A release that adds or removes a key changes the fields file, so its first publish raises `flai.minimum`, and an older flai stops on the manifest, naming the release, before it reads the workflow file ([workflow.md](workflow.md#suites-a-step-needs-and-runs-adr-0312)).
 
 ## Body structure
 

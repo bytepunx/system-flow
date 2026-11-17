@@ -14,7 +14,7 @@ The board's states, the moves between them, the rules each move passes, and the 
 2. Find the file. A project with no `design/workflows/board.md` runs the baseline flai carries, which is the template's file byte for byte. To change it, add the file first, in the story's worktree:
    - copy `root/design/workflows/board.md` from the template repository, or
    - let `flai upgrade` add it, which it does for a project that lacks it.
-3. Edit the front matter only. It is the whole workflow, and it replaces the baseline whole: flai merges nothing into it. The body is prose for people; flai reads none of it. Every field and its allowed values are in ADR-0301 §1.
+3. Edit the front matter only. It is the whole workflow, and it replaces the baseline whole: flai merges nothing into it. The body is prose for people; flai reads none of it. Every field and its allowed values are in ADR-0301 §1, and the keys that name test suites in [ADR-0312](../../../design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md).
 
 ## Add a state
 
@@ -115,16 +115,48 @@ Its items read as being in `review`, and the time they spent in `qa` counts as t
 
 Changing a state's `kind` changes how flai reads all of the state's time, past time included.
 
+## Name the suites a step runs
+
+Each test tier in `system-flow.yaml`'s `tests` belongs to a suite: its `suite`, or its own name when it gives none. A project made from the template has `static`, `behavior`, `integration`, and `smoke` ([Run the tests for what changed](../../users/flai.md#run-the-tests-for-what-changed)). The workflow file names suites in three places ([ADR-0312](../../../design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md)):
+
+- `verify` on a move: the suites a story's move needs its last `flai verify` to have passed.
+- `runs` on a state: the suites, and the cluster's `deploy` and `checks`, that flai runs when a story enters the state.
+- `verify_at` at the top level: the suites the merge queue's `batch`, the release's `publish`, and `ci` run.
+
+Each takes `all`, every suite, or a list of suites. One suite is a list of one, `[static]`. A move by default refuses when its suites have not passed. To let it through with a warning, give `verify` as `{suites: ..., severity: warn}`.
+
+The baseline gives today's behaviour: the move to review needs every suite, at `warn`; the acceptance needs every suite; review runs the cluster's deploy and checks; and the batch and CI run every suite. A project that keeps the move to review and the acceptance to its fast suites, and runs the slow ones at publish:
+
+```yaml
+states:
+  # ... the baseline's other states
+  - {name: review, kind: waiting, limit: true, runs: {kluster: [deploy, checks]}}
+transitions:
+  # ... the baseline's other moves
+  - from: in-progress
+    to: review
+    rules: [has-task, no-open-question, clean-worktree, {rule: criteria-ticked, severity: warn}, kluster-verified]
+    verify: {suites: [static, behavior], severity: warn}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept], rules: [children-closed, criteria-ticked], verify: [static, behavior]}
+verify_at: {batch: [static, behavior], publish: [integration, smoke], ci: all}
+```
+
+Today nothing runs differently for these keys. flai parses and checks them, but no move, state, batch, publish, or CI run reads them to decide what it runs yet; later releases make each do so. Until then the close-out and the acceptance run as they did.
+
+The keys need a flai that knows them. The first publish from the flai release that carries them raises `flai.minimum` in `system-flow.yaml`, and from then an older flai stops before it reads the file, naming the release to install ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)). Before that publish, an older flai refuses a file that uses them with its parse error, an unknown field.
+
 ## Before the story is accepted
 
-1. In the story's worktree, run `flai check --strict`. It checks the branch's file, and the items against it. The codes are `workflow.file`, `workflow.rule`, `workflow.timer`, `workflow.state`, `workflow.unreachable`, `workflow.dead-end`, `workflow.no-pull`, `workflow.no-accept`, and `workflow.item`; what each means and what clears it is under [Check the repository](../../users/flai.md#check-the-repository).
-2. Fix every error. While the file has one, every command run in that checkout and `flai serve` refuse to open the project, and the MCP server refuses each tool call, naming the finding:
+1. In the story's worktree, run `flai check --strict`. It checks the branch's file, and the items against it. The codes are `workflow.file`, `workflow.rule`, `workflow.timer`, `workflow.state`, `workflow.unreachable`, `workflow.dead-end`, `workflow.no-pull`, `workflow.no-accept`, `workflow.item`, `workflow.suite`, and `workflow.suite-unnamed`; what each means and what clears it is under [Check the repository](../../users/flai.md#check-the-repository).
+2. Fix every error. While the file has one, but `workflow.suite`, every command run in that checkout and `flai serve` refuse to open the project, and the MCP server refuses each tool call, naming the finding:
 
    ```text
    open the project at <root>: its workflow file cannot be run: <path>:<line>: <code>: <message>; fix the file, or remove it to run the baseline workflow flai carries
    ```
 
    Only `flai check` still runs. A warning, `workflow.unreachable`, stops nothing. Neither does `workflow.item`, an item naming a state the file lacks: add that name to an `aliases`.
+
+   The two suite findings stop nothing either; `flai check` reports them, and `--strict` fails on them. `workflow.suite`, an error, is a suite the file names that no tier in `system-flow.yaml`'s `tests` has: name a suite a tier gives, add `suite: <name>` to the tier it belongs to, or give `all`. `workflow.suite-unnamed`, a warning, is a suite with a tier that is not `manual` which nothing in the file names, so no step runs it: name it in a `verify`, a `runs`, or `verify_at`, give `all` somewhere, or mark its tiers `manual: true`.
 3. Look at the board in the worktree: `flai board` there shows the branch's columns. A move made there follows the branch's file, but writes the item in the main checkout, where the old board still runs: an item moved into a new state is a `workflow.item` finding on main until the story is accepted. To try moves freely, copy the file into a scratch project made with `flai new`.
 4. Commit, and move the story to review. Accept it yourself. A story that changes the file is the operator's to accept, never the orchestrator's or the merge queue's (ADR-0301 §7). The dashboard's saves refuse the file on main, and take it only on a story's branch.
 5. Once it is accepted, main runs the new board: the main checkout's commands, `flai serve` at its next look, the MCP server at its next call (it reads the file again when it changed), and the dashboard through `flai serve`. A story's worktree runs its own branch's file until it takes main in.
@@ -142,3 +174,5 @@ the template's baseline design/workflows/board.md changed: the project's file is
 ```
 
 Compare the template's file with yours, and carry over what you want in a story, as above.
+
+The template's file gained `verify`, `runs`, and `verify_at` in S-0806. A file you kept from before names no suite, so `flai check` warns `workflow.suite-unnamed` for each suite with a tier that is not `manual` until you carry them over ([Name the suites a step runs](#name-the-suites-a-step-runs)).
