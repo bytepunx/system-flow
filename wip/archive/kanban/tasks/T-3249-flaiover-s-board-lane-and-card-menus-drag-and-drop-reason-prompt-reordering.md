@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1201
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 172
-      output: 779
-      cache_read: 13432066
-      cache_write: 254956
-      cost: 5.2097
+      input: 160
+      output: 54000
+      cache_read: 13509057
+      cache_write: 328293
+      cost: 5.7751
 ---
 # T-3249 flaiover's board, lane and card menus, drag and drop, reason prompt, reordering, collapsing, and home page counts read the columns and moves from board.get
 

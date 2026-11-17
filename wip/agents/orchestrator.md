@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2234.1473
-accrued_seconds: 1573434
-tasks_completed: 3811
-last_run: 2026-11-17T03:39:03Z
+accrued_cost: 2234.8847
+accrued_seconds: 1573523
+tasks_completed: 3816
+last_run: 2026-11-17T04:41:50Z
 ---
 
 # Orchestrator activity
@@ -26712,6 +26712,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.2225 USD, estimated
+
+### 2026-11-17T04:29:17Z
+
+- Summary: Release due after S-0742's acceptance: release_evaluate met under threshold (count 1 at or over threshold 1; value 142.52 USD/week, threshold 1000). Ran flai formula run publish --ready --autocommit: instance S-0821 (T-3510 fetch, T-3511 evaluate, T-3512 publish), now ready, commit bec3982c8. Then flai order --by throughput --apply: S-0819 (1h30m) first, S-0821 (no forecast) second.
+- Items: S-0742, S-0821, S-0819
+- Seconds: 22
+- Cost: 0.1368 USD, estimated
+
+### 2026-11-17T04:29:31Z
+
+- Summary: TH-1272 (host flai 1.101.4 older than 1.102.0): left alone under answer_threads autonomous, as its only entry is a flai serve notice, not a story's agent's or a planner's. It needs the operator: 1.102.0 is not published yet, so S-0821's publish should produce it, and then flai host upgrade --version 1.102.0.
+- Items: S-0821
+- Seconds: 14
+- Cost: 0.0301 USD, estimated
+
+### 2026-11-17T04:29:52Z
+
+- Summary: I started a release for S-0742, and the host's flai upgrade (TH-1272) still needs you.
+- Items: none
+- Seconds: 21
+- Cost: 0.2053 USD, estimated
+
+### 2026-11-17T04:41:31Z
+
+- Summary: TH-1270: alex fixed D-0653 and resolved the thread; S-0742 is accepted since (publish instance S-0821 ready), but alex moved S-0817 back to in-progress at 04:29:20Z ("Rebase appears to fail from review"), so it is not in review and there is nothing to accept; no action taken.
+- Items: S-0817
+- Seconds: 13
+- Cost: 0.0766 USD, estimated
+
+### 2026-11-17T04:41:50Z
+
+- Summary: I took no action on TH-1270: S-0817 is no longer in review, so there is nothing to accept.
+- Items: none
+- Seconds: 19
+- Cost: 0.2886 USD, estimated
 
 ## Refusals
 

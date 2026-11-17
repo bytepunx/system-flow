@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 321
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 21
-      cache_read: 315634
-      cache_write: 1008
-      cost: 0.1205
+      input: 4
+      output: 1249
+      cache_read: 312522
+      cache_write: 7595
+      cost: 0.1336
 ---
 
 # T-3509 board.limit takes the workflow's limited columns, and the lane and card menus' examples carry the flow

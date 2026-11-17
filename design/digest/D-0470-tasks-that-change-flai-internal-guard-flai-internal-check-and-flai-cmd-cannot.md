@@ -2,7 +2,7 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742]
 topics: [planning, go, code, flai]
 paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver, flai/internal/mergequeue]
 date: 2026-11-03
@@ -110,4 +110,12 @@ T-3417 runs after them, alone, because it changes flai/cmd beside T-3415's cmd/q
 
 So a task that changes a file of `flai/cmd` waits for any other task of its layer that changes `flai/cmd`, even when they share no file, or runs in a task worktree of its own.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799.
+S-0742 met it in `flai/internal/serve` again. Its four layer-2 tasks, T-3213, T-3215, T-3216, and T-3217, shared no path but all build and test package `serve`, and its agent ran them at once, each in a task worktree, with test helpers of their own prefix (`wip/archive/agents/S-0742.md`):
+
+```text
+The four layer-2 tasks ran at once, one task worktree each (.flai-cache/worktrees/T-nnnn from story/S-0742). Their uncommitted diffs were applied to the story worktree, where paths did not overlap, and new test helpers carry a t32nn prefix, so nothing collided.
+```
+
+So the per-task helper prefix holds for any layer of tasks that add tests to one package, and a task's uncommitted diff may be applied to the story worktree in place of copying its files, where the tasks' paths do not overlap.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742.

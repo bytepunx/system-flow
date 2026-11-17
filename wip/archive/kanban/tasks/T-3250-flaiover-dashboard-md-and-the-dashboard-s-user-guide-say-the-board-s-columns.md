@@ -24,16 +24,16 @@ touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-3244]
 usage:
   source: log
-  seconds: 1626
+  seconds: 1665
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 476
-      cache_read: 6528159
-      cache_write: 108982
-      cost: 2.5263
+      input: 96
+      output: 32505
+      cache_read: 8131655
+      cache_write: 197613
+      cost: 3.4763
 ---
 # T-3250 flaiover-dashboard.md and the dashboard's user guide say the board's columns and moves come from the workflow
 

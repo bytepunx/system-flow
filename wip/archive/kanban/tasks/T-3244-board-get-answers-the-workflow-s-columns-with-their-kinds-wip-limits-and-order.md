@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1037
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 344
-      cache_read: 2534293
-      cache_write: 279787
-      cost: 1.0712
+      input: 33
+      output: 11103
+      cache_read: 2777527
+      cache_write: 67499
+      cost: 1.1874
 ---
 # T-3244 board.get answers the workflow's columns with their kinds, WIP limits, and order, and its transitions with who may make each and its reason
 

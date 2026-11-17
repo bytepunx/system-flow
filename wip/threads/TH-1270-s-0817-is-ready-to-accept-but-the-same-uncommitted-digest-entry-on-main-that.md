@@ -4,10 +4,10 @@ title: S-0817 is ready to accept, but the same uncommitted digest entry on main 
 anchor:
   path: wip/kanban/stories/S-0817-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md
   item: S-0817
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-17T03:26:10Z
-updated: 2026-11-17T03:26:10Z
+updated: 2026-11-17T04:40:48Z
 ---
 
 # TH-1270 S-0817 is ready to accept, but the same uncommitted digest entry on main that holds S-0742 fails lint (MD028)
@@ -34,3 +34,9 @@ design/digest/D-0653-…md:20 error MD028/no-blanks-blockquote Blank line inside
 - The dry run listed no blocker.
 
 **Alternative:** accept it yourself with `flai accept S-0817 --by alex` once the file is fixed.
+
+### 2026-11-17T04:40:43Z alex
+I fixed it
+
+### 2026-11-17T04:40:48Z alex
+Resolved.

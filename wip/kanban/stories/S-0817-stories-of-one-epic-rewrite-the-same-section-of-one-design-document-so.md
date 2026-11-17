@@ -3,10 +3,10 @@ id: S-0817
 type: story
 nature: improvement
 title: Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-17T02:26:33Z
-updated: 2026-11-17T03:23:24Z
+updated: 2026-11-17T04:29:20Z
 transitions:
   - to: ready
     at: 2026-11-17T02:33:25Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-17T03:23:24Z
     by: agent-S-0817
+  - to: in-progress
+    at: 2026-11-17T04:29:20Z
+    by: alex
 tags: []
 topics: [merge, sync, acceptance]
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0314-a-section-merge-merges-a-line-both-sides-change-by-its-words-keeping-both.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0387-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md, design/issues/summary.md]
@@ -52,15 +55,15 @@ usage:
           cache_write: 172382
           cost: 2.4701
     - kind: orchestrator
-      seconds: 181
+      seconds: 194
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 217
-          cache_read: 1234059
-          cache_write: 192211
-          cost: 0.4391
+          input: 38
+          output: 276
+          cache_read: 1412809
+          cache_write: 261600
+          cost: 0.5157
         - model: claude-sonnet-5-5
           input: 10
           output: 79
@@ -157,3 +160,4 @@ No folder touch. No `after`: the story reads no open story's output. ADR-0287 an
 
 - Forecast 1h, delivery 2026-11-17T11:44:00Z. `flai forecast` gave 2m from size 2 (2 criteria, 0 touches) at 47 s a unit, before any touch was declared. That size does not count an ADR, new merge code, two real-git reproductions, and four documents. S-0719, the same shape, took 42m of agent time against a 1h forecast. This one adds table rows and the same-point refusal, so 1h. The delivery is flai's 10:46Z moved by the 58m added.
 - Cost of delay 600.00 USD a week, `flai cod`'s figure from the operator's input (4h lost a cycle at 150 USD an hour), kept. I-0387 counts two occurrences, and S-0797's was this week.
+- 2026-11-17T04:29:20Z: moved to in-progress: Rebase appears to fail from review
