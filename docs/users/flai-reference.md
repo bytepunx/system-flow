@@ -3523,6 +3523,8 @@ The orchestrator (FLAI\_ROLE=orchestrate) moves to ready only a story that flai 
 
 An item also moves back one column: ready to backlog, in-progress to ready, review to in-progress, cancelled to backlog, the last only while its parent is not cancelled (ADR-0055). Done is final.
 
+A story's move along the transition with the send-back effect, review to in-progress on the baseline, by anyone but flai and the story's own agent opens the send back's thread by flai with the reason, or writes on the one still open (I-0397). flai serve starts the story's agent on it and resolves it once the story is back in review. --json returns its ID as sent\_back\_thread.
+
 The project's workflow says what a move is (ADR-0301): a story's move along the transition with the accept effect is its acceptance, a move to a state of the cancelled kind is a cancellation, and the transition's by says who may make it. A move its by does not let the mover make is refused, naming the transition, who may make it, and the command that does. The mover is a role when FLAI\_ROLE is set, a story's agent when FLAI\_STORY is set or flai serve started the session, and the operator otherwise.
 
 Cancelling an epic cancels every open story under it and their open tasks; cancelling a story cancels its open tasks (ADR-0028). The items are listed first, a terminal is asked unless --yes is given, and --dry-run changes nothing. Branches, worktrees, and narratives are left as they are.

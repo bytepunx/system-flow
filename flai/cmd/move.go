@@ -10,6 +10,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/sendback"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -42,6 +45,13 @@ WIP limit; any other move to ready it makes is refused with the reason
 An item also moves back one column: ready to backlog, in-progress to ready,
 review to in-progress, cancelled to backlog, the last only while its parent
 is not cancelled (ADR-0055). Done is final.
+
+A story's move along the transition with the send-back effect, review to
+in-progress on the baseline, by anyone but flai and the story's own agent
+opens the send back's thread by flai with the reason, or writes on the one
+still open (I-0397). flai serve starts the story's agent on it and resolves
+it once the story is back in review. --json returns its ID as
+sent_back_thread.
 
 The project's workflow says what a move is (ADR-0301): a story's move along
 the transition with the accept effect is its acceptance, a move to a state of
@@ -133,7 +143,7 @@ word and records it in its Notes (ADR-0254).`,
 					return fmt.Errorf("rule: %w", err)
 				}
 			}
-			draft := it.Draft
+			draft, from := it.Draft, it.Status
 			// --yes is the operator's say that a draft story is finished (S-0199)
 			res, err := repo.TransitionAll(it, args[1], a.movedBy(by), reason, a.now(), a.yes)
 			if err != nil {
@@ -145,15 +155,25 @@ word and records it in its Notes (ADR-0254).`,
 			for _, w := range warnings {
 				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}
+			th, err := a.sendBackByHand(repo, it, from, a.movedBy(by), reason)
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
 				out := map[string]any{"id": it.ID, "status": it.Status, "warnings": warnings, "finalized": draft && !it.Draft}
 				if res.Followed != nil {
 					out["followed"] = res.Followed
 				}
+				if th != nil {
+					out["sent_back_thread"] = th.ID
+				}
 				return a.printJSON(out)
 			}
 			fmt.Fprintf(a.out, "%s → %s\n", it.ID, it.Status)
 			a.printFollowed(res.Followed)
+			if th != nil {
+				fmt.Fprintf(a.out, "  %s tells %s's agent why: flai serve starts the agent on it\n", th.ID, it.ID)
+			}
 			if draft && !it.Draft {
 				fmt.Fprintf(a.out, "  %s is finalized: no longer a draft\n", it.ID)
 			}
@@ -175,6 +195,27 @@ func (a *app) printFollowed(f *workitem.Followed) {
 	if f != nil {
 		fmt.Fprintf(a.out, "  %s → %s, following %s\n", f.ID, f.To, f.Story)
 	}
+}
+
+// sendBackByHand opens the thread of by's send back by hand of story it,
+// moved from the state from, or writes on the one still open (I-0397), and
+// returns it; nil when the move is no send back by hand or this flai runs in
+// a session of the story's own agent, which FLAI_STORY names. The move is
+// made already, so an error says so and how to tell the agent.
+func (a *app) sendBackByHand(repo *workitem.Repo, it *workitem.Item, from, by, reason string) (*threads.Thread, error) {
+	if story := os.Getenv("FLAI_STORY"); story != "" && workitem.CanonicalID(story) == it.ID {
+		return nil, nil
+	}
+	th, ok, err := sendback.ByHand(repo, repo.Flow(), it, from, it.Status, by, reason, a.now())
+	if err != nil {
+		return nil, fmt.Errorf("%s moved to %s, but its send back's thread could not be opened: %w; tell its agent with flai thread new --on %s --by %s %q %q",
+			it.ID, it.Status, err, it.ID, storygit.SentBackAuthor, sendback.ByHandTitle(by, it.ID, from, it.Status), sendback.ByHandText(by, it.ID, from, it.Status, reason))
+	}
+	if !ok {
+		return nil, nil
+	}
+	a.logger().Info("story sent back by hand", "component", "workitem", "item", it.ID, "by", by, "from", from, "to", it.Status, "thread", th.ID)
+	return th, nil
 }
 
 // mover is who this flai's caller is to a transition's by (ADR-0301 §3): a
