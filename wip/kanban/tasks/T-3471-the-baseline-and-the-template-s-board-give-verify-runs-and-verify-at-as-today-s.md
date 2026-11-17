@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 10055
-      cache_read: 2522157
-      cache_write: 85764
-      cost: 1.2179
+      input: 31
+      output: 9430
+      cache_read: 2500369
+      cache_write: 104971
+      cost: 1.3693
 ---
 # T-3471 The baseline and the template's board give verify, runs, and verify_at as today's behaviour, and stay equal
 

@@ -3,11 +3,11 @@ id: S-0756
 type: story
 nature: feature
 title: In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-17T11:03:00Z
+updated: 2026-11-17T11:48:46Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:55Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-17T11:03:00Z
     by: agent-S-0756
+  - to: review
+    at: 2026-11-17T11:47:02Z
+    by: agent-S-0756
+  - to: done
+    at: 2026-11-17T11:48:46Z
+    by: orchestrator
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
-touches: [flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md, flaiover/src/lib/server/workflow.test.ts, design/system/workflow.md, docs/operators/index.md]
+touches: [flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md, flaiover/src/lib/server/workflow.test.ts, design/system/workflow.md, design/issues/I-0402-flai-serve-stops-the-dev-server-of-a-story-in-a-state-a-project-s-workflow-adds.md, design/issues/summary.md, design/issues/I-0403-a-refusal-and-a-command-s-help-name-the-baseline-s-states-where-a-project-s.md, design/issues/I-0404-flai-board-s-text-shows-each-column-s-place-and-limit-but-not-its-kind-which.md, docs/operators/runbooks/change-the-board.md]
 after: [S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0752, S-0753, S-0754, S-0755, S-0758]
 agent:
   harness: claude-code
@@ -25,9 +31,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2667
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 51
+  models:
+    - model: claude-opus-5-5
+      input: 310
+      output: 84827
+      cache_read: 18044655
+      cache_write: 651036
+      cost: 9.1444
   strategic:
     - kind: orchestrator
       seconds: 23
@@ -61,14 +78,14 @@ The epic's outcome is shown end to end. In a project rendered from the template,
 
 ## Acceptance criteria
 
-- [ ] A test renders the template into a new project and adds to its workflow file a state between `in-progress` and `review`, of the active-work or wait kind as the ADR allows, a rule on the move into it, and a timer from it to the acceptance
-- [ ] `flai check --strict` passes on the project, and fails, naming the state, when the new state is left unreachable
-- [ ] `flai board` and `board.get` show the new column in its place with its kind and WIP limit
-- [ ] A story moves into the new state only when its rule passes, and on to `review` and `done` from it; `flai move`, `item_move`, and the dashboard's `item.move` each make and refuse the same moves
-- [ ] flai serve keeps the story's agent running while the story is in the new state, and the acceptance merges and archives it as today
-- [ ] `flai stats --json` and `stats.get` report the new timer for the story, and flaiover's Charts page draws it, with time in state stacking the new state
-- [ ] The test runs in a tier `system-flow.yaml` declares, so `flai test` and the close-out select it for a story that changes `flai/internal/workflow`
-- [ ] Anything that does not follow the new state is recorded as an issue or a story under E-0034 before this story goes to review
+- [x] A test renders the template into a new project and adds to its workflow file a state between `in-progress` and `review`, of the active-work or wait kind as the ADR allows, a rule on the move into it, and a timer from it to the acceptance
+- [x] `flai check --strict` passes on the project, and fails, naming the state, when the new state is left unreachable
+- [x] `flai board` and `board.get` show the new column in its place with its kind and WIP limit
+- [x] A story moves into the new state only when its rule passes, and on to `review` and `done` from it; `flai move`, `item_move`, and the dashboard's `item.move` each make and refuse the same moves
+- [x] flai serve keeps the story's agent running while the story is in the new state, and the acceptance merges and archives it as today
+- [x] `flai stats --json` and `stats.get` report the new timer for the story, and flaiover's Charts page draws it, with time in state stacking the new state
+- [x] The test runs in a tier `system-flow.yaml` declares, so `flai test` and the close-out select it for a story that changes `flai/internal/workflow`
+- [x] Anything that does not follow the new state is recorded as an issue or a story under E-0034 before this story goes to review
 
 ## Tasks
 
@@ -106,3 +123,18 @@ The epic's outcome is shown end to end. In a project rendered from the template,
 - Tasks: T-3261 (the Go test) first; T-3263 (the flaiover test) after it, using its fixture; T-3264 (recording what did not follow) after both.
 - Forecast 45m, up from the 24m `flai forecast`'s rate gives for size 13. The test drives every surface of flai and flaiover, and each failure it finds is diagnosed here before it is recorded.
 - Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: 56725e781240e84ef00a0e7848dcde56c1a4f735
+- At: 2026-11-17T11:48:46Z
+
+Verdict: pass at 56725e781240e84ef00a0e7848dcde56c1a4f735
+- 1: flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md
+- 2: flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md
+- 3: flai/cmd/workflow_e2e_test.go, flaiover/src/lib/server/workflow.test.ts
+- 4: flai/cmd/workflow_e2e_test.go, flaiover/src/lib/server/workflow.test.ts
+- 5: flai/cmd/workflow_e2e_test.go
+- 6: flai/cmd/workflow_e2e_test.go, flaiover/src/lib/server/workflow.test.ts
+- 7: flai/cmd/workflow_e2e_test.go, flaiover/src/lib/server/workflow.test.ts
+- 8: design/issues/I-0402-flai-serve-stops-the-dev-server-of-a-story-in-a-state-a-project-s-workflow-adds.md, design/issues/I-0403-a-refusal-and-a-command-s-help-name-the-baseline-s-states-where-a-project-s.md, design/issues/I-0404-flai-board-s-text-shows-each-column-s-place-and-limit-but-not-its-kind-which.md, design/issues/summary.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md

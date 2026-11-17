@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T09:44:40Z
+updated: 2026-11-17T11:37:08Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -17,6 +17,9 @@ transitions:
     by: agent-S-0806
 blocked:
   - from: 2026-11-17T09:44:40Z
+    until: 2026-11-17T11:36:10Z
+    reason: awaiting the operator on TH-1289
+  - from: 2026-11-17T11:37:08Z
     reason: awaiting the operator on TH-1289
 tags: [flai, template]
 topics: [verify, workflow]
@@ -29,19 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5273
+  seconds: 5318
   priced_by: harness
   turns:
     - day: 2026-11-17
       ceremony: 2
-      work: 82
+      work: 89
   models:
     - model: claude-opus-5-5
-      input: 460
-      output: 140726
-      cache_read: 35298130
-      cache_write: 1200285
-      cost: 17.045
+      input: 476
+      output: 144064
+      cache_read: 38197178
+      cache_write: 1603608
+      cost: 20.9182
   strategic:
     - kind: planner
       seconds: 55

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 15472
-      cache_read: 3880714
-      cache_write: 131961
-      cost: 1.8739
+      input: 48
+      output: 14510
+      cache_read: 3847190
+      cache_write: 161514
+      cost: 2.1069
 ---
 # T-3477 The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
 

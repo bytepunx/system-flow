@@ -6,7 +6,7 @@ title: flai's markdown lint reports MD038 on a code span holding escaped backtic
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T11:15:21Z
+updated: 2026-11-17T11:42:33Z
 transitions:
   - to: ready
     at: 2026-11-17T10:05:44Z
@@ -15,16 +15,29 @@ transitions:
     at: 2026-11-17T11:15:21Z
     by: agent-S-0836
 tags: [flai, mdlint]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]
+touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt, design/adrs/0318-flai-digest-new-and-edit-refuse-an-entry-whose-markdown-the-project-s-lint.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/internal/digest/write.go, flai/internal/digest/write_test.go, design/issues/I-0363-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1639
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      ceremony: 2
+      test_runs: 2
+      work: 60
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 801
+      cache_read: 15273479
+      cache_write: 291959
+      cost: 5.9452
   strategic:
     - kind: planner
       seconds: 2
@@ -81,8 +94,9 @@ This story remediates [I-0363](../../../design/issues/I-0363-flai-s-markdown-lin
 - [ ] I-0363 is closed with `flai issue close I-0363 --reason` saying what fixed it
 
 ## Tasks
-- T-3529 mdlint parses the code spans of D-0592's line 17 as markdownlint-cli2 does and reports no MD038 there, with a fixture that reproduces it
+- T-3529 mdlint and markdownlint-cli2 agree on D-0592's line 17 in both its wordings, pinned by the code span fixture
 - T-3531 Close I-0363 with the cause and the fix T-3529 found
+- T-3558 flai digest new and edit refuse an entry whose markdown the project's lint rejects
 
 ## Notes
 

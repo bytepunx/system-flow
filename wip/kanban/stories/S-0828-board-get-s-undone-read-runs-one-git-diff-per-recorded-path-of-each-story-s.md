@@ -3,14 +3,17 @@ id: S-0828
 type: story
 nature: improvement
 title: board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:19Z
-updated: 2026-11-17T11:48:16Z
+updated: 2026-11-17T11:48:31Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:10Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T11:48:31Z
+    by: agent-S-0828
 tags: [flai, git, performance]
 topics: [performance]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md]
@@ -41,15 +44,21 @@ usage:
           cache_write: 114626
           cost: 3.276
     - kind: orchestrator
-      seconds: 69
+      seconds: 87
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 90
-          cache_read: 748303
-          cache_write: 130458
-          cost: 0.2726
+          input: 23
+          output: 177
+          cache_read: 982144
+          cache_write: 162949
+          cost: 0.3558
+        - model: claude-sonnet-5-5
+          input: 3
+          output: 22
+          cache_read: 24100
+          cache_write: 28024
+          cost: 0.042
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m

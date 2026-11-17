@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 11473
-      cache_read: 2877802
-      cache_write: 97857
-      cost: 1.3897
+      input: 36
+      output: 10760
+      cache_read: 2852942
+      cache_write: 119773
+      cost: 1.5624
 ---
 # T-3474 flai check reports a suite the workflow file names that no tier has, and a non-manual tier's suite nothing names
 
