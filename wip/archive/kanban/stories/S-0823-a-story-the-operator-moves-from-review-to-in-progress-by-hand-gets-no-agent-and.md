@@ -3,10 +3,10 @@ id: S-0823
 type: story
 nature: remediation
 title: A story the operator moves from review to in-progress by hand gets no agent and no thread, so it waits in in-progress with nothing to bring it back
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T07:13:19Z
-updated: 2026-11-17T10:12:56Z
+updated: 2026-11-17T11:04:26Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:12:56Z
     by: agent-S-0823
+  - to: review
+    at: 2026-11-17T11:02:47Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T11:04:26Z
+    by: orchestrator
 tags: [flai]
 touches: [flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/move.go, flai/cmd/move_sendback_test.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0397-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md, design/issues/summary.md]
 agent:
@@ -22,9 +28,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2999
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 5
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 268
+      output: 65139
+      cache_read: 10938175
+      cache_write: 556286
+      cost: 7.3035
   strategic:
     - kind: planner
       seconds: 35
@@ -85,8 +102,8 @@ This story remediates [I-0397](../../../design/issues/I-0397-a-story-the-operato
 A move of a story from a state of kind `waiting` back to a working state by the operator's hand, from the dashboard or `flai move`, with a reason, is a send back: flai opens the send back's thread on the story with the reason as its text, as `sendback.Thread` does for `flai accept` and the rebase and resolve job, so that flai serve starts the story's agent on it. Where the operator gives no reason, the dashboard asks for one, or the board shows the story as in progress with no agent and no thread awaiting it, with what to do. Say which in the story, and bring the workflow design and the user guide in step.
 
 ## Acceptance criteria
-- [ ] The cause I-0397 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0397 is closed with `flai issue close I-0397 --reason` saying what fixed it
+- [x] The cause I-0397 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0397 is closed with `flai issue close I-0397 --reason` saying what fixed it
 
 ## Tasks
 - T-3541 flai move along the send-back transition by hand opens the send back's thread with the move's reason
@@ -120,3 +137,12 @@ Forecast: 36m from `flai forecast` over 16 touches, kept: the change is one help
 Cost of delay: 150 USD a week from `flai cod`, kept: 1h lost per 168h cycle, the operator's input from I-0397, at 150 USD an hour.
 
 No `after`: the story reads no output of another open story.
+
+### Accepted by the orchestrator
+
+- Verified: d027431521936e72246fe3edb7f8507f3d14d92f
+- At: 2026-11-17T11:04:26Z
+
+Verdict: pass at d027431521936e72246fe3edb7f8507f3d14d92f
+- 1: flai/cmd/move.go, flai/cmd/move_sendback_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go
+- 2: design/issues/I-0397-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md, design/issues/summary.md

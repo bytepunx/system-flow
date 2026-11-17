@@ -6,7 +6,7 @@ title: flai guard reads a subcommand's value flag before flai's command as the c
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:26Z
-updated: 2026-11-17T10:19:25Z
+updated: 2026-11-17T10:38:30Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -15,16 +15,28 @@ transitions:
     at: 2026-11-17T10:19:25Z
     by: agent-S-0832
 tags: [flai, guard]
-touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2115
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 178
+      output: 1060
+      cache_read: 8495257
+      cache_write: 558266
+      cost: 3.4562
   strategic:
     - kind: planner
       seconds: 5

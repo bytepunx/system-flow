@@ -3,11 +3,11 @@ id: T-3541
 type: task
 nature: remediation
 title: flai move along the send-back transition by hand opens the send back's thread with the move's reason
-status: in-progress
+status: done
 parent: S-0823
 owner: alex
 created: 2026-11-17T08:30:49Z
-updated: 2026-11-17T10:14:03Z
+updated: 2026-11-17T10:23:23Z
 transitions:
   - to: ready
     at: 2026-11-17T10:14:00Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:14:03Z
     by: agent-S-0823
+  - to: done
+    at: 2026-11-17T10:23:23Z
+    by: agent-S-0823
 stream: S-0823
 tags: [flai]
 touches: [flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/move.go, flai/cmd/move_sendback_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 560
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 15832
+      cache_read: 2251139
+      cache_write: 148211
+      cost: 1.7811
 ---
 # T-3541 flai move along the send-back transition by hand opens the send back's thread with the move's reason
 

@@ -3,16 +3,37 @@ id: T-3532
 type: task
 nature: remediation
 title: flai guard takes the flags that take no value from flai's command tree, and a test holds its reading of the command to cobra's Find
-status: backlog
+status: done
 parent: S-0832
 owner: alex
 created: 2026-11-17T08:29:35Z
-updated: 2026-11-17T08:29:44Z
-transitions: []
+updated: 2026-11-17T10:51:52Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:38:39Z
+    by: agent-S-0832
+  - to: in-progress
+    at: 2026-11-17T10:38:39Z
+    by: agent-S-0832
+  - to: done
+    at: 2026-11-17T10:51:52Z
+    by: agent-S-0832
 stream: S-0832
 tags: [flai, guard]
 touches: [flai/cmd/guard.go, flai/cmd/guard_test.go]
 after: [T-3530]
+usage:
+  source: log
+  seconds: 793
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 275
+      cache_read: 1590745
+      cache_write: 69887
+      cost: 0.634
 ---
 # T-3532 flai guard takes the flags that take no value from flai's command tree, and a test holds its reading of the command to cobra's Find
 

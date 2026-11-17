@@ -3,15 +3,18 @@ id: S-0756
 type: story
 nature: feature
 title: In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-17T10:20:28Z
+updated: 2026-11-17T11:03:00Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:55Z
     by: alex
+  - to: in-progress
+    at: 2026-11-17T11:03:00Z
+    by: agent-S-0756
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
 touches: [flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md, flaiover/src/lib/server/workflow.test.ts, design/system/workflow.md, docs/operators/index.md]

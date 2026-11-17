@@ -3,11 +3,11 @@ id: T-3530
 type: task
 nature: remediation
 title: flai guard reads the command and subcommand after flai as cobra finds them, so a value flag before the command takes its value with it
-status: in-progress
+status: done
 parent: S-0832
 owner: alex
 created: 2026-11-17T08:29:26Z
-updated: 2026-11-17T10:20:00Z
+updated: 2026-11-17T10:38:30Z
 transitions:
   - to: ready
     at: 2026-11-17T10:20:00Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:20:00Z
     by: agent-S-0832
+  - to: done
+    at: 2026-11-17T10:38:30Z
+    by: agent-S-0832
 stream: S-0832
 tags: [flai, guard]
-touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+usage:
+  source: log
+  seconds: 1110
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 500
+      cache_read: 4435728
+      cache_write: 279360
+      cost: 1.8
 ---
 # T-3530 flai guard reads the command and subcommand after flai as cobra finds them, so a value flag before the command takes its value with it
 

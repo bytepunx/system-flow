@@ -3,16 +3,37 @@ id: T-3545
 type: task
 nature: remediation
 title: The workflow design and the user guides name the send back by hand, and I-0397 is closed
-status: backlog
+status: done
 parent: S-0823
 owner: alex
 created: 2026-11-17T08:31:08Z
-updated: 2026-11-17T08:31:08Z
-transitions: []
+updated: 2026-11-17T10:52:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:48:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T10:48:52Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T10:52:30Z
+    by: agent-S-0823
 stream: S-0823
 tags: [flai]
 touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0397-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md, design/issues/summary.md]
 after: [T-3541, T-3543]
+usage:
+  source: log
+  seconds: 218
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 9561
+      cache_read: 2016221
+      cache_write: 68537
+      cost: 1.0659
 ---
 # T-3545 The workflow design and the user guides name the send back by hand, and I-0397 is closed
 

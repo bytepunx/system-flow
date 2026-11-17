@@ -3,12 +3,18 @@ id: T-3261
 type: task
 nature: feature
 title: An integration test renders the template, adds a state with a rule and a timer to its workflow file, and drives the check, the board, the moves, serve, the acceptance, and stats through it
-status: backlog
+status: in-progress
 parent: S-0756
 owner: alex
 created: 2026-11-12T16:10:19Z
-updated: 2026-11-12T16:10:19Z
-transitions: []
+updated: 2026-11-17T11:04:14Z
+transitions:
+  - to: ready
+    at: 2026-11-17T11:04:13Z
+    by: agent-S-0756
+  - to: in-progress
+    at: 2026-11-17T11:04:14Z
+    by: agent-S-0756
 stream: S-0756
 tags: [cli]
 touches: [flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md]
