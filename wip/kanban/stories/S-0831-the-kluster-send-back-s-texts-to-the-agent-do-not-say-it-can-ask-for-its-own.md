@@ -6,7 +6,7 @@ title: The kluster send-back's texts to the agent do not say it can ask for its 
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T09:15:15Z
+updated: 2026-11-17T09:43:10Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:20Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0831
 tags: [flai, serve, kluster]
 topics: [kluster]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/summary.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/summary.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

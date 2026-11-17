@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2244.6377
-accrued_seconds: 1575616
-tasks_completed: 3895
-last_run: 2026-11-17T09:16:35Z
+accrued_cost: 2245.2521
+accrued_seconds: 1575690
+tasks_completed: 3899
+last_run: 2026-11-17T09:18:07Z
 ---
 
 # Orchestrator activity
@@ -27300,6 +27300,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0752
 - Seconds: 59
 - Cost: 0.2116 USD, estimated
+
+### 2026-11-17T09:16:58Z
+
+- Summary: Published flai 1.105.0 (tag flai/v1.105.0, pushed) under threshold policy: count 1 at threshold 1, value 58.79 USD/week; bundled S-0752
+- Items: S-0752
+- Seconds: 23
+- Cost: 0.0924 USD, estimated
+
+### 2026-11-17T09:17:20Z
+
+- Summary: I accepted S-0752 and published it as flai 1.105.0.
+- Items: none
+- Seconds: 22
+- Cost: 0.2597 USD, estimated
+
+### 2026-11-17T09:17:45Z
+
+- Summary: Release-due for S-0752: release_evaluate under threshold is not met (0 accepted stories pending, value 0 USD of 1000, count 0 of 1), so nothing to publish; no formula run.
+- Items: S-0752
+- Seconds: 7
+- Cost: 0.0520 USD, estimated
+
+### 2026-11-17T09:18:07Z
+
+- Summary: I didn't publish anything for S-0752: no accepted story is waiting for a release, so the release policy isn't met.
+- Items: none
+- Seconds: 22
+- Cost: 0.2103 USD, estimated
 
 ## Refusals
 

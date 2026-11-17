@@ -3,16 +3,37 @@ id: T-3539
 type: task
 nature: remediation
 title: Close I-0359 with the reason that the publish commit waits out a held index lock
-status: backlog
+status: done
 parent: S-0833
 owner: alex
 created: 2026-11-17T08:30:10Z
-updated: 2026-11-17T08:30:10Z
-transitions: []
+updated: 2026-11-17T09:33:17Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:32:49Z
+    by: agent-S-0833
+  - to: in-progress
+    at: 2026-11-17T09:32:49Z
+    by: agent-S-0833
+  - to: done
+    at: 2026-11-17T09:33:17Z
+    by: agent-S-0833
 stream: S-0833
 tags: [issues, release]
 touches: [design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md, design/issues/summary.md]
 after: [T-3535]
+usage:
+  source: log
+  seconds: 28
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 2476
+      cache_read: 1001463
+      cache_write: 32967
+      cost: 0.4962
 ---
 # T-3539 Close I-0359 with the reason that the publish commit waits out a held index lock
 

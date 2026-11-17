@@ -9,7 +9,7 @@ date: 2026-10-07
 status: compacted
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0833]
 ---
 
 # D-0208 The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai

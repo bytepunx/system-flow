@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 354.1175
-accrued_seconds: 39394
-tasks_completed: 245
-last_run: 2026-11-17T09:06:15Z
+accrued_cost: 355.4854
+accrued_seconds: 39468
+tasks_completed: 246
+last_run: 2026-11-17T09:17:50Z
 ---
 
 # Curator activity
@@ -1971,3 +1971,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0462, D-0549, D-0554, D-0661, D-0662
 - Seconds: 96
 - Cost: 0.7927 USD, estimated
+
+### 2026-11-17T09:17:50Z
+
+- Summary: I wrote no new entries, merged two into existing ones (D-0630, D-0462), absorbed none, and `flai digest compact` compacted none. The six candidates all came from S-0752's narrative. In D-0630 I added S-0752 as a source, plus its finding that a caller must set the workflow option to `repo.Flow()` or `flai stats` runs the baseline. In D-0462 I recorded TH-1288 under asked_again. No design change since 09:06:15Z states an active entry's fact.
+- Trigger: accepted S-0752
+- Items: D-0208, D-0462, D-0603, D-0630
+- Seconds: 74
+- Cost: 1.3679 USD, estimated

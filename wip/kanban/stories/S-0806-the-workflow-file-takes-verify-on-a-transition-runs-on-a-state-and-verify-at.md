@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T09:07:23Z
+updated: 2026-11-17T09:44:40Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:16:01Z
     by: agent-S-0806
+blocked:
+  - from: 2026-11-17T09:44:40Z
+    reason: awaiting the operator on TH-1289
 tags: [flai, template]
 topics: [verify, workflow]
-touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go]
+touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
 after: [S-0805]
 agent:
   harness: claude-code
@@ -26,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3430
-  estimated: true
-  priced_by: estimate
+  seconds: 5273
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 1
-      work: 36
+      ceremony: 2
+      work: 82
   models:
     - model: claude-opus-5-5
-      input: 350
-      output: 1808
-      cache_read: 16495227
-      cache_write: 1153035
-      cost: 6.732
+      input: 460
+      output: 140726
+      cache_read: 35298130
+      cache_write: 1200285
+      cost: 17.045
   strategic:
     - kind: planner
       seconds: 55
@@ -87,7 +89,7 @@ finalized:
 - [x] The baseline and the template's file give `verify: all` at `warn` on the move to review, `verify: all` on the acceptance, `batch: all`, `ci: all`, no `publish`, and `runs: {kluster: [deploy, checks]}` on `review`, and the two files stay equal.
 - [x] `flai check` reports a suite the file names that no tier has as an error, and a suite of a tier that is not `manual` which no transition, state, or point names as a warning.
 - [x] A flai from before this story refuses a file that uses the keys with words that name the flai that reads them, and `flai upgrade` does not write the keys into a project's own file.
-- [ ] The workflow design and the reference describe the keys.
+- [x] The workflow design and the reference describe the keys.
 
 ## Tasks
 - T-3469 The workflow package parses verify on a transition, runs on a state, and verify_at, and lists the suites a file names

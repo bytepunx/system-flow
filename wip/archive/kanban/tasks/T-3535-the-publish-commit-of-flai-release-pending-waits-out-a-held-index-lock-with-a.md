@@ -3,11 +3,11 @@ id: T-3535
 type: task
 nature: remediation
 title: The publish commit of flai release --pending waits out a held index lock, with a test that holds it
-status: in-progress
+status: done
 parent: S-0833
 owner: alex
 created: 2026-11-17T08:29:55Z
-updated: 2026-11-17T09:16:08Z
+updated: 2026-11-17T09:29:38Z
 transitions:
   - to: ready
     at: 2026-11-17T09:16:08Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-17T09:16:08Z
     by: agent-S-0833
+  - to: done
+    at: 2026-11-17T09:29:38Z
+    by: agent-S-0833
 stream: S-0833
 tags: [flai, release, git]
 touches: [flai/cmd/release.go, flai/cmd/release_lock_test.go]
+usage:
+  source: log
+  seconds: 810
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 5874
+      cache_read: 2376108
+      cache_write: 78218
+      cost: 1.1773
 ---
 # T-3535 The publish commit of flai release --pending waits out a held index lock, with a test that holds it
 

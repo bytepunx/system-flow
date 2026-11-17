@@ -24,16 +24,16 @@ touches: [design/system/workflow.md, docs/operators/runbooks/change-the-board.md
 after: [T-3471, T-3473, T-3474]
 usage:
   source: log
-  seconds: 337
+  seconds: 342
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 457
-      cache_read: 3870900
-      cache_write: 94372
-      cost: 1.5126
+      input: 51
+      output: 15472
+      cache_read: 3880714
+      cache_write: 131961
+      cost: 1.8739
 ---
 # T-3477 The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
 

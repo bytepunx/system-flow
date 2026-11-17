@@ -3,15 +3,18 @@ id: S-0754
 type: story
 nature: feature
 title: The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-17T09:16:30Z
+updated: 2026-11-17T09:45:10Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:53Z
     by: alex
+  - to: in-progress
+    at: 2026-11-17T09:45:10Z
+    by: agent-S-0754
 tags: [dashboard]
 topics: [dashboard, analysis]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

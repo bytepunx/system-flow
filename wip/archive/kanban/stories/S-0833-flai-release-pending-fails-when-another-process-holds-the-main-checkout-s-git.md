@@ -3,10 +3,10 @@ id: S-0833
 type: story
 nature: remediation
 title: flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:27Z
-updated: 2026-11-17T09:15:12Z
+updated: 2026-11-17T09:46:17Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:27Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T09:15:12Z
     by: agent-S-0833
+  - to: review
+    at: 2026-11-17T09:45:01Z
+    by: agent-S-0833
+  - to: done
+    at: 2026-11-17T09:46:17Z
+    by: orchestrator
 tags: [flai, release, git]
 topics: [release]
 touches: [flai/cmd/release.go, flai/cmd/release_lock_test.go, docs/users/flai.md, design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md, design/issues/summary.md]
@@ -23,9 +29,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1804
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 2
+      work: 36
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 23781
+      cache_read: 9618927
+      cache_write: 316643
+      cost: 4.7658
   strategic:
     - kind: planner
       seconds: 30
@@ -78,8 +95,8 @@ finalized:
 This story remediates [I-0359](../../../design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md), "flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0359 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0359 is closed with `flai issue close I-0359 --reason` saying what fixed it
+- [x] The cause I-0359 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0359 is closed with `flai issue close I-0359 --reason` saying what fixed it
 
 ## Tasks
 - T-3535 The publish commit of flai release --pending waits out a held index lock, with a test that holds it
@@ -110,3 +127,12 @@ Forecast 18m stands as `flai forecast` gives it: the change is two calls and a t
 Cost of delay value 40 USD a week stands as `flai cod` works it from the operator's input `time_lost_per_cycle` 16m at 150 USD an hour.
 
 No `after`: the story reads nothing another open story writes. S-0811 (ready) also changes the release's publish. A trial merge judges any overlap.
+
+### Accepted by the orchestrator
+
+- Verified: bb41b9fbeabf54194f23c4a8b9fd059d7ad8925b
+- At: 2026-11-17T09:46:17Z
+
+Verdict: S-0833 meets both acceptance criteria and breaks no convention; close-out passed at bb41b9fbeabf54194f23c4a8b9fd059d7ad8925b.
+- 1: flai/cmd/release.go, flai/cmd/release_lock_test.go, docs/users/flai.md
+- 2: design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md, design/issues/summary.md

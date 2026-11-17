@@ -2,9 +2,9 @@
 id: D-0630
 title: A flai package reads the board's states through repo.Flow() and the workflow package's lookups, Kind, OfKind, Find, WithEffect, and Permits, not through a workitem helper
 kind: decision
-sources: [S-0746, S-0749, S-0750]
+sources: [S-0746, S-0749, S-0750, S-0752]
 topics: [flai, go, code]
-paths: [flai/internal/workflow, flai/internal/workitem/repo.go, flai/internal/mcpserver, flai/internal/storystart, flai/internal/taskdone, flai/internal/inbox, flai/internal/itemedit, flai/internal/storygit, flai/internal/guard, flai/internal/messages, flai/internal/planning, flai/internal/metrics]
+paths: [flai/internal/workflow, flai/internal/workitem/repo.go, flai/internal/mcpserver, flai/internal/storystart, flai/internal/taskdone, flai/internal/inbox, flai/internal/itemedit, flai/internal/storygit, flai/internal/guard, flai/internal/messages, flai/internal/planning, flai/internal/metrics, flai/internal/statsread]
 date: 2026-11-15
 status: active
 absorbed_by: ""
@@ -32,4 +32,12 @@ S-0750 followed it for the metrics in `flai/internal/metrics` (`wip/archive/agen
 
 > Following D-0630, the metrics read states through the workflow package's lookups (Kind, OfKind, WithEffect), not through a new workitem helper. committed and started are the first moves into the states the commit and pull transitions move to (ADR-0305 §5).
 
-Sources: S-0746's, S-0749's, and S-0750's narratives, `wip/archive/agents/S-0746.md`, `wip/archive/agents/S-0749.md`, and `wip/archive/agents/S-0750.md`, § Decisions.
+S-0752 followed it for the workflow's own timers in `flai stats` (`wip/archive/agents/S-0752.md`, § Decisions), and found a caller that had passed the baseline by leaving the workflow unset:
+
+> Following D-0630: the metrics read timers through the workflow package (Timer, Measure, Kind), not a new workitem helper.
+>
+> statsread.Read never set Options.Workflow, so flai stats and stats.get ran the baseline even when a project has a workflow file. Setting it to repo.Flow() is what lets a timer the operator adds reach both.
+
+So a caller that builds options for a package taking a workflow sets that field to `repo.Flow()`. Left empty, the package runs the baseline, and a project's own workflow file is silently ignored.
+
+Sources: S-0746's, S-0749's, S-0750's, and S-0752's narratives, `wip/archive/agents/S-0746.md`, `wip/archive/agents/S-0749.md`, `wip/archive/agents/S-0750.md`, and `wip/archive/agents/S-0752.md`, § Decisions.

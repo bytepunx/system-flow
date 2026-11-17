@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 934
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 353
-      cache_read: 2259131
-      cache_write: 171457
-      cost: 0.9272
+      input: 31
+      output: 9484
+      cache_read: 2378764
+      cache_write: 80888
+      cost: 1.1487
 ---
 # T-3473 The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
 

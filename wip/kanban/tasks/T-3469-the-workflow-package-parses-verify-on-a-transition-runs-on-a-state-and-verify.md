@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 847
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 162
-      cache_read: 1986224
-      cache_write: 204632
-      cost: 0.8357
+      input: 28
+      output: 8548
+      cache_read: 2144132
+      cache_write: 72910
+      cost: 1.0354
 ---
 # T-3469 The workflow package parses verify on a transition, runs on a state, and verify_at, and lists the suites a file names
 
