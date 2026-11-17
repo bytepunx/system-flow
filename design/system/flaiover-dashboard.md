@@ -408,6 +408,23 @@ flaiover/
 
 Every markdown the dashboard shows, documents, item bodies, thread entries, messages, and editor previews, is rendered by `render()` in `$lib/markdown.ts`, which shows raw HTML as text (S-0627, [markdown.md](../tech/markdown.md)).
 
+### A state's kind (S-0758)
+
+No view compares an item's status with a state's name. Each reads what a state is from the board's flow, the `lanes` and `transitions` `board.get` answers through `GET /api/board` (S-0753, [ADR-0301](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)), through `src/lib/workflow.ts`, built on `src/lib/lanes.ts`:
+
+| Function | Answers |
+|----------|---------|
+| `kindOf`, `isQueue`, `isActive`, `isWaiting`, `isAccepted`, `isCancelled` | The kind of the state's lane: `queue`, `active`, `waiting`, `accepted`, or `cancelled` |
+| `isClosed`, `isOpen` | Accepted or cancelled, or not; a state with no lane counts as open |
+| `isUnderway` | Being worked or waiting on review: kind `active` or `waiting` |
+| `isPullable` | A transition with the `pull` effect leaves it, `ready` on the baseline |
+| `acceptedState`, `cancelledState`, `stateTitle` | The first lane of kind `accepted` or `cancelled`, and a lane's title |
+| `acceptMove`, `sendBackMove` | The transition with the `accept` or `send-back` effect from a state |
+| `itemMoves` | The moves the item page offers: the operator's transitions to a later lane, then those that send back, then those that cancel, each with whether flai needs a reason |
+| `stateSlot` | A state's colour in the categorical palette by its kind and its place among the lanes of that kind, `KIND_SLOTS`, which gives the baseline the colours it always had |
+
+The item page, the review page, the Deployments page and `DeploymentRow`, the activity and docs pages, `BoardCard`, `CardMenu` and `$lib/cardmenu.ts`, `CancelConfirm`, `StoryAgent`, `ActivityView`, `DocEditor`, the explorer's `SourcePicker`, `touching` in `$lib/touches.ts`, and the agent actions in `$lib/activity.ts` take the flow as a required argument or prop, or read it from `/api/board` themselves, so a state an operator adds is shown for its kind: a story in a lane of kind `waiting` links to its review page, one in a second `active` lane is offered its agent's retry and start here, and the item page offers only the moves its transitions allow. With the baseline every view looks and behaves as it did. The task plan's states, the inbox's `review` entries, a wait's `review` kind, and a pull request's reviews are words flai gives of their own, not states, and stay. The charts still colour the baseline's states by `STATE_SLOT` in `viz/charts.ts` until S-0754 draws the workflow's own.
+
 ### Times (S-0329)
 
 flai records and returns every time in UTC, `YYYY-MM-DDTHH:MM:SSZ`, and the dashboard shows each in the browser's zone through `src/lib/localtime.ts`: `localTime` to the minute with the zone's short name (`2026-10-07 15:35 EDT`), `localDate` as the date there, and `localTimes` for each time inside a text flai wrote, which `DismissibleNotice.svelte` applies to every notice. No component formats a time of its own. What goes back to the API, and keys and comparisons, stay UTC; a document's text and front matter show as written. The charts keep flai's buckets, per UTC day and per UTC week from Monday ([metrics.md](metrics.md), [ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and set no `useUTC`: `place` in `charts.ts` draws a day or a week at the local midnight of its own date, so its mark sits on that date's tick in any zone, an hour at its moment, and `bucketLabel` names an hour in local time and a day or a week by its date. The tests run in `America/New_York` (`vite.config.ts`), so a time shown in UTC fails them.
