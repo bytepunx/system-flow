@@ -6,7 +6,7 @@ title: flai's markdown lint reports MD038 on a code span holding escaped backtic
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T08:34:32Z
+updated: 2026-11-17T09:04:31Z
 transitions: []
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]
@@ -56,10 +56,10 @@ cost_of_delay:
   at: 2026-11-17T08:29:08Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T18:27:00Z
-  basis: "Its own forecast of 45m; 24th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0832, S-0834 and S-0835."
+  delivery: 2026-11-17T18:28:00Z
+  basis: "Its own forecast of 45m; 23rd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0832, S-0834 and S-0835."
   by: flai
-  at: 2026-11-17T08:34:32Z
+  at: 2026-11-17T09:04:31Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:55Z

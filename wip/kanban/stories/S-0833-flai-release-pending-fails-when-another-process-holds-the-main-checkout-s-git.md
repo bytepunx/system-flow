@@ -6,7 +6,7 @@ title: flai release --pending fails when another process holds the main checkout
 status: ready
 owner: alex
 created: 2026-11-17T08:17:27Z
-updated: 2026-11-17T08:34:32Z
+updated: 2026-11-17T09:04:31Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:27Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 69861
           cost: 1.5422
     - kind: orchestrator
-      seconds: 6
+      seconds: 19
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 11
-          cache_read: 45663
-          cache_write: 3959
-          cost: 0.0154
+          input: 4
+          output: 48
+          cache_read: 354304
+          cache_write: 7664
+          cost: 0.1123
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T08:30:26Z
 forecast:
   duration: 18m
-  delivery: 2026-11-17T09:26:00Z
-  basis: "Its own forecast of 18m; 2nd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827 and S-0831."
+  delivery: 2026-11-17T09:30:00Z
+  basis: "Its own forecast of 18m; 1st in the pull order with an in-progress limit of 3, behind S-0752, S-0806 and S-0831."
   by: flai
-  at: 2026-11-17T08:34:32Z
+  at: 2026-11-17T09:04:31Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:51Z
