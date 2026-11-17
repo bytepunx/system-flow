@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2245.4313
-accrued_seconds: 1575735
-tasks_completed: 3900
-last_run: 2026-11-17T09:46:22Z
+accrued_cost: 2246.2443
+accrued_seconds: 1575845
+tasks_completed: 3905
+last_run: 2026-11-17T10:04:17Z
 ---
 
 # Orchestrator activity
@@ -27335,6 +27335,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0833
 - Seconds: 45
 - Cost: 0.1792 USD, estimated
+
+### 2026-11-17T09:46:44Z
+
+- Summary: Published flai 1.105.0 → 1.105.1 (tag flai/v1.105.1, pushed) bundling S-0833, under the threshold policy: count 1 at or over threshold 1 (value 40 USD/week under 1000).
+- Items: S-0833
+- Seconds: 22
+- Cost: 0.0947 USD, estimated
+
+### 2026-11-17T09:47:02Z
+
+- Summary: I accepted S-0833 and published it as flai 1.105.1. My reasons are done, so this run ends.
+- Items: none
+- Seconds: 18
+- Cost: 0.1852 USD, estimated
+
+### 2026-11-17T09:47:29Z
+
+- Summary: release-due S-0833: did not publish; release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, nothing pending: S-0833 is already published as flai 1.105.1 (commit 27df492fe)
+- Items: S-0833
+- Seconds: 12
+- Cost: 0.0983 USD, estimated
+
+### 2026-11-17T09:47:47Z
+
+- Summary: I didn't publish anything for S-0833, because it is already released as flai 1.105.1 (commit `27df492fe`, tag `flai/v1.105.1`).
+- Items: none
+- Seconds: 18
+- Cost: 0.1645 USD, estimated
+
+### 2026-11-17T10:04:17Z
+
+- Summary: ready-empty: promoted S-0830 (25m, rank 1), S-0823 (36m, rank 2), S-0832 (40m, rank 3) to ready under promote_to_ready by throughput, filling ready to 10/10; applied flai order --by throughput
+- Items: S-0830, S-0823, S-0832
+- Seconds: 40
+- Cost: 0.2703 USD, estimated
 
 ## Refusals
 

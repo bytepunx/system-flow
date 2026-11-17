@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 445
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 13
-      cache_read: 575419
-      cache_write: 1599
-      cost: 0.2201
+      output: 477
+      cache_read: 570670
+      cache_write: 6346
+      cost: 0.1745
 ---
 # T-3534 The kluster failure thread of a story sent back tells its agent it may deploy the story before review
 

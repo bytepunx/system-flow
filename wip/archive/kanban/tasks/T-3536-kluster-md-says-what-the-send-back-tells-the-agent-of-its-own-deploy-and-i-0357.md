@@ -24,16 +24,16 @@ touches: [design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s
 after: [T-3533, T-3534]
 usage:
   source: log
-  seconds: 35
+  seconds: 38
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 59
-      cache_read: 1548655
-      cache_write: 6856
-      cost: 0.5933
+      input: 10
+      output: 1287
+      cache_read: 1538405
+      cache_write: 17108
+      cost: 0.4703
 ---
 # T-3536 kluster.md says what the send-back tells the agent of its own deploy, and I-0357 is closed
 

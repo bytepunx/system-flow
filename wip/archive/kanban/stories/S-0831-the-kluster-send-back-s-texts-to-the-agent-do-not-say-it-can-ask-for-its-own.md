@@ -3,10 +3,10 @@ id: S-0831
 type: story
 nature: improvement
 title: The kluster send-back's texts to the agent do not say it can ask for its own deploy before review
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T09:43:10Z
+updated: 2026-11-17T10:04:45Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:20Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T09:02:53Z
     by: agent-S-0831
+  - to: review
+    at: 2026-11-17T10:02:48Z
+    by: agent-S-0831
+  - to: done
+    at: 2026-11-17T10:04:45Z
+    by: orchestrator
 tags: [flai, serve, kluster]
 topics: [kluster]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/summary.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md]
@@ -24,19 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 766
-  estimated: true
-  priced_by: estimate
+  seconds: 3642
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      work: 30
+      ceremony: 2
+      work: 98
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 369
-      cache_read: 7035156
-      cache_write: 298426
-      cost: 2.7972
+      input: 210
+      output: 25890
+      cache_read: 30946501
+      cache_write: 344135
+      cost: 9.461
   strategic:
     - kind: planner
       seconds: 17
@@ -89,8 +95,8 @@ finalized:
 This story remediates [I-0357](../../../design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md), "The kluster send-back's texts to the agent do not say it can ask for its own deploy before review". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0357 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0357 is closed with `flai issue close I-0357 --reason` saying what fixed it
+- [x] The cause I-0357 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0357 is closed with `flai issue close I-0357 --reason` saying what fixed it
 
 ## Tasks
 - T-3533 The kluster send-back's start prompt tells the agent it may deploy its own story before review
@@ -128,3 +134,12 @@ Figures:
 
 - Forecast 17m, delivered 2026-11-17T15:41:00Z: `flai forecast`'s figure, kept. Its median, 109 s per unit of size over 39 done medium-band improvement stories, times size 9, fits two texts, their tests, and one design paragraph.
 - Cost of delay 12.50 USD a week: `flai cod` from flai's input, 5m lost per 168h cycle at 150 USD an hour, kept as worked out.
+
+### Accepted by the orchestrator
+
+- Verified: b71f2f4ff8923d10d436c2cc4287b3d643bec4cd
+- At: 2026-11-17T10:04:45Z
+
+Verdict: met. Both acceptance criteria are met at b71f2f4ff8923d10d436c2cc4287b3d643bec4cd; every changed file is in the story's touches; the close-out passed every step at that commit.
+- 1: flai/internal/harness/harness.go, flai/internal/serve/kluster.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster_test.go, design/system/kluster.md
+- 2: design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/summary.md

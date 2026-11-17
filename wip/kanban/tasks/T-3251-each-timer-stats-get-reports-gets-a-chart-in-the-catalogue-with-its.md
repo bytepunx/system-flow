@@ -3,15 +3,21 @@ id: T-3251
 type: task
 nature: feature
 title: Each timer stats.get reports gets a chart in the catalogue with its distribution over the window
-status: backlog
+status: in-progress
 parent: S-0754
 owner: alex
 created: 2026-11-12T16:09:40Z
-updated: 2026-11-12T16:09:40Z
-transitions: []
+updated: 2026-11-17T09:59:52Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:59:52Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T09:59:52Z
+    by: system-flow
 stream: S-0754
 tags: [dashboard]
-touches: [flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/src/lib/viz/charts.ts]
+touches: [flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [T-3245]
 ---
 # T-3251 Each timer stats.get reports gets a chart in the catalogue with its distribution over the window
