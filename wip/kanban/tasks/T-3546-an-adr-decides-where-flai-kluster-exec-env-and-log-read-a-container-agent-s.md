@@ -3,15 +3,33 @@ id: T-3546
 type: task
 nature: research
 title: An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it
-status: backlog
+status: in-progress
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:32:08Z
-updated: 2026-11-17T08:32:08Z
-transitions: []
+updated: 2026-11-17T12:06:03Z
+transitions:
+  - to: ready
+    at: 2026-11-17T12:06:03Z
+    by: agent-S-0834
+  - to: in-progress
+    at: 2026-11-17T12:06:03Z
+    by: agent-S-0834
 stream: S-0834
 tags: [adr, kluster, container]
 touches: [design/adrs/README.md, design/system/kluster.md]
+usage:
+  source: log
+  seconds: 118
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 9294
+      cache_read: 2838615
+      cache_write: 123790
+      cost: 1.744
 ---
 # T-3546 An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it
 

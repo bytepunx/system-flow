@@ -3,11 +3,11 @@ id: T-3525
 type: task
 nature: improvement
 title: RecordedUndone runs one git diff for all of a record's paths and one per old base, not one or two per path
-status: in-progress
+status: done
 parent: S-0828
 owner: alex
 created: 2026-11-17T08:28:54Z
-updated: 2026-11-17T11:50:13Z
+updated: 2026-11-17T12:05:33Z
 transitions:
   - to: ready
     at: 2026-11-17T11:50:12Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-17T11:50:13Z
     by: system-flow
+  - to: done
+    at: 2026-11-17T12:05:33Z
+    by: agent-S-0828
 stream: S-0828
 tags: [flai, git, performance]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go]
+usage:
+  source: log
+  seconds: 920
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 96
+      cache_read: 2340255
+      cache_write: 23524
+      cost: 0.9031
 ---
 # T-3525 RecordedUndone runs one git diff for all of a record's paths and one per old base, not one or two per path
 

@@ -61,15 +61,15 @@ usage:
           cache_write: 19703
           cost: 0.3238
     - kind: orchestrator
-      seconds: 93
+      seconds: 126
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 231
-          cache_read: 1371340
-          cache_write: 114075
-          cost: 0.4631
+          input: 35
+          output: 297
+          cache_read: 1762515
+          cache_write: 180326
+          cost: 0.606
         - model: claude-sonnet-5-5
           input: 6
           output: 56

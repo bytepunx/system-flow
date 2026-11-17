@@ -6,7 +6,7 @@ title: flai kluster exec and log read .flai-cache/kluster, which a story's agent
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T12:03:23Z
+updated: 2026-11-17T12:08:37Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
@@ -14,18 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-17T12:03:23Z
     by: agent-S-0834
+blocked:
+  - from: 2026-11-17T12:08:37Z
+    reason: awaiting the operator on TH-1290
 tags: [flai, kluster, container]
 topics: [kluster, harness]
-touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 284
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 2
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 19531
+      cache_read: 5965176
+      cache_write: 260137
+      cost: 3.665
   strategic:
     - kind: planner
       seconds: 115
@@ -38,15 +52,15 @@ usage:
           cache_write: 76790
           cost: 2.9372
     - kind: orchestrator
-      seconds: 114
+      seconds: 145
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 333
-          cache_read: 1772806
-          cache_write: 176678
-          cost: 0.6058
+          input: 47
+          output: 411
+          cache_read: 2181230
+          cache_write: 256287
+          cost: 0.7584
         - model: claude-sonnet-5-5
           input: 3
           output: 21

@@ -3,10 +3,10 @@ id: S-0828
 type: story
 nature: improvement
 title: board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:19Z
-updated: 2026-11-17T11:48:31Z
+updated: 2026-11-17T12:25:10Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:10Z
@@ -14,18 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-11-17T11:48:31Z
     by: agent-S-0828
+  - to: review
+    at: 2026-11-17T12:23:50Z
+    by: agent-S-0828
+  - to: done
+    at: 2026-11-17T12:25:10Z
+    by: orchestrator
 tags: [flai, git, performance]
 topics: [performance]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1518
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 584
+      cache_read: 7982640
+      cache_write: 268671
+      cost: 3.1525
   strategic:
     - kind: planner
       seconds: 41
@@ -84,8 +101,8 @@ finalized:
 This story remediates [I-0349](../../../design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md), "board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0349 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0349 is closed with `flai issue close I-0349 --reason` saying what fixed it
+- [x] The cause I-0349 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0349 is closed with `flai issue close I-0349 --reason` saying what fixed it
 
 ## Tasks
 - T-3525 RecordedUndone runs one git diff for all of a record's paths and one per old base, not one or two per path
@@ -117,3 +134,12 @@ Figures:
 - Cost of delay 5.00 USD a week, as `flai cod S-0828` computes it from the operator's input, 2m lost per 168h cycle at 150 USD an hour. It stands.
 
 No `after`: the story reads nothing another open story writes.
+
+### Accepted by the orchestrator
+
+- Verified: 18fe4dda5b88a7fb7e9b0e4cd8cd86435db0c281
+- At: 2026-11-17T12:25:10Z
+
+Verdict: accept. Both criteria are met at 18fe4dd, and the close-out passed.
+- 1: flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md
+- 2: design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2252.1671
-accrued_seconds: 1576772
-tasks_completed: 3941
-last_run: 2026-11-17T12:04:57Z
+accrued_cost: 2253.2242
+accrued_seconds: 1576906
+tasks_completed: 3948
+last_run: 2026-11-17T12:09:10Z
 ---
 
 # Orchestrator activity
@@ -27622,6 +27622,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0836
 - Seconds: 61
 - Cost: 0.2876 USD, estimated
+
+### 2026-11-17T12:05:22Z
+
+- Summary: Published flai 1.106.0 → 1.106.1 (tag flai/v1.106.1, pushed) under threshold policy: count 1 at threshold 1, value 12.5 USD/week; bundled S-0836.
+- Items: S-0836
+- Seconds: 25
+- Cost: 0.0739 USD, estimated
+
+### 2026-11-17T12:05:39Z
+
+- Summary: I accepted S-0836 and published it as flai 1.106.1. The tag `flai/v1.106.1` is pushed.
+- Items: none
+- Seconds: 17
+- Cost: 0.2161 USD, estimated
+
+### 2026-11-17T12:06:13Z
+
+- Summary: Release-due on S-0836: no publish. release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD, nothing pending), because S-0836 is already released in flai 1.106.1 (a28e30e45).
+- Items: S-0836
+- Seconds: 8
+- Cost: 0.0690 USD, estimated
+
+### 2026-11-17T12:06:33Z
+
+- Summary: I published nothing for S-0836, because it is already out: commit `a28e30e45` released it as flai 1.106.1.
+- Items: none
+- Seconds: 20
+- Cost: 0.2777 USD, estimated
+
+### 2026-11-17T12:08:37Z
+
+- Summary: Recommended an answer on TH-1290, citing design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Decision
+- Items: S-0834
+- Seconds: 31
+- Cost: 0.1526 USD, estimated
+
+### 2026-11-17T12:08:51Z
+
+- Summary: Recommended on TH-1290 (answer_threads autonomous): accept ADR-0319 for S-0834 as written. It is a new ADR, a decision not yet recorded, so I recommended rather than answered. Source: ADR-0292 §2.
+- Items: S-0834, TH-1290
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-17T12:09:10Z
+
+- Summary: I posted a recommendation on TH-1290: accept ADR-0319 as written. That was my only reason for this run, and it is done.
+- Items: none
+- Seconds: 19
+- Cost: 0.2678 USD, estimated
 
 ## Refusals
 

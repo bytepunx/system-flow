@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 363.4355
-accrued_seconds: 40086
-tasks_completed: 253
-last_run: 2026-11-17T11:49:55Z
+accrued_cost: 363.8990
+accrued_seconds: 40128
+tasks_completed: 254
+last_run: 2026-11-17T12:05:35Z
 ---
 
 # Curator activity
@@ -2035,3 +2035,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0521, D-0592
 - Seconds: 64
 - Cost: 0.8453 USD, estimated
+
+### 2026-11-17T12:05:35Z
+
+- Summary: Nothing new to take in. S-0836's four candidates are stated by ADR-0318 or are plan chatter, so I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none.
+- Trigger: accepted S-0836
+- Items: none
+- Seconds: 42
+- Cost: 0.4635 USD, estimated

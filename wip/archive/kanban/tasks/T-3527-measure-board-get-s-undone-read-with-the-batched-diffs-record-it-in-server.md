@@ -3,16 +3,37 @@ id: T-3527
 type: task
 nature: improvement
 title: Measure board.get's undone.read with the batched diffs, record it in server-performance.md, and close I-0349
-status: backlog
+status: done
 parent: S-0828
 owner: alex
 created: 2026-11-17T08:29:03Z
-updated: 2026-11-17T08:29:03Z
-transitions: []
+updated: 2026-11-17T12:13:41Z
+transitions:
+  - to: ready
+    at: 2026-11-17T12:05:53Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T12:05:53Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T12:13:41Z
+    by: agent-S-0828
 stream: S-0828
 tags: [flai, docs, performance]
 touches: [flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md, design/issues/summary.md]
 after: [T-3525]
+usage:
+  source: log
+  seconds: 466
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 293
+      cache_read: 4077767
+      cache_write: 24411
+      cost: 1.5673
 ---
 # T-3527 Measure board.get's undone.read with the batched diffs, record it in server-performance.md, and close I-0349
 
