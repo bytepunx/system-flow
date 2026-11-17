@@ -7,7 +7,7 @@ count: 1
 cost: 1m
 first_reported: 2026-11-16T06:16:26Z
 last_reported: 2026-11-16T06:16:26Z
-updated: 2026-11-16T06:16:26Z
+updated: 2026-11-17T08:32:58Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ Analysis 2026-11-16: the board flips between starved and not while drafts are fi
 ## Remediation
 
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
+
+Story S-0847 remediates this issue, created from it at 2026-11-17T08:32:58Z.
