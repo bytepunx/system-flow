@@ -6,7 +6,7 @@ title: flai guard reads a subcommand's value flag before flai's command as the c
 status: ready
 owner: alex
 created: 2026-11-17T08:17:26Z
-updated: 2026-11-17T10:04:15Z
+updated: 2026-11-17T10:04:46Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -40,15 +40,21 @@ usage:
           cache_write: 9979
           cost: 0.2437
     - kind: orchestrator
-      seconds: 6
+      seconds: 19
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 11
-          cache_read: 45662
-          cache_write: 3959
-          cost: 0.0154
+          input: 4
+          output: 56
+          cache_read: 222330
+          cache_write: 38249
+          cost: 0.0811
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 268
+          cache_read: 14873
+          cache_write: 15254
+          cost: 0.0244
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -59,10 +65,10 @@ cost_of_delay:
   at: 2026-11-17T08:30:33Z
 forecast:
   duration: 40m
-  delivery: 2026-11-17T11:21:00Z
+  delivery: 2026-11-17T11:22:00Z
   basis: "Its own forecast of 40m; 4th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0830, S-0811 and S-0823."
   by: flai
-  at: 2026-11-17T10:04:15Z
+  at: 2026-11-17T10:04:46Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:54Z

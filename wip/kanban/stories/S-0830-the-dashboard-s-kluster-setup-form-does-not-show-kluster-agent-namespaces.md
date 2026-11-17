@@ -6,7 +6,7 @@ title: The dashboard's kluster setup form does not show kluster.agent_namespaces
 status: ready
 owner: alex
 created: 2026-11-17T08:17:22Z
-updated: 2026-11-17T10:04:15Z
+updated: 2026-11-17T10:04:46Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -41,15 +41,21 @@ usage:
           cache_write: 45690
           cost: 0.9539
     - kind: orchestrator
-      seconds: 6
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 11
-          cache_read: 45662
-          cache_write: 3959
-          cost: 0.0154
+          input: 5
+          output: 56
+          cache_read: 222330
+          cache_write: 38249
+          cost: 0.0811
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 269
+          cache_read: 14874
+          cache_write: 15255
+          cost: 0.0244
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -60,10 +66,10 @@ cost_of_delay:
   at: 2026-11-17T08:28:38Z
 forecast:
   duration: 25m
-  delivery: 2026-11-17T10:38:00Z
+  delivery: 2026-11-17T10:39:00Z
   basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 3, behind S-0754 and S-0806."
   by: flai
-  at: 2026-11-17T10:04:15Z
+  at: 2026-11-17T10:04:46Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:52Z
