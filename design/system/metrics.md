@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-11-15
+updated: 2026-11-17
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -46,6 +46,22 @@ Computed over a window (default 30 days, by `completed`) and groupable by `type`
 - **Flow efficiency**: `(cycle time - blocked time) / cycle time`, averaged.
 - **Cancellation rate**: cancelled over cancelled plus done.
 - **Time-in-state share**: total time per state as a share of total lead time, the chart that shows which part of the process to optimise.
+
+## Workflow timers (S-0752)
+
+A workflow file defines its timers in its front matter. Each is the time between two points of an item's history, or the time the item spent in the states it names ([ADR-0301](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md) §5 has the forms, the points, and the fields). The baseline's four, `lead`, `cycle`, `queue`, and `review`, are the per-item durations above, under their own field names. A workflow's own timers are the others its file defines, in file order. A workflow that redefines one of the four changes that figure and adds no own timer ([ADR-0317](../adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md)).
+
+An own timer is valued per item as the four are, from `created` and the transitions ([ADR-0305](../adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md) §3). It needs no new data, so a timer added to the file has values for every past item, archived ones included. Over the window it is a distribution of the same shape as cycle time, taken over the group's items completed in the window that its `counts` takes and that have a value: with `accepted`, items in a state of kind `accepted`; with `closed`, items of kind `cancelled` too. With no such item the distribution is zeros, as cycle time's is.
+
+`flai stats --json` gives them in three places:
+
+| Field | Holds |
+|-------|-------|
+| `timers[]` | One entry per own timer: `name`, `title`, `types`, and `counts`, the defaults filled in |
+| `items[].timers` | The timer's name to its value in seconds, for each timer whose `types` take the item's type and that has a value for it. Open items count, a sum's open interval up to now. Absent when empty |
+| `summary.timers`, `groups[].timers` | The timer's name to its distribution, `count`, `p50_seconds`, `p85_seconds`, `max_seconds`, and `mean_seconds`, for each timer whose `types` take the report's type |
+
+The text report prints each own timer's distribution under its `title`, after cycle time, lead time, and ready wait, in each summary. The baseline has no own timer, so on it the three fields are absent and `flai stats` prints what it printed before S-0752.
 
 ## Usage (S-0143, S-0163)
 
@@ -606,4 +622,4 @@ So that `flai stats` and the dashboard agree to the second:
 
 ## Data access
 
-The dashboard reads no project file. Its server asks flai on the host for the items and for the stats, and keeps each answer until flai says a file changed ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md), [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md)). `flai stats` prints the same aggregates as a table or JSON so scripts and CI can use them. Both share the definitions above. The Go implementation is the reference, and the dashboard computes none of them. `flaiover`'s fixture test, `stats.test.ts`, asks the built flai for the stats of `flai/internal/metrics/testdata/good` and checks the charts it draws from them.
+The dashboard reads no project file. Its server asks flai on the host for the items and for the stats, and keeps each answer until flai says a file changed ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md), [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md)). `flai stats` prints the same aggregates as a table or JSON so scripts and CI can use them. The host's `stats.get` answers the report `flai stats --json` prints, `timers` included, and both read the workflow the repository runs: its `design/workflows/board.md`, else the baseline ([Workflow timers](#workflow-timers-s-0752)). Both share the definitions above. The Go implementation is the reference, and the dashboard computes none of them. `flaiover`'s fixture test, `stats.test.ts`, asks the built flai for the stats of `flai/internal/metrics/testdata/good` and checks the charts it draws from them.

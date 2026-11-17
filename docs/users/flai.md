@@ -2485,7 +2485,7 @@ A request flai serve does not take within ten seconds is withdrawn, and the comm
 flai stats                          # stories completed in the last 30 days
 flai stats --since 90d --by nature  # grouped
 flai stats --type task
-flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging, usage, forecasts, cost of delay, waiting, claims, turns, coordination
+flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging, usage, forecasts, cost of delay, waiting, claims, turns, coordination, workflow timers
 flai stats --since 7d --bucket hour --json   # spend over time by the hour (day by default, or week)
 ```
 
@@ -2499,6 +2499,16 @@ Since S-0551 the queue time line is called `ready wait`: how long an item waited
 ```
 
 `--json` has them at the top level: `concurrency`, with `window_seconds`, `limit`, `seconds[]` and `share[]` indexed by n, and `mean_busy`; and `ready_wait`, with `count`, `p50_seconds`, and `p85_seconds`, the same figures as `summary.queue_time`'s p50 and p85. The `--by` groups print the ready wait without the `in progress` line.
+
+Since S-0752 `flai stats` also reports the timers your workflow defines beyond the baseline's lead, cycle, queue, and review time ([Workflow timers](../../design/system/metrics.md#workflow-timers-s-0752), [ADR-0317](../../design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md)). Add one to the `timers` list in `design/workflows/board.md`, in a story ([Add a timer](../operators/runbooks/change-the-board.md#add-a-timer)):
+
+```yaml
+timers:
+  # ... the baseline's four
+  - {name: acceptance-wait, title: Acceptance wait, from: {first: review}, to: completed}
+```
+
+No change to flai is needed. A timer reads the moves every item already records, so it has values for past items too, archived ones included. The table prints each such timer's distribution under its title, after cycle time, lead time, and ready wait, in each summary and `--by` group. `--json` has the definitions under `timers`, each item's seconds under `items[].timers`, and each distribution under `summary.timers` and `groups[].timers`. On the baseline workflow these are absent and the output is as before.
 
 Since S-0205 `flai stats` also reports what the planner's figures, cost of delay, waiting, and claims come to ([Planning, waiting, and claims](../../design/system/metrics.md#planning-waiting-and-claims-s-0205)). The table adds, each only when there is something to show: the absolute error of forecasts, delivery dates, and estimates (p50 and p85); the cost of delay outstanding in each column now and incurred over the window; the time the agents of the items done in the window waited on threads and in review, in all and per item, and their empty wakes; the time those stories were held in ready, the items in progress now against the board's limit, and how far the stories' touches were from the files their commits changed; and what the planner, the orchestrator, and the analyzer spent over the window beside the items done. `--json` has them under `forecasts`, `cost_of_delay`, `waiting`, `claims`, and `strategic_days`, with each item's values under `items`. An empty wake is a `wait_for_events` call of a story's agent that timed out with nothing to report: a model turn spent on nothing. `flai serve` counts them from its agents' logs when it measures the story's usage, so a story worked by hand has none. The waiting section ends with a line such as `empty wakes  total 4 · mean 4.0 per item with usage`, and `--json` has them under `items[].usage.empty_wakes`, `waiting.empty_wakes` (`count` and `mean`), and `waiting.weeks[].empty_wakes` ([ADR-0105](../../design/adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md)). Since S-0396, when the project accepts stories through pull requests, the waiting section also says how much of review went on the required checks and on the reviewers, read from the forge state flai serve keeps ([Waiting](../../design/system/metrics.md#waiting), [ADR-0168](../../design/adrs/0168-under-pull-request-acceptance-flai-stats-reports-a-checks-wait-and-a-reviewers.md)). They are parts of `in review`, not added to it. In `local` mode the two lines do not print. `--json` has them under `items[].wait_checks_seconds` and `items[].wait_reviewers_seconds`, `waiting.weeks[].checks` and `.reviewers`, and the `waiting.longest[]` kinds `checks` and `reviewers`.
 

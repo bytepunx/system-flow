@@ -1,6 +1,6 @@
 ---
 title: "Runbook: change the board"
-updated: 2026-11-15
+updated: 2026-11-17
 status: active
 ---
 
@@ -85,7 +85,7 @@ timers:
   - {name: qa-time, title: QA time, sum: [qa]}
 ```
 
-A point is `created`, `completed`, `{first: <state>}`, `{last: <state>}`, or `{first: {kind: <kind>}}` and `{last: {kind: <kind>}}`. `until: <point>` bounds a sum. The fields are in ADR-0301 §5. `flai stats` reports the baseline's four timers; it reports a workflow's own timers once S-0752 lands.
+A point is `created`, `completed`, `{first: <state>}`, `{last: <state>}`, or `{first: {kind: <kind>}}` and `{last: {kind: <kind>}}`. `until: <point>` bounds a sum. The fields are in ADR-0301 §5. `flai stats` reports the baseline's four as lead, cycle, queue, and review time, and each of the workflow's own timers after them, for past items too ([Workflow timers](../../../design/system/metrics.md#workflow-timers-s-0752)).
 
 ## Rename a state
 
