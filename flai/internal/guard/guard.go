@@ -281,6 +281,11 @@ import (
 // reads a move's target: the initial state the planner moves an item to, the
 // state a commit moves it into, and the state only an acceptance moves a
 // story into. Nil runs the baseline.
+//
+// NoValue are the flags of flai's command tree that take no value, from which
+// the guard reads the command and the subcommand a flai command line runs as
+// cobra finds them (FlaiCommand, I-0358); while it is nil, flai's own root
+// flags, flaiNoValue, stand for it.
 type Guard struct {
 	Commands        []string
 	Role            string
@@ -303,7 +308,17 @@ type Guard struct {
 	Subcommands     map[string][]string
 	Design          string
 	Workflow        *workflow.Workflow
+	NoValue         NoValue
 }
+
+// NoValue are the flags that take no value of each of flai's commands, by the
+// command's path after flai: "" for flai itself, and kluster for flai
+// kluster, each with the command's own flags, its persistent ones among them.
+// Each is written as on a command line, --json, and its shorthand too, -y.
+// FlaiCommand reads flai's command with the flags of "" and its subcommand
+// with those and the command's, as cobra merges a parent's persistent flags
+// into its children's.
+type NoValue map[string][]string
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
 // the main checkout, where every flai that writes to a thread reads it.
@@ -834,7 +849,7 @@ func reads(cmd, sub string, rest []string) bool {
 	if f, ok := flagReads[cmd]; ok {
 		return (len(f.with) == 0 || slices.ContainsFunc(f.with, func(w string) bool { return given(rest, w) })) &&
 			!slices.ContainsFunc(f.without, func(w string) bool { return named(rest, w) }) &&
-			(f.form == nil || f.form(rest))
+			(f.subs == nil || slices.Contains(f.subs, sub)) && (f.form == nil || f.form(rest))
 	}
 	subs, ok := cliReads[cmd]
 	return ok && (subs == nil || slices.Contains(subs, sub))

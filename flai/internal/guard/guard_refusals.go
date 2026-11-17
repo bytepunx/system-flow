@@ -316,11 +316,11 @@ func (g Guard) refuse(words []string, r rules) (why, needs string) {
 				return why, needs
 			}
 		case "flai", "flai.sh":
-			cmd, sub := subcommands(rest, flaiValues)
-			if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
+			cmd, sub, args := g.flaiWords(rest)
+			if !slices.Contains(g.Commands, cmd) || slices.Contains(args, "--help") || slices.Contains(args, "-h") {
 				continue
 			}
-			if why, needs := r.flai(cmd, sub, rest); why != "" {
+			if why, needs := r.flai(cmd, sub, args); why != "" {
 				return why, needs
 			}
 		case "git":
@@ -344,19 +344,14 @@ func (g Guard) script(text string, r rules) (why, needs string) {
 	return "", ""
 }
 
-// subcommands is the first two words after a program's own flags; a flag in
-// takesValue consumes the word after it.
-func subcommands(words []string, takesValue map[string]bool) (cmd, sub string) {
+// subcommands is the first two words of another program's than flai that
+// are not flags.
+func subcommands(words []string) (cmd, sub string) {
 	var found []string
-	for i := 0; i < len(words) && len(found) < 2; i++ {
-		w := words[i]
-		if strings.HasPrefix(w, "-") {
-			if takesValue[w] && len(found) == 0 {
-				i++
-			}
-			continue
+	for _, w := range words {
+		if !strings.HasPrefix(w, "-") {
+			found = append(found, w)
 		}
-		found = append(found, w)
 	}
 	if len(found) > 0 {
 		cmd = found[0]
@@ -365,6 +360,102 @@ func subcommands(words []string, takesValue map[string]bool) (cmd, sub string) {
 		sub = found[1]
 	}
 	return cmd, sub
+}
+
+// FlaiCommand is flai's command and its subcommand in the words after flai,
+// as cobra's Command.Find finds them (I-0358): before each, a word that begins
+// with - and holds no =, --x or -x, takes the next word as its value unless
+// noValue lists it, -- ends the flags, and a word such as --x=v or -abc takes
+// none. The command is read with noValue's flags of flai itself, "", and the
+// subcommand with those and the command's, from every word but the command,
+// those before it too, as cobra reads them. sub is the word read whether or
+// not it names one of the command's subcommands; each is "" when the words
+// name none.
+func FlaiCommand(words []string, noValue NoValue) (cmd, sub string) {
+	at, subAt := findFlai(words, noValue)
+	if at >= 0 {
+		cmd = words[at]
+	}
+	if subAt >= 0 {
+		sub = words[subAt]
+	}
+	return cmd, sub
+}
+
+// findFlai is where FlaiCommand finds the command and the subcommand in words,
+// -1 for each it finds none of.
+func findFlai(words []string, noValue NoValue) (cmd, sub int) {
+	cmd = firstCommand(words, noValue[""])
+	if cmd < 0 {
+		return -1, -1
+	}
+	rest := slices.Delete(slices.Clone(words), cmd, cmd+1)
+	sub = firstCommand(rest, slices.Concat(noValue[""], noValue[words[cmd]]))
+	if sub >= cmd {
+		sub++
+	}
+	return cmd, sub
+}
+
+// firstCommand is the index of the first word of words that cobra's
+// stripFlags reads as a command, with noValue the flags that take no value;
+// -1 when it reads none.
+func firstCommand(words, noValue []string) int {
+	for i := 0; i < len(words); i++ {
+		w := words[i]
+		switch {
+		case w == "--":
+			return -1
+		case takesNext(w, noValue):
+			i++
+		case w != "" && !strings.HasPrefix(w, "-"):
+			return i
+		}
+	}
+	return -1
+}
+
+// takesNext says whether cobra reads the word w as a flag that takes the next
+// word as its value: --x or -x, with no =, that noValue does not list.
+func takesNext(w string, noValue []string) bool {
+	long := strings.HasPrefix(w, "--")
+	short := !long && len(w) == 2 && w[0] == '-'
+	return (long || short) && !strings.Contains(w, "=") && !slices.Contains(noValue, w)
+}
+
+// flaiWords reads the words after flai as FlaiCommand does, with the Guard's
+// NoValue: the command and its subcommand, and the words with each flag
+// before the command joined to the value it takes, --by=alex, so that a rule
+// that takes the command by position, as the first of positionals, finds it
+// there, and reads the flag's value where flai does.
+func (g Guard) flaiWords(words []string) (cmd, sub string, joined []string) {
+	nv := g.noValue()
+	at, subAt := findFlai(words, nv)
+	if at < 0 {
+		return "", "", words
+	}
+	joined = make([]string, 0, len(words))
+	for i := 0; i < at; i++ {
+		w := words[i]
+		if takesNext(w, nv[""]) && i+1 < at {
+			i++
+			w += "=" + words[i]
+		}
+		joined = append(joined, w)
+	}
+	joined = append(joined, words[at:]...)
+	if subAt >= 0 {
+		sub = words[subAt]
+	}
+	return words[at], sub, joined
+}
+
+// noValue is the Guard's NoValue, or flai's own, flaiNoValue, while it is nil.
+func (g Guard) noValue() NoValue {
+	if g.NoValue == nil {
+		return flaiNoValue
+	}
+	return g.NoValue
 }
 
 // positionals are the words that are not flags; a flag in takesValue

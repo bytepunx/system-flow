@@ -1833,3 +1833,77 @@ func TestHoldAsksInAnyActiveState(t *testing.T) {
 		t.Errorf("acceptance-review: %+v", v)
 	}
 }
+
+// I-0358: the guard reads flai's command and subcommand as cobra's
+// Command.Find finds them: before each, a flag with no = takes the next word
+// unless it is one that takes no value, -- ends the flags, and --x=v or a
+// cluster of shorthands takes nothing. The command's own flags join flai's at
+// the subcommand.
+func TestFlaiCommandReadsAsCobraFinds(t *testing.T) {
+	cases := []struct {
+		words    string
+		cmd, sub string
+	}{
+		{"kluster deploy S-0001", "kluster", "deploy"},
+		{"--by alex kluster deploy S-0001", "kluster", "deploy"},
+		{"--reason x kluster deploy S-0001", "kluster", "deploy"},
+		{"--wait 5m thread reply TH-0001", "thread", "reply"},
+		{"--wait=5m kluster deploy S-0001", "kluster", "deploy"},
+		{"--json kluster deploy S-0001", "kluster", "deploy"},
+		{"-y kluster deploy S-0001", "kluster", "deploy"},
+		{"-v --help kluster deploy", "kluster", "deploy"},
+		{"-n 3 kluster deploy", "kluster", "deploy"},
+		{"-yv kluster deploy", "kluster", "deploy"},
+		{"kluster --wait 5m deploy S-0001", "kluster", "deploy"},
+		{"kluster --job deploy S-0001", "kluster", "S-0001"},
+		{"kluster --json deploy", "kluster", "deploy"},
+		{"--config kluster thread reply", "thread", "reply"},
+		{"-- kluster deploy", "", ""},
+		{"kluster -- deploy", "kluster", ""},
+		{"--by", "", ""},
+		{"", "", ""},
+	}
+	for _, c := range cases {
+		if cmd, sub := FlaiCommand(strings.Fields(c.words), flaiNoValue); cmd != c.cmd || sub != c.sub {
+			t.Errorf("flai %s: %q %q, want %q %q", c.words, cmd, sub, c.cmd, c.sub)
+		}
+	}
+	// a command's own flag that takes no value takes no word before its
+	// subcommand, and another command's does
+	tree := NoValue{"": flaiNoValue[""], "kluster": {"--job"}}
+	for words, want := range map[string]string{"kluster --job deploy S-0001": "deploy", "thread --job reply TH-0001": "TH-0001"} {
+		if _, sub := FlaiCommand(strings.Fields(words), tree); sub != want {
+			t.Errorf("flai %s: %q, want %q", words, sub, want)
+		}
+	}
+}
+
+// I-0358: a flag that takes a value before flai's command takes its value
+// with it, so the guard reads the command flai runs: the kluster rule refuses
+// a deploy whatever flag stands before kluster, a served agent is refused
+// another author after flai --wait 5m, and the planner's move to backlog is
+// read past one.
+func TestAFlagBeforeFlaisCommandTakesItsValue(t *testing.T) {
+	agent := Guard{Commands: append(append([]string{}, g.Commands...), "kluster"), Story: "S-0001", Served: true}
+	for _, line := range []string{
+		"flai --by alex kluster deploy S-0001",
+		"flai --reason x kluster deploy S-0001",
+		"flai --json kluster deploy S-0001",
+		"flai -y kluster deploy S-0001",
+		"flai --wait=5m kluster deploy S-0001",
+	} {
+		if why := agent.Check(bash("", line)); !strings.Contains(why, "shared infrastructure on the operator's machine") {
+			t.Errorf("%q: %q", line, why)
+		}
+	}
+	if why := storysAgent.Check(bash("", "flai --wait 5m thread reply TH-0001 --by other")); !strings.Contains(why, "it names other as its author with --by") {
+		t.Errorf("another author after --wait 5m: %q", why)
+	}
+	planner := Guard{Commands: g.Commands, Role: RolePlan}
+	if why := planner.Check(bash("", "flai --reason x move T-0001 backlog")); why != "" {
+		t.Errorf("the planner's move to backlog: %q", why)
+	}
+	if why := planner.Check(bash("", "flai --reason backlog move T-0001 review")); !strings.Contains(why, "backlog and no further") {
+		t.Errorf("the planner's move to review: %q", why)
+	}
+}

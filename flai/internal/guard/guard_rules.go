@@ -247,11 +247,17 @@ var curating = rules{
 	git: func(string) string { return "it runs only git's reads" },
 }
 
-// flaiValues are the flags that take a value and that flai reads before its
-// command: its own, and --wait, which flai kluster deploy and teardown --job
-// and flai checks run --job take and cobra reads wherever it stands, so that
-// flai --wait 5m kluster deploy is read as the deploy it runs.
-var flaiValues = map[string]bool{"--config": true, "--wait": true}
+// flaiValues are flai's own flags that take a value, --config, which every
+// command takes after its name too, so that positionals reads the words of
+// flai plan and flai hostapi past its value. The command before them is read
+// as cobra finds it, from the flags that take none (FlaiCommand).
+var flaiValues = map[string]bool{"--config": true}
+
+// flaiNoValue are the flags of flai that take no value, which the guard reads
+// flai's command and subcommand with while its NoValue is nil: its root
+// command's --json, --yes, and --verbose, and --help, which cobra gives every
+// command (I-0358).
+var flaiNoValue = NoValue{"": {"--help", "--json", "--verbose", "--yes", "-h", "-v", "-y"}}
 
 // finalizeValues are the flags flai edit may carry besides --no-draft when it
 // only finalizes a draft and that take a value; finalizeFlags those that do
@@ -471,37 +477,25 @@ func jobRequest(rest []string) (story string, job, asked bool) {
 // isJobFlag says whether w begins --job, as --job does in each of its forms.
 func isJobFlag(w string) bool { return strings.HasPrefix(w, "--job") }
 
-// klusterBools are flai's own flags that take no value, the ones flai knows
-// between a command and its subcommand; a subcommand's own, such as --job, it
-// does not know there.
-var klusterBools = []string{"--help", "--json", "--verbose", "--yes", "-h", "-v", "-y"}
-
 // subcommandOf is the subcommand of flai's command cmd, kluster or checks,
 // among subs which the words after flai, rest, may run, or "" when they run
-// none: given, the first word after cmd's flags, or the one flai would take
-// instead, as it reads a flag it does not know before the subcommand as
-// taking the word after it. ambiguous says the two differ, so that the line
-// makes no request and reaches no namespace.
-func subcommandOf(cmd string, subs []string, given string, rest []string) (sub string, ambiguous bool) {
+// none: the first word after cmd that is not a flag, or read, the one flai
+// takes instead, as FlaiCommand reads it, since flai reads a flag it does not
+// know before the subcommand as taking the word after it. ambiguous says the
+// two differ, so that the line makes no request and reaches no namespace.
+// rest holds no word before cmd but flags, as the guard's reading leaves it.
+func subcommandOf(cmd string, subs []string, read string, rest []string) (sub string, ambiguous bool) {
 	at := slices.Index(rest, cmd)
-	var read string
+	var first string
 	for i := at + 1; at >= 0 && i < len(rest); i++ {
-		w := rest[i]
-		if w == "--" {
+		if !strings.HasPrefix(rest[i], "-") {
+			first = rest[i]
 			break
 		}
-		if strings.HasPrefix(w, "-") {
-			if !strings.Contains(w, "=") && !slices.Contains(klusterBools, w) {
-				i++
-			}
-			continue
-		}
-		read = w
-		break
 	}
 	switch {
-	case slices.Contains(subs, given):
-		return given, read != given
+	case slices.Contains(subs, first):
+		return first, read != first
 	case slices.Contains(subs, read):
 		return read, true
 	}

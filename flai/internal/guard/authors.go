@@ -40,10 +40,6 @@ var byNamesNoAuthor = []string{"order", "stats"}
 // entry (ADR-0199).
 var bySubNamesNoAuthor = [][2]string{{"digest", "absorb"}}
 
-// authorValues are flaiValues and the author flags: flai's flags that take a
-// value before its command, as in flai --by alex thread reply.
-var authorValues = map[string]bool{"--by": true, "--config": true, "--placed-by": true}
-
 // declarers are the shell's builtins whose words assign variables, as in
 // export FLAI_AGENT=alex.
 var declarers = []string{"declare", "export", "local", "readonly", "typeset"}
@@ -205,9 +201,11 @@ func (g Guard) impersonatesIn(c Call, text string) string {
 // own, or "" when they do not: --by, but on order, stats, and digest
 // absorb, and --placed-by, each as its last occurrence gives it. An empty value falls
 // back to FLAI_AGENT and passes; so does a word flai that runs none of its
-// commands, or asks for help.
+// commands, or asks for help. The command is read as flai finds it, past any
+// flag before it and its value, as in flai --wait 5m thread reply
+// (FlaiCommand, I-0358).
 func (g Guard) names(c Call, rest []string) string {
-	cmd, sub := subcommands(rest, authorValues)
+	cmd, sub, rest := g.flaiWords(rest)
 	if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
 		return ""
 	}

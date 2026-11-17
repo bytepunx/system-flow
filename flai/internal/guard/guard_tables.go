@@ -111,10 +111,12 @@ var cliReads = map[string][]string{
 // those ADR-0220 leaves open, and in none that writes the host
 // configuration; flai serve alone runs the server, and its other forms start,
 // stop, or commit (S-0680, I-0318).
-// A command with no with flags reads in any form without its without flags.
+// A command with no with flags reads in any form without its without flags;
+// one with subs reads only with one of them, "" for none.
 var flagReads = map[string]struct {
 	with    []string
 	without []string
+	subs    []string
 	form    func(words []string) bool
 }{
 	"hostapi": {form: readsHostAPI},
@@ -122,7 +124,7 @@ var flagReads = map[string]struct {
 	"plan":    {with: []string{"--candidates"}},
 	"promote": {with: []string{"--candidates", "--drafts"}},
 	"release": {with: []string{"--evaluate"}},
-	"role":    {without: []string{"--write"}, form: readsRoles},
+	"role":    {without: []string{"--write"}, subs: roleReads},
 	"serve":   {form: readsServe},
 	"verify":  {without: []string{"--job", "--record-issues"}},
 }
@@ -168,13 +170,6 @@ func readsServe(words []string) bool {
 // alone.
 var roleReads = []string{"", "definition", "list", "show"}
 
-// readsRoles says whether the words of flai role name a subcommand that
-// reads.
-func readsRoles(words []string) bool {
-	_, sub := subcommands(words, flaiValues)
-	return slices.Contains(roleReads, sub)
-}
-
 // HostAPIReads are the methods of the host API's table (flai hostapi, ADR-0029)
 // that write nothing: no work item, thread, document, file, or commit, no
 // mark of what was seen, no setting, and no process started; at most the
@@ -203,7 +198,8 @@ var redirection = regexp.MustCompile(`^[0-9]*&?[<>]`)
 
 // hostAPIMethod is the method the words of flai hostapi name, its first
 // positional word after hostapi that is not a redirection or its target; ""
-// when they name none.
+// when they name none. The words are the guard's reading of them, with
+// hostapi the first that is not a flag (FlaiCommand).
 func hostAPIMethod(words []string) string {
 	args := positionals(words, flaiValues)
 	for i := 1; i < len(args); i++ {
@@ -288,7 +284,7 @@ func gitListsOnly(cmd string, args []string) bool {
 	case !ok:
 		return false
 	case f.sub != "":
-		_, sub := subcommands(append([]string{cmd}, args...), nil)
+		_, sub := subcommands(append([]string{cmd}, args...))
 		return sub == f.sub
 	}
 	var positional, listing bool
