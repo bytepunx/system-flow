@@ -578,14 +578,14 @@ func pick(q []queued, running func(item string) bool) int {
 	return -1
 }
 
-// replays plays the board out again for every story with a forecast
-// duration in a state wf gives the queue kind (replayStates: ready, then
-// backlog, in the baseline), in pull order, each keeping its own duration
-// (planning.ReplayIn) under wf, the project's workflow, and returns those
-// whose delivery moved with the new delivery and basis, and the replays that
-// failed. Every story is played out against the same items: the writes keep
-// the durations the others are played out with.
-func replays(wf workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
+// replays plays the board out again for every ready and backlog story with a
+// forecast duration, in pull order, each keeping its own duration
+// (planning.ReplayIn) under flow, the project's workflow, and returns those whose delivery moved with the new
+// delivery and basis, and the replays that failed. Every story is played out
+// against the same items: the writes keep the durations the others are
+// played out with. Ready and backlog are the states of flow's queue kind, in
+// the order replayStates gives them.
+func replays(flow workflow.Workflow, items []*workitem.Item, board *workitem.Board, plan manifest.Planning, now time.Time) ([]moved, []error) {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
@@ -597,7 +597,7 @@ func replays(wf workflow.Workflow, items []*workitem.Item, board *workitem.Board
 	var out []moved
 	var errs []error
 	var ids []string
-	for _, st := range replayStates(wf) {
+	for _, st := range replayStates(flow) {
 		ids = append(ids, workitem.PullSequence(order, items, st)...)
 	}
 	for _, id := range ids {
@@ -605,7 +605,7 @@ func replays(wf workflow.Workflow, items []*workitem.Item, board *workitem.Board
 		if it.Forecast.IsZero() || it.Forecast.Duration == "" {
 			continue
 		}
-		res, err := planning.ReplayIn(wf, items, board, plan, id, now)
+		res, err := planning.ReplayIn(flow, items, board, plan, id, now)
 		if err != nil {
 			errs = append(errs, err)
 			continue

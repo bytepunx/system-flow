@@ -274,13 +274,13 @@ func (r *orchestrator) catchUp(repo *workitem.Repo, now time.Time) ([]*workitem.
 }
 
 // triggers are the orchestrator's triggers, from its role file in repo's
-// design folder or else builtinTriggers.
+// design folder or else builtinTriggers on repo's workflow.
 func (r *orchestrator) triggers(repo *workitem.Repo) []roles.Trigger {
 	all, _, err := roles.Load(repo.Root, repo.Manifest.Layout["design"])
 	if err != nil {
 		r.warnOnce("orchestrator role file not read", err)
 	}
-	return orchestratorTriggers(all)
+	return orchestratorTriggers(repo.Flow(), all)
 }
 
 // schedule is orchestration.schedule parsed, nil when it is unset or cannot

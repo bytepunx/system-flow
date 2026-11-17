@@ -333,14 +333,47 @@ func scheduleReason(sched *cron.Schedule, now time.Time) orchestrateReason {
 }
 
 // orchestratorTriggers are the triggers of the orchestrator's role file
-// among all, or builtinTriggers when there is none, as when it does not
-// parse, or when it still names continuous (ADR-0209 §1).
-func orchestratorTriggers(all []roles.Role) []roles.Trigger {
+// among all, or builtinTriggers on wf when there is none, as when it does
+// not parse, or when it still names continuous (ADR-0209 §1). A role file
+// names the states of the project's own workflow (ADR-0304), so its triggers
+// are taken as they are.
+func orchestratorTriggers(wf workflow.Workflow, all []roles.Role) []roles.Trigger {
 	i := slices.IndexFunc(all, func(r roles.Role) bool { return r.Name == roles.Orchestrator })
 	if i < 0 || slices.ContainsFunc(all[i].Trigger, func(t roles.Trigger) bool { return t.Kind == roles.TriggerContinuous }) {
-		return builtinTriggers
+		return builtinTriggersIn(wf)
 	}
 	return all[i].Trigger
+}
+
+// builtinTriggersIn are builtinTriggers on wf: a move into a state of the
+// baseline names, in builtinTriggers, the move into wf's state of the same
+// role, read by kind (S-0742). The baseline's waiting state is each state of
+// wf's waiting kind, and the baseline's initial state is wf's initial state;
+// any other is kept as it is. On the baseline they are builtinTriggers.
+func builtinTriggersIn(wf workflow.Workflow) []roles.Trigger {
+	initial, _ := baselineFlow.Initial()
+	out := make([]roles.Trigger, 0, len(builtinTriggers))
+	for _, t := range builtinTriggers {
+		switch {
+		case t.When != roles.CondTo:
+			out = append(out, t)
+		case isWaiting(baselineFlow, t.To):
+			for _, s := range wf.OfKind(workflow.KindWaiting) {
+				c := t
+				c.To = s.Name
+				out = append(out, c)
+			}
+		case t.To == initial.Name:
+			if s, ok := wf.Initial(); ok {
+				c := t
+				c.To = s.Name
+				out = append(out, c)
+			}
+		default:
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // scheduled says whether triggers start the orchestrator on
@@ -449,14 +482,14 @@ func eventNames(wf workflow.Workflow, e inbox.Event) []string {
 const replanBy = "flai"
 
 // occurrenceOf is e in roles' terms, without its event's name: the state a
-// move went to, as conditionState reads it in wf, whether an edited item is
+// move went to, by its current name in wf (ADR-0304), whether an edited item is
 // a story that is a draft after the edit, and whom a thread awaits, "you"
 // for the reader, whose names you says, or "operator".
 func occurrenceOf(wf workflow.Workflow, e inbox.Event, byID map[string]*workitem.Item, you func(awaits string) bool) roles.Occurrence {
 	var o roles.Occurrence
 	switch e.Kind {
 	case workitem.Moved:
-		o.To = conditionState(wf, e.To)
+		o.To = stateName(wf, e.To)
 	case inbox.Edited:
 		it := byID[e.ID]
 		o.Draft = it != nil && it.Type == workitem.Story && it.Draft && (e.By != replanBy || e.To != "forecast")
@@ -469,25 +502,6 @@ func occurrenceOf(wf workflow.Workflow, e inbox.Event, byID map[string]*workitem
 		}
 	}
 	return o
-}
-
-// conditionState is state, a state of wf, as package roles' conditions
-// read a move's To until S-0748 has them read kinds: they name the
-// baseline's states (to-review, to-backlog), so a state of the waiting kind
-// is the baseline's waiting state, and the state items are created in the
-// baseline's; any other is state as it is.
-func conditionState(wf workflow.Workflow, state string) string {
-	switch {
-	case isWaiting(wf, state):
-		if ws := baselineFlow.OfKind(workflow.KindWaiting); len(ws) > 0 {
-			return ws[0].Name
-		}
-	case isCreatedIn(wf, state):
-		if s, ok := baselineFlow.Initial(); ok {
-			return s.Name
-		}
-	}
-	return state
 }
 
 // isCreatedIn reports whether state is the one wf creates items in, where a

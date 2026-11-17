@@ -429,14 +429,14 @@ func TestARunThatFailsGivesItsReasonsBack(t *testing.T) {
 
 func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
 	file := roles.Role{Name: roles.Orchestrator, Trigger: []roles.Trigger{{Kind: roles.TriggerEvent, Event: workitem.Moved, When: roles.CondTo, To: workitem.Review}}}
-	if got := orchestratorTriggers(nil); len(got) != len(builtinTriggers) {
+	if got := orchestratorTriggers(workflow.Baseline(), nil); len(got) != len(builtinTriggers) {
 		t.Errorf("no role file: %+v", got)
 	}
 	continuous := roles.Role{Name: roles.Orchestrator, Trigger: []roles.Trigger{{Kind: roles.TriggerContinuous}}}
-	if got := orchestratorTriggers([]roles.Role{continuous}); len(got) != len(builtinTriggers) {
+	if got := orchestratorTriggers(workflow.Baseline(), []roles.Role{continuous}); len(got) != len(builtinTriggers) {
 		t.Errorf("continuous: %+v", got)
 	}
-	if got := orchestratorTriggers([]roles.Role{{Name: "planner"}, file}); len(got) != 1 {
+	if got := orchestratorTriggers(workflow.Baseline(), []roles.Role{{Name: "planner"}, file}); len(got) != 1 {
 		t.Errorf("the file's: %+v", got)
 	}
 	if scheduled(file.Trigger) || !scheduled(builtinTriggers) {
@@ -575,7 +575,7 @@ func TestARoleStartsOnAMoveIntoAStateOfTheProjectsOwn(t *testing.T) {
 		{Change: workitem.Change{Kind: workitem.Moved, Type: workitem.Story, ID: "S-0002", Title: "Review", To: workitem.Review}, Summary: "s"},
 		{Change: workitem.Change{Kind: inbox.Edited, Type: workitem.Story, ID: "S-0003", Title: "Edit", To: "verifying"}, Summary: "s"},
 	}
-	if got := reasonsOf(events, r.Trigger, nil); len(got) != 1 || got[0].ID != "S-0001" || got[0].To != "verifying" {
+	if got := reasonsOf(wf, events, r.Trigger, nil); len(got) != 1 || got[0].ID != "S-0001" || got[0].To != "verifying" {
 		t.Errorf("reasons = %+v, want the move of S-0001 into verifying alone", got)
 	}
 }
@@ -692,8 +692,9 @@ func t3216Reasons(wf workflow.Workflow, events []inbox.Event, triggers []roles.T
 // awaiting is the reason a move to review is on the baseline, with the same
 // form for prime; a move to doing or testing is none that a move to review
 // would be; and the moves to backlog, ready, done, and cancelled are what
-// they are on the baseline, under the built-in triggers, a role file's
-// condition, and each event name ADR-0207 gives a move.
+// they are on the baseline, under the built-in triggers read by kind, a role
+// file's to condition naming the board's own state, and each event name
+// ADR-0207 gives a move.
 func TestTheReasonsReadAMovedStatesKind(t *testing.T) {
 	kinds := *kindsWorkflow(t)
 	base := workflow.Baseline()
@@ -702,29 +703,40 @@ func TestTheReasonsReadAMovedStatesKind(t *testing.T) {
 	ev := func(event, when string) []roles.Trigger {
 		return []roles.Trigger{{Kind: roles.TriggerEvent, Event: event, When: when}}
 	}
+	to := func(state string) []roles.Trigger {
+		return []roles.Trigger{{Kind: roles.TriggerEvent, Event: workitem.Moved, When: roles.CondTo, To: state}}
+	}
+	// The built-in triggers are read on each board by kind; a role file
+	// names the board's own states (ADR-0304), so its condition names
+	// review on the baseline and awaiting on the other board.
 	for _, c := range []struct {
-		name     string
-		triggers []roles.Trigger
-		want     string
+		name        string
+		base, other []roles.Trigger
+		want        string
 	}{
-		{"built-in", builtinTriggers, "S-0001=review:S-0001 S-0004=draft:S-0004"},
-		{"to-review", ev(workitem.Moved, "to-review"), "S-0001=review:S-0001"},
-		{"to-backlog", ev(workitem.Moved, "to-backlog"), "S-0004=draft:S-0004"},
-		{"review", ev(eventReview, ""), "S-0001=review:S-0001"},
-		{"ready", ev(eventReady, ""), "S-0005="},
-		{"accepted", ev(eventAccepted, ""), "S-0006="},
-		{"cancelled", ev(eventCancelled, ""), "S-0007="},
+		{"built-in", builtinTriggersIn(base), builtinTriggersIn(kinds), "S-0001=review:S-0001 S-0004=draft:S-0004"},
+		{"to the waiting state", to(workitem.Review), to("awaiting"), "S-0001=review:S-0001"},
+		{"to the initial state", to(workitem.Backlog), to("backlog"), "S-0004=draft:S-0004"},
+		{"review", ev(eventReview, ""), ev(eventReview, ""), "S-0001=review:S-0001"},
+		{"ready", ev(eventReady, ""), ev(eventReady, ""), "S-0005="},
+		{"accepted", ev(eventAccepted, ""), ev(eventAccepted, ""), "S-0006="},
+		{"cancelled", ev(eventCancelled, ""), ev(eventCancelled, ""), "S-0007="},
 	} {
-		if got := t3216Reasons(base, baseMoves, c.triggers); got != c.want {
+		if got := t3216Reasons(base, baseMoves, c.base); got != c.want {
 			t.Errorf("%s on the baseline: %q, want %q", c.name, got, c.want)
 		}
-		if got := t3216Reasons(kinds, kindsMoves, c.triggers); got != c.want {
+		if got := t3216Reasons(kinds, kindsMoves, c.other); got != c.want {
 			t.Errorf("%s on the other board: %q, want %q, as on the baseline", c.name, got, c.want)
 		}
 	}
+	// A role file that names review on the other board names a state it
+	// has not, so no move there starts it.
+	if got := t3216Reasons(kinds, kindsMoves, to(workitem.Review)); got != "" {
+		t.Errorf("a trigger on review reads the other board's moves as %q, want none", got)
+	}
 	// Read in the baseline, a move to awaiting is a move to a state the
 	// baseline has not: it is no review.
-	if got := t3216Reasons(base, t3216Moves("awaiting"), builtinTriggers); got != "" {
+	if got := t3216Reasons(base, t3216Moves("awaiting"), builtinTriggersIn(base)); got != "" {
 		t.Errorf("the baseline reads a move to awaiting as %q, want no reason", got)
 	}
 	for _, to := range []string{"doing", "testing"} {
