@@ -96,6 +96,23 @@ func moving(root, id string) (workflow.Workflow, *workitem.Item) {
 	return repo.Flow(), it
 }
 
+// limitedColumns are the states of the workflow the project at root runs
+// that take a WIP limit, in board order: the baseline's when flai cannot open
+// the project here, which flai board limit then reports as it runs.
+func limitedColumns(root string) []string {
+	w := workflow.Baseline()
+	if repo, err := openRepo(root); err == nil {
+		w = repo.Flow()
+	}
+	var out []string
+	for _, s := range w.States {
+		if s.Limit {
+			out = append(out, s.Name)
+		}
+	}
+	return out
+}
+
 // itemWriteSpecs are the writes to work items, the board, issues, and acceptance.
 func itemWriteSpecs() map[string]spec {
 	return map[string]spec{
@@ -174,7 +191,8 @@ func itemWriteSpecs() map[string]spec {
 		}),
 
 		// board.limit: a column's WIP limit, from the board's lane menu (S-0167).
-		"board.limit": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// The columns that take one are the project's workflow's (S-0753).
+		"board.limit": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				Column string `json:"column"`
 				Limit  *int   `json:"limit"`
@@ -182,8 +200,8 @@ func itemWriteSpecs() map[string]spec {
 			if e != nil {
 				return nil, "", e
 			}
-			if !slices.Contains(workitem.LimitedColumns, in.Column) {
-				return nil, "", bad("%q has no WIP limit; only %s do", in.Column, strings.Join(workitem.LimitedColumns, ", "))
+			if limited := limitedColumns(p.Root); !slices.Contains(limited, in.Column) {
+				return nil, "", bad("%q has no WIP limit; only %s do", in.Column, strings.Join(limited, ", "))
 			}
 			if in.Limit == nil || *in.Limit < 0 || *in.Limit > maxWIPLimit {
 				return nil, "", bad("limit is a whole number from 0, for none, to %d", maxWIPLimit)

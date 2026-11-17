@@ -4391,3 +4391,31 @@ func TestItemMoveDryRunAsksTheReasonTheTransitionAsks(t *testing.T) {
 		t.Errorf("the dry run of a cancellation that asks no reason: %s", args)
 	}
 }
+
+// S-0753: board.limit takes the columns the project's workflow limits, so
+// the lane menu sets the limit of a state the workflow adds, and refuses a
+// column that takes none, naming the workflow's limited columns.
+func TestBoardLimitTakesTheWorkflowsLimitedColumns(t *testing.T) {
+	p := harbour(t)
+	limit := func(column string) ([]string, *channel.Error) {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+		_, e := writeMethods(rec.run, time.Now, Host{})["board.limit"](context.Background(), p, json.RawMessage(`{"column":"`+column+`","limit":4,`+rid+`}`))
+		var args []string
+		for _, r := range rec.runs {
+			args = append(args, strings.Join(r.Args, " "))
+		}
+		return args, e
+	}
+	if _, e := limit("testing"); e == nil || e.Message != `"testing" has no WIP limit; only ready, in-progress, review do` {
+		t.Errorf("the baseline has no testing column: %+v", e)
+	}
+
+	withWorkflow(t, testingWorkflow)
+	if args, e := limit("testing"); e != nil || len(args) != 1 || args[0] != "board limit --json -- testing 4" {
+		t.Errorf("a column the workflow limits: %+v %v", e, args)
+	}
+	args, e := limit("backlog")
+	if e == nil || e.Code != channel.CodeInvalidParams || e.Message != `"backlog" has no WIP limit; only ready, in-progress, testing, acceptance-review do` || len(args) != 0 {
+		t.Errorf("a column the workflow does not limit: %+v %v", e, args)
+	}
+}
