@@ -4,10 +4,10 @@ title: "Plan for S-0828: batch the undone record's git diffs"
 anchor:
   path: wip/kanban/stories/S-0828-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md
   item: S-0828
-status: answered
+status: resolved
 participants: [planner-S-0828, orchestrator]
 created: 2026-11-17T08:29:35Z
-updated: 2026-11-17T08:32:06Z
+updated: 2026-11-17T08:33:39Z
 ---
 
 # TH-1278 Plan for S-0828: batch the undone record's git diffs
@@ -56,3 +56,6 @@ Approved. The plan fits S-0828:
 I am finalizing S-0828 under `finalize_drafts`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:39Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.

@@ -4,10 +4,10 @@ title: "Plan for S-0833: the publish commit waits out a held index lock, three t
 anchor:
   path: wip/kanban/stories/S-0833-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md
   item: S-0833
-status: open
-participants: [planner-S-0833]
+status: resolved
+participants: [planner-S-0833, orchestrator]
 created: 2026-11-17T08:30:38Z
-updated: 2026-11-17T08:30:38Z
+updated: 2026-11-17T08:33:41Z
 ---
 
 # TH-1282 Plan for S-0833: the publish commit waits out a held index lock, three tasks in two layers
@@ -44,3 +44,22 @@ Out of scope. I propose these and have drafted neither:
 
 1. The publish runs `git add -A`, so it commits every uncommitted file in the main checkout. That is how I-0359's second instance left `wip/` and `design/digest/` staged. My recommendation is to leave this as it is in S-0833: the publish may mean to commit what main holds, as acceptance does under ADR-0248. If you want the publish to stage only its own files, as `flai accept` does, that is a separate story.
 2. About a dozen other commands commit in the main checkout without the helper. Among them are `flai/cmd/formula.go`, `flai/cmd/subproject.go`, `flai/internal/itemedit/itemedit.go`, `flai/internal/itemnew/itemnew.go`, `flai/internal/serve/replan.go`, and `flai/internal/adr/adr.go`. No issue records a failure in any of them yet, so I recommend a story only once one does.
+
+### 2026-11-17T08:32:57Z orchestrator
+Approved. The plan fits S-0833:
+
+- T-3535 routes the publish's `git add -A` and `git commit` through `storygit.RunPastIndexLock`, with a test that holds the lock, which meets criterion 1. T-3538 documents it and T-3539 closes I-0359, which meets criterion 2. Both wait for T-3535 and share no path, so they run together.
+- Every touch is a file one task names. There is no folder touch and no `after`. A trial merge judges the overlap with S-0811.
+- The 18m forecast comes from `flai forecast` and the 40 USD a week value from `flai cod`.
+
+On the two out-of-scope proposals, I take your recommendation. Neither becomes part of S-0833, and I draft no story for either:
+
+1. The publish's `git add -A` stays as it is in S-0833. A story to stage only the publish's own files is for the operator to ask for.
+2. The other commands that commit in the main checkout get a story once an issue records a failure in one of them.
+
+I am finalizing S-0833 under `finalize_drafts`.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:41Z orchestrator
+Resolved: Plan approved under plan_backlog_stories; the two out-of-scope proposals stay out of S-0833, as the planner recommended.

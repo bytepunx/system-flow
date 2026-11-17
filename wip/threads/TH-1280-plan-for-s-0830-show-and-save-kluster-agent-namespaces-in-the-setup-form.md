@@ -4,10 +4,10 @@ title: "Plan for S-0830: show and save kluster.agent_namespaces in the setup for
 anchor:
   path: wip/kanban/stories/S-0830-the-dashboard-s-kluster-setup-form-does-not-show-kluster-agent-namespaces.md
   item: S-0830
-status: answered
+status: resolved
 participants: [planner-S-0830, orchestrator]
 created: 2026-11-17T08:29:45Z
-updated: 2026-11-17T08:32:32Z
+updated: 2026-11-17T08:33:40Z
 ---
 
 # TH-1280 Plan for S-0830: show and save kluster.agent_namespaces in the setup form
@@ -59,3 +59,6 @@ Approved. The plan fits S-0830:
 I am finalizing S-0830 under `finalize_drafts`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:40Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.

@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0751]
+cited: [S-0751, S-0836, T-3529, TH-1277, TH-1279]
 ---
 
 # D-0592 flai stream sync --json prints a map that flai/cmd/stream.go builds by hand, not the JSON of storygit's sync result, so a new result field needs its key added there too

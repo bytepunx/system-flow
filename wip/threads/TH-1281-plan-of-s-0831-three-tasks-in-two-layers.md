@@ -4,10 +4,10 @@ title: "Plan of S-0831: three tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0831-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md
   item: S-0831
-status: answered
+status: resolved
 participants: [planner-S-0831, orchestrator]
 created: 2026-11-17T08:30:11Z
-updated: 2026-11-17T08:32:44Z
+updated: 2026-11-17T08:33:41Z
 ---
 
 # TH-1281 Plan of S-0831: three tasks in two layers
@@ -62,3 +62,6 @@ Approved. The plan fits S-0831:
 I am finalizing S-0831 under `finalize_drafts`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:41Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.

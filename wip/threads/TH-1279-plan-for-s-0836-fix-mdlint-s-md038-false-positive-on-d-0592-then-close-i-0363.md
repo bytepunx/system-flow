@@ -4,10 +4,10 @@ title: "Plan for S-0836: fix mdlint's MD038 false positive on D-0592, then close
 anchor:
   path: wip/kanban/stories/S-0836-flai-s-markdown-lint-reports-md038-on-a-code-span-holding-escaped-backticks.md
   item: S-0836
-status: answered
+status: resolved
 participants: [planner-S-0836, orchestrator]
 created: 2026-11-17T08:29:41Z
-updated: 2026-11-17T08:32:19Z
+updated: 2026-11-17T08:33:39Z
 ---
 
 # TH-1279 Plan for S-0836: fix mdlint's MD038 false positive on D-0592, then close I-0363
@@ -48,3 +48,6 @@ Approved. The plan fits S-0836:
 I am finalizing S-0836 under `finalize_drafts`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:39Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.

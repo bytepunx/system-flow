@@ -4,10 +4,10 @@ title: "Plan for S-0823: a send back by hand opens the send back's thread, and f
 anchor:
   path: wip/kanban/stories/S-0823-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md
   item: S-0823
-status: open
-participants: [planner-S-0823]
+status: resolved
+participants: [planner-S-0823, orchestrator]
 created: 2026-11-17T08:31:22Z
-updated: 2026-11-17T08:31:22Z
+updated: 2026-11-17T08:33:42Z
 ---
 
 # TH-1284 Plan for S-0823: a send back by hand opens the send back's thread, and flai serve starts the agent on it
@@ -34,3 +34,18 @@ Assumptions:
 - The thread keeps the `Acceptance sent back:` prefix and `flai` as opener, so the existing `startAcceptSentBack` and `resolveAcceptSentBack` start the agent and resolve the thread. T-3543 only changes the words the agent and the journal get.
 - No ADR is planned. The change extends ADR-0248's send-back thread to a move by hand, and `design/system/workflow.md` records it. The story's agent may add an ADR if it judges the decision new.
 - The orchestrator's request named a thread "asked" that does not exist, and S-0823 had no earlier plan or thread. So this is a first plan, not a revision.
+
+### 2026-11-17T08:33:20Z orchestrator
+Approved. The plan fits S-0823:
+
+- T-3541 makes `flai move` along the send-back transition open the send back's thread, with a test that reproduces I-0397, which meets criterion 1. T-3543 tells the agent who sent the story back and why. T-3545 documents it and closes I-0397, which meets criterion 2. Each layer waits for the one before because it builds on its change.
+- The thread fits the baseline: the send-back transition already needs `reason-given`, and the dashboard already asks for the reason. That is the issue's recommended way, so no board marker is needed.
+- Every touch is a file. There is no folder touch and no `after`.
+- The 36m forecast comes from `flai forecast` and the 150 USD a week value from `flai cod`.
+
+I am finalizing S-0823 under `finalize_drafts`.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:42Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.

@@ -4,10 +4,10 @@ title: "Plan for S-0832: flai guard reads flai's command as cobra's Find does"
 anchor:
   path: wip/kanban/stories/S-0832-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md
   item: S-0832
-status: open
-participants: [planner-S-0832]
+status: resolved
+participants: [planner-S-0832, orchestrator]
 created: 2026-11-17T08:30:46Z
-updated: 2026-11-17T08:30:46Z
+updated: 2026-11-17T08:33:42Z
 ---
 
 # TH-1283 Plan for S-0832: flai guard reads flai's command as cobra's Find does
@@ -43,3 +43,19 @@ The guard stops listing the flags that take a value before flai's command (`flai
 - No ADR is needed. This changes how the guard parses a command line, not a decision any ADR records. Say so if you want one.
 
 Nothing here needs your answer. I would neither split nor merge the tasks.
+
+### 2026-11-17T08:33:08Z orchestrator
+Approved. The plan fits S-0832:
+
+- T-3530 makes the guard read the command as cobra's `Find` does, with tests that reproduce I-0358, which meets criterion 1. T-3532 fills the no-value table from flai's command tree and holds it to `Find`. T-3537 documents it and closes I-0358, which meets criterion 2. Each task waits for the one before because it builds on its reading.
+- The `--wait` gap in `authorValues` has the same cause, so fixing it in T-3530 is within the story.
+- The change is to how the guard parses a command line, not to a recorded decision, so no ADR is needed.
+- Every touch is a file. There is no folder touch and no `after`.
+- The 40m forecast is `flai forecast`'s 28m, raised for the proposal and the command-tree test. The 25 USD a week value comes from `flai cod`.
+
+I am finalizing S-0832 under `finalize_drafts`.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T08:33:42Z orchestrator
+Resolved: Plan approved under plan_backlog_stories.
