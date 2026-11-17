@@ -3,12 +3,15 @@ id: S-0812
 type: story
 nature: feature
 title: flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:08Z
-updated: 2026-11-17T08:22:24Z
-transitions: []
+updated: 2026-11-17T08:30:09Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:27:41Z
+    by: alex
 tags: [flai, template]
 topics: [verify, workflow]
 touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:48:32Z
 forecast:
   duration: 50m
-  delivery: 2026-11-17T13:01:00Z
-  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 3, behind S-0752, S-0758, S-0806, S-0754, S-0756, S-0808, S-0807, S-0241, S-0809, S-0810 and S-0811."
+  delivery: 2026-11-17T11:23:00Z
+  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827, S-0811, S-0809 and S-0756."
   by: flai
-  at: 2026-11-17T08:22:24Z
+  at: 2026-11-17T08:30:09Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:51:54Z

@@ -3,12 +3,15 @@ id: S-0810
 type: story
 nature: feature
 title: flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:06Z
-updated: 2026-11-17T08:22:24Z
-transitions: []
+updated: 2026-11-17T08:30:09Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:26:12Z
+    by: alex
 tags: [flai]
 topics: [verify, workflow, kluster]
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/transition.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/move.go, flai/cmd/move_workflow_test.go, flai/internal/workflow/runs.go, flai/internal/workflow/runs_test.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/serve.go, flai/internal/serve/agents_restart.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/verify.go, flai/internal/verify/story.go, docs/users/flai-reference.md, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:52:16Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-17T14:25:00Z
-  basis: "Its own forecast of 2h30m; 7th in the pull order with an in-progress limit of 3, behind S-0752, S-0758, S-0806, S-0754, S-0756, S-0808, S-0807, S-0241 and S-0809."
+  delivery: 2026-11-17T14:14:00Z
+  basis: "Its own forecast of 2h30m; 9th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827, S-0811, S-0809, S-0756, S-0812, S-0808 and S-0807."
   by: flai
-  at: 2026-11-17T08:22:24Z
+  at: 2026-11-17T08:30:09Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:28Z

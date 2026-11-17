@@ -3,12 +3,15 @@ id: S-0809
 type: story
 nature: feature
 title: The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:05Z
-updated: 2026-11-17T08:22:24Z
-transitions: []
+updated: 2026-11-17T08:30:09Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:26:02Z
+    by: alex
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:48:51Z
 forecast:
   duration: 41m
-  delivery: 2026-11-17T11:35:00Z
-  basis: "Its own forecast of 41m; 6th in the pull order with an in-progress limit of 3, behind S-0752, S-0758, S-0806, S-0754, S-0756, S-0808, S-0807 and S-0241."
+  delivery: 2026-11-17T10:43:00Z
+  basis: "Its own forecast of 41m; 4th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827 and S-0811."
   by: flai
-  at: 2026-11-17T08:22:24Z
+  at: 2026-11-17T08:30:09Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:25Z
