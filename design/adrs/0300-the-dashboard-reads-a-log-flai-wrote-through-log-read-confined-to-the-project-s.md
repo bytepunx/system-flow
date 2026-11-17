@@ -1,8 +1,8 @@
 ---
 id: ADR-0300
 title: "The dashboard reads a log flai wrote through log.read, confined to the project's .flai-cache and to its own logs in flai serve's state folder"
-status: proposed
-date: 2026-11-14
+status: accepted
+date: 2026-11-17
 supersedes: []
 superseded_by: []
 refines: [ADR-0029]
