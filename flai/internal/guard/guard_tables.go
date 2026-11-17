@@ -186,7 +186,7 @@ var HostAPIReads = []string{
 	"board.get", "components.list", "design.get", "design.proposals", "doc.get", "doc.lint", "doc.show",
 	"docs.tree", "forge.status", "inbox.designer", "issue.list", "item.get", "item.move.preview", "item.show",
 	"items.count", "items.list", "kluster.status", "messages.get", "messages.list", "order.by", "project.info",
-	"promote.candidates", "publish.preview", "release.evaluate", "search.query", "settings.get", "stats.get",
+	"promote.candidates", "publish.preview", "release.evaluate", "resolve.status", "search.query", "settings.get", "stats.get",
 	"stream.diff", "threads.list", "verify.status",
 }
 

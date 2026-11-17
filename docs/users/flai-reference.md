@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-15
+updated: 2026-11-17
 status: active
 ---
 
@@ -219,7 +219,7 @@ A story's verify covers the main branch it ran over, not the one it would land o
 
 While the kluster host action is on for the project and its system-flow.yaml has a kluster: block, a change the cluster has not run is not shipped (ADR-0254 §5a): every acceptance of a story with a branch, by hand, from the dashboard, --by orchestrator, and --batch alike, is refused, before anything is merged, until its namespace's record under .flai-cache/kluster says its deploy passed at the head of story/&lt;id&gt; and, while the checks host action is on, that the checks run against it passed there too. The refusal is the blocker kluster, naming the namespace's last job, its commit, and its outcome; --dry-run lists it, with --json under kluster\_blocker, among the orchestrator\_blockers for --by orchestrator, and kluster\_why says why. --without-kluster lands the story anyway, on the operator's word, by hand outside the merge queue, and writes, with the commit, why the gate held it, who accepted, and when under ### Accepted without the kluster gate in its Notes. It is refused with --by orchestrator and with --batch, and changes nothing while the action is off or the gate passes.
 
---resolve accepts nothing (ADR-0302): it is the operator's request that the agent of a story in review rebase its branch onto the main branch and resolve what holds its acceptance. It runs the preview --dry-run runs and, when that lists a blocker, moves the story back to in-progress as flai and opens the send-back thread of ADR-0248 on it, or writes on the one still open, listing each blocker; flai serve starts the story's agent on that thread and resolves it once the story is back in review. With --json it prints {"id", "reason", "sent\_back", "branch", "base", "conflicts", "thread", "blockers"}. A story not in review, or one nothing holds, is refused with exit 4, with --json as {"refused": {"id", "reason"}}. It is the operator's alone: refused with --dry-run, --yes, --batch, --by orchestrator, under FLAI\_ROLE=orchestrate, and with the flags of an acceptance.
+--resolve accepts nothing (ADR-0302, S-0804): it is the operator's request that flai serve rebase a story in review onto the main branch and close it out again, with no agent. It runs the preview --dry-run runs and, when that lists a blocker, asks flai serve for a rebase and resolve job and answers at once with the job; it moves nothing and opens no thread. The job rebases the story's branch onto the main branch as flai stream sync does, then runs the story's close-out at the rebased head, all of its output in the job's log. A clean rebase and a passing close-out leave the story in review, ready to accept. Only a rebase that stops on conflicts, which the job aborts, or a step of the close-out that fails sends the story back to in-progress, with the send-back thread of ADR-0248 naming the paths, or the step, its findings, and the log, which flai serve starts the story's agent on. A request while a job of the story runs answers that job and starts nothing. With --json it prints {"id", "job", "started", "running", "log", "reason"}. A story not in review, one nothing holds, and a request flai serve does not take or refuses are refused with exit 4, with --json as {"refused": {"id", "reason"}}. It is the operator's alone: refused with --dry-run, --yes, --batch, --by orchestrator, under FLAI\_ROLE=orchestrate, and with the flags of an acceptance.
 
 Examples:
 
@@ -245,7 +245,7 @@ Flags:
 | `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion, or - &lt;n&gt;: T-nnnn done for a formula's instance (- reads standard input) |
 | `--keep-removal` stringArray | as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable) |
 | `--reason` stringArray | with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable) |
-| `--resolve` | accept nothing: send a review story its acceptance blockers hold back to its agent, to rebase onto the main branch and resolve them (ADR-0302) |
+| `--resolve` | accept nothing: ask flai serve to rebase a review story its acceptance blockers hold onto the main branch and close it out, sending it back to its agent only on conflicts or a failed step (S-0804) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
 | `--without-kluster` | as the operator: accept while the kluster host action is on though the story's namespace was not deployed, or its checks did not pass, at its head, recorded in its Notes (ADR-0254) |

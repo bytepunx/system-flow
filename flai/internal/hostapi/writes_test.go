@@ -88,6 +88,7 @@ var good = map[string]struct {
 	// S-0270: flai verify for a story, and its last report, which flai serve
 	// answers in its own process, with no command line (S-0662)
 	"verify.run":    {`{"id":"S-0001","max":3,` + rid + `}`, "verify S-0001 --max=3 --json", ""},
+	"resolve.status": {`{"id":"S-0001"}`, "", ""},
 	"verify.status": {`{"id":"S-0001"}`, "", ""},
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
@@ -207,6 +208,7 @@ var refused = map[string][]string{
 		`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001",` + rid + `}`, `{"id":"S-0001 --last",` + rid + `}`, `{` + rid + `}`,
 		`{"id":"S-0001","max":-1,` + rid + `}`, `{"id":"S-0001","max":"3",` + rid + `}`, `{"id":"S-0001"}`,
 	},
+	"resolve.status": {`{"id":"--help"}`, `{"id":"T-0001"}`, `{"id":"S-0001 --json"}`, `{}`, `[]`},
 	"verify.status": {`{"id":"--help"}`, `{"id":"T-0001"}`, `{"id":"S-0001 --json"}`, `{}`, `[]`},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,

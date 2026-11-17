@@ -312,18 +312,24 @@ who accepted, and when under ### Accepted without the kluster gate in its
 Notes. It is refused with --by orchestrator and with --batch, and changes
 nothing while the action is off or the gate passes.
 
---resolve accepts nothing (ADR-0302): it is the operator's request that the
-agent of a story in review rebase its branch onto the main branch and resolve
-what holds its acceptance. It runs the preview --dry-run runs and, when that
-lists a blocker, moves the story back to in-progress as flai and opens the
-send-back thread of ADR-0248 on it, or writes on the one still open, listing
-each blocker; flai serve starts the story's agent on that thread and resolves
-it once the story is back in review. With --json it prints {"id", "reason",
-"sent_back", "branch", "base", "conflicts", "thread", "blockers"}. A story not
-in review, or one nothing holds, is refused with exit 4, with --json as
-{"refused": {"id", "reason"}}. It is the operator's alone: refused with
---dry-run, --yes, --batch, --by orchestrator, under FLAI_ROLE=orchestrate,
-and with the flags of an acceptance.`,
+--resolve accepts nothing (ADR-0302, S-0804): it is the operator's request
+that flai serve rebase a story in review onto the main branch and close it
+out again, with no agent. It runs the preview --dry-run runs and, when that
+lists a blocker, asks flai serve for a rebase and resolve job and answers at
+once with the job; it moves nothing and opens no thread. The job rebases the
+story's branch onto the main branch as flai stream sync does, then runs the
+story's close-out at the rebased head, all of its output in the job's log. A
+clean rebase and a passing close-out leave the story in review, ready to
+accept. Only a rebase that stops on conflicts, which the job aborts, or a
+step of the close-out that fails sends the story back to in-progress, with
+the send-back thread of ADR-0248 naming the paths, or the step, its findings,
+and the log, which flai serve starts the story's agent on. A request while a
+job of the story runs answers that job and starts nothing. With --json it
+prints {"id", "job", "started", "running", "log", "reason"}. A story not in
+review, one nothing holds, and a request flai serve does not take or refuses
+are refused with exit 4, with --json as {"refused": {"id", "reason"}}. It is
+the operator's alone: refused with --dry-run, --yes, --batch, --by
+orchestrator, under FLAI_ROLE=orchestrate, and with the flags of an acceptance.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
@@ -356,7 +362,7 @@ and with the flags of an acceptance.`,
 	addAcceptFlags(c, &o)
 	c.Flags().BoolVar(&o.dryRun, "dry-run", false, "show what would block acceptance and change nothing")
 	c.Flags().StringVar(&o.batch, "batch", "", "the merge queue batch whose verification the acceptance takes, as flai serve lands it (ADR-0176)")
-	c.Flags().BoolVar(&resolve, "resolve", false, "accept nothing: send a review story its acceptance blockers hold back to its agent, to rebase onto the main branch and resolve them (ADR-0302)")
+	c.Flags().BoolVar(&resolve, "resolve", false, "accept nothing: ask flai serve to rebase a review story its acceptance blockers hold onto the main branch and close it out, sending it back to its agent only on conflicts or a failed step (S-0804)")
 	return c
 }
 
@@ -791,9 +797,6 @@ type sentBack struct {
 	Base      string   `json:"base"`
 	Conflicts []string `json:"conflicts"`
 	Thread    string   `json:"thread"`
-	// Blockers are what held the acceptance when the operator asked its
-	// agent to resolve them with flai accept --resolve (ADR-0302).
-	Blockers []string `json:"blockers,omitempty"`
 }
 
 // Error is the send back's text.
@@ -862,14 +865,7 @@ func acceptanceBy(story, by string) string {
 // its branch by who over stop (ADR-0248), or adds the same words to the one
 // still open from an earlier send back.
 func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop *syncStopped) (*threads.Thread, error) {
-	return a.sendBackThread(repo, story, storygit.SentBackTitle(branch, stop.Base, stop.Conflicts), sentBackText(story, branch, who, stop))
-}
-
-// sendBackThread opens the send back's thread on story, titled title and
-// saying text, at the acceptance's time, or adds text to the one still open
-// (sendback.Thread).
-func (a *app) sendBackThread(repo *workitem.Repo, story, title, text string) (*threads.Thread, error) {
-	return sendback.Thread(repo, story, title, text, a.now())
+	return sendback.Thread(repo, story, storygit.SentBackTitle(branch, stop.Base, stop.Conflicts), sentBackText(story, branch, who, stop), a.now())
 }
 
 // sentBackText is what the send back's thread tells story's agent: what

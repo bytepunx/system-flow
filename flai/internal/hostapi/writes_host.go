@@ -258,6 +258,15 @@ func hostSpecs() map[string]spec {
 			_, e := verifyStatusOf(raw)
 			return nil, "", e
 		}, do: verifyStatus},
+		// resolve.status: a read of the story's last close-out or rebase and
+		// resolve job, running or ended, with its steps and where its log is,
+		// from .flai-cache/verify/jobs (resolveStatus), which the review page
+		// follows while a Rebase and resolve runs (S-0804). It runs nothing,
+		// so, as verify.status, it is not gated.
+		"resolve.status": {reads: true, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			_, e := verifyStatusOf(raw)
+			return nil, "", e
+		}, do: resolveStatus},
 		// agent.restart: a new agent for a story whose agent dropped or
 		// failed (S-0116, ADR-0043); flai serve agent restart judges whether
 		// it may, and says why not.
@@ -379,7 +388,8 @@ func lastReportAt(repo *workitem.Repo, id, head string, log *slog.Logger) (verif
 	return rep, ok, nil
 }
 
-// verifyStatusOf is the story verify.status is asked of.
+// verifyStatusOf is the story verify.status, or resolve.status, is asked
+// of.
 func verifyStatusOf(raw json.RawMessage) (string, *channel.Error) {
 	in, e := decode[struct {
 		ID string `json:"id"`
