@@ -6,7 +6,7 @@ title: "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an
 status: ready
 owner: alex
 created: 2026-11-17T08:32:51Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:39:22Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 69067
           cost: 1.705
     - kind: orchestrator
-      seconds: 49
+      seconds: 54
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 21
-          cache_read: 369204
-          cache_write: 10300
-          cost: 0.1188
+          input: 7
+          output: 33
+          cache_read: 506640
+          cache_write: 11536
+          cost: 0.1622
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:53Z
 forecast:
   duration: 40m
-  delivery: 2026-11-17T14:04:00Z
-  basis: "Its own forecast of 40m; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0811, S-0838 and S-0829."
+  delivery: 2026-11-17T14:18:00Z
+  basis: "Its own forecast of 40m; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0838, S-0841, S-0811 and S-0829."
   by: flai
-  at: 2026-11-17T12:35:58Z
+  at: 2026-11-17T12:39:22Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:33Z

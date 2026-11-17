@@ -6,7 +6,7 @@ title: A story in review whose close-out fails after main moved waits for the op
 status: backlog
 owner: alex
 created: 2026-11-17T08:32:56Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:39:22Z
 transitions: []
 tags: [flai, orchestrator]
 topics: [acceptance, verify, orchestration]
@@ -38,15 +38,15 @@ usage:
           cache_write: 81180
           cost: 2.1123
     - kind: orchestrator
-      seconds: 5
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 4
-          cache_read: 42170
-          cache_write: 425
-          cost: 0.0133
+          input: 4
+          output: 48
+          cache_read: 320670
+          cache_write: 5680
+          cost: 0.1022
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -63,7 +63,6 @@ usage:
           cache_read: 2398931
           cache_write: 47318
           cost: 0.1557
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30h
@@ -74,10 +73,13 @@ cost_of_delay:
   at: 2026-11-17T12:34:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-18T01:52:00Z
-  basis: "Its own forecast of 3h; 23rd in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0811, S-0838, S-0829, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0841, S-0843 and S-0844."
+  delivery: 2026-11-18T02:24:00Z
+  basis: "Its own forecast of 3h; 22nd in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0838, S-0841, S-0811, S-0829, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843 and S-0844."
   by: flai
-  at: 2026-11-17T12:35:58Z
+  at: 2026-11-17T12:39:22Z
+finalized:
+  by: orchestrator
+  at: 2026-11-17T12:38:55Z
 ---
 # S-0845 A story in review whose close-out fails after main moved waits for the operator to send it back, while its after chain holds the backlog and the board starves
 

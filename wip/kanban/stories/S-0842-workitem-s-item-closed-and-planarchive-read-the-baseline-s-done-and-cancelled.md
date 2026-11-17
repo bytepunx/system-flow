@@ -6,7 +6,7 @@ title: workitem's Item.Closed and PlanArchive read the baseline's done and cance
 status: ready
 owner: alex
 created: 2026-11-17T08:32:53Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:39:22Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 99552
           cost: 1.409
     - kind: orchestrator
-      seconds: 12
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 18
-          cache_read: 124457
-          cache_write: 4104
-          cost: 0.0402
+          input: 4
+          output: 30
+          cache_read: 261893
+          cache_write: 5340
+          cost: 0.0836
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:29:22Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T14:50:00Z
-  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0811, S-0838, S-0829, S-0840 and S-0809."
+  delivery: 2026-11-17T15:05:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0838, S-0841, S-0811, S-0829, S-0840 and S-0809."
   by: flai
-  at: 2026-11-17T12:35:58Z
+  at: 2026-11-17T12:39:22Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:33Z
