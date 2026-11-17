@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ActivityView from './ActivityView.svelte';
 import type { StoryActivity } from '$lib/activity';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -72,7 +73,11 @@ describe('ActivityView agent streams (S-0142)', () => {
 		};
 		c = mount(ActivityView, {
 			target: document.body,
-			props: { streams: [stream('S-0001'), stream('S-0002'), stream('S-0003')], agents }
+			props: {
+				flow: baselineFlow,
+				streams: [stream('S-0001'), stream('S-0002'), stream('S-0003')],
+				agents
+			}
 		});
 		await settle();
 
@@ -102,6 +107,7 @@ describe('ActivityView agent streams (S-0142)', () => {
 		c = mount(ActivityView, {
 			target: document.body,
 			props: {
+				flow: baselineFlow,
 				streams: [
 					{
 						...stream('S-0001'),
@@ -121,7 +127,10 @@ describe('ActivityView agent streams (S-0142)', () => {
 	});
 
 	it('shows the narratives alone when flai knows of no agent', async () => {
-		c = mount(ActivityView, { target: document.body, props: { streams: [stream('S-0001')] } });
+		c = mount(ActivityView, {
+			target: document.body,
+			props: { flow: baselineFlow, streams: [stream('S-0001')] }
+		});
 		await settle();
 		expect(card('S-0001')).toBeDefined();
 		expect(document.querySelector('[data-testid="agent-stream"]')).toBeNull();
@@ -165,13 +174,16 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 	it('offers Stop only for an agent that runs or waits for an answer, and only while it may', async () => {
 		answer({ ok: true, body: {} });
 		const streams = [stream('S-0001'), stream('S-0002'), stream('S-0003')];
-		c = mount(ActivityView, { target: document.body, props: { streams, agents: agents() } });
+		c = mount(ActivityView, {
+			target: document.body,
+			props: { flow: baselineFlow, streams, agents: agents() }
+		});
 		await settle();
 		expect(document.querySelector('[data-testid="agent-stop"]')).toBeNull();
 		unmount(c);
 		c = mount(ActivityView, {
 			target: document.body,
-			props: { streams, agents: agents(), canStop: true }
+			props: { flow: baselineFlow, streams, agents: agents(), canStop: true }
 		});
 		await settle();
 		expect(stopButton('S-0001')).not.toBeNull();
@@ -184,7 +196,13 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		const onstopped = vi.fn();
 		c = mount(ActivityView, {
 			target: document.body,
-			props: { streams: [stream('S-0001')], agents: agents(), canStop: true, onstopped }
+			props: {
+				flow: baselineFlow,
+				streams: [stream('S-0001')],
+				agents: agents(),
+				canStop: true,
+				onstopped
+			}
 		});
 		await settle();
 		stopButton('S-0001')!.click();
@@ -228,7 +246,13 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		const onstopped = vi.fn();
 		c = mount(ActivityView, {
 			target: document.body,
-			props: { streams: [stream('S-0003')], agents: agents(), canStop: true, onstopped }
+			props: {
+				flow: baselineFlow,
+				streams: [stream('S-0003')],
+				agents: agents(),
+				canStop: true,
+				onstopped
+			}
 		});
 		await settle();
 		stopButton('S-0003')!.click();
@@ -261,6 +285,7 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		const retryButton = () =>
 			card('S-0004')?.querySelector<HTMLButtonElement>('[data-testid="agent-retry"]') ?? null;
 		const props = (canStop: boolean, writable: boolean) => ({
+			flow: baselineFlow,
 			streams: [stream('S-0004')],
 			agents: stopped,
 			canStop,
@@ -290,5 +315,26 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 				expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'restart' }) })
 			]
 		]);
+		unmount(c);
+
+		// S-0758: Retry reads the kind of the story's state, so an active lane the workflow adds offers
+		// it and a lane of kind waiting does not
+		for (const [status, offered] of [
+			['testing', true],
+			['review', false]
+		] as const) {
+			c = mount(ActivityView, {
+				target: document.body,
+				props: {
+					...props(true, true),
+					flow: addedStateFlow,
+					streams: [{ ...stream('S-0004'), status }]
+				}
+			});
+			await settle();
+			expect(retryButton() !== null, status).toBe(offered);
+			unmount(c);
+		}
+		c = undefined;
 	});
 });

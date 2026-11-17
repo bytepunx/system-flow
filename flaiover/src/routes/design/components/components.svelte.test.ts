@@ -27,6 +27,7 @@ import type {
 import { fromQuery, toQuery } from '$lib/explorer/controls';
 import { draftKey } from '$lib/design/draft';
 import { colorFromHex } from '$lib/design/tokens';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -915,6 +916,7 @@ describe('the components page (S-0439)', () => {
 		const STORY = 'S-0442';
 		const STORY_HARNESS = 'http://127.0.0.1:5299/__flai/components/';
 		const board = {
+			...baselineFlow,
 			columns: {
 				ready: [{ id: 'S-0443', type: 'story', title: 'Examples', status: 'ready' }],
 				'in-progress': [

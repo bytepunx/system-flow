@@ -18,6 +18,7 @@
 		splitRaw,
 		type Saved
 	} from '$lib/edit';
+	import type { Flow } from '$lib/lanes';
 	import { touching, type Worker } from '$lib/touches';
 	import Threads from '$lib/components/Threads.svelte';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
@@ -60,6 +61,8 @@
 	let conflict = $state<Conflict | null>(null);
 	let busy = $state(false);
 	let workers = $state<Worker[]>([]);
+	// The board's lanes, whose kinds say which of the workers are underway (S-0758).
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 	let acknowledged = $state(false);
 	let caretHeading = $state<string | null>(null);
 	let threadHeading = $state<string | undefined>(undefined);
@@ -75,7 +78,7 @@
 
 	const content = $derived(compose(frontMatter, body));
 	const dirty = $derived(doc !== null && content !== doc.content);
-	const workedOn = $derived(touching(path, workers));
+	const workedOn = $derived(touching(path, workers, flow));
 	const blockedByTouches = $derived(workedOn.length > 0 && !acknowledged);
 
 	$effect(() => ondirty?.(dirty));
@@ -140,6 +143,12 @@
 		api('/api/items?archived=false')
 			.then(async (r) => (workers = r.ok ? await r.json() : []))
 			.catch(() => (workers = []));
+		api('/api/board')
+			.then(async (r) => {
+				const b = r.ok ? await r.json() : {};
+				flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+			})
+			.catch(() => (flow = { lanes: [], transitions: [] }));
 	});
 
 	// A new line for the document already open moves the caret there.

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import DocEditor from './DocEditor.svelte';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -31,7 +32,8 @@ function backend(
 	doc: Record<string, unknown>,
 	put?: () => Reply,
 	items: unknown[] = [],
-	lint: (content: string) => Reply = () => json({ findings: [] })
+	lint: (content: string) => Reply = () => json({ findings: [] }),
+	flow = baselineFlow
 ) {
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 		if (init?.method === 'PUT') return put ? put() : json({});
@@ -39,6 +41,7 @@ function backend(
 		if (url.startsWith('/api/docs/edit')) return json(doc);
 		if (url.startsWith('/api/items')) return json(items);
 		if (url.startsWith('/api/threads')) return json([]);
+		if (url === '/api/board') return json({ ...flow, writable: true });
 		return json({});
 	});
 }
@@ -228,6 +231,24 @@ describe('DocEditor', () => {
 		(document.querySelector('input[type=checkbox]') as HTMLInputElement).click();
 		flushSync();
 		expect(saveButton().disabled).toBe(false);
+	});
+
+	// S-0758: underway is the kind of the story's state, so an active lane the workflow adds counts
+	it('warns of a story in a state the workflow adds, and not of one in a closed state', async () => {
+		backend(
+			{ path: 'design/system/plan.md', content: DOC, hash: 'h1', mode: 'full' },
+			undefined,
+			[
+				{ id: 'S-0041', title: 'Testing', status: 'testing', touches: ['design/system'] },
+				{ id: 'S-0042', title: 'Done', status: 'done', touches: ['design/system'] }
+			],
+			undefined,
+			addedStateFlow
+		);
+		c = mount(DocEditor, { target: document.body, props: { path: 'design/system/plan.md' } });
+		await settle();
+		expect(document.body.textContent).toContain('S-0041');
+		expect(document.body.textContent).not.toContain('S-0042');
 	});
 
 	it('opens a thread on the heading under the cursor', async () => {

@@ -39,6 +39,50 @@
             "path": "wip/agents/S-0441.md"
           }
         ],
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
+        },
         "agents": {
           "S-0444": {
             "state": "working",
@@ -146,7 +190,51 @@
     {
       "name": "No active streams",
       "props": {
-        "streams": []
+        "streams": [],
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
+        }
       }
     }
   ]

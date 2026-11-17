@@ -191,11 +191,18 @@
 		}
 	}
 
-	/** Lists the stories in progress or in review, from the board; none when it cannot be read. */
+	/**
+	 * Lists the stories being worked or waiting on review, by the board's lanes, from the board; none
+	 * when it cannot be read.
+	 */
 	async function loadStories() {
 		try {
 			const r = await api('/api/board');
-			stories = r.ok ? openStories((await r.json()).columns ?? {}) : [];
+			const b = r.ok ? await r.json() : {};
+			stories = openStories(b.columns ?? {}, {
+				lanes: b.lanes ?? [],
+				transitions: b.transitions ?? []
+			});
 		} catch {
 			stories = [];
 		}

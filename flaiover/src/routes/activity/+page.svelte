@@ -12,12 +12,15 @@
 	import AgentStream from '$lib/components/AgentStream.svelte';
 	import LogText from '$lib/components/LogText.svelte';
 	import { anyRunning, orchestratorLine, orchestratorRunning, type HostAgent } from '$lib/activity';
+	import type { Flow } from '$lib/lanes';
 
 	let streams = $state<never[] | null>(null);
 	let error = $state<string | null>(null);
 	let host = $state<HostAgent | null>(null);
-	// Whether the dashboard may write, asked once: Retry needs it, as the story page's does.
+	// Whether the dashboard may write, and the board's lanes and moves, asked once: Retry needs
+	// both, as the story page's does.
 	let writable = $state(false);
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 	const orchestrator = $derived(host?.state?.orchestrator ?? null);
 
 	async function loadAgents() {
@@ -44,9 +47,11 @@
 			error = e instanceof Error ? e.message : String(e);
 		}
 	}
-	async function loadWritable() {
+	async function loadBoard() {
 		try {
-			writable = (await (await api('/api/board')).json()).writable === true;
+			const b = await (await api('/api/board')).json();
+			writable = b.writable === true;
+			flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
 		} catch {
 			// not known: no Retry
 		}
@@ -54,7 +59,7 @@
 	onMount(() => {
 		void load();
 		void loadAgents();
-		void loadWritable();
+		void loadBoard();
 		// the streams are read from the narratives and the work items, the agents from the items and
 		// the threads; flai serve says when an agent starts or ends (S-0161), the orchestrator's too
 		const agents = debounced(() => void loadAgents());
@@ -134,6 +139,7 @@
 	{/if}
 	<ActivityView
 		{streams}
+		{flow}
 		agents={host?.state?.stories ?? {}}
 		canStop={!!host?.enabled}
 		{writable}

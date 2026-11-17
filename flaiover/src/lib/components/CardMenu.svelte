@@ -40,7 +40,7 @@
 	} = $props();
 
 	const entries = $derived(
-		cardMenu(card, { writable, activity, agentEnabled, planEnabled }).filter(
+		cardMenu(card, { flow, writable, activity, agentEnabled, planEnabled }).filter(
 			(e) => e.action !== 'cancel' || cancelMove(flow, card.status, card.type) !== undefined
 		)
 	);

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compose, headingAt, headingsOf, lineAt, locate, offsetOfLine, splitRaw } from './edit';
+import type { Flow } from './lanes';
+import { addedStateFlow, baselineFlow } from './lanes.fixture';
 import { touching } from './touches';
 
 const DOC = '---\ntitle: Plan\nupdated: 2026-09-01\n---\n\n# Plan\n\n## Shape\ntext\n';
@@ -74,9 +76,20 @@ describe('touches', () => {
 		{ id: 'S-4', title: 'd', status: 'in-progress', touches: ['design/sys'] }
 	];
 	it('matches the path or a folder above it, for work in progress or review only', () => {
-		expect(touching('design/system/plan.md', items).map((w) => w.id)).toEqual(['S-1']);
-		expect(touching('docs/users/flai.md', items).map((w) => w.id)).toEqual(['S-2']);
-		expect(touching('docs/users/other.md', items)).toEqual([]);
-		expect(touching('', items)).toEqual([]);
+		const on = (path: string) => touching(path, items, baselineFlow).map((w) => w.id);
+		expect(on('design/system/plan.md')).toEqual(['S-1']);
+		expect(on('docs/users/flai.md')).toEqual(['S-2']);
+		expect(on('docs/users/other.md')).toEqual([]);
+		expect(on('')).toEqual([]);
+	});
+	// S-0758: underway is the kind of the item's state, so an active lane the workflow adds counts
+	it('matches work in a state the workflow adds of kind active', () => {
+		const tested = [
+			...items,
+			{ id: 'S-5', title: 'e', status: 'testing', touches: ['design/system/plan.md'] }
+		];
+		const on = (flow: Flow) => touching('design/system/plan.md', tested, flow).map((w) => w.id);
+		expect(on(addedStateFlow)).toEqual(['S-1', 'S-5']);
+		expect(on(baselineFlow)).toEqual(['S-1']);
 	});
 });

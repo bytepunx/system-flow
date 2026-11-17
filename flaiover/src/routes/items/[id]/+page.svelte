@@ -860,6 +860,7 @@
 				<div class="space-y-4 text-sm" hidden={shown !== 'agent'} data-testid="item-agent-pane">
 					<StoryAgent
 						story={item.id}
+						{flow}
 						status={item.status}
 						writable={writable && !item.archived}
 						onhold={(h) => (hold = h)}

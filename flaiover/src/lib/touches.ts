@@ -9,11 +9,7 @@ export type Worker = { id: string; title: string; status?: string; touches?: str
  * Items underway in the flow, in a lane of kind active or waiting, or of no status given, whose
  * `touches` cover the path: the path itself or a folder above it.
  */
-export function touching(
-	path: string,
-	items: Worker[],
-	flow: Flow = { lanes: [], transitions: [] }
-): Worker[] {
+export function touching(path: string, items: Worker[], flow: Flow): Worker[] {
 	if (!path) return [];
 	return items.filter(
 		(w) =>

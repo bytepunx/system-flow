@@ -6,6 +6,17 @@
       "props": {
         "deployable": true,
         "busy": false,
+        "flow": {
+          "lanes": [
+            { "name": "backlog", "title": "backlog", "kind": "queue", "ordered": true, "initial": true },
+            { "name": "ready", "title": "ready", "kind": "queue", "wip_limit": 5, "takes_limit": true, "ordered": true },
+            { "name": "in-progress", "title": "in-progress", "kind": "active", "wip_limit": 2, "takes_limit": true },
+            { "name": "review", "title": "review", "kind": "waiting", "wip_limit": 3, "takes_limit": true },
+            { "name": "done", "title": "done", "kind": "accepted" },
+            { "name": "cancelled", "title": "cancelled", "kind": "cancelled" }
+          ],
+          "transitions": []
+        },
         "deployment": {
           "story": "S-0663",
           "title": "The Deployments page shows the namespace of each story in progress",
@@ -44,6 +55,17 @@
       "props": {
         "deployable": true,
         "busy": false,
+        "flow": {
+          "lanes": [
+            { "name": "backlog", "title": "backlog", "kind": "queue", "ordered": true, "initial": true },
+            { "name": "ready", "title": "ready", "kind": "queue", "wip_limit": 5, "takes_limit": true, "ordered": true },
+            { "name": "in-progress", "title": "in-progress", "kind": "active", "wip_limit": 2, "takes_limit": true },
+            { "name": "review", "title": "review", "kind": "waiting", "wip_limit": 3, "takes_limit": true },
+            { "name": "done", "title": "done", "kind": "accepted" },
+            { "name": "cancelled", "title": "cancelled", "kind": "cancelled" }
+          ],
+          "transitions": []
+        },
         "deployment": {
           "story": "S-0581",
           "title": "The Deployments page lists the namespaces deployed to the project's kluster",
@@ -78,6 +100,17 @@
       "props": {
         "deployable": true,
         "busy": false,
+        "flow": {
+          "lanes": [
+            { "name": "backlog", "title": "backlog", "kind": "queue", "ordered": true, "initial": true },
+            { "name": "ready", "title": "ready", "kind": "queue", "wip_limit": 5, "takes_limit": true, "ordered": true },
+            { "name": "in-progress", "title": "in-progress", "kind": "active", "wip_limit": 2, "takes_limit": true },
+            { "name": "review", "title": "review", "kind": "waiting", "wip_limit": 3, "takes_limit": true },
+            { "name": "done", "title": "done", "kind": "accepted" },
+            { "name": "cancelled", "title": "cancelled", "kind": "cancelled" }
+          ],
+          "transitions": []
+        },
         "deployment": {
           "story": "S-0586",
           "title": "The operator reaches a namespace through a port-forward",
@@ -113,6 +146,17 @@
       "props": {
         "deployable": true,
         "busy": false,
+        "flow": {
+          "lanes": [
+            { "name": "backlog", "title": "backlog", "kind": "queue", "ordered": true, "initial": true },
+            { "name": "ready", "title": "ready", "kind": "queue", "wip_limit": 5, "takes_limit": true, "ordered": true },
+            { "name": "in-progress", "title": "in-progress", "kind": "active", "wip_limit": 2, "takes_limit": true },
+            { "name": "review", "title": "review", "kind": "waiting", "wip_limit": 3, "takes_limit": true },
+            { "name": "done", "title": "done", "kind": "accepted" },
+            { "name": "cancelled", "title": "cancelled", "kind": "cancelled" }
+          ],
+          "transitions": []
+        },
         "deployment": {
           "story": "S-0595",
           "title": "The Deployments page groups its panes in its own rail",
@@ -151,6 +195,17 @@
       "props": {
         "deployable": false,
         "busy": true,
+        "flow": {
+          "lanes": [
+            { "name": "backlog", "title": "backlog", "kind": "queue", "ordered": true, "initial": true },
+            { "name": "ready", "title": "ready", "kind": "queue", "wip_limit": 5, "takes_limit": true, "ordered": true },
+            { "name": "in-progress", "title": "in-progress", "kind": "active", "wip_limit": 2, "takes_limit": true },
+            { "name": "review", "title": "review", "kind": "waiting", "wip_limit": 3, "takes_limit": true },
+            { "name": "done", "title": "done", "kind": "accepted" },
+            { "name": "cancelled", "title": "cancelled", "kind": "cancelled" }
+          ],
+          "transitions": []
+        },
         "deployment": {
           "story": "S-0640",
           "title": "An agent deploys its story to see it running",

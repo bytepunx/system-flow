@@ -325,10 +325,7 @@ export function stoppable(a: StoryActivity | undefined): a is StoryActivity {
 
 // What a writer may have flai do for a story's agent, with the agent action on (S-0115, S-0116,
 // S-0177): one rule for the story page and the card's menu (S-0202), read from the kind of the
-// story's status and the moves from it in the workflow's flow (S-0758); with no flow given, no
-// status allows any of it.
-
-const noFlow: Flow = { lanes: [], transitions: [] };
+// story's status and the moves from it in the workflow's flow (S-0758).
 
 /**
  * Whether a writer may retry a story whose agent failed (S-0116): one an agent may pull, or one
@@ -339,7 +336,7 @@ export function retryable(
 	enabled: boolean,
 	status: string,
 	writable: boolean,
-	flow: Flow = noFlow
+	flow: Flow
 ): a is StoryActivity {
 	return (
 		writable &&
@@ -355,7 +352,7 @@ export function startable(
 	enabled: boolean,
 	status: string,
 	writable: boolean,
-	flow: Flow = noFlow
+	flow: Flow
 ): boolean {
 	return writable && enabled && isPullable(flow, status) && (!a || (!!a.hold && !a.run.started));
 }
@@ -366,7 +363,7 @@ export function startableHere(
 	enabled: boolean,
 	status: string,
 	writable: boolean,
-	flow: Flow = noFlow
+	flow: Flow
 ): boolean {
 	return writable && enabled && isActive(flow, status) && !!a?.elsewhere;
 }
@@ -377,7 +374,7 @@ export function agentAction(
 	enabled: boolean,
 	status: string,
 	writable: boolean,
-	flow: Flow = noFlow
+	flow: Flow
 ): { action: 'start' | 'restart'; label: 'Start agent' | 'Retry' } | null {
 	if (retryable(activity, enabled, status, writable, flow))
 		return { action: 'restart', label: 'Retry' };

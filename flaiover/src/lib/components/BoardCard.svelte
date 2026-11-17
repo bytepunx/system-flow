@@ -52,7 +52,7 @@
 
 	let {
 		card,
-		flow = { lanes: [], transitions: [] },
+		flow,
 		draggable = false,
 		dragging = false,
 		waiting = false,
@@ -64,8 +64,8 @@
 	}: {
 		card: Card;
 		/** The board's lanes and moves (S-0758): a story in a lane of kind waiting links to its review
-		 * page and carries its merge-queue mark; with none given, no lane is. */
-		flow?: Flow;
+		 * page and carries its merge-queue mark. */
+		flow: Flow;
 		draggable?: boolean;
 		dragging?: boolean;
 		/** Merged to main but not yet published (S-0087); the done column's own state, meaningless

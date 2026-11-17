@@ -50,7 +50,6 @@ describe('openStories', () => {
 			'S-0444',
 			'S-0442'
 		]);
-		expect(openStories(columns)).toEqual([]);
 	});
 });
 

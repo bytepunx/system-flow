@@ -1,6 +1,9 @@
 // A board card's menu (S-0202): what the operator may do with the item from the card, as its page
-// offers it, in the order the menu lists it.
+// offers it, in the order the menu lists it; open, closed, and cancelled are the kinds of the item's
+// state in the workflow's flow (S-0758).
 import { agentAction, type StoryActivity } from './activity';
+import type { Flow } from './lanes';
+import { isCancelled, isOpen } from './workflow';
 
 /** What an entry of the card's menu does. */
 export type CardAction =
@@ -19,16 +22,22 @@ export function cardMenu(
 		draft?: boolean;
 		archived?: boolean;
 	},
-	ctx: { writable: boolean; activity?: StoryActivity; agentEnabled: boolean; planEnabled: boolean }
+	ctx: {
+		flow: Flow;
+		writable: boolean;
+		activity?: StoryActivity;
+		agentEnabled: boolean;
+		planEnabled: boolean;
+	}
 ): CardEntry[] {
 	const entries: CardEntry[] = [{ action: 'open', label: 'Open' }];
 	const story = card.type === 'story';
 	const changeable = ctx.writable && !card.archived;
-	const open = card.status !== 'done' && card.status !== 'cancelled';
+	const open = isOpen(ctx.flow, card.status);
 	if (changeable && story && card.draft === true)
 		entries.push({ action: 'finalize', label: 'Finalize' });
 	const agent = story
-		? agentAction(ctx.activity, ctx.agentEnabled, card.status, ctx.writable)
+		? agentAction(ctx.activity, ctx.agentEnabled, card.status, ctx.writable, ctx.flow)
 		: null;
 	if (agent) entries.push({ action: 'agent', label: agent.label, agent: agent.action });
 	// the planner, as an epic's or a story's page offers it while the plan host action is on (S-0263)
@@ -38,7 +47,7 @@ export function cardMenu(
 	else if (changeable && open) entries.push({ action: 'block', label: 'Block…' });
 	if (changeable && open) entries.push({ action: 'cancel', label: 'Cancel…' });
 	// where Cancel… stood before the item was cancelled: what is left to do with it (S-0343)
-	if (changeable && card.status === 'cancelled')
+	if (changeable && isCancelled(ctx.flow, card.status))
 		entries.push({ action: 'archive', label: 'Archive' });
 	return entries;
 }

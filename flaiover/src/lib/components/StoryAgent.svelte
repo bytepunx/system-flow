@@ -36,6 +36,8 @@
 		type HostAgent,
 		type StoryActivity
 	} from '$lib/activity';
+	import type { Flow } from '$lib/lanes';
+	import { isClosed } from '$lib/workflow';
 	import AgentDot from './AgentDot.svelte';
 	import AgentStream from './AgentStream.svelte';
 	import { imageJobAnchor } from './ImageJob.svelte';
@@ -43,12 +45,16 @@
 
 	let {
 		story,
+		flow,
 		status: storyStatus = '',
 		writable = false,
 		onhold,
 		onactivity
 	}: {
 		story: string;
+		/** The board's lanes and moves (S-0758): which states the agent may be started or retried in,
+		 * and which are closed. */
+		flow: Flow;
 		status?: string;
 		writable?: boolean;
 		/** Told the story's hold each time it changes, undefined once it clears. */
@@ -62,19 +68,24 @@
 	// The failed run Retry was pressed for: the button stays hidden while flai has it.
 	let retried = $state<string | null>(null);
 
-	async function ask() {
+	// flai leaves a finished story's runs out unless asked for them (S-0611); an archived story is
+	// closed too
+	const finished = $derived(isClosed(flow, storyStatus));
+
+	async function ask(closed = finished) {
 		try {
-			// flai leaves a finished story's runs out unless asked for them (S-0611); an archived
-			// story is done or cancelled too
-			const finished = storyStatus === 'done' || storyStatus === 'cancelled';
-			const r = await api(finished ? '/api/host-agent?finished=1' : '/api/host-agent');
+			const r = await api(closed ? '/api/host-agent?finished=1' : '/api/host-agent');
 			if (r.ok) status = await r.json();
 		} catch {
 			// keep what we had
 		}
 	}
+	// first, and again whenever the story's state closes or reopens, as when the page's flow
+	// arrives after the panel
+	$effect(() => {
+		void ask(finished);
+	});
 	onMount(() => {
-		void ask();
 		// flai serve says when this story's agent starts or ends, which changes no file (S-0154); what
 		// it is doing is read from the work items and the threads it asks in (S-0161)
 		const stopItems = follow(['item', 'thread'], () => void ask());
@@ -115,13 +126,15 @@
 	const live = $derived(activity?.state === 'working' || activity?.state === 'waiting');
 	// The rules are the card menu's too (S-0202); Retry hides once pressed for that run.
 	const canRetry = $derived(
-		retryable(activity, !!status?.enabled, storyStatus, writable) &&
+		retryable(activity, !!status?.enabled, storyStatus, writable, flow) &&
 			activity.run.started !== retried
 	);
 	// A ready story no agent was started for; flai says why not when it refuses.
-	const canStart = $derived(startable(activity, !!status?.enabled, storyStatus, writable));
+	const canStart = $derived(startable(activity, !!status?.enabled, storyStatus, writable, flow));
 	// A story in progress begun with no agent of this host's: flai serve agent restart starts one.
-	const canStartHere = $derived(startableHere(activity, !!status?.enabled, storyStatus, writable));
+	const canStartHere = $derived(
+		startableHere(activity, !!status?.enabled, storyStatus, writable, flow)
+	);
 	// Why flai serve has not started it, from the reasons it gives for each story that waits.
 	const waitingWhy = $derived(
 		status?.state?.waiting?.split('; ').find((w) => new RegExp(`\\b${story}\\b`).test(w))

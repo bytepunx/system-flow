@@ -653,6 +653,7 @@
 				{:else}
 					<DeploymentRow
 						deployment={d}
+						{flow}
 						deployable={!undeployable}
 						busy={disabled}
 						onDeploy={(id) => act('deploy', id)}

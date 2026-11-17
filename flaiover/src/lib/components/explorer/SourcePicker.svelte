@@ -15,11 +15,11 @@
 
 	/**
 	 * The board's stories underway, being worked or waiting on review, lane by lane in board order
-	 * (S-0758): the sources besides Main. With no flow given, no lane is underway.
+	 * (S-0758): the sources besides Main.
 	 */
 	export function openStories(
 		columns: Partial<Record<string, readonly (SourceStory & { type: string })[]>>,
-		flow: Flow = { lanes: [], transitions: [] }
+		flow: Flow
 	): SourceStory[] {
 		return flow.lanes
 			.filter((l) => isUnderway(flow, l.name))

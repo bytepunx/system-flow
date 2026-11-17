@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { cardMenu } from './cardmenu';
 import type { StoryActivity } from './activity';
+import { addedStateFlow, baselineFlow, testingFlow } from './lanes.fixture';
 
 // S-0202: a board card's menu offers what the item's page does, to a writer
 describe('a card’s menu', () => {
 	const story = { id: 'S-0202', type: 'story', status: 'backlog', blocked: false };
-	const writer = { writable: true, agentEnabled: true, planEnabled: false };
+	const writer = { flow: baselineFlow, writable: true, agentEnabled: true, planEnabled: false };
 	const labels = (...args: Parameters<typeof cardMenu>) => cardMenu(...args).map((e) => e.label);
 	const failed: StoryActivity = {
 		state: 'failed',
@@ -31,7 +32,7 @@ describe('a card’s menu', () => {
 		);
 	});
 	it('offers only Open on a read-only board', () => {
-		const reader = { writable: false, agentEnabled: true, planEnabled: true };
+		const reader = { flow: baselineFlow, writable: false, agentEnabled: true, planEnabled: true };
 		expect(cardMenu({ ...story, status: 'ready', draft: true }, reader)).toEqual([
 			{ action: 'open', label: 'Open' }
 		]);
@@ -120,6 +121,32 @@ describe('a card’s menu', () => {
 		expect(labels({ ...story, status: 'in-progress', blocked: true }, writer)).toEqual([
 			'Open',
 			'Unblock',
+			'Cancel…'
+		]);
+	});
+	// S-0758: open, cancelled, and the agent's action are the kinds of the card's state, not its name
+	it("reads the card's state from the flow's lanes and moves", () => {
+		const added = { ...writer, flow: addedStateFlow };
+		expect(labels({ ...story, status: 'testing' }, added)).toEqual(['Open', 'Block…', 'Cancel…']);
+		expect(labels({ ...story, status: 'testing' }, { ...added, activity: failed })).toContain(
+			'Retry'
+		);
+		expect(
+			labels({ ...story, status: 'doing' }, { ...writer, flow: testingFlow, activity: failed })
+		).toContain('Retry');
+		const dropped = {
+			...writer,
+			flow: {
+				...baselineFlow,
+				lanes: baselineFlow.lanes.map((l) =>
+					l.kind === 'cancelled' ? { ...l, name: 'dropped', title: 'dropped' } : l
+				)
+			}
+		};
+		expect(labels({ ...story, status: 'dropped' }, dropped)).toEqual(['Open', 'Archive']);
+		expect(labels({ ...story, status: 'cancelled' }, dropped)).toEqual([
+			'Open',
+			'Block…',
 			'Cancel…'
 		]);
 	});

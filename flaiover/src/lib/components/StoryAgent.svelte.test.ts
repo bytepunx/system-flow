@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import StoryAgent from './StoryAgent.svelte';
 import { GATHER_MS } from '$lib/events';
+import type { Flow } from '$lib/lanes';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -60,10 +62,13 @@ describe('StoryAgent (S-0104)', () => {
 	const show = async (
 		stories: unknown,
 		enabled = true,
-		props: { status?: string; writable?: boolean } = {}
+		props: { status?: string; writable?: boolean; flow?: Flow } = {}
 	) => {
 		api.mockResolvedValue(answer({ enabled, state: { command: '', stories } }));
-		c = mount(StoryAgent, { target: document.body, props: { story: 'S-0104', ...props } });
+		c = mount(StoryAgent, {
+			target: document.body,
+			props: { story: 'S-0104', flow: baselineFlow, ...props }
+		});
 		await settle();
 	};
 
@@ -92,6 +97,23 @@ describe('StoryAgent (S-0104)', () => {
 			await show({ 'S-0104': { state: 'worked', run } }, true, { status });
 			expect(urls()).toEqual(['/api/host-agent?finished=1']);
 		}
+	});
+
+	// S-0758: finished is a state's kind, so a closed lane of another name is finished too
+	it("asks for a finished story's runs in a lane of kind accepted of any name", async () => {
+		const shipped: Flow = {
+			...baselineFlow,
+			lanes: baselineFlow.lanes.map((l) =>
+				l.kind === 'accepted' ? { ...l, name: 'shipped', title: 'shipped' } : l
+			)
+		};
+		await show({ 'S-0104': { state: 'worked', run } }, true, { status: 'shipped', flow: shipped });
+		expect(api).toHaveBeenCalledWith('/api/host-agent?finished=1');
+		unmount(c!);
+		c = undefined;
+		api.mockReset();
+		await show({ 'S-0104': { state: 'worked', run } }, true, { status: 'done', flow: shipped });
+		expect(api).not.toHaveBeenCalledWith('/api/host-agent?finished=1');
 	});
 
 	it('shows the agent at work, and asks again when the project changes', async () => {
@@ -356,6 +378,7 @@ describe('StoryAgent (S-0104)', () => {
 				[failed, { status: 'in-progress', writable: true }, true],
 				[failed, { status: 'ready', writable: true }, true],
 				[failed, { status: 'review', writable: true }, false],
+				[failed, { status: 'testing', writable: true, flow: addedStateFlow }, true],
 				[failed, { status: 'in-progress', writable: false }, false],
 				[{ 'S-0104': { state: 'working', run } }, { status: 'in-progress', writable: true }, false],
 				[
@@ -464,7 +487,7 @@ describe('StoryAgent (S-0104)', () => {
 			unmount(c!);
 			c = mount(StoryAgent, {
 				target: document.body,
-				props: { story: 'S-0104', status: 'ready', writable: true }
+				props: { story: 'S-0104', flow: baselineFlow, status: 'ready', writable: true }
 			});
 			await settle();
 			expect(button()).toBeNull();
@@ -530,7 +553,7 @@ describe('StoryAgent (S-0104)', () => {
 			);
 			c = mount(StoryAgent, {
 				target: document.body,
-				props: { story: 'S-0104', status: 'ready', writable: true }
+				props: { story: 'S-0104', flow: baselineFlow, status: 'ready', writable: true }
 			});
 			await settle();
 			expect(text()).toContain(
@@ -613,7 +636,7 @@ describe('StoryAgent (S-0104)', () => {
 			);
 			c = mount(StoryAgent, {
 				target: document.body,
-				props: { story: 'S-0104', status: 'ready', writable: true }
+				props: { story: 'S-0104', flow: baselineFlow, status: 'ready', writable: true }
 			});
 			await settle();
 			expect(text()).toContain(
@@ -688,6 +711,7 @@ describe('StoryAgent (S-0104)', () => {
 				target: document.body,
 				props: {
 					story: 'S-0104',
+					flow: baselineFlow,
 					status: 'ready',
 					onhold: (h) => (got = h)
 				}
@@ -781,7 +805,10 @@ describe('StoryAgent (S-0104)', () => {
 			);
 		const showStream = async (stories: unknown) => {
 			serve(stories);
-			c = mount(StoryAgent, { target: document.body, props: { story: 'S-0104' } });
+			c = mount(StoryAgent, {
+				target: document.body,
+				props: { story: 'S-0104', flow: baselineFlow }
+			});
 			await settle();
 		};
 

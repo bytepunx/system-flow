@@ -8,6 +8,7 @@
 	import DocTree from '$lib/components/DocTree.svelte';
 	import { render, enhance } from '$lib/markdown';
 	import { headingsOf } from '$lib/edit';
+	import type { Flow } from '$lib/lanes';
 	import { touching, type Worker } from '$lib/touches';
 	import PageSidebar from '$lib/components/PageSidebar.svelte';
 	import { hashId, type SidebarEntry } from '$lib/pagesidebar.svelte';
@@ -30,9 +31,10 @@
 	const current = $derived(page.params.path ?? '');
 	let workers = $state<Worker[]>([]);
 	let writable = $state(false);
-	// Items in progress or review whose touches cover the open document (ADR-0019);
-	// a story in review still owns its branch until it is accepted.
-	const touchingNow = $derived(touching(current, workers));
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
+	// Items being worked or waiting on review, by the board's lanes (S-0758), whose touches cover the
+	// open document (ADR-0019); a story in review still owns its branch until it is accepted.
+	const touchingNow = $derived(touching(current, workers, flow));
 	async function loadWorkers() {
 		try {
 			const r = await api('/api/items?archived=false');
@@ -78,7 +80,11 @@
 	onMount(async () => {
 		void loadWorkers();
 		api('/api/board')
-			.then(async (r) => (writable = r.ok ? (await r.json()).writable : false))
+			.then(async (r) => {
+				const b = r.ok ? await r.json() : {};
+				writable = b.writable ?? false;
+				flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+			})
 			.catch(() => (writable = false));
 		const r = await api('/api/docs/tree');
 		tree = await r.json();

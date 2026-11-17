@@ -372,7 +372,6 @@ describe("a story's agent action", () => {
 		expect(agentAction(undefined, true, 'ready', true, addedStateFlow)).toEqual(start);
 		expect(agentAction(begun, true, 'doing', true, testingFlow)).toEqual(startHere);
 		expect(agentAction(failed, true, 'review', true, addedStateFlow)).toBeNull();
-		expect(agentAction(undefined, true, 'ready', true)).toBeNull();
 	});
 });
 

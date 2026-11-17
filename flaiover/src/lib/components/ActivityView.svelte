@@ -12,6 +12,7 @@
 	import { age } from '$lib/age';
 	import { localTime } from '$lib/localtime';
 	import { activityLine, retryable, stoppable, type StoryActivity } from '$lib/activity';
+	import type { Flow } from '$lib/lanes';
 	import AgentDot from './AgentDot.svelte';
 	import AgentStopConfirm from './AgentStopConfirm.svelte';
 	import AgentStream from './AgentStream.svelte';
@@ -32,6 +33,7 @@
 	};
 	let {
 		streams,
+		flow,
 		agents = {},
 		canStop = false,
 		writable = false,
@@ -39,6 +41,8 @@
 		onretried
 	}: {
 		streams: Stream[];
+		/** The board's lanes and moves (S-0758): which stories' states Retry is offered in. */
+		flow: Flow;
 		agents?: Record<string, StoryActivity>;
 		/** Whether the operator may stop an agent here: the agent host action is on. */
 		canStop?: boolean;
@@ -54,7 +58,7 @@
 	let retried = $state<Record<string, string>>({});
 	let retryErrors = $state<Record<string, string>>({});
 	const canRetry = (s: Stream, a: StoryActivity) =>
-		retryable(a, canStop, s.status, writable) && retried[s.stream] !== a.run.started;
+		retryable(a, canStop, s.status, writable, flow) && retried[s.stream] !== a.run.started;
 
 	async function retry(id: string, started: string) {
 		retried[id] = started;

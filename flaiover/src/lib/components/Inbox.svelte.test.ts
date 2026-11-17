@@ -4,6 +4,7 @@ import ActivityView from './ActivityView.svelte';
 import InboxView from './InboxView.svelte';
 import InboxBadge from './InboxBadge.svelte';
 import { inboxState, newEntries, type Inbox } from '$lib/inbox.svelte';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -246,6 +247,7 @@ describe('inbox and activity views', () => {
 		c = mount(ActivityView, {
 			target: document.body,
 			props: {
+				flow: baselineFlow,
 				streams: [
 					{
 						stream: 'S-0042',
@@ -281,7 +283,7 @@ describe('inbox and activity views', () => {
 	});
 
 	it('says when there are no active streams', () => {
-		c = mount(ActivityView, { target: document.body, props: { streams: [] } });
+		c = mount(ActivityView, { target: document.body, props: { flow: baselineFlow, streams: [] } });
 		flushSync();
 		expect(document.body.textContent).toContain('No active streams');
 	});

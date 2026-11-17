@@ -11,7 +11,10 @@
 	// to read, so the row shows the end of its log itself. Each log file it names, the checks run's
 	// and the failed step's, links the log page, and a log path in its error does too (S-0785); the
 	// folder of a deploy's step logs is no file, so Its log opens Logs, which links each step's.
+	// The column is named, toned, and open for a deploy by its lane's kind (S-0758).
+	import type { Flow } from '$lib/lanes';
 	import type { KlusterDeployment, KlusterStep } from '$lib/server/repo';
+	import { isActive, isUnderway, isWaiting, kindOf, stateTitle } from '$lib/workflow';
 	import { localTime } from '$lib/localtime';
 	import { resolve } from '$app/paths';
 	import LogLink from './LogLink.svelte';
@@ -19,6 +22,7 @@
 
 	let {
 		deployment,
+		flow,
 		deployable = true,
 		busy = false,
 		onDeploy,
@@ -30,6 +34,8 @@
 	}: {
 		/** The story namespace's deployment, as kluster.deployments answers it. */
 		deployment: KlusterDeployment;
+		/** The board's lanes and moves, which say what the story's column is. */
+		flow: Flow;
 		/** Whether the block names a deploy; without one, Deploy gives way to Set up deploys. */
 		deployable?: boolean;
 		/** Whether a job runs or the kluster host action is off: every action is disabled. */
@@ -59,15 +65,24 @@
 	const href = $derived(resolve('/items/[id]', { id: deployment.story }));
 	// the story's column; a flai older than S-0663 sends the story's status alone
 	const column = $derived(d.column ?? d.status);
+	// named as the Deployments page names it: the board's first active lane in progress, its first
+	// waiting lane in review, any other by its title; an active lane's badge as work under way
+	const leadsKind = $derived(
+		flow.lanes.find((l) => l.kind === kindOf(flow, column))?.name === column
+	);
 	const columnText = $derived(
-		column === 'in-progress' ? 'in progress' : column === 'review' ? 'in review' : column
+		isActive(flow, column) && leadsKind
+			? 'in progress'
+			: isWaiting(flow, column) && leadsKind
+				? 'in review'
+				: stateTitle(flow, column)
 	);
 	const tone = $derived(
-		column === 'in-progress'
+		isActive(flow, column)
 			? 'ml-1 rounded bg-info-soft px-2 py-0.5 text-xs text-info'
 			: 'ml-1 rounded bg-surface px-2 py-0.5 text-xs text-muted'
 	);
-	const open = $derived(column === 'in-progress' || column === 'review');
+	const open = $derived(isUnderway(flow, column));
 	const commit = $derived(short(d.commit));
 	const behind = $derived(!!d.head && d.head !== d.commit);
 	const redeployable = $derived(

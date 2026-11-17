@@ -673,6 +673,7 @@
 {#if cancelling}
 	<CancelConfirm
 		id={cancelling.id}
+		{flow}
 		oncancel={() => (cancelling = null)}
 		onconfirm={async (reason) => {
 			const { id, to } = cancelling!;
@@ -899,6 +900,7 @@
 							{/if}
 							<BoardCard
 								card={c}
+								{flow}
 								draggable={board.writable}
 								dragging={dragging === c.id}
 								waiting={lane.kind === 'accepted' && waitingIds.has(c.id)}

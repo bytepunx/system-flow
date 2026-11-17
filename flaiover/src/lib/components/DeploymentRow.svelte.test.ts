@@ -14,8 +14,10 @@ vi.mock('$app/paths', () => ({
 }));
 
 import DeploymentRow from './DeploymentRow.svelte';
+import type { Flow } from '$lib/lanes';
+import { addedStateFlow, testingFlow } from '$lib/lanes.fixture';
 
-type Props = { deployment: KlusterDeployment; deployable?: boolean; busy?: boolean };
+type Props = { deployment: KlusterDeployment; flow: Flow; deployable?: boolean; busy?: boolean };
 type Example = { name: string; props: Props };
 
 const FILE =
@@ -146,6 +148,32 @@ describe('DeploymentRow examples', () => {
 		expect(text('deployment-to-setup')).toBe('Set up deploys');
 		expect(buttonNamed('Teardown')!.disabled).toBe(true);
 		expect(step('build').dataset.outcome).toBe('running');
+	});
+
+	// S-0758: the column is named, toned, and open for a deploy by its lane's kind, not its name
+	it("names the column by its lane's kind, as the Deployments page does", () => {
+		const behind = example(BEHIND);
+		render({ ...behind, flow: testingFlow, deployment: { ...behind.deployment, column: 'doing' } });
+		expect(text('deployment-column')).toBe('in progress');
+		expect(q('deployment-column')!.className).toContain('text-info');
+		expect(buttonNamed('Deploy')).toBeDefined();
+		unmount(component!);
+		render({
+			...behind,
+			flow: addedStateFlow,
+			deployment: { ...behind.deployment, column: 'testing' }
+		});
+		expect(text('deployment-column')).toBe('testing');
+		expect(q('deployment-column')!.className).toContain('text-info');
+		expect(buttonNamed('Deploy')).toBeDefined();
+		unmount(component!);
+		render({
+			...behind,
+			flow: addedStateFlow,
+			deployment: { ...behind.deployment, column: 'done' }
+		});
+		expect(text('deployment-column')).toBe('done');
+		expect(buttonNamed('Deploy')).toBeUndefined();
 	});
 });
 
