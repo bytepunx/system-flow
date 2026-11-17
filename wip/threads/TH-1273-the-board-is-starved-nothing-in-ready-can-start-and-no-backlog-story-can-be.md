@@ -3,10 +3,10 @@ id: TH-1273
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-17T08:14:03Z
-updated: 2026-11-17T08:14:03Z
+updated: 2026-11-17T08:15:46Z
 ---
 
 # TH-1273 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -33,3 +33,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0822 A rebase and resolve job that passes records stayed in review without reading the story, and a move out of review neither stops the job nor is noticed by it: a draft; finalize it.
 - S-0823 A story the operator moves from review to in-progress by hand gets no agent and no thread, so it waits in in-progress with nothing to bring it back: a draft; finalize it.
 - S-0824 A rebase and resolve job runs the whole close-out again each time main moves under it, so one took three rounds and 33 minutes while other stories were accepted: a draft; finalize it.
+
+### 2026-11-17T08:15:46Z flai serve
+Resolved: S-0806 The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour in ready can start, so the board is no longer starved.
