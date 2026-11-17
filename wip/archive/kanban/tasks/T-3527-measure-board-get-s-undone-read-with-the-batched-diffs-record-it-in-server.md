@@ -24,16 +24,16 @@ touches: [flai/internal/hostapi/hostapi.go, design/system/server-performance.md,
 after: [T-3525]
 usage:
   source: log
-  seconds: 466
+  seconds: 468
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 293
-      cache_read: 4077767
-      cache_write: 24411
-      cost: 1.5673
+      input: 37
+      output: 13412
+      cache_read: 3989742
+      cache_write: 112431
+      cost: 1.9658
 ---
 # T-3527 Measure board.get's undone.read with the batched diffs, record it in server-performance.md, and close I-0349
 

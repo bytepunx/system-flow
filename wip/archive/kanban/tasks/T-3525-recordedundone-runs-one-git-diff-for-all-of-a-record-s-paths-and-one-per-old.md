@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 920
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 96
-      cache_read: 2340255
-      cache_write: 23524
-      cost: 0.9031
+      input: 22
+      output: 7728
+      cache_read: 2298992
+      cache_write: 64785
+      cost: 1.1327
 ---
 # T-3525 RecordedUndone runs one git diff for all of a record's paths and one per old base, not one or two per path
 
