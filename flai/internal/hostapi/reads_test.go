@@ -733,3 +733,68 @@ func TestBoardUndoneReadsTheStoriesAtOnceInOrder(t *testing.T) {
 		t.Errorf("%d diffs ran at once, want 2 to %d", g.most, undoneWorkers)
 	}
 }
+
+// S-0752 criterion 4: stats.get on a project whose workflow file adds
+// timers of its own answers the report flai stats --json prints with them:
+// their definitions, each item's seconds, and the summary's distribution,
+// read from the transitions the items had before the timers were added
+// (ADR-0317 §6).
+func TestStatsGetCarriesTheWorkflowsOwnTimers(t *testing.T) {
+	p := harbour(t)
+	data, err := os.ReadFile(filepath.Join("..", "workflow", "baseline", "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := "  - {name: review, title: Review time, sum: [review]}\n"
+	if !strings.Contains(string(data), last) {
+		t.Fatalf("the baseline workflow file has no line %q", last)
+	}
+	flow := strings.Replace(string(data), last, last+
+		"  - {name: acceptance-wait, title: Acceptance wait, from: {first: review}, to: completed}\n"+
+		"  - {name: in-work, title: In work, sum: [in-progress, review]}\n", 1)
+	if err := os.MkdirAll(filepath.Join(p.Root, "design", "workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.Root, "design", "workflows", "board.md"), []byte(flow), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Data struct {
+			Timers []struct {
+				Name  string `json:"name"`
+				Title string `json:"title"`
+			} `json:"timers"`
+			Items []struct {
+				ID     string             `json:"id"`
+				Timers map[string]float64 `json:"timers"`
+			} `json:"items"`
+			Summary struct {
+				Timers map[string]struct {
+					Count int     `json:"count"`
+					P50   float64 `json:"p50_seconds"`
+				} `json:"timers"`
+			} `json:"summary"`
+		} `json:"data"`
+	}
+	if rerr := call(t, p, "stats.get", `{}`, &got); rerr != nil {
+		t.Fatalf("stats.get: %+v", rerr)
+	}
+	if len(got.Data.Timers) != 2 || got.Data.Timers[0].Name != "acceptance-wait" || got.Data.Timers[0].Title != "Acceptance wait" ||
+		got.Data.Timers[1].Name != "in-work" || got.Data.Timers[1].Title != "In work" {
+		t.Errorf("timers = %+v, want acceptance-wait and in-work by their titles", got.Data.Timers)
+	}
+	// S-0003, Survey, went to review a minute after in progress and was
+	// accepted a minute later
+	var survey map[string]float64
+	for _, it := range got.Data.Items {
+		if it.ID == "S-0003" {
+			survey = it.Timers
+		}
+	}
+	if want := map[string]float64{"acceptance-wait": 60, "in-work": 120}; !reflect.DeepEqual(survey, want) {
+		t.Errorf("S-0003's timers = %v, want %v", survey, want)
+	}
+	if aw, iw := got.Data.Summary.Timers["acceptance-wait"], got.Data.Summary.Timers["in-work"]; aw.Count != 1 || aw.P50 != 60 || iw.Count != 1 || iw.P50 != 120 {
+		t.Errorf("summary.timers = %+v, want one of 60s and one of 120s", got.Data.Summary.Timers)
+	}
+}

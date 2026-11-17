@@ -36,7 +36,8 @@ import (
 // issues, the manifest's projects, the board's in-progress limit and pull
 // order, planning.default_duration, the files each story's commits
 // changed, the conversations between stories, the conflict log, the merge
-// queue's event log, the manifest's owner and the digest's entries, and,
+// queue's event log, the manifest's owner, the digest's entries, the
+// workflow the repository runs, whose own timers the report gives, and,
 // under pull-request acceptance only, each story's kept forge events. The
 // caller sets the window and grouping. When git cannot be read, Commits
 // stays nil, which leaves claims.drift out; a conversation that cannot be
@@ -147,7 +148,12 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 		return nil, opt, fmt.Errorf("cannot project the ready column's cost of delay: %w", err)
 	}
 	opt.Activities, opt.Roles, opt.Threads, opt.Issues = activities, roles, threadList, issueList
-	opt.WIPLimit, opt.Order = board.WIPLimits[pulledInto(repo.Flow())], board.Order
+	// the metrics read the workflow the repository runs, its file else the
+	// baseline, so that flai stats and stats.get report its own timers
+	// (ADR-0317 §6)
+	flow := repo.Flow()
+	opt.Workflow = &flow
+	opt.WIPLimit, opt.Order = board.WIPLimits[pulledInto(flow)], board.Order
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
 	opt.Commits, opt.FlaiFolders = commits, storygit.FlaiFolders(repo.Manifest)

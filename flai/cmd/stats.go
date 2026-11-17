@@ -117,11 +117,11 @@ cannot read, and digest is absent.`,
 // stories through pull requests, which adds the checks and reviewers waits.
 func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	fmt.Fprintf(a.out, "%s completed in the last %gd (since %s)\n", workitem.Folder(rep.Type), rep.WindowDays, rep.WindowStart[:10])
-	printGroup(a, rep.Summary, &rep.Concurrency)
+	printGroup(a, rep.Summary, rep.Timers, &rep.Concurrency)
 	printUsage(a, rep.Type, rep.Usage)
 	for _, g := range rep.Groups {
 		fmt.Fprintf(a.out, "\n[%s]\n", g.Group)
-		printGroup(a, g, nil)
+		printGroup(a, g, rep.Timers, nil)
 	}
 	if len(rep.Aging) > 0 {
 		fmt.Fprintln(a.out, "\naging WIP (age since started, vs cycle time p85):")
@@ -696,9 +696,11 @@ func printStrategicIssues(a *app, list []metrics.StrategicIssue) {
 	}
 }
 
-// printGroup prints a summary's aggregates; under its ready wait, the
-// report's concurrency when one is given, as the summary's is (S-0551).
-func printGroup(a *app, s metrics.Summary, conc *metrics.Concurrency) {
+// printGroup prints a summary's aggregates; under its ready wait, each of
+// the workflow's own timers the summary holds, by its title in the order
+// timers gives (ADR-0317 §5), then the report's concurrency when one is
+// given, as the summary's is (S-0551).
+func printGroup(a *app, s metrics.Summary, timers []metrics.TimerDefinition, conc *metrics.Concurrency) {
 	fmt.Fprintf(a.out, "  completed %d · cancelled %d (%.0f%%) · throughput %.1f/week · WIP now %d\n",
 		s.Completed, s.Cancelled, s.CancellationRate*100, s.ThroughputWeek, s.WIP)
 	dist := func(name string, d metrics.Distribution) {
@@ -712,6 +714,11 @@ func printGroup(a *app, s metrics.Summary, conc *metrics.Concurrency) {
 	dist("cycle time", s.CycleTime)
 	dist("lead time", s.LeadTime)
 	dist("ready wait", s.QueueTime)
+	for _, t := range timers {
+		if d, ok := s.Timers[t.Name]; ok {
+			dist(t.Title, d)
+		}
+	}
 	if conc != nil && len(conc.Seconds) > 0 {
 		fmt.Fprintf(a.out, "  %-12s %s\n", "in progress", concurrencyText(*conc))
 	}

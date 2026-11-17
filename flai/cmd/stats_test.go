@@ -464,3 +464,164 @@ func TestStatsReportsConcurrencyAndTheReadyWait(t *testing.T) {
 		t.Errorf("stats.get: %+v", rerr)
 	}
 }
+
+// timedWorkflow is the baseline workflow file flai carries with two timers
+// of its own after the baseline's: the wait from the first review to
+// acceptance, and the time in progress and in review together.
+func timedWorkflow(t *testing.T) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "internal", "workflow", "baseline", "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := "  - {name: review, title: Review time, sum: [review]}\n"
+	if !strings.Contains(string(data), last) {
+		t.Fatalf("the baseline workflow file has no line %q", last)
+	}
+	return strings.Replace(string(data), last, last+
+		"  - {name: acceptance-wait, title: Acceptance wait, from: {first: review}, to: completed}\n"+
+		"  - {name: in-work, title: In work, sum: [in-progress, review]}\n", 1)
+}
+
+// S-0752 criteria 2, 3, and 6: a workflow's own timers, added to its file
+// after the items moved, read their recorded transitions: flai stats --json
+// lists them, gives each item's seconds and each summary's distribution, and
+// flai stats prints them after the ready wait; on the baseline there are
+// none (ADR-0317).
+func TestStatsReportsTheWorkflowsOwnTimers(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("LOG_FORMAT", "json")
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+	project := func(t *testing.T, flow string) string {
+		root := tempProject(t)
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tr := func(to, at string) workitem.Transition { return workitem.Transition{To: to, At: at} }
+		for _, s := range []struct {
+			created time.Time
+			status  string
+			moves   []workitem.Transition
+		}{
+			// sent back from review once, then accepted: 6h from the first
+			// review to acceptance, 12h in progress and in review
+			{time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC), workitem.Done, []workitem.Transition{
+				tr(workitem.Ready, "2026-10-02T06:00:00Z"), tr(workitem.InProgress, "2026-10-02T08:00:00Z"),
+				tr(workitem.Review, "2026-10-02T14:00:00Z"), tr(workitem.InProgress, "2026-10-02T15:00:00Z"),
+				tr(workitem.Review, "2026-10-02T17:00:00Z"), tr(workitem.Done, "2026-10-02T20:00:00Z")}},
+			// done weeks ago, within the window: 2d and 3d
+			{time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC), workitem.Done, []workitem.Transition{
+				tr(workitem.Ready, "2026-09-10T01:00:00Z"), tr(workitem.InProgress, "2026-09-11T00:00:00Z"),
+				tr(workitem.Review, "2026-09-12T00:00:00Z"), tr(workitem.Done, "2026-09-14T00:00:00Z")}},
+			// open in progress since 10:00: 10h in work until now, never in
+			// review, and not completed, so in no distribution
+			{time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC), workitem.InProgress, []workitem.Transition{
+				tr(workitem.Ready, "2026-10-03T09:30:00Z"), tr(workitem.InProgress, "2026-10-03T10:00:00Z")}},
+		} {
+			it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Runs", Owner: "t", Now: s.created})
+			if err != nil {
+				t.Fatal(err)
+			}
+			it.Transitions, it.Status = s.moves, s.status
+			if err := repo.Save(it); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if flow != "" {
+			if err := os.MkdirAll(filepath.Join(root, "design", "workflows"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "design", "workflows", "board.md"), []byte(flow), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return root
+	}
+	h, d := 3600.0, 86400.0
+
+	root := project(t, timedWorkflow(t))
+	out, errOut, code := runInAt(t, root, at, "stats", "--json")
+	if code != 0 {
+		t.Fatalf("stats --json: %s", errOut)
+	}
+	var rep struct {
+		Timers []metrics.TimerDefinition `json:"timers"`
+		Items  []struct {
+			ID     string             `json:"id"`
+			Timers map[string]float64 `json:"timers"`
+		} `json:"items"`
+		Summary struct {
+			Timers map[string]metrics.Distribution `json:"timers"`
+		} `json:"summary"`
+	}
+	if err := json.Unmarshal([]byte(out), &rep); err != nil {
+		t.Fatal(err)
+	}
+	every := []string{workitem.Epic, workitem.Story, workitem.Task}
+	wantDefs := []metrics.TimerDefinition{
+		{Name: "acceptance-wait", Title: "Acceptance wait", Types: every, Counts: "accepted"},
+		{Name: "in-work", Title: "In work", Types: every, Counts: "accepted"},
+	}
+	if !reflect.DeepEqual(rep.Timers, wantDefs) {
+		t.Errorf("timers = %+v, want %+v", rep.Timers, wantDefs)
+	}
+	items := map[string]map[string]float64{}
+	for _, it := range rep.Items {
+		items[it.ID] = it.Timers
+	}
+	wantItems := map[string]map[string]float64{
+		"S-0001": {"acceptance-wait": 6 * h, "in-work": 12 * h},
+		"S-0002": {"acceptance-wait": 2 * d, "in-work": 3 * d},
+		"S-0003": {"in-work": 10 * h},
+	}
+	if !reflect.DeepEqual(items, wantItems) {
+		t.Errorf("items' timers = %v, want %v", items, wantItems)
+	}
+	wantSummary := map[string]metrics.Distribution{
+		"acceptance-wait": {Count: 2, P50: 6 * h, P85: 2 * d, Max: 2 * d, Mean: (6*h + 2*d) / 2},
+		"in-work":         {Count: 2, P50: 12 * h, P85: 3 * d, Max: 3 * d, Mean: (12*h + 3*d) / 2},
+	}
+	if !reflect.DeepEqual(rep.Summary.Timers, wantSummary) {
+		t.Errorf("summary.timers = %+v, want %+v", rep.Summary.Timers, wantSummary)
+	}
+
+	out, errOut, code = runInAt(t, root, at, "stats", "--by", "nature")
+	wantText := "  ready wait   p50 2h · p85 23h · max 23h · mean 12h30m (n=2)\n" +
+		"  Acceptance wait p50 6h · p85 2d · max 2d · mean 1d3h (n=2)\n" +
+		"  In work      p50 12h · p85 3d · max 3d · mean 1d18h (n=2)\n"
+	if code != 0 || strings.Count(out, wantText) != 2 {
+		t.Errorf("text: %d %s, want the summary and its one group to hold %q, got\n%s", code, errOut, wantText, out)
+	}
+
+	base := project(t, "")
+	out, errOut, code = runInAt(t, base, at, "stats", "--json", "--by", "nature")
+	if code != 0 {
+		t.Fatalf("baseline stats --json: %s", errOut)
+	}
+	var raw struct {
+		Timers  json.RawMessage  `json:"timers"`
+		Summary map[string]any   `json:"summary"`
+		Groups  []map[string]any `json:"groups"`
+		Items   []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(out), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if raw.Timers != nil {
+		t.Errorf("baseline: timers = %s, want none", raw.Timers)
+	}
+	for _, m := range append(append([]map[string]any{raw.Summary}, raw.Groups...), raw.Items...) {
+		if v, ok := m["timers"]; ok {
+			t.Errorf("baseline: %v holds timers %v", m["id"], v)
+		}
+	}
+	if len(raw.Groups) == 0 || len(raw.Items) != 3 {
+		t.Errorf("baseline: %d groups and %d items, want some and 3", len(raw.Groups), len(raw.Items))
+	}
+	out, errOut, code = runInAt(t, base, at, "stats")
+	if code != 0 || strings.Contains(out, "Acceptance wait") || strings.Contains(out, "In work") ||
+		!strings.Contains(out, "  ready wait   p50 2h · p85 23h · max 23h · mean 12h30m (n=2)\n") {
+		t.Errorf("baseline text: %d %s, want the ready wait and no timer of the workflow's own, got\n%s", code, errOut, out)
+	}
+}
