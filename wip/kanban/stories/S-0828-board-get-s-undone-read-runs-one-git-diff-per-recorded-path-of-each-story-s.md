@@ -6,7 +6,7 @@ title: board.get's undone.read runs one git diff per recorded path of each story
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:19Z
-updated: 2026-11-17T10:14:13Z
+updated: 2026-11-17T10:20:28Z
 transitions: []
 tags: [flai, git, performance]
 topics: [performance]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-17T08:28:36Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T17:36:00Z
-  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0823, S-0811, S-0832, S-0809, S-0756, S-0836, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
+  delivery: 2026-11-17T17:35:00Z
+  basis: "Its own forecast of 1h; 15th in the pull order with an in-progress limit of 3, behind S-0806, S-0823, S-0832, S-0811, S-0809, S-0756, S-0836, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
   by: flai
-  at: 2026-11-17T10:14:13Z
+  at: 2026-11-17T10:20:28Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:56Z

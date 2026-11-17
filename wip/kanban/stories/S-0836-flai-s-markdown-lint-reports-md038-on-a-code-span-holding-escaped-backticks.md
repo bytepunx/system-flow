@@ -6,7 +6,7 @@ title: flai's markdown lint reports MD038 on a code span holding escaped backtic
 status: ready
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T10:14:13Z
+updated: 2026-11-17T10:20:28Z
 transitions:
   - to: ready
     at: 2026-11-17T10:05:44Z
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-17T08:29:08Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T11:55:00Z
-  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0823, S-0811, S-0832, S-0809 and S-0756."
+  delivery: 2026-11-17T12:00:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0823, S-0832, S-0811, S-0809 and S-0756."
   by: flai
-  at: 2026-11-17T10:14:13Z
+  at: 2026-11-17T10:20:28Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:55Z

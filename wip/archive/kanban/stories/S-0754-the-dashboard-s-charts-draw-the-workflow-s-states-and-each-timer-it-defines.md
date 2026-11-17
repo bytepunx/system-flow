@@ -3,11 +3,11 @@ id: S-0754
 type: story
 nature: feature
 title: The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-17T10:14:13Z
+updated: 2026-11-17T10:20:27Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:53Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T09:45:10Z
     by: agent-S-0754
+  - to: review
+    at: 2026-11-17T10:19:14Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T10:20:27Z
+    by: orchestrator
 tags: [dashboard]
 topics: [dashboard, analysis]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/viz/explain.ts]
@@ -26,20 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1747
-  estimated: true
-  priced_by: estimate
+  seconds: 2058
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 2
-      work: 34
+      ceremony: 3
+      hand_edits: 1
+      work: 50
   models:
     - model: claude-opus-5-5
-      input: 272
-      output: 1549
-      cache_read: 19442883
-      cache_write: 638593
-      cost: 7.6628
+      input: 314
+      output: 128984
+      cache_read: 26819290
+      cache_write: 691958
+      cost: 12.5267
   strategic:
     - kind: orchestrator
       seconds: 23
@@ -73,11 +79,11 @@ Every chart follows the workflow. Time in state, cumulative flow, and the cost o
 
 ## Acceptance criteria
 
-- [ ] `flaiover/src/lib/viz/charts.ts` holds no list of states: `STATES` and `COD_COLUMNS` give way to the columns `board.get` answers, in the workflow's order and by kind
-- [ ] Each timer `stats.get` reports gets a chart in the catalogue, with its distribution over the window as cycle time has, and the baseline's charts are drawn from their timers
-- [ ] Tests draw time in state and cumulative flow for a workflow with a state added between `in-progress` and `review`, and a chart for a timer of the operator's own
-- [ ] With the baseline, every chart draws as today and every existing flaiover test passes
-- [ ] `design/system/metrics.md` § Charts has a row for a workflow's own timer, as ADR-0219 asks, and `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` say the charts follow the workflow
+- [x] `flaiover/src/lib/viz/charts.ts` holds no list of states: `STATES` and `COD_COLUMNS` give way to the columns `board.get` answers, in the workflow's order and by kind
+- [x] Each timer `stats.get` reports gets a chart in the catalogue, with its distribution over the window as cycle time has, and the baseline's charts are drawn from their timers
+- [x] Tests draw time in state and cumulative flow for a workflow with a state added between `in-progress` and `review`, and a chart for a timer of the operator's own
+- [x] With the baseline, every chart draws as today and every existing flaiover test passes
+- [x] `design/system/metrics.md` § Charts has a row for a workflow's own timer, as ADR-0219 asks, and `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` say the charts follow the workflow
 
 ## Tasks
 
@@ -88,6 +94,7 @@ Every chart follows the workflow. Time in state, cumulative flow, and the cost o
 ## Notes
 
 - `charts.ts` line 497 (`COD_COLUMNS`) and line 616 (`STATES`, five states with no `cancelled`) are the lists today. ADR-0219 asks `metrics.md` § Charts for a row under its catalogue title for every chart.
+- Criterion 2, as built: a timer's chart is the kind `timer-<name>` at `/charts/timer-<name>`, and `viz/catalog.ts` holds its kinds (`timerKind`, `timerCharts`). It appears on the Charts page, where Cycle Time and each timer chart link to one another. The nav rail keeps its fixed list: it reads no stats, and listing the timers there would need a stats call on every page load. A follow-up story can add the timers to the rail if wanted.
 
 ### Planning
 
@@ -101,3 +108,15 @@ Every chart follows the workflow. Time in state, cumulative flow, and the cost o
 - Tasks: T-3245 (stacked charts), then T-3251 (timer charts), since both change `charts.ts`, then T-3254 (the documents), which describe T-3251's chart.
 - Forecast 30m, up from the 24m `flai forecast` gave for the first draft's size 13; size 15 now gives 27m, and a new chart kind on the catalogue has taken more than its size in earlier dashboard stories.
 - Cost of delay: 53.44 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 30m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: 13c5e39803571019b406c20d74a86163278ab54e
+- At: 2026-11-17T10:20:27Z
+
+Verdict: pass. All five criteria are met at commit 13c5e39803571019b406c20d74a86163278ab54e, where the close-out passed.
+- 1: flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/routes/charts/[kind]/+page.svelte, flaiover/src/routes/charts/[kind]/charts.svelte.test.ts
+- 2: flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/routes/charts/[kind]/+page.svelte
+- 3: flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/routes/charts/[kind]/charts.svelte.test.ts
+- 4: flaiover/src/lib/viz/charts.test.ts, flaiover/src/routes/charts/[kind]/charts.svelte.test.ts
+- 5: design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md

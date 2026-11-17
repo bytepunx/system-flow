@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 667
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 521
-      cache_read: 5664478
-      cache_write: 158966
-      cost: 2.2222
+      input: 67
+      output: 27630
+      cache_read: 5745066
+      cache_write: 148227
+      cost: 2.6834
 ---
 # T-3245 The charts stack and colour the workflow's states from the columns board.get answers, in place of STATES and COD_COLUMNS
 

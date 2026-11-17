@@ -3,14 +3,17 @@ id: S-0832
 type: story
 nature: remediation
 title: flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:26Z
-updated: 2026-11-17T10:14:13Z
+updated: 2026-11-17T10:19:25Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T10:19:25Z
+    by: agent-S-0832
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md]
 agent:

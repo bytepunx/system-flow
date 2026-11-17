@@ -8,7 +8,6 @@ wip_limits:
   review: 6
 order:
   - S-0811
-  - S-0832
   - S-0809
   - S-0756
   - S-0836

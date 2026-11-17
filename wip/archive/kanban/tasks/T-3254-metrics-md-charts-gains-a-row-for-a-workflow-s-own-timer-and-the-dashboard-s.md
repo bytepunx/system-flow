@@ -3,11 +3,11 @@ id: T-3254
 type: task
 nature: feature
 title: "metrics.md § Charts gains a row for a workflow's own timer, and the dashboard's design and guide say the charts follow the workflow"
-status: in-progress
+status: done
 parent: S-0754
 owner: alex
 created: 2026-11-12T16:09:54Z
-updated: 2026-11-17T10:14:32Z
+updated: 2026-11-17T10:16:06Z
 transitions:
   - to: ready
     at: 2026-11-17T10:14:32Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:14:32Z
     by: system-flow
+  - to: done
+    at: 2026-11-17T10:16:06Z
+    by: agent-S-0754
 stream: S-0754
 tags: [dashboard]
 touches: [design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-3251]
+usage:
+  source: log
+  seconds: 94
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 13926
+      cache_read: 2895632
+      cache_write: 74709
+      cost: 1.3525
 ---
 # T-3254 metrics.md § Charts gains a row for a workflow's own timer, and the dashboard's design and guide say the charts follow the workflow
 

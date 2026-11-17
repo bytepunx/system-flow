@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 861
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 626
-      cache_read: 8434747
-      cache_write: 188536
-      cost: 3.2905
+      input: 100
+      output: 40914
+      cache_read: 8507188
+      cache_write: 219492
+      cost: 3.9735
 ---
 # T-3251 Each timer stats.get reports gets a chart in the catalogue with its distribution over the window
 
