@@ -2,12 +2,12 @@
 id: I-0349
 title: board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 2m
 first_reported: 2026-11-11T08:52:49Z
 last_reported: 2026-11-11T08:52:49Z
-updated: 2026-11-17T08:17:19Z
+updated: 2026-11-17T12:08:16Z
 ---
 
 # I-0349 board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
@@ -24,3 +24,4 @@ S-0698 measured this repository's board.get on 2026-11-11 at 08:45 UTC (design/s
 ## Remediation
 
 Story S-0828 remediates this issue, created from it at 2026-11-17T08:17:19Z.
+Closed 2026-11-17T12:08:16Z: S-0828: storygit.RecordedUndone runs one git diff of the branch for all of a record's paths and one per distinct old base, split by each file's header, not one or two per path. A 20-path record fell from 40 diffs and about 100 ms to 2 diffs and about 12 ms (design/system/server-performance.md, The undone record's git diffs batched (S-0828)).
