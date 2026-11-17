@@ -9,7 +9,7 @@ date: 2026-11-17
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1269, TH-1270]
 ---
 
 # D-0653 workitem's EpicFollows, PlanOf, NewHolds, PlanCandidatesOf, PromotionCandidates, FinalizableLacks, Changes, and CancelledWith run the baseline workflow, and a caller outside workitem reads the repository's board only through their -In forms, which no caller outside workitem calls yet
@@ -17,7 +17,7 @@ cited: []
 S-0739 moved `flai/internal/workitem`'s epic following, board view, task plan, holds, order, and promotion off state names and onto a state's kind (ADR-0301). Its narrative's Decisions (`wip/archive/agents/S-0739.md`) record how it kept every caller in other packages unchanged:
 
 > Package functions that take no Repo (PlanOf, PullSequence, EpicFollows, NewHolds, NewBoardView and the like) read the workflow from what they are given (the Board, the Holds) or get a form that takes it; where an exported signature would change for callers in other packages, the existing form keeps its signature and runs the baseline, so those callers change in their own E-0034 stories (S-0742 to S-0749) and this story stays in `workitem`.
-
+  
 > Callers outside workitem keep the baseline forms (EpicFollows, PlanOf, NewHolds, PlanCandidatesOf, PromotionCandidates, FinalizableLacks, Changes, CancelledWith) and switch to the -In forms in their own stories: check/check_items.go (epicLags, CancelledWith, NewHolds) under S-0741; transition.go's `to == Cancelled` and rules.go's PlanOf under S-0744; inbox, serve/replan.go, hostapi, mcpserver, cmd, itemedit, messages, storygit, verify, metrics under S-0742, S-0746, S-0747, and S-0749.
 
 The -In forms are `EpicFollowsIn`, `PlanOfIn`, `NewHoldsIn`, `PlanCandidatesIn`, `PromotionCandidatesIn`, `FinalizableLacksIn`, `ChangesIn`, `CancelledWithIn`, and `OrderedIn`. S-0741, S-0744, S-0746, S-0747, and S-0749 were accepted before S-0739 (2026-11-17), so none switched: on main at S-0739's acceptance every call outside `workitem` is still a baseline form, such as `workitem.NewHolds` in `check`, `cmd`, `itemedit`, `mcpserver`, `storygit`, `taskdone`, and `verify`, `workitem.Changes` in `inbox` and `serve/replan.go`, and `workitem.PlanOf` in `cmd`, `hostapi`, and `mcpserver`. A project whose workflow file renames a state gets the baseline's answer from those calls.
