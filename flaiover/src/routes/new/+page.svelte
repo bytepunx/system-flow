@@ -3,11 +3,11 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import NewItemForm from '$lib/components/NewItemForm.svelte';
-	import { startLane } from '$lib/lanes';
 
 	const initialType = $derived(page.url.searchParams.get('type') === 'epic' ? 'epic' : 'story');
-	// The board's lane menu opens this page with the lane it was opened on (S-0167).
-	const initialLane = $derived(startLane(page.url.searchParams.get('status')));
+	// The board's lane menu opens this page with the lane it was opened on (S-0167); the form starts
+	// an item there when it can start in that lane.
+	const initialLane = $derived(page.url.searchParams.get('status') ?? '');
 	// An item page's New link opens this page with the epic of the story it was on (S-0171).
 	const initialParent = $derived(page.url.searchParams.get('parent') ?? '');
 </script>

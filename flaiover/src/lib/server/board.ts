@@ -3,8 +3,7 @@ import type { Item, Repo } from './repo';
 import type { TaskSummary } from '$lib/taskplan';
 import type { Share } from '$lib/activity';
 import type { MergeQueueState } from '$lib/components/MergeQueue.svelte';
-
-export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
+import type { Lane, Move } from '$lib/lanes';
 
 export type Card = {
 	id: string;
@@ -31,6 +30,10 @@ export type Card = {
 };
 
 export type Board = {
+	/** The columns in the workflow's order, each with its kind and limit (ADR-0301 §2). */
+	lanes: Lane[];
+	/** The workflow's moves in its order, with who may make each and whether it needs a reason. */
+	transitions: Move[];
 	wip_limits: Record<string, number>;
 	order: string[];
 	writable: boolean;
@@ -47,6 +50,8 @@ type FlaiCard = Omit<Card, 'age_seconds' | 'tasks' | 'shared' | 'undoes_main'> &
 	undoes_main?: string[] | null;
 };
 type FlaiBoard = {
+	lanes: Lane[] | null;
+	transitions: Move[] | null;
 	columns: Record<string, FlaiCard[] | null>;
 	wip_limits: Record<string, number>;
 	order: string[] | null;
@@ -54,15 +59,17 @@ type FlaiBoard = {
 };
 
 /**
- * The board is flai's: its columns, limits, pull order, and the order of backlog and ready come from
- * board.get over the channel (S-0073), the same code as flai board. Age is counted from entered_at
- * here so that `now` means the same thing it always did to callers and tests.
+ * The board is flai's: its lanes, the moves between them, limits, pull order, and the order of the
+ * ordered lanes come from board.get over the channel (S-0073, S-0753), the same code as flai board.
+ * Age is counted from entered_at here so that `now` means the same thing it always did to callers
+ * and tests.
  */
 export async function board(repo: Repo, now = new Date()): Promise<Board> {
 	// Kept until flai says a file changed, like everything else asked: the board's one moving part,
 	// a card's age, is counted here from entered_at.
 	const b = await repo.boardView<FlaiBoard>();
-	const columns: Record<string, Card[]> = Object.fromEntries(STATES.map((s) => [s, []]));
+	const lanes = b.lanes ?? [];
+	const columns: Record<string, Card[]> = Object.fromEntries(lanes.map((l) => [l.name, []]));
 	for (const [state, cards] of Object.entries(b.columns ?? {})) {
 		columns[state] = (cards ?? []).map((c) => ({
 			id: c.id,
@@ -83,6 +90,8 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 		}));
 	}
 	return {
+		lanes,
+		transitions: b.transitions ?? [],
 		wip_limits: b.wip_limits,
 		order: b.order ?? [],
 		// flai on the host does the writing (S-0075): a board that could be read can be written.

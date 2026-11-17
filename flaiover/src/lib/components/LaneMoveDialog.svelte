@@ -2,7 +2,6 @@
 	// Move stories of one lane a column forward or back, from the lane's menu (S-0167). The
 	// designer ticks which; the card the menu was opened on starts ticked. Closing changes nothing.
 	import { untrack } from 'svelte';
-	import { needsReason } from '$lib/lanes';
 
 	type Story = { id: string; title: string };
 
@@ -11,6 +10,7 @@
 		to,
 		stories,
 		picked = [],
+		reasonRequired = false,
 		onconfirm,
 		oncancel
 	}: {
@@ -18,6 +18,8 @@
 		to: string;
 		stories: Story[];
 		picked?: string[];
+		/** flai refuses the move without a reason, as the workflow's transition says ($lib/lanes). */
+		reasonRequired?: boolean;
 		onconfirm: (ids: string[], reason: string) => void | Promise<void>;
 		oncancel: () => void;
 	} = $props();
@@ -29,9 +31,8 @@
 	let reason = $state('');
 	let busy = $state(false);
 
-	const asking = $derived(needsReason(from, to));
 	const all = $derived(stories.length > 0 && ticked.length === stories.length);
-	const can = $derived(!busy && ticked.length > 0 && (!asking || reason.trim() !== ''));
+	const can = $derived(!busy && ticked.length > 0 && (!reasonRequired || reason.trim() !== ''));
 
 	async function confirm() {
 		busy = true;
@@ -86,7 +87,7 @@
 					</li>
 				{/each}
 			</ul>
-			{#if asking}
+			{#if reasonRequired}
 				<label class="mt-3 block">
 					<span class="font-medium">Reason</span>
 					<textarea

@@ -12,7 +12,7 @@
 	import AgentFields from './AgentFields.svelte';
 	import CostOfDelayPanel from './CostOfDelayPanel.svelte';
 	import { costFields, costInputs, DEFAULT_CURRENCY } from '$lib/costofdelay';
-	import { movesTo, START_LANES, type StartLane } from '$lib/lanes';
+	import { movesTo, startLane, startLanes, type Flow } from '$lib/lanes';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Epic = { id: string; title: string; status: string; archived: boolean };
@@ -20,19 +20,26 @@
 	let {
 		oncreated,
 		initialType = 'story',
-		initialLane = 'backlog',
+		initialLane = '',
 		initialParent = ''
 	}: {
 		oncreated: (id: string) => void;
 		initialType?: 'epic' | 'story';
-		initialLane?: StartLane;
+		/** The lane the board's menu was opened on; one an item cannot start in starts it initial. */
+		initialLane?: string;
 		initialParent?: string;
 	} = $props();
 
 	// The props say where the form starts; from there the choices are the designer's.
 	let type = $state<'epic' | 'story'>(untrack(() => initialType));
-	// The lane it starts in (S-0167): flai makes every item in backlog, and the form moves it on.
-	let lane = $state<StartLane>(untrack(() => initialLane));
+	// The lane it starts in (S-0167): flai makes every item in the workflow's initial lane, and the
+	// form moves it on by the moves a person may make (S-0753), which the board's answer gives.
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
+	let chosen = $state<string | null>(null);
+	const lanes = $derived(startLanes(flow, type));
+	const lane = $derived(
+		chosen !== null && lanes.includes(chosen) ? chosen : startLane(flow, initialLane, type)
+	);
 	// Made, but not moved as far as asked: it exists, so the form must not make it again.
 	let created = $state<string | null>(null);
 	let title = $state('');
@@ -137,6 +144,19 @@
 	$effect(() => {
 		void loadManifest();
 	});
+	async function loadFlow() {
+		try {
+			const r = await api('/api/board');
+			if (!r.ok) return;
+			const b = (await r.json()) as Partial<Flow>;
+			flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+		} catch {
+			// made where flai makes it, and moved nowhere
+		}
+	}
+	$effect(() => {
+		void loadFlow();
+	});
 
 	async function create(e: Event) {
 		e.preventDefault();
@@ -179,7 +199,7 @@
 			}
 			const id = answer.item.id as string;
 			// Each move is one of flai's, with its rules: a story needs acceptance criteria to be ready.
-			for (const to of movesTo(lane)) {
+			for (const to of movesTo(flow, lane, type)) {
 				const m = await api(`/api/items/${id}/move`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
@@ -227,10 +247,10 @@
 			<span class="mb-1 block text-xs text-muted">starts in</span>
 			<select
 				class="rounded border border-line-strong bg-surface px-2 py-1"
-				bind:value={lane}
+				onchange={(e) => (chosen = e.currentTarget.value)}
 				data-testid="lane"
 			>
-				{#each START_LANES as l (l)}<option value={l}>{l}</option>{/each}
+				{#each lanes as l (l)}<option value={l} selected={l === lane}>{l}</option>{/each}
 			</select>
 		</label>
 		<label class="text-sm">

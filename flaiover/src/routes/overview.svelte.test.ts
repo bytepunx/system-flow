@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { resetForTests } from '$lib/project.svelte';
+import { baselineFlow, testingFlow } from '$lib/lanes.fixture';
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
 
@@ -51,6 +52,54 @@ describe('the root page (S-0080)', () => {
 		expect(document.body.textContent!.replace(/\s+/g, ' ')).toContain(
 			'1 active items · 812 archived'
 		);
+	});
+
+	// S-0753: a column for each of the board's lanes but the cancelled kind, as its workflow defines them
+	it("counts the items in each of the board's lanes, all but the cancelled", async () => {
+		const table = async (flow: typeof baselineFlow) => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async (url: string) => {
+					if (url.startsWith('/api/projects'))
+						return answer({ projects: [{ key: 'harbour', name: 'Harbour', connected: true }] });
+					if (url.startsWith('/api/manifest')) return answer({ name: 'Harbour' });
+					if (url.startsWith('/api/board')) return answer(flow);
+					if (url.startsWith('/api/items/count')) return answer({ active: 3, archived: 0 });
+					if (url.startsWith('/api/items'))
+						return answer([
+							{ id: 'S-0001', type: 'story', status: 'ready', title: 'Berths' },
+							{ id: 'S-0002', type: 'story', status: 'testing', title: 'Cranes' },
+							{ id: 'T-0001', type: 'task', status: 'testing', title: 'Bollards' }
+						]);
+					return answer({});
+				})
+			);
+			const { default: Overview } = await import('./+page.svelte');
+			c = mount(Overview, { target: document.body });
+			await settle();
+			const rows = [...document.querySelectorAll('tr')].map((tr) =>
+				[...tr.children].map((td) => td.textContent!.trim())
+			);
+			unmount(c);
+			c = undefined;
+			document.body.innerHTML = '';
+			resetForTests();
+			return rows;
+		};
+		expect((await table(baselineFlow))[0]).toEqual([
+			'',
+			'backlog',
+			'ready',
+			'in-progress',
+			'review',
+			'done'
+		]);
+		expect(await table(testingFlow)).toEqual([
+			['', 'backlog', 'ready', 'doing', 'testing', 'review', 'done'],
+			['epics', '0', '0', '0', '0', '0', '0'],
+			['storys', '0', '1', '0', '1', '0', '0'],
+			['tasks', '0', '0', '0', '1', '0', '0']
+		]);
 	});
 
 	it('shows a list of projects, each with its glance, while more than one is known and none chosen', async () => {

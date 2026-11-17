@@ -3,6 +3,7 @@ import { doneLane } from '$lib/publish';
 import { AgentError } from './agent';
 import { board } from './board';
 import { Repo, RepoError, type Ask } from './repo';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 // S-0073: the project, items, threads, and the board are asked of flai on the host.
 const project = { name: 'Harbour', key: 'harbour', layout: { design: 'd', docs: 'o', wip: 'w' } };
@@ -236,6 +237,7 @@ describe('Repo over the channel', () => {
 						}
 					]
 				},
+				...baselineFlow,
 				wip_limits: { ready: 5, 'in-progress': 2, review: 3 },
 				order: ['S-0002', 'S-0001'],
 				breaches: null
@@ -258,6 +260,8 @@ describe('Repo over the channel', () => {
 		]);
 		expect(b.columns.review).toEqual([]);
 		expect(b.order).toEqual(['S-0002', 'S-0001']);
+		// the lanes and the moves between them are the workflow's, as flai gives them (S-0753)
+		expect({ lanes: b.lanes, transitions: b.transitions }).toEqual(baselineFlow);
 		// a story's tasks by state and its plan's layers (S-0176); none for a story without tasks
 		expect(b.columns.ready[0].tasks).toEqual({
 			ready: 1,
@@ -284,6 +288,23 @@ describe('Repo over the channel', () => {
 			message: 'behind'
 		};
 		expect(doneLane(b.columns.done, tagsBehind).map((c) => c.id)).toEqual(['T-0001']);
+	});
+
+	// S-0753: the columns are the workflow's lanes, whatever their names; none from flai is none
+	it("lays a column out for each of the workflow's lanes, and none for lanes flai did not give", async () => {
+		const lanes = [
+			{ name: 'backlog', kind: 'queue', initial: true },
+			{ name: 'doing', kind: 'active', wip_limit: 2, takes_limit: true }
+		];
+		let { ask } = fake({ 'board.get': { lanes, transitions: [], columns: {}, wip_limits: {} } });
+		let b = await board(new Repo('/nowhere', ask));
+		expect(b.columns).toEqual({ backlog: [], doing: [] });
+		expect(b.lanes).toEqual(lanes);
+		({ ask } = fake({
+			'board.get': { lanes: null, transitions: null, columns: { ready: null }, wip_limits: {} }
+		}));
+		b = await board(new Repo('/nowhere', ask));
+		expect(b).toMatchObject({ lanes: [], transitions: [], columns: { ready: [] } });
 	});
 
 	it('repeats a write once, with the same request ID, when flai was lost and came back', async () => {

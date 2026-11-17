@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { projectState } from '$lib/project.svelte';
+	import { laneTitle, type Lane } from '$lib/lanes';
 
 	type Manifest = { name: string; description?: string; template?: { version?: string } };
 	type Item = { id: string; type: string; status: string; title: string; archived: boolean };
@@ -21,7 +22,9 @@
 			: glances
 	);
 
-	const statuses = ['backlog', 'ready', 'in-progress', 'review', 'done'];
+	// The board's lanes as its workflow defines them (S-0753), all but the cancelled kind.
+	let lanes = $state<Lane[]>([]);
+	const counted = $derived(lanes.filter((l) => l.kind !== 'cancelled'));
 	const count = (type: string, status: string) =>
 		items.filter((i) => i.type === type && i.status === status).length;
 
@@ -31,15 +34,17 @@
 
 	async function loadOverview() {
 		try {
-			const [m, i, n] = await Promise.all([
+			const [m, i, n, b] = await Promise.all([
 				api('/api/manifest'),
 				api('/api/items?archived=false'),
-				api('/api/items/count')
+				api('/api/items/count'),
+				api('/api/board')
 			]);
 			if (!m.ok) throw new Error((await m.json()).error ?? m.statusText);
 			manifest = await m.json();
 			items = await i.json();
 			archived = n.ok ? (await n.json()).archived : null;
+			lanes = b.ok ? ((await b.json()).lanes ?? []) : [];
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -118,14 +123,15 @@
 			<thead>
 				<tr class="text-left text-muted">
 					<th class="py-2 pr-4"></th>
-					{#each statuses as s (s)}<th class="py-2 pr-4 font-medium">{s}</th>{/each}
+					{#each counted as l (l.name)}<th class="py-2 pr-4 font-medium">{laneTitle(l)}</th>{/each}
 				</tr>
 			</thead>
 			<tbody>
 				{#each ['epic', 'story', 'task'] as t (t)}
 					<tr class="border-t border-line">
 						<td class="py-2 pr-4 font-medium">{t}s</td>
-						{#each statuses as s (s)}<td class="py-2 pr-4 tabular-nums">{count(t, s)}</td>{/each}
+						{#each counted as l (l.name)}<td class="py-2 pr-4 tabular-nums">{count(t, l.name)}</td
+							>{/each}
 					</tr>
 				{/each}
 			</tbody>

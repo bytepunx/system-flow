@@ -9,7 +9,20 @@
 	import { longPress } from './longpress';
 	import LaneMoveDialog from '$lib/components/LaneMoveDialog.svelte';
 	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
-	import { archiveOrder, backOf, forwardOf, laneCounts, longCounts, shortCounts } from '$lib/lanes';
+	import {
+		archiveOrder,
+		backOf,
+		cancelMove,
+		forwardOf,
+		laneCounts,
+		laneOf,
+		laneTitle,
+		longCounts,
+		needsReason,
+		operatorMove,
+		shortCounts,
+		type Flow
+	} from '$lib/lanes';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import AcceptFindings, { findingsOf, type Finding } from '$lib/components/AcceptFindings.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
@@ -64,7 +77,7 @@
 		tasks?: TaskSummary;
 		shared?: Share[];
 	};
-	type Board = {
+	type Board = Flow & {
 		wip_limits: Record<string, number>;
 		order: string[];
 		writable: boolean;
@@ -73,8 +86,11 @@
 		queue?: MergeQueueState;
 	};
 
-	const states = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'];
 	let board = $state<Board | null>(null);
+	// The lanes and the moves between them are the workflow's, as board.get answers them (S-0753):
+	// what the board draws, offers, and takes, by lane kind, never by a state's name.
+	const flow = $derived<Flow>(board ?? { lanes: [], transitions: [] });
+	const kindOf = (lane: string) => laneOf(flow, lane)?.kind;
 	// story, on a refused move, is the item's whose branch the files the refusal names are fixed on;
 	// findings, on a move to done refused for lint the fix left, are listed in place of the text, each
 	// file opened on its own checkout (S-0465), and saved holds the key of each file saved since.
@@ -98,10 +114,11 @@
 		}
 		if (notice?.kind === 'error' && !board) notice = null;
 		board = body;
+		laneCollapse.setLanes(body.lanes);
 	}
 
-	// Everything accepted and unreleased since each component's last tag (S-0087), for the done
-	// column's Publish banner and to mark its own cards as waiting rather than published. Fetched
+	// Everything accepted and unreleased since each component's last tag (S-0087), for the accepted
+	// lane's Publish banner and to mark its own cards as waiting rather than published. Fetched
 	// here, not inside the banner, so the two share one answer instead of asking twice (I-0033).
 	type PendingItem = { id: string; title: string; level: string };
 	type PendingPlan = {
@@ -221,11 +238,11 @@
 		return () => sm.removeEventListener('change', onchange);
 	});
 
-	// What a lane holds: while the clone lags its remote's release tags, the done lane leaves out the
-	// archived cards it holds only because they look unpublished (S-0174).
+	// What a lane holds: while the clone lags its remote's release tags, the accepted lane leaves out
+	// the archived cards it holds only because they look unpublished (S-0174).
 	const held = (state: string) => {
 		const column = board?.columns[state] ?? [];
-		return state === 'done' ? doneLane(column, publishRemote) : column;
+		return kindOf(state) === 'accepted' ? doneLane(column, publishRemote) : column;
 	};
 	// The types (S-0141, S-0303) and the natures (S-0302) toggled on in its legend: a lane shows a
 	// card only when both let it. Neither hides anything from the WIP counts or reordering, which
@@ -238,22 +255,27 @@
 	const count = (state: string) =>
 		(board?.columns[state] ?? []).filter((c) => c.type === 'story').length;
 
-	// A story dropped on done is an acceptance: confirm with the plan first (S-0046).
-	let accepting = $state<string | null>(null);
+	// A story dropped where the move accepts it is an acceptance: confirm with the plan first (S-0046).
+	let accepting = $state<{ id: string; to: string } | null>(null);
 	function cardOf(id: string): Card | undefined {
 		for (const cards of Object.values(board?.columns ?? {})) {
 			const c = cards.find((x) => x.id === id);
 			if (c) return c;
 		}
 	}
+	// A drop is the workflow's move a person may make from the card's lane to the lane dropped on
+	// (S-0753), and only such a lane takes it; the move's effect says whether it is an acceptance or a
+	// cancellation, which are confirmed first.
 	function request(id: string, to: string) {
 		const card = cardOf(id);
-		if (to === 'done' && card?.type === 'story' && card.status === 'review') accepting = id;
-		else if (to === 'cancelled') cancelling = id;
+		const m = card && operatorMove(flow, card.status, to, card.type);
+		if (!m) return;
+		if (m.effects.includes('accept') && card.type === 'story') accepting = { id, to };
+		else if (m.effects.includes('cancel')) cancelling = { id, to };
 		else void move(id, to);
 	}
 	// A cancellation takes everything open under the item with it: show that first (S-0070).
-	let cancelling = $state<string | null>(null);
+	let cancelling = $state<{ id: string; to: string } | null>(null);
 
 	// Reordering within backlog and ready (S-0057). `marker` is where a drop would put the
 	// dragged story: above or below a card, or at the end of its column.
@@ -287,7 +309,7 @@
 		}
 	}
 	function step(c: Card, dir: 'up' | 'down', refocus: string) {
-		if (!reorderable(c, writable())) return;
+		if (!reorderable(c, writable(), flow.lanes)) return;
 		const p = stepPlacement(stories(c.status), c.id, dir);
 		if (p) void place(c.id, p, refocus);
 	}
@@ -361,7 +383,7 @@
 			void archive(archiveOrder(archivable(lane)));
 			return;
 		}
-		const to = action === 'forward' ? forwardOf(lane) : backOf(lane);
+		const to = action === 'forward' ? forwardOf(flow, lane) : backOf(flow, lane);
 		if (!to) return;
 		const picked = card && cardOf(card)?.type === 'story' ? [card] : [];
 		laneMove = { from: lane, to, picked };
@@ -395,8 +417,9 @@
 		if (!c) return;
 		switch (entry.action) {
 			case 'open':
-				// the card's own link: a story in review opens on its review
-				if (c.type === 'story' && c.status === 'review') void goto(resolve('/review/[id]', { id }));
+				// the card's own link: a story waiting in review opens on its review
+				if (c.type === 'story' && kindOf(c.status) === 'waiting')
+					void goto(resolve('/review/[id]', { id }));
 				else void goto(resolve('/items/[id]', { id }));
 				return;
 			case 'finalize':
@@ -426,9 +449,11 @@
 						`planner started for ${id} (pid ${run.pid})${run.log ? `; its output: ${run.log}` : ''}`
 				);
 				return loadAgents();
-			case 'cancel':
-				cancelling = id;
+			case 'cancel': {
+				const m = cancelMove(flow, c.status, c.type);
+				if (m) cancelling = { id, to: m.to };
 				return;
+			}
 			case 'archive':
 				return archive([id]);
 		}
@@ -528,10 +553,9 @@
 		notice = null;
 		saved = [];
 		let reason = why;
-		const from = board?.columns[
-			Object.keys(board.columns).find((s) => board!.columns[s].some((c) => c.id === id)) ?? ''
-		]?.find((c) => c.id === id)?.status;
-		if (!reason && (to === 'cancelled' || (from === 'review' && to === 'in-progress'))) {
+		const card = cardOf(id);
+		// flai refuses the move without a reason where the workflow's transition says so (S-0753)
+		if (!reason && card && needsReason(flow, card.status, to, card.type)) {
 			reason = prompt(`Reason for moving ${id} to ${to}:`) ?? undefined;
 			if (!reason) return;
 		}
@@ -573,11 +597,11 @@
 
 {#if accepting}
 	<AcceptConfirm
-		id={accepting}
+		id={accepting.id}
 		oncancel={() => (accepting = null)}
 		onconfirm={async () => {
-			const id = accepting!;
-			await move(id, 'done');
+			const { id, to } = accepting!;
+			await move(id, to);
 			accepting = null;
 		}}
 	/>
@@ -585,6 +609,7 @@
 
 {#if laneMenu}
 	<LaneMenu
+		{flow}
 		lane={laneMenu.lane}
 		count={archivable(laneMenu.lane).length}
 		x={laneMenu.x}
@@ -602,6 +627,7 @@
 	{@const card = cardOf(menuCard.id)}
 	{#if card}
 		<CardMenu
+			{flow}
 			{card}
 			lane={menuCard.lane}
 			laneCount={archivable(menuCard.lane).length}
@@ -628,6 +654,7 @@
 		to={laneMove.to}
 		stories={laneStories(laneMove.from)}
 		picked={laneMove.picked}
+		reasonRequired={needsReason(flow, laneMove.from, laneMove.to)}
 		oncancel={() => (laneMove = null)}
 		onconfirm={(ids, reason) => moveStories(ids, laneMove!.to, reason)}
 	/>
@@ -645,11 +672,11 @@
 
 {#if cancelling}
 	<CancelConfirm
-		id={cancelling}
+		id={cancelling.id}
 		oncancel={() => (cancelling = null)}
 		onconfirm={async (reason) => {
-			const id = cancelling!;
-			await move(id, 'cancelled', reason);
+			const { id, to } = cancelling!;
+			await move(id, to, reason);
 			cancelling = null;
 		}}
 	/>
@@ -700,7 +727,8 @@
 	     page, and each lane scrolls its own cards under its sticky heading. Below sm they stack, and
 	     each collapses to its heading, a button that opens or closes its cards. -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:overflow-x-auto sm:pb-2" data-testid="lanes">
-		{#each states as state (state)}
+		{#each board.lanes as lane (lane.name)}
+			{@const state = lane.name}
 			{@const counts = laneCounts(held(state))}
 			{@const open = laneCollapse.isOpen(state)}
 			<section
@@ -709,27 +737,30 @@
 					? 'border-accent'
 					: 'border-line '}"
 				role="group"
-				aria-label={state}
+				aria-label={laneTitle(lane)}
 				data-lane={state}
 				oncontextmenu={(e) => openMenu(e, state)}
 				ondragover={(e) => {
 					if (!board?.writable || !dragging) return;
 					const from = cardOf(dragging);
-					if (from?.status !== state) {
+					if (!from) return;
+					if (from.status !== state) {
+						// another lane takes the card only by a move a person may make (S-0753)
+						if (!operatorMove(flow, from.status, state, from.type)) return;
 						e.preventDefault();
 						over = state;
 						marker = null;
 					} else if (
 						!onCard(e) &&
-						reorderable(from, true) &&
+						reorderable(from, true, flow.lanes) &&
 						endPlacement(stories(state), from.id)
 					) {
 						// its own column, below the last card: a drop here sends it to the end
 						e.preventDefault();
 						marker = { end: state };
 					}
-					// Otherwise its own column with nowhere to go: not a drop target, so the pointer
-					// says no and nothing looks as if it worked.
+					// Otherwise its own column with nowhere to go, or a lane no move takes it to: not a
+					// drop target, so the pointer says no and nothing looks as if it worked.
 				}}
 				ondragleave={() => {
 					over = null;
@@ -745,7 +776,9 @@
 					if (!id || !from) return;
 					if (from.status !== state) return request(id, state);
 					const p =
-						!onCard(e) && reorderable(from, writable()) ? endPlacement(stories(state), id) : null;
+						!onCard(e) && reorderable(from, writable(), flow.lanes)
+							? endPlacement(stories(state), id)
+							: null;
 					if (p) void place(id, p);
 				}}
 			>
@@ -766,7 +799,7 @@
 									class="size-4 shrink-0 text-muted sm:hidden {open ? 'rotate-90' : ''}"
 									aria-hidden="true"
 								/>
-								{state}
+								{laneTitle(lane)}
 							</span>
 							{#if board.wip_limits[state]}
 								<span
@@ -786,7 +819,7 @@
 						</span>
 					</button>
 				</h2>
-				{#if state === 'review'}
+				{#if lane.kind === 'waiting'}
 					<MergeQueue
 						{queue}
 						enabled={queueEnabled}
@@ -794,7 +827,7 @@
 						onchanged={() => void loadQueue()}
 					/>
 				{/if}
-				{#if state === 'done'}
+				{#if lane.kind === 'accepted'}
 					<PublishBanner
 						plans={publishPlans}
 						enabled={publishEnabled}
@@ -829,7 +862,7 @@
 							onclickcapture={(e) => press.click(e)}
 							ondragover={(e) => {
 								const from = dragging ? cardOf(dragging) : undefined;
-								if (!canReorderOnto(from, c, writable())) {
+								if (!canReorderOnto(from, c, writable(), flow.lanes)) {
 									// not a place to reorder to: no marker left over from the last card
 									marker = null;
 									return;
@@ -844,7 +877,7 @@
 							}}
 							ondrop={(e) => {
 								const from = dragging ? cardOf(dragging) : undefined;
-								if (!canReorderOnto(from, c, writable())) return;
+								if (!canReorderOnto(from, c, writable(), flow.lanes)) return;
 								e.preventDefault();
 								e.stopPropagation();
 								const half = marker && 'id' in marker && marker.id === c.id ? marker.half : null;
@@ -868,7 +901,7 @@
 								card={c}
 								draggable={board.writable}
 								dragging={dragging === c.id}
-								waiting={state === 'done' && waitingIds.has(c.id)}
+								waiting={lane.kind === 'accepted' && waitingIds.has(c.id)}
 								activity={activity[c.id]}
 								queue={marks[c.id]}
 								ondragstart={() => {
@@ -882,12 +915,12 @@
 								}}
 								onkeydown={(e) => {
 									const dir = keyStep(e);
-									if (!dir || !reorderable(c, writable())) return;
+									if (!dir || !reorderable(c, writable(), flow.lanes)) return;
 									e.preventDefault();
 									step(c, dir, `a[data-id="${c.id}"]`);
 								}}
 							/>
-							{#if reorderable(c, board.writable) && !dragging}
+							{#if reorderable(c, board.writable, flow.lanes) && !dragging}
 								<CardReorder
 									id={c.id}
 									up={stepPlacement(stories(state), c.id, 'up')}

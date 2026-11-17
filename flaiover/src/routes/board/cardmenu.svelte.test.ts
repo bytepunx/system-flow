@@ -14,6 +14,7 @@ vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) 
 
 import BoardPage from './+page.svelte';
 import { PRESS_MS } from './longpress';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 /** Stands in for the browser's WebSocket to /api/events, which says nothing here. */
 class QuietWebSocket {
@@ -64,7 +65,7 @@ describe('a card’s menu (S-0202)', () => {
 				return posted;
 			}
 			if (url === '/api/board')
-				return answer({ wip_limits: { ready: 5 }, order: [], writable, columns });
+				return answer({ ...baselineFlow, wip_limits: { ready: 5 }, order: [], writable, columns });
 			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
 			if (url === '/api/host-agent') return answer(agents);
 			return answer({});

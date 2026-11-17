@@ -6,6 +6,7 @@ import { AgentError } from './agent';
 import { Repo, storyParam, type Ask } from './repo';
 import { flaiAsk, haveFlai, shell } from './testing';
 import { board } from './board';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 // The dashboard's writes are flai's methods on the host (S-0075). Here they run through `flai
 // hostapi` from this tree: the same method table flai serve offers, the same validation, the same
@@ -21,6 +22,8 @@ describe('board reader', () => {
 		expect(s4.age_seconds).toBe(93600);
 		expect(s4.blocked).toBe(false);
 		expect(b.columns.done).toEqual([]); // done items in the fixture are archived
+		// the baseline workflow's lanes and moves, as the shared fixture holds them (S-0753)
+		expect({ lanes: b.lanes, transitions: b.transitions }).toEqual(baselineFlow);
 	});
 	it('names the parent of every card that has one', async () => {
 		const b = await board(new Repo(fixture, flaiAsk(fixture)), new Date('2026-09-01T12:00:00Z'));

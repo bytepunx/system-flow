@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import NewItemForm from './NewItemForm.svelte';
+import { baselineFlow, testingFlow } from '$lib/lanes.fixture';
+import type { Flow } from '$lib/lanes';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -18,9 +20,11 @@ const EPIC_BODY = '## Outcome\n\n## Stories\n\n## Notes\n';
 
 function backend(
 	create: (body: Record<string, unknown>) => unknown = () => ok({ item: { id: 'S-0099' } }),
-	move: (id: string, to: string) => unknown = (id, to) => ok({ id, status: to })
+	move: (id: string, to: string) => unknown = (id, to) => ok({ id, status: to }),
+	flow: Flow = baselineFlow
 ) {
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+		if (url === '/api/board') return ok(flow);
 		const moving = url.match(/^\/api\/items\/([^/]+)\/move$/);
 		if (moving) return move(moving[1], JSON.parse(init!.body!).to);
 		if (url.startsWith('/api/items/template'))
@@ -453,12 +457,16 @@ describe('NewItemForm', () => {
 
 	// S-0167: the board's lane menu opens the form on a lane, and the item is moved there once made
 	describe('the lane it starts in', () => {
-		const submit = async (lane?: 'backlog' | 'ready' | 'in-progress') => {
+		const submit = async (lane?: string, flow?: Flow) => {
 			const moves: string[] = [];
-			backend(undefined, (id, to) => {
-				moves.push(`${id}→${to}`);
-				return ok({ id, status: to });
-			});
+			backend(
+				undefined,
+				(id, to) => {
+					moves.push(`${id}→${to}`);
+					return ok({ id, status: to });
+				},
+				flow
+			);
 			const oncreated = vi.fn();
 			c = mount(NewItemForm, {
 				target: document.body,
@@ -494,6 +502,23 @@ describe('NewItemForm', () => {
 			run = await submit('in-progress');
 			expect(run.moves).toEqual(['S-0099→ready', 'S-0099→in-progress']);
 			expect(run.oncreated).toHaveBeenCalledWith('S-0099');
+		});
+
+		// S-0753: the lanes and the moves are the workflow's, as the board answers them
+		it("starts an item in the workflow's lanes, through its moves, and anywhere else initial", async () => {
+			let run = await submit('testing', testingFlow);
+			expect([...q<HTMLSelectElement>('lane').options].map((o) => o.value)).toEqual([
+				'backlog',
+				'ready',
+				'doing',
+				'testing'
+			]);
+			expect(run.moves).toEqual(['S-0099→ready', 'S-0099→doing', 'S-0099→testing']);
+			unmount(c!);
+			document.body.innerHTML = '';
+			run = await submit('in-progress', testingFlow);
+			expect(q<HTMLSelectElement>('lane').value).toBe('backlog');
+			expect(run.moves).toEqual([]);
 		});
 
 		it('says which move was refused, links the item made, and does not make it again', async () => {

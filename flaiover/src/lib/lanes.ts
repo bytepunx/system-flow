@@ -1,51 +1,141 @@
-// What each lane of the board offers in its menu (S-0167), by flai's workflow rules: a story
-// moves forward from backlog to ready, and back one column from ready, in-progress, review, or
-// cancelled; done is final (ADR-0055). Only ready, in-progress, and review carry a WIP limit.
+// The board's lanes and the moves between them as the workflow defines them and flai's board.get
+// answers them (ADR-0301 §2, §3; S-0753), and what each lane's menu offers (S-0167): every rule
+// here reads the lanes and transitions it is given, and holds no list of states of its own.
 
-export const LANES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
-export type Lane = (typeof LANES)[number];
+/** What a lane is for (ADR-0301 §2). */
+export type LaneKind = 'queue' | 'active' | 'waiting' | 'accepted' | 'cancelled';
 
-/** The lanes an item can be created in; any other starts in backlog. */
-export const START_LANES = ['backlog', 'ready', 'in-progress'] as const;
-export type StartLane = (typeof START_LANES)[number];
-
-/** The lane a new item starts in, from the lane its menu was opened on. */
-export function startLane(lane: string | null | undefined): StartLane {
-	return (START_LANES as readonly string[]).includes(lane ?? '') ? (lane as StartLane) : 'backlog';
-}
-
-/** The moves that take a new item, made in backlog, to its starting lane, in order. */
-export function movesTo(lane: StartLane): Lane[] {
-	return START_LANES.slice(1, START_LANES.indexOf(lane) + 1);
-}
-
-/** Where the lane menu moves stories forward to: from backlog only. */
-export function forwardOf(lane: string): Lane | null {
-	return lane === 'backlog' ? 'ready' : null;
-}
-
-const back: Record<string, Lane> = {
-	ready: 'backlog',
-	'in-progress': 'ready',
-	review: 'in-progress',
-	cancelled: 'backlog'
+/** One column of the board as board.get gives it; a flag or limit it does not have is absent. */
+export type Lane = {
+	name: string;
+	title?: string;
+	kind: LaneKind;
+	wip_limit?: number;
+	takes_limit?: boolean;
+	ordered?: boolean;
+	initial?: boolean;
 };
 
-/** Where the lane menu moves stories back to; none from backlog or done. */
-export function backOf(lane: string): Lane | null {
-	return back[lane] ?? null;
+/** One of the workflow's transitions as board.get gives it (internal/workitem BoardMove). */
+export type Move = {
+	from: string[];
+	to: string;
+	types: string[];
+	by: string[];
+	effects: string[];
+	/** flai refuses the move without a reason. */
+	reason: boolean;
+	/** A person may make the move from the board. */
+	operator: boolean;
+};
+
+/** The board's lanes in order and the workflow's moves in order. */
+export type Flow = { lanes: Lane[]; transitions: Move[] };
+
+/** The lane's heading: its title, else its name. */
+export function laneTitle(lane: Lane): string {
+	return lane.title || lane.name;
 }
 
-/** flai asks why a story is sent back from review (workflow.md). */
-export function needsReason(from: string, to: string): boolean {
-	return from === 'review' && to === 'in-progress';
+/** The board's lane of that name, if it has one. */
+export function laneOf(flow: Flow, name: string): Lane | undefined {
+	return flow.lanes.find((l) => l.name === name);
 }
 
-export const LIMITED_LANES = ['ready', 'in-progress', 'review'] as const;
+const at = (flow: Flow, name: string) => flow.lanes.findIndex((l) => l.name === name);
+
+/**
+ * The first move, in the workflow's order, that a person may make from the board taking an item of
+ * `type` from `from` to `to`; none when the board may not offer it.
+ */
+export function operatorMove(flow: Flow, from: string, to: string, type: string): Move | undefined {
+	return flow.transitions.find(
+		(m) => m.operator && m.to === to && m.from.includes(from) && m.types.includes(type)
+	);
+}
+
+/** The first move a person may make that cancels an item of `type` in `from`, if any. */
+export function cancelMove(flow: Flow, from: string, type: string): Move | undefined {
+	return flow.transitions.find(
+		(m) =>
+			m.operator && m.effects.includes('cancel') && m.from.includes(from) && m.types.includes(type)
+	);
+}
+
+/** The lanes, in board order, that a person may move an item of `type` to from `lane`. */
+function targets(flow: Flow, lane: string, type: string): Lane[] {
+	return flow.lanes.filter((l) => l.name !== lane && operatorMove(flow, lane, l.name, type));
+}
+
+/**
+ * Where the lane menu moves stories forward to: the nearest later lane of kind queue that a person
+ * may move them to. Forward is within the queue only, which is the operator's to commit; past it a
+ * story moves by its agent's pull and work, or by acceptance.
+ */
+export function forwardOf(flow: Flow, lane: string): string | null {
+	const from = at(flow, lane);
+	const later = targets(flow, lane, 'story').filter((l) => at(flow, l.name) > from);
+	return later.find((l) => l.kind === 'queue')?.name ?? null;
+}
+
+/** Where the lane menu moves stories back to: the nearest earlier lane a person may move them to. */
+export function backOf(flow: Flow, lane: string): string | null {
+	const from = at(flow, lane);
+	return targets(flow, lane, 'story').findLast((l) => at(flow, l.name) < from)?.name ?? null;
+}
+
+/** Whether flai refuses moving an item of `type` from `from` to `to` without a reason. */
+export function needsReason(flow: Flow, from: string, to: string, type = 'story'): boolean {
+	return operatorMove(flow, from, to, type)?.reason === true;
+}
 
 /** Whether the lane carries a WIP limit that the menu can change. */
-export function hasLimit(lane: string): boolean {
-	return (LIMITED_LANES as readonly string[]).includes(lane);
+export function hasLimit(flow: Flow, lane: string): boolean {
+	return laneOf(flow, lane)?.takes_limit === true;
+}
+
+/** The lane flai makes a new item in: the workflow's initial lane. */
+export function initialLane(flow: Flow): string | undefined {
+	return (flow.lanes.find((l) => l.initial) ?? flow.lanes[0])?.name;
+}
+
+/**
+ * The way a new item of `type` reaches each lane it may start in, from the initial lane: by moves a
+ * person may make, each to a later lane of kind queue or active, so never into a lane that waits,
+ * accepts, or cancels. The fewest moves, the nearer lane first where two are as few.
+ */
+function startPaths(flow: Flow, type: string): Map<string, string[]> {
+	const first = initialLane(flow);
+	const paths = new Map<string, string[]>();
+	if (first === undefined) return paths;
+	paths.set(first, []);
+	const queue = [first];
+	for (let lane = queue.shift(); lane !== undefined; lane = queue.shift()) {
+		const from = at(flow, lane);
+		for (const next of targets(flow, lane, type)) {
+			if (paths.has(next.name) || at(flow, next.name) < from) continue;
+			if (next.kind !== 'queue' && next.kind !== 'active') continue;
+			paths.set(next.name, [...paths.get(lane)!, next.name]);
+			queue.push(next.name);
+		}
+	}
+	return paths;
+}
+
+/** The lanes an item of `type` can be created in, in board order; the initial lane first. */
+export function startLanes(flow: Flow, type = 'story'): string[] {
+	const paths = startPaths(flow, type);
+	return flow.lanes.filter((l) => paths.has(l.name)).map((l) => l.name);
+}
+
+/** The lane a new item starts in, from the lane its menu was opened on: any other starts initial. */
+export function startLane(flow: Flow, lane: string | null | undefined, type = 'story'): string {
+	return startLanes(flow, type).includes(lane ?? '') ? lane! : (initialLane(flow) ?? '');
+}
+
+/** The moves that take a new item, made in the initial lane, to its starting lane, in order. */
+export function movesTo(flow: Flow, lane: string, type = 'story'): string[] {
+	return startPaths(flow, type).get(lane) ?? [];
 }
 
 /**
@@ -58,18 +148,22 @@ export type LaneAction = 'create' | 'forward' | 'back' | 'limit' | 'archive';
  * The lane's menu, in order (S-0167), for a lane holding `count` cards; a card's menu offers it too,
  * under the lane (S-0202).
  */
-export function laneEntries(lane: string, count = 0): { action: LaneAction; label: string }[] {
-	const forward = forwardOf(lane);
-	const backTo = backOf(lane);
+export function laneEntries(
+	flow: Flow,
+	lane: string,
+	count = 0
+): { action: LaneAction; label: string }[] {
+	const forward = forwardOf(flow, lane);
+	const backTo = backOf(flow, lane);
 	return [
 		{ action: 'create' as const, label: 'Create item here' },
 		...(forward
 			? [{ action: 'forward' as const, label: `Move stories forward to ${forward}…` }]
 			: []),
 		...(backTo ? [{ action: 'back' as const, label: `Move stories back to ${backTo}…` }] : []),
-		...(hasLimit(lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : []),
+		...(hasLimit(flow, lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : []),
 		// cancelled cards stay until archived, and flai check fails on them (S-0343)
-		...(lane === 'cancelled' && count > 0
+		...(laneOf(flow, lane)?.kind === 'cancelled' && count > 0
 			? [{ action: 'archive' as const, label: 'Archive All' }]
 			: [])
 	];

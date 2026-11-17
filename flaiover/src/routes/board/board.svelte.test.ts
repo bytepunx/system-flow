@@ -6,7 +6,8 @@ import { GATHER_MS, RETRY_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
 import { BoardTypes, boardTypes, itemTypes } from '$lib/boardtypes.svelte';
 import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
-import { LaneCollapse, laneCollapse, laneStates } from '$lib/lanecollapse.svelte';
+import { LaneCollapse, laneCollapse } from '$lib/lanecollapse.svelte';
+import { baselineFlow, testingFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -33,7 +34,8 @@ class FakeWebSocket {
 }
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
-const board = { wip_limits: {}, order: [], writable: false, columns: {} };
+const board = { ...baselineFlow, wip_limits: {}, order: [], writable: false, columns: {} };
+const laneStates = baselineFlow.lanes.map((l) => l.name);
 const settle = async (ms = 0) => {
 	await new Promise((r) => setTimeout(r, ms));
 	for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
@@ -721,7 +723,7 @@ describe("each lane's heading opens or closes it on a narrow screen (S-0462)", (
 		vi.stubGlobal('WebSocket', FakeWebSocket);
 		// the lanes as they start from nothing stored
 		localStorage.clear();
-		laneCollapse.open = new LaneCollapse().open;
+		laneCollapse.open = new LaneCollapse(baselineFlow.lanes).open;
 		for (const t of itemTypes) boardTypes.set(t, true);
 		boardNatures.shown = new BoardNatures().shown;
 		columns = { ready: [card('S-0001', 'ready')], backlog: [] };
@@ -743,7 +745,7 @@ describe("each lane's heading opens or closes it on a narrow screen (S-0462)", (
 		vi.unstubAllGlobals();
 		document.body.innerHTML = '';
 		localStorage.clear();
-		laneCollapse.open = new LaneCollapse().open;
+		laneCollapse.open = new LaneCollapse(baselineFlow.lanes).open;
 	});
 
 	it('makes each heading a button for its cards, with Ready, In progress, and Review open', async () => {
@@ -785,7 +787,7 @@ describe("each lane's heading opens or closes it on a narrow screen (S-0462)", (
 		expect(hidden('ready')).toBe(true);
 		expect(stored()).toEqual(['backlog', 'in-progress', 'review']);
 		// the next page load reads it back
-		expect(new LaneCollapse().open).toEqual(['backlog', 'in-progress', 'review']);
+		expect(new LaneCollapse(baselineFlow.lanes).open).toEqual(['backlog', 'in-progress', 'review']);
 	});
 
 	it('takes a card moved into a closed lane and changes its counts at once', async () => {
@@ -831,5 +833,207 @@ describe("each lane's heading opens or closes it on a narrow screen (S-0462)", (
 		flushSync();
 		expect(document.querySelector('[data-testid="lane-menu"]')).not.toBeNull();
 		expect(toggle('backlog').getAttribute('aria-expanded')).toBe('false');
+	});
+});
+
+// S-0753, criteria 3 and 4: the board draws the lanes and offers the moves its workflow defines, here
+// in-progress renamed doing and testing, an active lane with a WIP limit, added after it; a move
+// only a cascade makes is not offered, and a move flai refuses shows flai's words.
+describe('a board for a workflow with a state renamed and one added (S-0753)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, status: string, type = 'story') => ({
+		id,
+		type,
+		title: id,
+		nature: 'feature',
+		status,
+		blocked: false,
+		age_seconds: 0
+	});
+	let posts: { url: string; body: Record<string, unknown> }[];
+	let refuse: string | null;
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+		localStorage.clear();
+		for (const t of itemTypes) boardTypes.set(t, true);
+		boardNatures.shown = new BoardNatures().shown;
+		posts = [];
+		refuse = null;
+		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+			if (init?.method === 'POST') {
+				const body = JSON.parse(init.body ?? '{}');
+				posts.push({ url, body });
+				if (refuse) return { ok: false, statusText: 'Bad', json: async () => ({ error: refuse }) };
+				return answer({ id: url.split('/')[3], status: body.to, warnings: [] });
+			}
+			if (url === '/api/board')
+				return answer({
+					...testingFlow,
+					wip_limits: { ready: 5, doing: 2, testing: 4, review: 3 },
+					order: [],
+					writable: true,
+					columns: {
+						backlog: [card('S-0001', 'backlog')],
+						doing: [card('S-0002', 'doing')],
+						testing: [card('S-0003', 'testing'), card('S-0004', 'testing')],
+						review: [card('S-0005', 'review')]
+					}
+				});
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			return answer({ enabled: false });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+		localStorage.clear();
+		laneCollapse.setLanes(baselineFlow.lanes);
+		laneCollapse.open = new LaneCollapse(baselineFlow.lanes).open;
+	});
+	const open = async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+	};
+	const lane = (name: string) => document.querySelector<HTMLElement>(`[data-lane="${name}"]`)!;
+	const rightClick = (el: Element) => {
+		const init = { bubbles: true, cancelable: true, button: 2, clientX: 40, clientY: 50 };
+		el.dispatchEvent(new MouseEvent('contextmenu', init));
+		flushSync();
+	};
+	const labels = (menu: string) => {
+		const items = document.querySelectorAll(`[data-testid="${menu}"] [role="menuitem"]`);
+		return [...items].map((b) => b.textContent!.trim());
+	};
+	const escape = () => {
+		const menu = document.querySelector('[role="menu"]')!;
+		menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		flushSync();
+	};
+	const drag = (id: string) => {
+		const link = document.querySelector(`a[data-id="${id}"]`)!;
+		link.dispatchEvent(new Event('dragstart', { bubbles: true }));
+	};
+	const takes = (name: string) => {
+		const e = new Event('dragover', { bubbles: true, cancelable: true });
+		lane(name).dispatchEvent(e);
+		return e.defaultPrevented;
+	};
+	const drop = async (name: string) => {
+		lane(name).dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+		await settle();
+	};
+
+	it('draws its lanes in place, with their titles, WIP limits, and default open lanes', async () => {
+		await open();
+		const lanes = [...document.querySelectorAll<HTMLElement>('section[data-lane]')];
+		expect(lanes.map((l) => l.dataset.lane)).toEqual([
+			'backlog',
+			'ready',
+			'doing',
+			'testing',
+			'review',
+			'done',
+			'cancelled'
+		]);
+		const heading = (name: string) => {
+			const text = lane(name).querySelector('h2')!.textContent!;
+			return text.replace(/\s+/g, ' ');
+		};
+		expect(heading('testing')).toContain('testing');
+		expect(heading('testing')).toContain('2/4');
+		expect(heading('doing')).toContain('1/2');
+		const toggles = lanes.map((l) => l.querySelector('h2 > button')!);
+		const expanded = toggles.map((t) => t.getAttribute('aria-expanded'));
+		expect(expanded).toEqual(['false', 'true', 'true', 'true', 'true', 'false', 'false']);
+	});
+
+	it("offers the added lane's moves and limit in its lane menu and its cards' menus", async () => {
+		await open();
+		rightClick(lane('testing'));
+		expect(labels('lane-menu')).toEqual([
+			'Create item here',
+			'Move stories back to doing…',
+			'Change WIP limit…'
+		]);
+		escape();
+		rightClick(lane('review'));
+		expect(labels('lane-menu')).toContain('Move stories back to doing…');
+		escape();
+		rightClick(lane('doing'));
+		expect(labels('lane-menu')).toContain('Move stories back to ready…');
+		escape();
+		rightClick(document.querySelector('[data-card="S-0003"]')!);
+		expect(labels('card-menu')).toEqual([
+			'Open',
+			'Block…',
+			'Cancel…',
+			'Create item here',
+			'Move stories back to doing…',
+			'Change WIP limit…'
+		]);
+		escape();
+		// a story in review is cancelled only by a cascade, which is not the operator's to make
+		rightClick(document.querySelector('[data-card="S-0005"]')!);
+		expect(labels('card-menu')).not.toContain('Cancel…');
+	});
+
+	it('takes a card only in a lane a person may move it to, and moves it there', async () => {
+		await open();
+		drag('S-0002');
+		const others = ['backlog', 'ready', 'testing', 'review', 'done', 'cancelled'];
+		expect(others.filter(takes)).toEqual(['ready', 'testing', 'review', 'cancelled']);
+		await drop('testing');
+		expect(posts).toEqual([{ url: '/api/items/S-0002/move', body: { to: 'testing' } }]);
+		expect(document.querySelector('[data-testid="board-notice"]')!.textContent).toContain(
+			'S-0002 → testing'
+		);
+		drag('S-0005');
+		// review's cancellation is a cascade's, its acceptance the operator's
+		const lanes = ['doing', 'testing', 'done', 'cancelled'];
+		expect(lanes.filter(takes)).toEqual(['doing', 'done']);
+		await drop('cancelled');
+		expect(posts).toHaveLength(1);
+	});
+
+	it('asks a reason where the transition needs one, and shows the words of a move flai refuses', async () => {
+		const prompt = vi.fn(() => 'tests missing');
+		vi.stubGlobal('prompt', prompt);
+		await open();
+		drag('S-0003');
+		await drop('doing');
+		expect(prompt).not.toHaveBeenCalled();
+		expect(posts.at(-1)).toEqual({ url: '/api/items/S-0003/move', body: { to: 'doing' } });
+		refuse = 'rule: S-0005 has no task after';
+		drag('S-0005');
+		await drop('doing');
+		expect(prompt).toHaveBeenCalledTimes(1);
+		expect(posts.at(-1)).toEqual({
+			url: '/api/items/S-0005/move',
+			body: { to: 'doing', reason: 'tests missing' }
+		});
+		const notice = document.querySelector('[data-testid="board-notice"]')!;
+		expect(notice.textContent).toBe('rule: S-0005 has no task after');
+		expect(notice.parentElement!.getAttribute('role')).toBe('alert');
+	});
+
+	it('moves stories back to the renamed lane from the lane menu, asking why from review', async () => {
+		await open();
+		rightClick(lane('review'));
+		document.querySelector<HTMLButtonElement>('[role="menuitem"][data-action="back"]')!.click();
+		await settle();
+		expect(document.querySelector('[data-testid="lane-move"] h2')!.textContent).toContain(
+			'from review to doing'
+		);
+		expect(document.querySelector('[data-testid="lane-move-reason"]')).not.toBeNull();
+		document.querySelector<HTMLButtonElement>('[data-testid="lane-move"] button')!.click();
+		await settle();
+		rightClick(lane('testing'));
+		document.querySelector<HTMLButtonElement>('[role="menuitem"][data-action="back"]')!.click();
+		await settle();
+		expect(document.querySelector('[data-testid="lane-move-reason"]')).toBeNull();
 	});
 });

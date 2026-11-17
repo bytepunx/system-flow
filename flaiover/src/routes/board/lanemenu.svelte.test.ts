@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { resetForTests } from '$lib/project.svelte';
+import { baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 const goto = vi.fn();
@@ -31,6 +32,7 @@ const card = (id: string, status: string, type = 'story', archived = false) => (
 });
 let cancelled: ReturnType<typeof card>[];
 const board = (writable = true) => ({
+	...baselineFlow,
 	wip_limits: { ready: 5, 'in-progress': 2, review: 3 },
 	order: [],
 	writable,

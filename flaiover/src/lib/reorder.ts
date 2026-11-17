@@ -1,27 +1,38 @@
-// Reordering cards within a board column (S-0057). Only backlog and ready have a pull order,
-// and only stories are in it; the rules are flai's (design/system/workflow.md), and flai
-// refuses what these helpers should never ask for. These decide which placement a drop, a
-// button, or a key asks flai order for, and when there is nothing to ask.
-export const ORDERED = ['backlog', 'ready'];
+// Reordering cards within a board column (S-0057). Only the lanes the workflow orders have a pull
+// order, backlog and ready with the baseline (S-0753), and only stories are in it; the rules are
+// flai's (design/system/workflow.md), and flai refuses what these helpers should never ask for.
+// These decide which placement a drop, a button, or a key asks flai order for, and when there is
+// nothing to ask.
+import type { Lane } from './lanes';
 
 export type Placement = { before: string } | { after: string } | { top: true } | { bottom: true };
 
 type Orderable = { id: string; type: string; status: string };
 
-/** Whether a card has a place in a pull order that the designer may change. */
-export function reorderable(card: Orderable | undefined, writable: boolean): boolean {
-	return !!card && writable && card.type === 'story' && ORDERED.includes(card.status);
+/** Whether a card has a place in the pull order of an ordered lane that the designer may change. */
+export function reorderable(
+	card: Orderable | undefined,
+	writable: boolean,
+	lanes: Pick<Lane, 'name' | 'ordered'>[]
+): boolean {
+	return (
+		!!card &&
+		writable &&
+		card.type === 'story' &&
+		lanes.some((l) => l.ordered === true && l.name === card.status)
+	);
 }
 
 /** Whether `dragged` may be dropped on or beside `target` to reorder: same ordered column, both stories. */
 export function canReorderOnto(
 	dragged: Orderable | undefined,
 	target: Orderable | undefined,
-	writable: boolean
+	writable: boolean,
+	lanes: Pick<Lane, 'name' | 'ordered'>[]
 ): boolean {
 	return (
-		reorderable(dragged, writable) &&
-		reorderable(target, writable) &&
+		reorderable(dragged, writable, lanes) &&
+		reorderable(target, writable, lanes) &&
 		dragged!.id !== target!.id &&
 		dragged!.status === target!.status
 	);
