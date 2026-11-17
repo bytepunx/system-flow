@@ -645,15 +645,20 @@ func (g *undoneGit) Run(_, _ string, args ...string) (string, error) {
 	g.mu.Unlock()
 	time.Sleep(5 * time.Millisecond)
 	defer func() { g.mu.Lock(); g.now--; g.mu.Unlock() }()
-	// diff --no-ext-diff --no-color --no-renames -U0 from to -- path
-	if args[5] == "b0" { // main's diff since the old base: it added its line at line 2
-		return "@@ -1,0 +2 @@\n+main's", nil
+	// -c core.quotePath=false diff ... -U0 from to -- paths...
+	dash := slices.Index(args, "--")
+	from, to, paths := args[dash-2], args[dash-1], args[dash+1:]
+	var out []string
+	for _, path := range paths {
+		head := "diff --git a/" + path + " b/" + path + "\n"
+		switch story := strings.TrimPrefix(to, "story/"); {
+		case from == "b0": // main's diff since the old base: it added its line at line 2
+			out = append(out, head+"@@ -1,0 +2 @@\n+main's")
+		case slices.Contains(g.undoes[story], path):
+			out = append(out, head+"@@ -2 +1,0 @@\n-main's")
+		}
 	}
-	story, path := strings.TrimPrefix(args[6], "story/"), args[8]
-	if slices.Contains(g.undoes[story], path) {
-		return "@@ -2 +1,0 @@\n-main's", nil
-	}
-	return "", nil
+	return strings.Join(out, "\n"), nil
 }
 
 func (g *undoneGit) RunInput(dir, name, _ string, args ...string) (string, error) {

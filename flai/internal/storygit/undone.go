@@ -106,7 +106,10 @@ func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 // a line the sync did not record is not counted (I-0338). A path whose branch
 // removes none of its recorded lines there, as after it is restored or when
 // the text compare before ADR-0309 recorded it, drops out, and the record is
-// written again without it. A story with no record has none.
+// written again without it. A story with no record has none. It runs one git
+// diff of the branch for all the record's paths, and one per distinct old
+// base for the paths the branch still removes lines of, not one or two per
+// path (I-0349).
 func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone, error) {
 	cacheDir := repo.CacheDir()
 	rec, err := readUndone(cacheDir, story)
@@ -121,21 +124,37 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 	if err != nil {
 		return nil, err
 	}
+	paths := make([]string, 0, len(rec.Paths))
+	for _, e := range rec.Paths {
+		paths = append(paths, e.Path)
+	}
+	branch, err := readHunksOf(r, repo.MainRoot, main, Branch(story), paths)
+	if err != nil {
+		return nil, fmt.Errorf("check whether %s still undoes %s's change to %s: %w; a story with no branch has nothing to undo, so delete %s", Branch(story), main, strings.Join(paths, ", "), err, UndoneRecordPath(cacheDir, story))
+	}
+	// the paths the branch still removes lines of, by the old base each was
+	// found at, each base read once
+	byBase := map[string][]string{}
+	for _, e := range rec.Paths {
+		if len(branch[e.Path].removed) > 0 {
+			byBase[e.OldBase] = append(byBase[e.OldBase], e.Path)
+		}
+	}
+	mains := make(map[string]map[string]hunks, len(byBase))
+	for base, ps := range byBase {
+		if mains[base], err = readHunksOf(r, repo.MainRoot, base, main, ps); err != nil {
+			return nil, fmt.Errorf("read what %s changed in %s since %s: %w; delete %s and run flai stream sync %s again", main, strings.Join(ps, ", "), base, err, UndoneRecordPath(cacheDir, story), story)
+		}
+	}
 	kept := []UndoneEntry{}
 	for _, e := range rec.Paths {
-		branchAdded, removed, err := readHunks(r, repo.MainRoot, main, Branch(story), e.Path)
-		if err != nil {
-			return nil, fmt.Errorf("check whether %s still undoes %s's change to %s: %w; a story with no branch has nothing to undo, so delete %s", Branch(story), main, e.Path, err, UndoneRecordPath(cacheDir, story))
-		}
-		if len(removed) == 0 {
+		b := branch[e.Path]
+		if len(b.removed) == 0 {
 			continue
 		}
-		added, mainRemoved, err := readHunks(r, repo.MainRoot, e.OldBase, main, e.Path)
-		if err != nil {
-			return nil, fmt.Errorf("read what %s changed in %s since %s: %w; delete %s and run flai stream sync %s again", main, e.Path, e.OldBase, err, UndoneRecordPath(cacheDir, story), story)
-		}
-		lines := undoneLines(e.Lines, atPositions(added, removed))
-		if e.Lines = notKept(e.Path, lines, texts(branchAdded), texts(mainRemoved)); len(e.Lines) == 0 {
+		m := mains[e.OldBase][e.Path]
+		lines := undoneLines(e.Lines, atPositions(m.added, b.removed))
+		if e.Lines = notKept(e.Path, lines, texts(b.added), texts(m.removed)); len(e.Lines) == 0 {
 			continue
 		}
 		kept = append(kept, e)
@@ -290,6 +309,67 @@ func readHunks(r execx.Runner, dir, from, to, path string) (added, removed []num
 		return nil, nil, err
 	}
 	return diffHunks(out)
+}
+
+// hunks is what a diff adds to a file, numbered in the new file, and
+// removes, numbered in the old one.
+type hunks struct {
+	added, removed []numbered
+}
+
+// diffAllArgs are git's arguments for the lines of every one of paths that
+// differ between from and to, with no context, each file under its own
+// header diff --git a/<path> b/<path>, whatever the host's diff.noprefix or
+// diff.mnemonicPrefix, and with no path quoted that git need not quote.
+func diffAllArgs(from, to string, paths []string) []string {
+	args := []string{"-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-color", "--no-renames", "--src-prefix=a/", "--dst-prefix=b/", "-U0", from, to, "--"}
+	return append(args, paths...)
+}
+
+// readHunksOf is, for each of paths, the lines git, run in dir, says differ
+// between from and to, as readHunks gives them, from one git diff of them
+// all, split by each file's header (I-0349). A path git prints no diff for
+// has none. A path git still quotes, one holding a quote, a backslash, or a
+// control character, matches no header, so it is read with a diff of its
+// own.
+func readHunksOf(r execx.Runner, dir, from, to string, paths []string) (map[string]hunks, error) {
+	out, err := r.Run(dir, "git", diffAllArgs(from, to, paths)...)
+	if err != nil {
+		return nil, err
+	}
+	header := make(map[string]string, len(paths))
+	for _, p := range paths {
+		header["diff --git a/"+p+" b/"+p] = p
+	}
+	files := map[string][]string{}
+	current, unknown := "", false
+	for _, l := range strings.Split(out, "\n") {
+		if strings.HasPrefix(l, "diff ") {
+			p, ok := header[l]
+			current, unknown = p, unknown || !ok
+		}
+		if current != "" {
+			files[current] = append(files[current], l)
+		}
+	}
+	res := make(map[string]hunks, len(paths))
+	for _, p := range paths {
+		lines, ok := files[p]
+		if !ok && unknown {
+			added, removed, err := readHunks(r, dir, from, to, p)
+			if err != nil {
+				return nil, err
+			}
+			res[p] = hunks{added, removed}
+			continue
+		}
+		added, removed, err := diffHunks(strings.Join(lines, "\n"))
+		if err != nil {
+			return nil, err
+		}
+		res[p] = hunks{added, removed}
+	}
+	return res, nil
 }
 
 // diffHunks is the lines a unified diff adds, numbered in the new file, and

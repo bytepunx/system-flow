@@ -3,6 +3,7 @@ package storygit
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -149,8 +150,9 @@ func TestUndoneLeavesAMarkdownLineTheBranchExtends(t *testing.T) {
 	if err := recordUndone(repo.CacheDir(), "S-0001", []Undone{{Path: "flai-cli.md", Lines: []string{"| `flai check` | main's |"}, OldBase: "b0"}}, time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	rg.script("@@ -54 +54 @@\n-| `flai check` | main's |\n+| `flai check` | main's and the story's |", diffArgs("main", "story/S-0001", "flai-cli.md")...)
-	rg.script("@@ -54 +54 @@\n-| `flai check` | old |\n+| `flai check` | main's |", diffArgs("b0", "main", "flai-cli.md")...)
+	md := []string{"flai-cli.md"}
+	rg.script(fileDiff("flai-cli.md", "@@ -54 +54 @@\n-| `flai check` | main's |\n+| `flai check` | main's and the story's |"), diffAllArgs("main", "story/S-0001", md)...)
+	rg.script(fileDiff("flai-cli.md", "@@ -54 +54 @@\n-| `flai check` | old |\n+| `flai check` | main's |"), diffAllArgs("b0", "main", md)...)
 	if got, err := RecordedUndone(rg, repo, "S-0001"); err != nil || len(got) != 0 {
 		t.Errorf("recorded and extended: %+v %v; want nothing still undone", got, err)
 	}
@@ -324,10 +326,9 @@ func TestRecordedUndoneDropsAPathTheBranchNoLongerRemoves(t *testing.T) {
 	if err := recordUndone(repo.CacheDir(), "S-0001", found, time.Date(2026, 10, 14, 18, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
-	g.script("@@ -1 +0,0 @@\n-y", diffArgs("main", "story/S-0001", "a.md")...)
-	g.script("@@ -0,0 +1,2 @@\n+y\n+x", diffArgs("b0", "main", "a.md")...)
-	// b.md's branch removes nothing, so main's diff of it, unscripted, is not read
-	g.script("", diffArgs("main", "story/S-0001", "b.md")...)
+	// b.md's branch removes nothing, so main's diff of it is not read
+	g.script(fileDiff("a.md", "@@ -1 +0,0 @@\n-y"), diffAllArgs("main", "story/S-0001", []string{"a.md", "b.md"})...)
+	g.script(fileDiff("a.md", "@@ -0,0 +1,2 @@\n+y\n+x"), diffAllArgs("b0", "main", []string{"a.md"})...)
 
 	got, err := RecordedUndone(g, repo, "S-0001")
 	if err != nil {
@@ -340,7 +341,7 @@ func TestRecordedUndoneDropsAPathTheBranchNoLongerRemoves(t *testing.T) {
 		t.Errorf("record not rewritten without b.md: %+v", rec)
 	}
 
-	g.script("", diffArgs("main", "story/S-0001", "a.md")...)
+	g.script("", diffAllArgs("main", "story/S-0001", []string{"a.md"})...)
 	if got, err := RecordedUndone(g, repo, "S-0001"); err != nil || len(got) != 0 {
 		t.Fatalf("restored: %+v %v", got, err)
 	}
@@ -392,10 +393,9 @@ func TestRecordedUndoneDropsAPathTheTextCompareRecorded(t *testing.T) {
 	if err := recordUndone(repo.CacheDir(), "S-0002", found, time.Date(2026, 11, 15, 18, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
-	g.script(goLoopReplace, diffArgs("main", "story/S-0002", "board.go")...)
-	g.script(goMainAdds, diffArgs("b0", "main", "board.go")...)
-	g.script(goRevert, diffArgs("main", "story/S-0002", "revert.go")...)
-	g.script(goMainAdds, diffArgs("b0", "main", "revert.go")...)
+	both := []string{"board.go", "revert.go"}
+	g.script(fileDiff("board.go", goLoopReplace)+"\n"+fileDiff("revert.go", goRevert), diffAllArgs("main", "story/S-0002", both)...)
+	g.script(fileDiff("board.go", goMainAdds)+"\n"+fileDiff("revert.go", goMainAdds), diffAllArgs("b0", "main", both)...)
 
 	got, err := RecordedUndone(g, repo, "S-0002")
 	if err != nil {
@@ -406,5 +406,126 @@ func TestRecordedUndoneDropsAPathTheTextCompareRecorded(t *testing.T) {
 	}
 	if rec := readRecord(t, repo, "S-0002"); len(rec.Paths) != 1 || rec.Paths[0].Path != "revert.go" {
 		t.Errorf("record not rewritten without board.go: %+v", rec)
+	}
+}
+
+// fileDiff is what git prints of path in a diff of several files: its
+// header, with the tab git puts after a name holding a space, then hunks.
+func fileDiff(path, hunks string) string {
+	end := ""
+	if strings.Contains(path, " ") {
+		end = "\t"
+	}
+	return "diff --git a/" + path + " b/" + path + "\nindex 1111111..2222222 100644\n--- a/" + path + end + "\n+++ b/" + path + end + "\n" + hunks
+}
+
+// countingGit is a scriptedGit that counts the git processes it runs, by
+// their subcommand.
+type countingGit struct {
+	scriptedGit
+	runs map[string]int
+}
+
+func (g countingGit) Run(dir, name string, args ...string) (string, error) {
+	sub := args[0]
+	if sub == "-c" {
+		sub = args[2]
+	}
+	g.runs[sub]++
+	return g.scriptedGit.Run(dir, name, args...)
+}
+
+// I-0349: a record of 20 paths with one old base is read with one git diff
+// of the branch and one of main since that base, beside the rev-parse of the
+// main branch, not one or two diffs per path; the answer is each path's.
+func TestRecordedUndoneRunsOneDiffForTheBranchAndOnePerOldBase(t *testing.T) {
+	repo, s := undoneRepo(t)
+	g := countingGit{s, map[string]int{}}
+	var found []Undone
+	var paths []string
+	branch, mains := "", ""
+	for i := range 20 {
+		p := fmt.Sprintf("p%02d.md", i)
+		paths = append(paths, p)
+		found = append(found, Undone{Path: p, Lines: []string{"main's " + p}, OldBase: "b0"})
+		branch += fileDiff(p, "@@ -3 +2,0 @@\n-main's "+p) + "\n"
+		mains += fileDiff(p, "@@ -2,0 +3 @@\n+main's "+p) + "\n"
+	}
+	if err := recordUndone(repo.CacheDir(), "S-0003", found, time.Date(2026, 11, 17, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	g.script(branch, diffAllArgs("main", "story/S-0003", paths)...)
+	g.script(mains, diffAllArgs("b0", "main", paths)...)
+
+	got, err := RecordedUndone(g, repo, "S-0003")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, found) {
+		t.Errorf("still undone %+v, want %+v", got, found)
+	}
+	if want := map[string]int{"rev-parse": 1, "diff": 2}; !reflect.DeepEqual(g.runs, want) {
+		t.Errorf("git runs %v, want %v", g.runs, want)
+	}
+}
+
+// I-0349: a record whose paths were found at two old bases reads main once
+// per base, and only for the paths the branch still removes lines of; a path
+// with a space is split out of the diff by its header, and a path the branch
+// no longer changes drops out.
+func TestRecordedUndoneReadsMainOncePerOldBase(t *testing.T) {
+	repo, s := undoneRepo(t)
+	g := countingGit{s, map[string]int{}}
+	found := []Undone{
+		{Path: "a.md", Lines: []string{"x"}, OldBase: "b0"},
+		{Path: "d.go", Lines: goMainLines, OldBase: "b1"},
+		{Path: "gone.md", Lines: []string{"g"}, OldBase: "b1"},
+		{Path: "with space.md", Lines: []string{"y"}, OldBase: "b0"},
+	}
+	if err := recordUndone(repo.CacheDir(), "S-0004", found, time.Date(2026, 11, 17, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	g.script(fileDiff("a.md", "@@ -2 +1,0 @@\n-x")+"\n"+fileDiff("d.go", goRevert)+"\n"+fileDiff("with space.md", "@@ -1 +0,0 @@\n-y"),
+		diffAllArgs("main", "story/S-0004", []string{"a.md", "d.go", "gone.md", "with space.md"})...)
+	g.script(fileDiff("a.md", "@@ -1,0 +2 @@\n+x")+"\n"+fileDiff("with space.md", "@@ -0,0 +1 @@\n+y"), diffAllArgs("b0", "main", []string{"a.md", "with space.md"})...)
+	g.script(fileDiff("d.go", goMainAdds), diffAllArgs("b1", "main", []string{"d.go"})...)
+
+	got, err := RecordedUndone(g, repo, "S-0004")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Undone{found[0], found[1], found[3]}; !reflect.DeepEqual(got, want) {
+		t.Errorf("still undone %+v, want %+v", got, want)
+	}
+	if want := map[string]int{"rev-parse": 1, "diff": 3}; !reflect.DeepEqual(g.runs, want) {
+		t.Errorf("git runs %v, want %v", g.runs, want)
+	}
+	if rec := readRecord(t, repo, "S-0004"); len(rec.Paths) != 3 {
+		t.Errorf("record not rewritten without gone.md: %+v", rec)
+	}
+}
+
+// I-0349: a path git quotes in its header, here one holding a quote, matches
+// no header of the batched diff, so it is read with a diff of its own, and a
+// deleted file is split out by its header as any other.
+func TestReadHunksOfReadsAQuotedPathOnItsOwn(t *testing.T) {
+	g := scriptedGit{}
+	quoted := `q"x.md`
+	paths := []string{"del.md", quoted}
+	g.script("diff --git a/del.md b/del.md\ndeleted file mode 100644\nindex 1111111..0000000\n--- a/del.md\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-a\n-b\n"+
+		`diff --git "a/q\"x.md" "b/q\"x.md"`+"\nindex 1111111..2222222 100644\n@@ -1 +1 @@\n-old\n+new",
+		diffAllArgs("b0", "c1", paths)...)
+	g.script("@@ -1 +1 @@\n-old\n+new", diffArgs("b0", "c1", quoted)...)
+
+	got, err := readHunksOf(g, "/wt", "b0", "c1", paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]hunks{
+		"del.md": {removed: []numbered{{1, "a"}, {2, "b"}}},
+		quoted:   {added: []numbered{{1, "new"}}, removed: []numbered{{1, "old"}}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("hunks %+v, want %+v", got, want)
 	}
 }

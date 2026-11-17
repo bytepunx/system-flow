@@ -387,11 +387,16 @@ func openThread(t *testing.T, repo *workitem.Repo, on, title string) string {
 func recordUndone(t *testing.T, repo *workitem.Repo, g scriptedGit, story string, paths ...string) {
 	t.Helper()
 	rec := storygit.UndoneRecord{Story: story}
+	var branch, mains []string
 	for _, p := range paths {
 		rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: p, Lines: []string{"main's line"}, OldBase: "b0"}, FoundAt: t0})
-		g.script("diff --git a/"+p+" b/"+p+"\n@@ -1 +0,0 @@\n-main's line", "diff", "--no-ext-diff", "--no-color", "--no-renames", "-U0", "main", storygit.Branch(story), "--", p)
-		g.script("diff --git a/"+p+" b/"+p+"\n@@ -0,0 +1 @@\n+main's line", "diff", "--no-ext-diff", "--no-color", "--no-renames", "-U0", "b0", "main", "--", p)
+		branch = append(branch, "diff --git a/"+p+" b/"+p+"\n@@ -1 +0,0 @@\n-main's line")
+		mains = append(mains, "diff --git a/"+p+" b/"+p+"\n@@ -0,0 +1 @@\n+main's line")
 	}
+	// one diff of the branch and one of main since the old base, for every path (I-0349)
+	diff := []string{"-c", "core.quotePath=false", "diff", "--no-ext-diff", "--no-color", "--no-renames", "--src-prefix=a/", "--dst-prefix=b/", "-U0"}
+	g.script(strings.Join(branch, "\n"), slices.Concat(diff, []string{"main", storygit.Branch(story), "--"}, paths)...)
+	g.script(strings.Join(mains, "\n"), slices.Concat(diff, []string{"b0", "main", "--"}, paths)...)
 	data, err := json.Marshal(rec)
 	if err != nil {
 		t.Fatal(err)
