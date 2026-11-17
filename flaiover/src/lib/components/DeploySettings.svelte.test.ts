@@ -7,6 +7,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterSetting, KlusterStatus } from '$lib/server/repo';
+import type { Flow } from '$lib/lanes';
+import { baselineFlow, renamedFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -96,6 +98,8 @@ const pick = (value: 'one' | 'components') => {
 describe('DeploySettings (S-0595, ADR-0263)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	let writes: Record<string, ReturnType<typeof answer>> = {};
+	let flow: Flow = baselineFlow;
+	let epics: unknown[] = [];
 	const saved = vi.fn();
 
 	const show = async (props: Record<string, unknown> = {}) => {
@@ -115,6 +119,11 @@ describe('DeploySettings (S-0595, ADR-0263)', () => {
 
 	beforeEach(() => {
 		writes = {};
+		flow = baselineFlow;
+		epics = [
+			{ id: 'E-0001', title: 'Ship it', status: 'in-progress' },
+			{ id: 'E-0002', title: 'Old', status: 'done' }
+		];
 		saved.mockReset();
 		api.mockReset();
 		api.mockImplementation(async (path: string, init?: RequestInit) => {
@@ -124,11 +133,8 @@ describe('DeploySettings (S-0595, ADR-0263)', () => {
 				return w;
 			}
 			if (path === '/api/kluster') return answer(STATUS);
-			if (path === '/api/items?type=epic&archived=false')
-				return answer([
-					{ id: 'E-0001', title: 'Ship it', status: 'in-progress' },
-					{ id: 'E-0002', title: 'Old', status: 'done' }
-				]);
+			if (path === '/api/board') return answer(flow);
+			if (path === '/api/items?type=epic&archived=false') return answer(epics);
 			throw new Error(`unexpected ${path}`);
 		});
 	});
@@ -321,5 +327,17 @@ describe('DeploySettings (S-0595, ADR-0263)', () => {
 		expect(String(body.title)).toContain('build, deploy, and teardown scripts');
 		expect(String(body.body)).toContain('Its components are api, web');
 		expect(q('kluster-agent-made')!.querySelector('a')!.getAttribute('href')).toBe('/items/S-0042');
+	});
+
+	it('offers the epics open by their lane’s kind on a workflow that renames its states (I-0399)', async () => {
+		flow = renamedFlow;
+		epics = [
+			{ id: 'E-0001', title: 'Shipped', status: 'shipped' },
+			{ id: 'E-0002', title: 'Dropped', status: 'dropped' },
+			{ id: 'E-0003', title: 'Queued', status: 'queued' }
+		];
+		await show();
+		const options = [...document.querySelectorAll<HTMLOptionElement>('select option')];
+		expect(options.map((o) => o.value)).toEqual(['E-0003']);
 	});
 });

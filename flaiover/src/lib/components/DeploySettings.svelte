@@ -22,6 +22,8 @@
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import type { Flow } from '$lib/lanes';
+	import { isOpen } from '$lib/workflow';
 
 	let {
 		settings,
@@ -202,13 +204,24 @@
 		}
 	}
 
+	/** Reads the board's lanes and transitions, which say which states are open. */
+	async function boardFlow(): Promise<Flow> {
+		const r = await api('/api/board');
+		const b = r.ok ? await r.json() : {};
+		return { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+	}
+
 	/** Reads the open epics a story for the scripts can go under. */
 	async function loadEpics() {
 		try {
-			const r = await api('/api/items?type=epic&archived=false');
+			const [r, flow] = await Promise.all([
+				api('/api/items?type=epic&archived=false'),
+				boardFlow()
+			]);
 			if (!r.ok) return;
 			const all = (await r.json()) as Epic[];
-			epics = all.filter((e) => e.status !== 'done' && e.status !== 'cancelled');
+			// open by the kind of its state's lane, whatever the workflow names it (I-0399)
+			epics = all.filter((e) => isOpen(flow, e.status));
 			if (!epic && epics.length) epic = epics[0].id;
 		} catch {
 			epics = [];

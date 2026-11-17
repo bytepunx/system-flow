@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import NewItemForm from './NewItemForm.svelte';
-import { baselineFlow, testingFlow } from '$lib/lanes.fixture';
+import { baselineFlow, renamedFlow, testingFlow } from '$lib/lanes.fixture';
 import type { Flow } from '$lib/lanes';
 
 const api = vi.fn();
@@ -17,11 +17,17 @@ const settle = async () => {
 const ok = (body: unknown) => ({ ok: true, statusText: 'OK', json: async () => body });
 const STORY_BODY = '## Goal\n\n## Acceptance criteria\n- [ ]\n\n## Tasks\n\n## Notes\n';
 const EPIC_BODY = '## Outcome\n\n## Stories\n\n## Notes\n';
+const EPICS = [
+	{ id: 'E-0001', title: 'Standard', status: 'done', archived: false },
+	{ id: 'E-0006', title: 'Workbench', status: 'ready', archived: false },
+	{ id: 'E-0004', title: 'Documentation', status: 'backlog', archived: false }
+];
 
 function backend(
 	create: (body: Record<string, unknown>) => unknown = () => ok({ item: { id: 'S-0099' } }),
 	move: (id: string, to: string) => unknown = (id, to) => ok({ id, status: to }),
-	flow: Flow = baselineFlow
+	flow: Flow = baselineFlow,
+	epics: unknown[] = EPICS
 ) {
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 		if (url === '/api/board') return ok(flow);
@@ -29,12 +35,7 @@ function backend(
 		if (moving) return move(moving[1], JSON.parse(init!.body!).to);
 		if (url.startsWith('/api/items/template'))
 			return ok({ body: url.endsWith('epic') ? EPIC_BODY : STORY_BODY });
-		if (url.startsWith('/api/items?'))
-			return ok([
-				{ id: 'E-0001', title: 'Standard', status: 'done', archived: false },
-				{ id: 'E-0006', title: 'Workbench', status: 'ready', archived: false },
-				{ id: 'E-0004', title: 'Documentation', status: 'backlog', archived: false }
-			]);
+		if (url.startsWith('/api/items?')) return ok(epics);
 		if (url === '/api/items' && init?.method === 'POST') return create(JSON.parse(init.body!));
 		throw new Error('unexpected ' + url);
 	});
@@ -165,6 +166,23 @@ describe('NewItemForm', () => {
 		expect(document.querySelector<HTMLInputElement>('input[value=epic]')!.checked).toBe(true);
 		expect(q<HTMLTextAreaElement>('body').value).toBe(EPIC_BODY);
 		expect(button().textContent).toContain('Create epic');
+	});
+
+	it('offers the epics open by their lane’s kind on a workflow that renames its states (I-0399)', async () => {
+		backend(undefined, undefined, renamedFlow, [
+			{ id: 'E-0001', title: 'Shipped', status: 'shipped', archived: false },
+			{ id: 'E-0002', title: 'Dropped', status: 'dropped', archived: false },
+			{ id: 'E-0003', title: 'Queued', status: 'queued', archived: false },
+			{ id: 'E-0004', title: 'Underway', status: 'in-progress', archived: false }
+		]);
+		c = mount(NewItemForm, {
+			target: document.body,
+			props: { oncreated: vi.fn(), initialParent: 'E-0001' }
+		});
+		await settle();
+		const options = [...q<HTMLSelectElement>('parent').options].map((o) => o.value);
+		expect(options).toEqual(['', 'E-0003', 'E-0004']);
+		expect(q<HTMLSelectElement>('parent').value).toBe('');
 	});
 
 	it('does not start under an epic that has closed since (S-0171)', async () => {

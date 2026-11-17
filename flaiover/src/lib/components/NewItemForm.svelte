@@ -13,6 +13,7 @@
 	import CostOfDelayPanel from './CostOfDelayPanel.svelte';
 	import { costFields, costInputs, DEFAULT_CURRENCY } from '$lib/costofdelay';
 	import { movesTo, startLane, startLanes, type Flow } from '$lib/lanes';
+	import { isOpen } from '$lib/workflow';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Epic = { id: string; title: string; status: string; archived: boolean };
@@ -114,9 +115,8 @@
 		try {
 			const r = await api('/api/items?type=epic&archived=false');
 			if (!r.ok) return;
-			epics = ((await r.json()) as Epic[]).filter(
-				(e) => e.status !== 'done' && e.status !== 'cancelled'
-			);
+			// open by the kind of its state's lane, whatever the workflow names it (I-0399)
+			epics = ((await r.json()) as Epic[]).filter((e) => isOpen(flow, e.status));
 			// an epic it was started under that has since closed is not offered, so it is not chosen
 			if (parent && !epics.some((e) => e.id === parent)) parent = '';
 			if (!parent && epics.length === 1) parent = epics[0].id;
@@ -126,9 +126,6 @@
 	}
 	$effect(() => {
 		void loadTemplate(type);
-	});
-	$effect(() => {
-		void loadEpics();
 	});
 	async function loadManifest() {
 		try {
@@ -154,8 +151,9 @@
 			// made where flai makes it, and moved nowhere
 		}
 	}
+	// The epics wait for the flow, which says which of them are open.
 	$effect(() => {
-		void loadFlow();
+		void loadFlow().then(loadEpics);
 	});
 
 	async function create(e: Event) {
