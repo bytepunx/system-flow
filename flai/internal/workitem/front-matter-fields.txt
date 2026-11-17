@@ -3,8 +3,11 @@
 # keys of an item's cost_of_delay and forecast blocks (S-0199) and of a
 # story's finalized block (S-0201), the keys of an item's usage block, of
 # each of its models, and of each of its strategic entries (S-0225), the
-# counts of each day of its turns (S-0293), and
-# the types of item that carry each field only some types carry (S-0176).
+# counts of each day of its turns (S-0293),
+# the types of item that carry each field only some types carry (S-0176),
+# and the keys of the workflow file's front matter and of each mapping in
+# it, a state, its runs, a transition, its rule entries and verify, a
+# timer, its points, and verify_at (S-0806), which flai reads strictly.
 # TestFieldsFileIsTheCode keeps it equal to the code: change it with any
 # field added or removed. Publishing a flai release that changed it raises
 # system-flow.yaml's flai.minimum to that release (release.RaiseMinimum).
@@ -22,3 +25,13 @@ item.usage.models: cache_read cache_write cost input model output
 item.usage.strategic: estimated kind models seconds
 item.usage.turns: ceremony day empty_wakes hand_edits test_runs work
 item.types: after=story,task agent=story cost_of_delay=epic,story draft=story finalized=story forecast=story topics=epic,story
+workflow: states status timers title transitions updated verify_at
+workflow.state: aliases initial kind limit name order runs title types
+workflow.state.runs: kluster suites
+workflow.timer: counts from name sum title to types until
+workflow.timer.point: first last
+workflow.timer.point.edge: kind
+workflow.transition: by effects from rules to types verify
+workflow.transition.rule: rule severity
+workflow.transition.verify: severity suites
+workflow.verify_at: batch ci publish

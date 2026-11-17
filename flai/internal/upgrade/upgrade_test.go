@@ -580,3 +580,46 @@ func TestUpgradeAddsTheWorkflowFileAndKeepsTheProjects(t *testing.T) {
 		}
 	})
 }
+
+// S-0806: a project whose workflow file is the baseline of a template from
+// before ADR-0312, untouched since, keeps it byte for byte when flai upgrade
+// runs from a template whose baseline gives a transition's verify, a state's
+// runs, and verify_at: upgrade never writes the keys into a project's file,
+// so a flai older than them goes on reading it (ADR-0307 §4).
+func TestUpgradeKeepsAProjectsWorkflowFileWithoutVerifyKeys(t *testing.T) {
+	const board = "design/workflows/board.md"
+	const before = "---\ntitle: Board\nupdated: 2026-11-01\nstatus: active\nstates:\n  - {name: backlog, kind: queue, initial: true}\n  - {name: review, kind: waiting}\n  - {name: done, kind: accepted}\ntransitions:\n  - {from: backlog, to: review}\n  - {from: review, to: done}\n---\n\nThe board.\n"
+	after := strings.NewReplacer(
+		"  - {name: review, kind: waiting}\n", "  - {name: review, kind: waiting, runs: {suites: [smoke], kluster: [deploy, checks]}}\n",
+		"  - {from: review, to: done}\n", "  - {from: review, to: done, verify: {suites: all, severity: warn}}\nverify_at: {batch: all, publish: all, ci: [static]}\n",
+	).Replace(before)
+	for _, key := range []string{"verify:", "runs:", "verify_at:"} {
+		if !strings.Contains(after, key) {
+			t.Fatalf("the new template's baseline lacks %s:\n%s", key, after)
+		}
+	}
+	root, lk := render(t)
+	p := filepath.Join(root, filepath.FromSlash(board))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(before), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lk.Files[board] = lock.Hash([]byte(before)) // the file as the old template shipped it
+
+	plan, c, _, _ := boardPlan(t, root, after, lk)
+	if c.Class != Keep || slices.Contains(plan.Conflicts(), board) {
+		t.Fatalf("class %s, conflicts %v, want keep: %s", c.Class, plan.Conflicts(), Describe(plan))
+	}
+	written, err := Apply(root, plan, Policy{board: "replace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(written, board) {
+		t.Errorf("written %v", written)
+	}
+	if b, _ := os.ReadFile(p); string(b) != before {
+		t.Errorf("the project's file was written:\n%s", b)
+	}
+}

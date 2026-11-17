@@ -134,10 +134,7 @@ func (v *Verify) UnmarshalYAML(n ast.Node) error {
 	if err := noValue(n, "suites", "verify's suites is all or a list of suites; give them, or leave verify out"); err != nil {
 		return err
 	}
-	var f struct {
-		Suites   *Suites `yaml:"suites"`
-		Severity string  `yaml:"severity"`
-	}
+	var f verifyFields
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}
@@ -160,10 +157,7 @@ func (r *Runs) UnmarshalYAML(n ast.Node) error {
 			return err
 		}
 	}
-	var f struct {
-		Suites  *Suites  `yaml:"suites"`
-		Kluster []string `yaml:"kluster"`
-	}
+	var f runsFields
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}
@@ -183,11 +177,7 @@ func (v *VerifyAt) UnmarshalYAML(n ast.Node) error {
 			return err
 		}
 	}
-	var f struct {
-		Batch   *Suites `yaml:"batch"`
-		Publish *Suites `yaml:"publish"`
-		CI      *Suites `yaml:"ci"`
-	}
+	var f verifyAtFields
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}

@@ -1,8 +1,10 @@
 package workitem_test
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -52,6 +55,14 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 		// the types each type-restricted field is valid on (S-0176): an older
 		// flai refuses an item that carries one on a type it does not allow
 		"item.types: " + workitem.FieldTypes(),
+	}
+	// the workflow file's keys and those of each mapping in it (S-0806): an
+	// older flai refuses a file that gives a key it does not know, so a
+	// release that adds one raises flai.minimum, and the older flai stops on
+	// the manifest, naming the release, before it reads the file
+	flow := workflow.Fields()
+	for _, name := range slices.Sorted(maps.Keys(flow)) {
+		want = append(want, name+": "+strings.Join(flow[name], " "))
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("%s is not the code's fields; write these lines:\n%s", release.FieldsFile, strings.Join(want, "\n"))

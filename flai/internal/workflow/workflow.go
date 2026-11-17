@@ -302,15 +302,7 @@ func (t *Transition) UnmarshalYAML(n ast.Node) error {
 	if pairs(n) == nil {
 		return shapeError(n, "a transition is a mapping, such as {from: ready, to: in-progress}")
 	}
-	var f struct {
-		From    names     `yaml:"from"`
-		To      string    `yaml:"to"`
-		Types   []string  `yaml:"types"`
-		By      []string  `yaml:"by"`
-		Rules   []RuleRef `yaml:"rules"`
-		Effects []string  `yaml:"effects"`
-		Verify  *Verify   `yaml:"verify"`
-	}
+	var f transitionFields
 	if err := noValue(n, "verify", "verify gives no value; "+verifyShape+", or leave verify out"); err != nil {
 		return err
 	}
@@ -332,10 +324,7 @@ func (r *RuleRef) UnmarshalYAML(n ast.Node) error {
 		}
 		return nil
 	}
-	var f struct {
-		Rule     string `yaml:"rule"`
-		Severity string `yaml:"severity"`
-	}
+	var f ruleFields
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}
@@ -351,16 +340,7 @@ func (t *Timer) UnmarshalYAML(n ast.Node) error {
 	if pairs(n) == nil {
 		return shapeError(n, "a timer is a mapping, such as {name: lead, title: Lead time, from: created, to: completed}")
 	}
-	var f struct {
-		Name   string   `yaml:"name"`
-		Title  string   `yaml:"title"`
-		From   *Point   `yaml:"from"`
-		To     *Point   `yaml:"to"`
-		Sum    []string `yaml:"sum"`
-		Until  *Point   `yaml:"until"`
-		Types  []string `yaml:"types"`
-		Counts string   `yaml:"counts"`
-	}
+	var f timerFields
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}
@@ -398,9 +378,7 @@ func (p *Point) UnmarshalYAML(n ast.Node) error {
 		*p = Point{Edge: edge, State: s}
 		return nil
 	}
-	var k struct {
-		Kind string `yaml:"kind"`
-	}
+	var k edgeKindFields
 	if err := yaml.NodeToValue(v, &k, yaml.Strict()); err != nil || k.Kind == "" {
 		return shapeError(n, pointShape)
 	}
