@@ -7,7 +7,7 @@ count: 2
 cost: 8m
 first_reported: 2026-11-13T08:58:25Z
 last_reported: 2026-11-15T21:32:06Z
-updated: 2026-11-15T21:32:06Z
+updated: 2026-11-17T08:17:27Z
 ---
 
 # I-0359 flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
@@ -26,3 +26,5 @@ Story: S-0793.
 the publish formula's publish step (T-3386) exited 1 at 2026-11-15T21:31:24Z: git commit for flai 1.99.0 found .git/index.lock held; the lock was gone seconds later, no tag was made, nothing was pushed, and the main checkout's wip/ and design/digest/ changes were left staged
 
 ## Remediation
+
+Story S-0833 remediates this issue, created from it at 2026-11-17T08:17:27Z.
