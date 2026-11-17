@@ -2,12 +2,12 @@
 id: I-0359
 title: flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
 class: defect
-status: open
+status: closed
 count: 2
 cost: 8m
 first_reported: 2026-11-13T08:58:25Z
 last_reported: 2026-11-15T21:32:06Z
-updated: 2026-11-17T08:17:27Z
+updated: 2026-11-17T09:33:11Z
 ---
 
 # I-0359 flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
@@ -28,3 +28,4 @@ the publish formula's publish step (T-3386) exited 1 at 2026-11-15T21:31:24Z: gi
 ## Remediation
 
 Story S-0833 remediates this issue, created from it at 2026-11-17T08:17:27Z.
+Closed 2026-11-17T09:33:11Z: S-0833: flai release --pending runs its publish's git add -A and git commit through storygit.RunPastIndexLock, as I-0100's fix does for flai accept, so a lock another git process holds for a moment is waited out (about nine seconds, never removed). flai/cmd/release_lock_test.go reproduces it: TestReleasePendingWaitsOutAnIndexLockHeldForAMoment failed with "index.lock': File exists" before the change and commits, tags, and pushes after; TestReleasePendingFailsWhenTheIndexLockStaysHeld shows a lock held throughout fails with git's message and the helper's hint and tags and pushes nothing.
