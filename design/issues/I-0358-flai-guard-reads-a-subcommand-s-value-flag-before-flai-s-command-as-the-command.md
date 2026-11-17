@@ -2,12 +2,12 @@
 id: I-0358
 title: flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-13T08:42:15Z
 last_reported: 2026-11-13T08:42:15Z
-updated: 2026-11-17T08:17:26Z
+updated: 2026-11-17T10:54:29Z
 ---
 
 # I-0358 flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs
@@ -24,3 +24,4 @@ Found by S-0660's T-2882: guard's subcommands() (flai/internal/guard/guard_refus
 ## Remediation
 
 Story S-0832 remediates this issue, created from it at 2026-11-17T08:17:26Z.
+Closed 2026-11-17T10:54:29Z: S-0832: flai guard reads flai's command as cobra's Find does (guard.FlaiCommand), from the flags flai's command tree defines with no value, so a value flag before the command, such as --by alex or --reason x, no longer hides it; flai/cmd/guard_test.go checks the reading against cobra's Find on flai's own root
