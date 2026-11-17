@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2238.5542
-accrued_seconds: 1574327
-tasks_completed: 3844
-last_run: 2026-11-17T08:18:18Z
+accrued_cost: 2238.7725
+accrued_seconds: 1574392
+tasks_completed: 3846
+last_run: 2026-11-17T08:19:32Z
 ---
 
 # Orchestrator activity
@@ -26943,6 +26943,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 25
 - Cost: 0.1215 USD, estimated
+
+### 2026-11-17T08:19:19Z
+
+- Summary: release-due S-0750, S-0805: no new publish run. release_evaluate is met under threshold (count 2, threshold 1; value 382.29 of 1000), and the publish formula's instance S-0826 is already in progress for that batch.
+- Items: S-0750, S-0805, S-0826
+- Seconds: 52
+- Cost: 0.2183 USD, estimated
+
+### 2026-11-17T08:19:32Z
+
+- Summary: S-0825 (publish instance) verified at e2e5959: close-out passed, T-3513..T-3515 done, dry run no blockers. Accept refused: an uncommitted digest edit in main, D-0630 line 26, fails markdownlint MD028 (blank line between blockquotes); the curator, running now, is writing it. Waiting for its run to end, then retrying.
+- Items: S-0825
+- Seconds: 13
+- Cost: 0.0000 USD
 
 ## Refusals
 

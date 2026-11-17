@@ -3,10 +3,10 @@ id: S-0825
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-17T07:54:16Z
-updated: 2026-11-17T08:17:03Z
+updated: 2026-11-17T08:20:01Z
 transitions:
   - to: ready
     at: 2026-11-17T07:54:18Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-17T08:17:03Z
     by: agent-S-0825
+  - to: done
+    at: 2026-11-17T08:20:01Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0825-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -85,3 +88,13 @@ Published on 2026-11-17 by step 3, `flai release --pending`, which pushed the br
 |-----------|------|----|-----|-------|
 | flai | 1.102.0 | 1.103.0 | `flai/v1.103.0` | S-0742, S-0753, S-0817, S-0819 |
 | flaiover | 0.61.3 | 0.62.0 | `flaiover/v0.62.0` | S-0753 |
+
+### Accepted by the orchestrator
+
+- Verified: e2e59593c729dbacc223bb942d5b5b7e5fcceb97
+- At: 2026-11-17T08:20:01Z
+
+Verdict: pass, all three steps done and the close-out passed at e2e5959
+- 1: T-3513 done
+- 2: T-3514 done
+- 3: T-3515 done

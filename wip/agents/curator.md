@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 350.2055
-accrued_seconds: 39081
-tasks_completed: 240
-last_run: 2026-11-17T08:17:59Z
+accrued_cost: 350.9647
+accrued_seconds: 39151
+tasks_completed: 241
+last_run: 2026-11-17T08:19:23Z
 ---
 
 # Curator activity
@@ -1931,3 +1931,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0449, D-0660, D-0661
 - Seconds: 126
 - Cost: 1.7073 USD, estimated
+
+### 2026-11-17T08:19:23Z
+
+- Summary: I wrote no new entries, merged S-0750 into D-0630, absorbed none, and `flai digest compact` compacted none. Nothing was harvested since 08:17:59Z; S-0750's other seven decisions were progress, coordination, or already stated in ADR-0305.
+- Trigger: accepted S-0750
+- Items: D-0630
+- Seconds: 70
+- Cost: 0.7592 USD, estimated

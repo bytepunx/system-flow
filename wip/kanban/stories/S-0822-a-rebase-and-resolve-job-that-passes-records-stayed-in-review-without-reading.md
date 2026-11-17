@@ -6,9 +6,9 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-17T07:13:18Z
+updated: 2026-11-17T08:19:55Z
 transitions: []
-tags: []
+tags: [flai, flaiover]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -55,6 +55,8 @@ When a rebase and resolve job passes, `settle` in `flai/internal/serve/resolvejo
 - [ ] I-0396 is closed with `flai issue close I-0396 --reason` saying what fixed it
 
 ## Tasks
+- T-3520 settle reads the story again and records left review for a story no longer in review
+- T-3521 The review page shows a rebase and resolve job that ended with its story out of review
 
 ## Notes
 
