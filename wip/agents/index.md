@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T09:16:30Z
+updated: 2026-11-17T09:16:35Z
 ---
 
 # Active streams
@@ -9,7 +9,7 @@ updated: 2026-11-17T09:16:30Z
 |--------|-------|--------|------------|---------|
 | [S-0806](S-0806.md) | The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour | in-progress | agent-S-0806 | 2026-11-17T09:13:29Z |
 | [S-0831](S-0831.md) | The kluster send-back's texts to the agent do not say it can ask for its own deploy before review | in-progress | agent-S-0831 | 2026-11-17T09:15:27Z |
-| [S-0833](S-0833.md) | flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1 | in-progress | agent-S-0833 | 2026-11-17T09:15:12Z |
+| [S-0833](S-0833.md) | flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1 | in-progress | agent-S-0833 | 2026-11-17T09:16:35Z |
 
 ## Strategic agents
 
