@@ -13,7 +13,7 @@
 		bucketsFor,
 		bucketLabel,
 		build,
-		COD_COLUMNS,
+		codColumns,
 		COD_KINDS,
 		codDayRows,
 		codOrderRows,
@@ -71,6 +71,7 @@
 	import KindChips from '$lib/components/KindChips.svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { chartWindow } from '$lib/chartwindow.svelte';
+	import type { Flow } from '$lib/lanes';
 
 	// the window chosen last in this browser, whichever chart it was chosen on (S-0168)
 	const since = $derived(chartWindow.since);
@@ -85,6 +86,9 @@
 	let error = $state<string | null>(null);
 	const dark = $derived(themeState.dark);
 	let epics = $state<{ id: string; title: string }[]>([]);
+	// the board's lanes and moves, which the charts by state stack (S-0754); until board.get answers,
+	// and from a flai that sends no lanes, they stack the states the report carries
+	let flow = $state<Flow | undefined>(undefined);
 
 	const kind = $derived(
 		(KINDS as readonly string[]).includes(page.params.kind ?? '')
@@ -97,7 +101,7 @@
 		nature: (shown.nature && nature) || undefined,
 		model: (shown.model && model) || undefined
 	});
-	const option = $derived(report ? build(kind, report, t, epic || undefined, filter) : null);
+	const option = $derived(report ? build(kind, report, t, epic || undefined, filter, flow) : null);
 	const s = $derived(report?.summary);
 	const usageKind = $derived((USAGE_KINDS as readonly string[]).includes(kind));
 	const spendKind = $derived(SPEND_KINDS.includes(kind));
@@ -147,6 +151,15 @@
 	const codKind = $derived((COD_KINDS as readonly string[]).includes(kind));
 	// what the cost of delay charts state under them (S-0213, ADR-0112)
 	const unvalued = $derived(report ? withoutValueNow(report) : undefined);
+	// the columns CoD Outstanding stacks, which its table and the items without a value list
+	const openColumns = $derived(report ? codColumns(report, flow) : []);
+	/** The items without a value now in each of those columns, in a sentence. */
+	const unvaluedText = $derived.by(() => {
+		const cols = openColumns.map((col) => [col, unvalued?.[col] ?? 0] as const);
+		return cols.some(([, n]) => n > 0)
+			? `Items without a value now, which add nothing to this chart: ${cols.map(([col, n]) => `${col} ${n}`).join(' · ')}.`
+			: 'Items without a value now: none.';
+	});
 	const ordered = $derived(report ? orderSummary(report) : undefined);
 	/** What the host's flai is missing that this cost of delay chart needs; empty when nothing. */
 	const codMissing = $derived.by(() => {
@@ -247,12 +260,20 @@
 			? body.map((e: { id: string; title: string }) => ({ id: e.id, title: e.title }))
 			: [];
 	}
+	/** The board's lanes and moves; left unknown when the board cannot be read. */
+	async function loadBoard() {
+		const r = await api('/api/board');
+		if (!r.ok) return;
+		const b = await r.json();
+		flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+	}
 	onMount(() => {
 		// the statistics are read from the work items (S-0161)
 		const stop = follow(['item'], () => void load());
-		// the charts do not wait for the epics, and are drawn without them (S-0168)
+		// the charts do not wait for the epics or the board, and are drawn without them (S-0168)
 		void load();
 		void loadEpics();
+		void loadBoard();
 		return stop;
 	});
 </script>
@@ -351,7 +372,7 @@
 	{#if kind === 'time-in-state' && report}
 		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
 		{#await import('$lib/viz/charts') then m}
-			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
+			<Chart option={m.stateShare(report, t, flow)} theme={t} height={120} />
 		{/await}
 	{/if}
 	{#if kind === 'coordination' && shares}
@@ -397,12 +418,7 @@
 		</p>
 	{/if}
 	{#if codKind && unvalued}
-		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
-			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
-				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
-					' · '
-				)}.{:else}Items without a value now: none.{/if}
-		</p>
+		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">{unvaluedText}</p>
 	{/if}
 	<div class="mt-4">
 		<ChartExplainer {kind} type={report?.type ?? asType} bucket={report?.usage?.bucket ?? bucket} />
@@ -506,16 +522,16 @@
 				<table class="min-w-full" data-testid="cod-day-table">
 					<thead
 						><tr class="text-left text-muted"
-							><th class="pr-4">date</th>{#each COD_COLUMNS as col (col)}<th class="pr-4">{col}</th
+							><th class="pr-4">date</th>{#each openColumns as col (col)}<th class="pr-4">{col}</th
 								>{/each}<th>without value</th></tr
 						></thead
 					><tbody
 						>{#each codDayRows(report) as d (d.date)}<tr
-								><td class="pr-4 font-mono">{d.date}</td>{#each COD_COLUMNS as col (col)}<td
+								><td class="pr-4 font-mono">{d.date}</td>{#each openColumns as col (col)}<td
 										class="pr-4">{amount(d.outstanding[col] ?? 0)}</td
 									>{/each}<td
 									>{d.without_value
-										? COD_COLUMNS.reduce((n, col) => n + (d.without_value?.[col] ?? 0), 0)
+										? openColumns.reduce((n, col) => n + (d.without_value?.[col] ?? 0), 0)
 										: '-'}</td
 								></tr
 							>{/each}</tbody

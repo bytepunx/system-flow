@@ -57,7 +57,6 @@ import {
 	roleByDay,
 	STRATEGIC_KINDS,
 	withUsage,
-	COD_COLUMNS,
 	COD_KINDS,
 	codDayRows,
 	codIncurred,
@@ -77,7 +76,7 @@ import {
 	hasOrder,
 	orderSummary,
 	withoutValueNow,
-	STATE_SLOT,
+	codColumns,
 	type Bucket,
 	type Claims,
 	type CodDay,
@@ -96,6 +95,8 @@ import {
 	type WaitWeek
 } from './charts';
 import { CATEGORICAL, modelSlot, modelSymbol, ORDER_SLOT, theme, TYPE_SLOT } from './palette';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
+import { stateSlot } from '$lib/workflow';
 
 // Spend over time as flai lays it out (S-0163): stories on 3 August (two models) and on
 // 5 August, the day between them empty, and tasks on 3 August.
@@ -699,7 +700,9 @@ describe('chart builders', () => {
 		expect(all.series[0].data.length).toBe(2);
 	});
 	it('cfd and time in state stack the states with the surface as the seam', () => {
-		const c = cfd(report, light) as { series: { stack: string; lineStyle: { color: string } }[] };
+		const c = cfd(report, light, baselineFlow) as {
+			series: { stack: string; lineStyle: { color: string } }[];
+		};
 		expect(new Set(c.series.map((s) => s.stack)).size).toBe(1);
 		expect(c.series[0].lineStyle.color).toBe(light.surface);
 		type Bars = {
@@ -709,7 +712,7 @@ describe('chart builders', () => {
 			}[];
 			tooltip: { formatter: (ps: unknown[]) => string };
 		};
-		const t = timeInState(report, light) as Bars;
+		const t = timeInState(report, light, undefined, baselineFlow) as Bars;
 		// a bar per UTC day with items completed, on its date's tick: the local midnight of its date
 		expect(t.series[2].name).toBe('in-progress');
 		expect(t.series[2].data).toEqual([
@@ -727,7 +730,7 @@ describe('chart builders', () => {
 				i.id === 'S-002' ? { ...i, completed: '2026-08-03T20:00:00Z' } : i
 			)
 		};
-		const m = timeInState(sameDay, light) as Bars;
+		const m = timeInState(sameDay, light, undefined, baselineFlow) as Bars;
 		expect(m.series.map((s) => s.data.map((d) => d.value[1]))).toEqual([
 			[0.8],
 			[24],
@@ -736,9 +739,119 @@ describe('chart builders', () => {
 			[0]
 		]);
 		expect(m.series[0].data[0].ids).toEqual(['S-001', 'S-002']);
-		expect((timeInState(report, light, 'E-999') as Bars).series[0].data).toEqual([]);
-		const share = stateShare(report, light) as { series: { data: number[] }[] };
+		expect((timeInState(report, light, 'E-999', baselineFlow) as Bars).series[0].data).toEqual([]);
+		const share = stateShare(report, light, baselineFlow) as { series: { data: number[] }[] };
 		expect(share.series[1].data[0]).toBeCloseTo(0.48);
+	});
+	type Stacked = {
+		series: {
+			name: string;
+			areaStyle?: { color: string };
+			itemStyle: { color: string };
+			data: unknown[];
+		}[];
+	};
+	const names = (o: unknown) => (o as Stacked).series.map((s) => s.name);
+	const bands = (o: unknown) => (o as Stacked).series.map((s) => s.areaStyle?.color);
+	const bars = (o: unknown) => (o as Stacked).series.map((s) => s.itemStyle.color);
+	const slots = (...n: number[]) => n.map((i) => CATEGORICAL.light[i]);
+	it("the charts by state stack the baseline's states in its colours, as before (S-0754)", () => {
+		const states = ['backlog', 'ready', 'in-progress', 'review', 'done'];
+		const colours = slots(6, 3, 0, 7, 5);
+		const c = cfd(report, light, baselineFlow);
+		expect(names(c)).toEqual(states);
+		expect(bands(c)).toEqual(colours);
+		const t = timeInState(report, light, undefined, baselineFlow);
+		expect(names(t)).toEqual(states);
+		expect(bars(t)).toEqual(colours);
+		const share = stateShare(report, light, baselineFlow);
+		expect(names(share)).toEqual(states);
+		expect(bars(share)).toEqual(colours);
+		expect((build('cfd', report, light, undefined, {}, baselineFlow) as Stacked).series).toEqual(
+			(c as Stacked).series
+		);
+		const o = codOutstanding(codReport, light, baselineFlow);
+		expect(names(o)).toEqual(states.slice(0, 4));
+		expect(bands(o)).toEqual(colours.slice(0, 4));
+		expect(codColumns(codReport, baselineFlow)).toEqual(states.slice(0, 4));
+	});
+	it('the charts by state stack a state added between in-progress and review in its own colour (S-0754)', () => {
+		const states = ['backlog', 'ready', 'in-progress', 'testing', 'review', 'done'];
+		const tested: Report = {
+			...report,
+			summary: {
+				...report.summary,
+				time_in_state_share: { ...report.summary.time_in_state_share, testing: 0.1 }
+			},
+			items: report.items.map((i) =>
+				i.id === 'S-001'
+					? { ...i, time_in_state_seconds: { ...i.time_in_state_seconds, testing: 7200 } }
+					: i
+			),
+			cfd: [{ date: '2026-09-01', counts: { ...report.cfd[0].counts, testing: 2 } }]
+		};
+		const testing = (o: unknown) => (o as Stacked).series[3];
+		// testing is the second active lane, past the kind's slots: it takes the first spare slot
+		const colours = slots(6, 3, 0, 2, 7, 5);
+		expect(new Set(colours).size).toBe(6);
+
+		const c = cfd(tested, light, addedStateFlow);
+		expect(names(c)).toEqual(states);
+		expect(bands(c)).toEqual(colours);
+		expect(testing(c).data).toEqual([['2026-09-01', 2]]);
+		expect((build('cfd', tested, light, undefined, {}, addedStateFlow) as Stacked).series).toEqual(
+			(c as Stacked).series
+		);
+
+		const t = timeInState(tested, light, undefined, addedStateFlow);
+		expect(names(t)).toEqual(states);
+		expect(bars(t)).toEqual(colours);
+		// S-001, done on 3 August, spent two hours in testing; S-002, done on 12 August, none
+		expect(testing(t).data).toEqual([
+			{ value: [midnight('2026-08-03'), 2], ids: ['S-001'], day: '2026-08-03' },
+			{ value: [midnight('2026-08-12'), 0], ids: ['S-002'], day: '2026-08-12' }
+		]);
+		expect(
+			(build('time-in-state', tested, light, undefined, {}, addedStateFlow) as Stacked).series
+		).toEqual((t as Stacked).series);
+
+		const share = stateShare(tested, light, addedStateFlow);
+		expect(names(share)).toEqual(states);
+		expect(bars(share)).toEqual(colours);
+		expect(testing(share).data).toEqual([0.1]);
+
+		const codTested: Report = {
+			...codReport,
+			cost_of_delay: {
+				...cod,
+				days: cod.days.map((d) => ({ ...d, outstanding: { ...d.outstanding, testing: 30 } }))
+			}
+		};
+		const open = states.slice(0, 5);
+		expect(codColumns(codTested, addedStateFlow)).toEqual(open);
+		const o = codOutstanding(codTested, light, addedStateFlow);
+		expect(names(o)).toEqual(open);
+		expect(bands(o)).toEqual(colours.slice(0, 5));
+		expect(testing(o).data).toHaveLength(10);
+		expect(testing(o).data.at(-1)).toEqual(['2026-09-01', 30]);
+	});
+	it('without the lanes the charts by state stack the states the report carries (S-0754)', () => {
+		const none = { lanes: [], transitions: [] };
+		for (const flow of [undefined, none]) {
+			const c = cfd(report, light, flow);
+			// flai's counts, in the order it sends them, each in the colour of its place
+			expect(names(c)).toEqual(Object.keys(report.cfd[0].counts));
+			expect(bands(c)).toEqual(slots(0, 1, 2, 3, 4, 5));
+			const t = timeInState(report, light, undefined, flow);
+			expect(names(t)).toEqual(['backlog', 'ready', 'in-progress', 'review']);
+			expect(bars(t)).toEqual(slots(0, 1, 2, 3));
+			expect(names(stateShare(report, light, flow))).toEqual(
+				Object.keys(report.summary.time_in_state_share)
+			);
+			expect(codColumns(codReport, flow)).toEqual(['backlog', 'ready', 'in-progress', 'review']);
+			expect(names(codOutstanding(codReport, light, flow))).toEqual(codColumns(codReport, flow));
+		}
+		expect(codColumns(report)).toEqual([]);
 	});
 	it('throughput shapes its data', () => {
 		const th = throughput(report, light) as { series: { name: string; data: number[] }[] };
@@ -1371,12 +1484,12 @@ describe('chart builders', () => {
 		}[];
 	};
 	it('CoD Outstanding stacks the value per week of each column per day, in board order', () => {
-		const o = codOutstanding(codReport, light) as Cod;
+		const o = codOutstanding(codReport, light, baselineFlow) as Cod;
 		expect(o.series.map((s) => s.name)).toEqual(['backlog', 'ready', 'in-progress', 'review']);
 		expect(new Set(o.series.map((s) => s.stack))).toEqual(new Set(['outstanding']));
 		// a band per column in the colour the cumulative flow gives its state, with the surface as seam
 		for (const s of o.series) {
-			expect(s.areaStyle?.color).toBe(CATEGORICAL.light[STATE_SLOT[s.name]]);
+			expect(s.areaStyle?.color).toBe(CATEGORICAL.light[stateSlot(baselineFlow, s.name)!]);
 			expect(s.lineStyle.color).toBe(light.surface);
 		}
 		expect(o.series[0].data).toHaveLength(10);
@@ -1411,7 +1524,9 @@ describe('chart builders', () => {
 		]);
 		expect(o.yAxis.name).toBe('value per week');
 		expect(o.legend.show).toBe(true);
-		expect((build('cod-outstanding', codReport, light) as Cod).series).toEqual(o.series);
+		expect(
+			(build('cod-outstanding', codReport, light, undefined, {}, baselineFlow) as Cod).series
+		).toEqual(o.series);
 		// the items without a value now: the last day's, per column
 		expect(withoutValueNow(codReport)).toEqual({
 			backlog: 3,
@@ -1419,7 +1534,7 @@ describe('chart builders', () => {
 			'in-progress': 0,
 			review: 1
 		});
-		expect(Object.keys(withoutValueNow(codReport)!)).toEqual([...COD_COLUMNS]);
+		expect(Object.keys(withoutValueNow(codReport)!)).toEqual(codColumns(codReport, baselineFlow));
 		const rows = codDayRows(codReport);
 		expect(rows.map((d) => d.date).slice(0, 2)).toEqual(['2026-09-01', '2026-08-31']);
 		expect(rows[0]).toEqual(cod.days[cod.days.length - 1]);
@@ -2882,7 +2997,7 @@ describe('the concurrency chart (S-0551)', () => {
 			['bar', 'concurrency']
 		]);
 		expect(o.series.map((s) => s.itemStyle.color)).toEqual([
-			light.series[STATE_SLOT['in-progress']],
+			light.series[stateSlot(baselineFlow, 'in-progress')!],
 			light.series[1]
 		]);
 		expect(o.legend.show).toBe(true);

@@ -20,6 +20,8 @@ import { amount } from '$lib/planning';
 import { count, dollars, type PricedBy } from '$lib/usage';
 import { localDate, localTime } from '$lib/localtime';
 import { kindOrder } from '$lib/strategic';
+import type { Flow, Lane, LaneKind } from '$lib/lanes';
+import { KIND_SLOTS, stateSlot } from '$lib/workflow';
 import {
 	CLAIMS_KINDS,
 	COD_KINDS,
@@ -31,19 +33,6 @@ import {
 	type Kind,
 	type PlanningKind
 } from './catalog';
-
-/**
- * The baseline's states' colour slots, until the charts draw the workflow's own states (S-0754);
- * a view takes a state's colour from workflow.ts's stateSlot.
- */
-export const STATE_SLOT: Record<string, number> = {
-	backlog: 6,
-	ready: 3,
-	'in-progress': 0,
-	review: 7,
-	done: 5,
-	cancelled: 1
-};
 
 export type Distribution = {
 	count: number;
@@ -505,15 +494,15 @@ export type Report = {
 	digest?: Digest;
 };
 
-/** The columns cost of delay is laid out in, in board order (S-0205). */
-export const COD_COLUMNS = ['backlog', 'ready', 'in-progress', 'review'] as const;
-export type CodColumn = (typeof COD_COLUMNS)[number];
-/** The cost of delay of a day: outstanding per column at its end, and what waiting cost in it. */
+/**
+ * The cost of delay of a day: outstanding per column at its end, and what waiting cost in it; the
+ * columns are the open states, as codColumns lays them out.
+ */
 export type CodDay = {
 	date: string;
-	outstanding: Record<CodColumn, number>;
+	outstanding: Record<string, number>;
 	/** The items per column at the day's end without a value; absent from a flai older than S-0213. */
-	without_value?: Record<CodColumn, number>;
+	without_value?: Record<string, number>;
 	incurred: number;
 };
 /** What waiting cost in an ISO week, which starts on `start`. */
@@ -625,7 +614,41 @@ export function titleOf(kind: Kind, bucket: BucketSize = 'day'): string {
 	return TITLES[kind];
 }
 
-const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done'];
+/** Whether board.get named the lanes: a flai older than S-0753, or a board not read, names none. */
+const hasLanes = (flow?: Flow): flow is Flow => (flow?.lanes.length ?? 0) > 0;
+/** The keys of the records in the order first seen. */
+const keysOf = (records: Record<string, number>[]) => [
+	...new Set(records.flatMap((c) => Object.keys(c)))
+];
+/**
+ * The states a chart stacks: the flow's lanes that `keep` keeps, in board order; with no lanes
+ * known, the states the report carries, as `carried` gives them.
+ */
+function stackedStates(
+	flow: Flow | undefined,
+	keep: (lane: Lane) => boolean,
+	carried: () => string[]
+): string[] {
+	return hasLanes(flow) ? flow.lanes.filter(keep).map((l) => l.name) : carried();
+}
+/** The states cumulative flow, time in state, and the share stack: every lane but cancelled. */
+const flowStates = (flow: Flow | undefined, carried: () => string[]) =>
+	stackedStates(flow, (l) => l.kind !== 'cancelled', carried);
+/**
+ * Each state's colour: the slot workflow.ts's stateSlot gives its lane by kind; with no lanes
+ * known, or once the spare slots run out, the slot of its place among the states drawn.
+ */
+function stateColors(t: Theme, flow: Flow | undefined, states: string[]): string[] {
+	return states.map((state, i) => {
+		const slot = (hasLanes(flow) ? stateSlot(flow, state) : undefined) ?? i;
+		return t.series[slot % t.series.length];
+	});
+}
+/**
+ * The colour a chart that stacks no lanes draws a kind of state in: the nth of the slots
+ * workflow.ts's stateSlot gives that kind's lanes in board order.
+ */
+const kindColor = (t: Theme, kind: LaneKind, nth = 0) => t.series[KIND_SLOTS[kind][nth]];
 /** An item type's plural: epics, stories, tasks. */
 export const plural = (type: string) => (type === 'story' ? 'stories' : `${type}s`);
 export const hours = (s: number) => Math.round((s / 3600) * 10) / 10;
@@ -822,26 +845,38 @@ export function burnUp(r: Report, t: Theme, epic = 'all'): Opt {
 }
 
 /** A state's band of a stacked area by the day, in the state's colour, with a surface-coloured seam. */
-function stateBand(t: Theme, state: string, stack: string, data: [string, number][]) {
+function stateBand(
+	t: Theme,
+	state: string,
+	color: string,
+	stack: string,
+	data: [string, number][]
+) {
 	return {
 		name: state,
 		type: 'line',
 		stack,
 		showSymbol: false,
 		lineStyle: { width: 2, color: t.surface },
-		areaStyle: { color: colorFor(t, STATE_SLOT, state, 0), opacity: 1 },
-		itemStyle: { color: colorFor(t, STATE_SLOT, state, 0) },
+		areaStyle: { color, opacity: 1 },
+		itemStyle: { color },
 		emphasis: { focus: 'series' },
 		data
 	};
 }
 
-/** Cumulative flow: stacked areas per state with a surface-coloured seam between bands. */
-export function cfd(r: Report, t: Theme): Opt {
-	const series = STATES.map((st) =>
+/**
+ * Cumulative flow: stacked areas per state, the flow's lanes but those cancelling in board order,
+ * with a surface-coloured seam between bands.
+ */
+export function cfd(r: Report, t: Theme, flow?: Flow): Opt {
+	const states = flowStates(flow, () => keysOf(r.cfd.map((d) => d.counts)));
+	const colors = stateColors(t, flow, states);
+	const series = states.map((st, i) =>
 		stateBand(
 			t,
 			st,
+			colors[i],
 			'flow',
 			r.cfd.map((d) => [d.date, d.counts[st] ?? 0])
 		)
@@ -867,9 +902,10 @@ const named = (names: string[]) =>
 	(names.length > NAMED ? ` and ${names.length - NAMED} more` : '');
 /**
  * Time in state (S-0168): one stacked bar per UTC day of the window in which items were completed,
- * the mean hours per state of those items, on its date's tick of a time axis that spans the window.
+ * the mean hours per state of those items, on its date's tick of a time axis that spans the window;
+ * the states are the flow's lanes but those cancelling, in board order.
  */
-export function timeInState(r: Report, t: Theme, epic?: string): Opt {
+export function timeInState(r: Report, t: Theme, epic?: string, flow?: Flow): Opt {
 	const byDay = new Map<number, ItemMetrics[]>();
 	for (const i of completedIn(r).filter((i) => !epic || i.parent === epic)) {
 		const at = floorTo(Date.parse(i.completed!), 'day');
@@ -880,12 +916,14 @@ export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 		.sort((a, b) => a.at - b.at);
 	const mean = (items: ItemMetrics[], st: string) =>
 		hours(items.reduce((n, i) => n + (i.time_in_state_seconds[st] ?? 0), 0) / items.length);
-	const series = STATES.map((st) => ({
+	const states = flowStates(flow, () => keysOf(r.items.map((i) => i.time_in_state_seconds ?? {})));
+	const colors = stateColors(t, flow, states);
+	const series = states.map((st, si) => ({
 		name: st,
 		type: 'bar',
 		stack: 'state',
 		barMaxWidth: 24,
-		itemStyle: { color: colorFor(t, STATE_SLOT, st, 0), borderColor: t.surface, borderWidth: 1 },
+		itemStyle: { color: colors[si], borderColor: t.surface, borderWidth: 1 },
 		data: daysDone.map((d): StateBar => ({
 			value: [place(d.at, 'day'), mean(d.items, st)],
 			ids: d.items.map((i) => i.id),
@@ -923,9 +961,14 @@ export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 	});
 }
 
-/** Time-in-state share as one horizontal 100% bar (the process optimisation view). */
-export function stateShare(r: Report, t: Theme): Opt {
+/**
+ * Time-in-state share as one horizontal 100% bar (the process optimisation view), the flow's lanes
+ * but those cancelling in board order.
+ */
+export function stateShare(r: Report, t: Theme, flow?: Flow): Opt {
 	const share = r.summary.time_in_state_share ?? {};
+	const states = flowStates(flow, () => keysOf([share]));
+	const colors = stateColors(t, flow, states);
 	return base(t, {
 		grid: { left: 24, right: 24, top: 40, bottom: 24 },
 		legend: legend(t, true),
@@ -944,12 +987,12 @@ export function stateShare(r: Report, t: Theme): Opt {
 			axisLabel: { show: false },
 			splitLine: { show: false }
 		}),
-		series: STATES.map((st) => ({
+		series: states.map((st, i) => ({
 			name: st,
 			type: 'bar',
 			stack: 'share',
 			barMaxWidth: 24,
-			itemStyle: { color: colorFor(t, STATE_SLOT, st, 0), borderColor: t.surface, borderWidth: 1 },
+			itemStyle: { color: colors[i], borderColor: t.surface, borderWidth: 1 },
 			label: {
 				show: (share[st] ?? 0) > 0.08,
 				color: t.surface,
@@ -1030,7 +1073,8 @@ export function agentWaiting(r: Report, t: Theme): Opt {
 	const checks = (wk: WaitWeek) => wk.checks?.total_seconds ?? 0;
 	const reviewers = (wk: WaitWeek) => wk.reviewers?.total_seconds ?? 0;
 	const parts = weeks.some((wk) => checks(wk) > 0 || reviewers(wk) > 0);
-	const review = colorFor(t, STATE_SLOT, 'review', 0);
+	// review is the wait on review, drawn in the colour of the lane that waits on it
+	const review = kindColor(t, 'waiting');
 	const mean = {
 		...line(t, `mean per ${r.type}`, t.textSecondary, 'emptyCircle', [], true),
 		// a point between two gaps is drawn by its mark alone, so every mark shows
@@ -2168,13 +2212,13 @@ export function parallelism(r: Report, t: Theme): Opt {
 	const series = [
 		daily(
 			'in progress',
-			colorFor(t, STATE_SLOT, 'in-progress', 0),
+			kindColor(t, 'active'),
 			days.map((d) => [d.date, d.in_progress])
 		),
-		// a held story waits in ready, and is drawn in its colour
+		// a held story waits in the queue it is pulled from, the second, and is drawn in its colour
 		daily(
 			'held',
-			colorFor(t, STATE_SLOT, 'ready', 0),
+			kindColor(t, 'queue', 1),
 			days.map((d) => [d.date, d.held ?? null])
 		)
 	];
@@ -2241,7 +2285,7 @@ export function concurrencyChart(r: Report, t: Theme): Opt {
 			return { value, n, seconds: c?.seconds[n] ?? 0 };
 		})
 	});
-	const busy = colorFor(t, STATE_SLOT, 'in-progress', 0);
+	const busy = kindColor(t, 'active');
 	const series =
 		share.length === 0
 			? []
@@ -2812,9 +2856,21 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  * The items without a cost of delay value now, per column: the last day's count. None from a flai
  * older than S-0213, or from a report without days.
  */
-export function withoutValueNow(r: Report): Record<CodColumn, number> | undefined {
+export function withoutValueNow(r: Report): Record<string, number> | undefined {
 	const days = codDays(r);
 	return days[days.length - 1]?.without_value;
+}
+
+/**
+ * The columns cost of delay is laid out in (S-0205): the flow's open lanes, neither accepting nor
+ * cancelling, in board order; with no lanes known, the columns the report's days carry.
+ */
+export function codColumns(r: Report, flow?: Flow): string[] {
+	return stackedStates(
+		flow,
+		(l) => l.kind !== 'accepted' && l.kind !== 'cancelled',
+		() => keysOf(codDays(r).map((d) => d.outstanding))
+	);
 }
 
 /** What CoD Outstanding plots, as rows: each day of the window, newest first. */
@@ -2865,17 +2921,21 @@ export function orderSummary(r: Report): OrderSummary | undefined {
 
 /**
  * CoD Outstanding (S-0213): per day of the window, the value per week of the items in each column
- * at the day's end, stacked in board order and coloured as the cumulative flow colours the states.
+ * codColumns lays out at the day's end, stacked in board order and coloured as the cumulative flow
+ * colours the states.
  */
-export function codOutstanding(r: Report, t: Theme): Opt {
+export function codOutstanding(r: Report, t: Theme, flow?: Flow): Opt {
 	const days = codDays(r);
+	const columns = codColumns(r, flow);
+	const colors = stateColors(t, flow, columns);
 	const series =
 		days.length === 0
 			? []
-			: COD_COLUMNS.map((col) =>
+			: columns.map((col, i) =>
 					stateBand(
 						t,
 						col,
+						colors[i],
 						'outstanding',
 						days.map((d) => [d.date, d.outstanding[col] ?? 0])
 					)
@@ -2999,13 +3059,17 @@ export function codOrder(r: Report, t: Theme): Opt {
 	});
 }
 
-/** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
+/**
+ * A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic; the
+ * charts by state stack the flow's lanes.
+ */
 export function build(
 	kind: Kind,
 	report: Report,
 	t: Theme,
 	epic?: string,
-	filter: ErrorFilter = {}
+	filter: ErrorFilter = {},
+	flow?: Flow
 ): Opt {
 	const r = normalise(report);
 	switch (kind) {
@@ -3014,9 +3078,9 @@ export function build(
 		case 'burn-up':
 			return burnUp(r, t, epic || 'all');
 		case 'cfd':
-			return cfd(r, t);
+			return cfd(r, t, flow);
 		case 'time-in-state':
-			return timeInState(r, t, epic);
+			return timeInState(r, t, epic, flow);
 		case 'throughput':
 			return throughput(r, t);
 		case 'concurrency':
@@ -3064,7 +3128,7 @@ export function build(
 		case 'strategic-use':
 			return strategicUseByDay(r, t);
 		case 'cod-outstanding':
-			return codOutstanding(r, t);
+			return codOutstanding(r, t, flow);
 		case 'cod-incurred':
 			return codIncurred(r, t);
 		case 'cod-order':

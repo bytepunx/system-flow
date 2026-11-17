@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 
 const api = vi.fn();
-vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+// board.get answers apart from the rest, so that each test's answers and the calls it counts stay
+// its own (S-0754)
+const board = vi.fn();
+vi.mock('$lib/api', () => ({
+	api: (...args: unknown[]) => (args[0] === '/api/board' ? board(...args) : api(...args))
+}));
 const at = vi.hoisted(() => ({ params: { kind: 'tokens-spent' }, moved: () => {} }));
 // SvelteKit keeps the page when it goes to another chart: its params are read as they change
 vi.mock('$app/state', async () => {
@@ -43,6 +48,8 @@ vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 import ChartsPage from './+page.svelte';
 import { chartWindow } from '$lib/chartwindow.svelte';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
+import type { Flow } from '$lib/lanes';
 
 const opus = (items: number, tokens: number, cost: number, seconds: number) => ({
 	model: 'claude-opus-5-5',
@@ -124,6 +131,10 @@ const reportIn = (bucket: string) => ({
 });
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
+/** What board.get answers for the flow: its lanes and moves, the rest of the board left out. */
+const boardOf = (flow: Flow) => answer({ lanes: flow.lanes, transitions: flow.transitions });
+beforeEach(() => board.mockImplementation(async () => boardOf(baselineFlow)));
+afterEach(() => board.mockReset());
 /** The local midnight of a date, where a chart draws flai's UTC day or week of it (S-0329). */
 const midnight = (date: string) => {
 	const [y, m, d] = date.split('-').map(Number);
@@ -2280,5 +2291,71 @@ describe("the chart page's order (S-0485)", () => {
 		await choose('window', '7d');
 		expect(api.mock.calls.at(-1)![0]).toBe('/api/stats?since=7d&type=story&bucket=day');
 		expectOrder('h1', chartEl(), EXPLAINER, WINDOW, tableView());
+	});
+});
+
+describe("the charts by state stack the board's lanes (S-0754)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const counts = { backlog: 1, ready: 2, 'in-progress': 1, testing: 3, review: 1, done: 4 };
+	const cols = { backlog: 100, ready: 50, 'in-progress': 25, testing: 40, review: 10 };
+	beforeEach(() => {
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			return answer({
+				...reportIn('day'),
+				cfd: [{ date: '2026-09-29', counts }],
+				cost_of_delay: {
+					days: [{ date: '2026-09-29', outstanding: cols, without_value: cols, incurred: 1 }],
+					weeks: []
+				}
+			});
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const drawn = () =>
+		(setOption.mock.calls.at(-1)![0] as { series: { name: string }[] }).series.map((s) => s.name);
+
+	it('reads the board once and stacks its lanes in board order', async () => {
+		board.mockImplementation(async () => boardOf(addedStateFlow));
+		board.mockClear();
+		await open('cfd');
+		expect(board).toHaveBeenCalledTimes(1);
+		expect(drawn()).toEqual(['backlog', 'ready', 'in-progress', 'testing', 'review', 'done']);
+		unmount(c!);
+		document.body.innerHTML = '';
+		await open('cod-outstanding');
+		expect(drawn()).toEqual(['backlog', 'ready', 'in-progress', 'testing', 'review']);
+		expect(text('[data-testid="cod-day-table"] thead')).toBe(
+			'datebacklogreadyin-progresstestingreviewwithout value'
+		);
+		expect(text('[data-testid="cod-without-value"]')).toBe(
+			'Items without a value now, which add nothing to this chart: backlog 100 · ready 50 · in-progress 25 · testing 40 · review 10.'
+		);
+	});
+
+	it("draws the report's own states when the board cannot be read", async () => {
+		board.mockImplementation(async () => ({
+			ok: false,
+			statusText: 'Service Unavailable',
+			json: async () => ({ error: 'down' })
+		}));
+		await open('cfd');
+		expect(drawn()).toEqual(Object.keys(counts));
 	});
 });
