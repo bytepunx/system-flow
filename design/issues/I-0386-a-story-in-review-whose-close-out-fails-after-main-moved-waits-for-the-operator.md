@@ -7,7 +7,7 @@ count: 1
 cost: 30h
 first_reported: 2026-11-16T06:16:10Z
 last_reported: 2026-11-16T06:16:10Z
-updated: 2026-11-16T06:16:10Z
+updated: 2026-11-17T08:32:56Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ aging[] 2026-11-16: S-0739 in review 108,804 s, S-0742 103,608 s, S-0747 100,939
 ## Remediation
 
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
+
+Story S-0845 remediates this issue, created from it at 2026-11-17T08:32:56Z.
