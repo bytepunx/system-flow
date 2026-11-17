@@ -7,7 +7,7 @@ count: 1
 cost: 10m
 first_reported: 2026-11-09T23:09:47Z
 last_reported: 2026-11-09T23:09:47Z
-updated: 2026-11-10T08:49:04Z
+updated: 2026-11-17T08:17:17Z
 ---
 
 # I-0327 TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
@@ -24,3 +24,5 @@ S-0644 added the design-routes tier, which a change to flaiover/src/routes selec
 ## Remediation
 
 Story S-0693 remediates this issue, created from it at 2026-11-10T08:49:04Z.
+
+Story S-0827 remediates this issue, created from it at 2026-11-17T08:17:17Z.
