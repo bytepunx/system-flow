@@ -223,6 +223,47 @@ func TestMergeMarkdownSettles(t *testing.T) {
 			theirs: md("# T", "", "## A", "", "one", "new", "two", "three"),
 			want:   md("# T", "", "## A", "", "one ours", "new", "two ours", "three"),
 		},
+		// I-0387, ADR-0314: a line both change merges by its words when its
+		// sentences do not settle it, or when it is a table row.
+		{
+			name: "words each side inserts at different places of one table row are both kept",
+			base: md("# T", "", "## Commands", "", "| Command | What |", "|---|---|",
+				"| `flai queue [--json]` | The merge queue as it stands, read-only. |", "| `flai x` | X. |"),
+			ours: md("# T", "", "## Commands", "", "| Command | What |", "|---|---|",
+				"| `flai queue [--json]` (S-0398) | The merge queue as it stands, read-only. |", "| `flai x` | X. |"),
+			theirs: md("# T", "", "## Commands", "", "| Command | What |", "|---|---|",
+				"| `flai queue [--json]` | The merge queue as it stands, with its batch, read-only. |", "| `flai x` | X. |"),
+			want: md("# T", "", "## Commands", "", "| Command | What |", "|---|---|",
+				"| `flai queue [--json]` (S-0398) | The merge queue as it stands, with its batch, read-only. |", "| `flai x` | X. |"),
+		},
+		{
+			name:   "different cells of one table row changed by each side are both kept",
+			base:   md("# T", "", "## A", "", "| one. | two. |"),
+			ours:   md("# T", "", "## A", "", "| one ours. | two. |"),
+			theirs: md("# T", "", "## A", "", "| one. | two theirs. |"),
+			want:   md("# T", "", "## A", "", "| one ours. | two theirs. |"),
+		},
+		{
+			name:   "words each side inserts at different places of one sentence are both kept",
+			base:   md("# T", "", "## A", "", "The cat sat on the mat. It slept."),
+			ours:   md("# T", "", "## A", "", "The black cat sat on the mat. It slept."),
+			theirs: md("# T", "", "## A", "", "The cat sat on the old mat. It slept."),
+			want:   md("# T", "", "## A", "", "The black cat sat on the old mat. It slept."),
+		},
+		{
+			name:   "a word one side changes and words the other inserts in one sentence are both kept",
+			base:   md("# T", "", "## A", "", "- The cat sat on the mat."),
+			ours:   md("# T", "", "## A", "", "- The dog sat on the mat."),
+			theirs: md("# T", "", "## A", "", "- The cat sat on the old mat."),
+			want:   md("# T", "", "## A", "", "- The dog sat on the old mat."),
+		},
+		{
+			name:   "words both insert alike in one sentence are kept once beside the others",
+			base:   md("# T", "", "## A", "", "The cat sat on the mat."),
+			ours:   md("# T", "", "## A", "", "The black cat sat on the old mat."),
+			theirs: md("# T", "", "## A", "", "The cat sat on the old mat."),
+			want:   md("# T", "", "## A", "", "The black cat sat on the old mat."),
+		},
 		{
 			name:   "a file without a final newline stays without one",
 			base:   "# T\n\nt",
@@ -245,8 +286,8 @@ func TestMergeMarkdownSettles(t *testing.T) {
 
 func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 	doc := md("---", "title: X", "status: active", "---", "", "# T", "", "## A", "", "one", "two", "three", "", "## B", "", "b1")
-	// ADR-0287 merges prose by sentences; these lines are not prose.
-	other := md("# T", "", "## A", "", "| one. | two. |", "", "```", "one. two.", "```")
+	// ADR-0314 merges prose and table rows by words; these lines are neither.
+	other := md("# T", "", "## A", "", "```", "one. two.", "```")
 	for _, tc := range []struct {
 		name, base, ours, theirs, where string
 	}{
@@ -258,7 +299,7 @@ func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 		},
 		{
 			name:   "lines inserted inside lines the other changes",
-			ours:   strings.Replace(doc, "one\ntwo", "one and two ours", 1),
+			ours:   strings.Replace(doc, "one\ntwo", "both", 1),
 			theirs: strings.Replace(doc, "one\ntwo", "one\nnew\ntwo", 1),
 			where:  `section "T > A": both sides change the same lines`,
 		},
@@ -271,10 +312,40 @@ func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 			where:  `section "T > A": both sides change the same lines`,
 		},
 		{
-			name:   "different cells of one table row changed by each side",
-			base:   other,
-			ours:   strings.Replace(other, "| one. |", "| one ours. |", 1),
-			theirs: strings.Replace(other, "two. |", "two theirs. |", 1),
+			// ADR-0314: a word both change, or a point both insert at, is still for the agent.
+			name:   "the same word of a table row changed differently",
+			base:   md("# T", "", "## A", "", "| one. | two. |"),
+			ours:   md("# T", "", "## A", "", "| one. | ours. |"),
+			theirs: md("# T", "", "## A", "", "| one. | theirs. |"),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			name:   "different words inserted at one point of a sentence",
+			base:   md("# T", "", "## A", "", "The cat sat."),
+			ours:   md("# T", "", "## A", "", "The black cat sat."),
+			theirs: md("# T", "", "## A", "", "The white cat sat."),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			name:   "words one side inserts where the other changes a word",
+			base:   md("# T", "", "## A", "", "The cat sat on the mat."),
+			ours:   md("# T", "", "## A", "", "The cat sat on the old rug."),
+			theirs: md("# T", "", "## A", "", "The cat sat on the old mat."),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			name:   "different words inserted at one point of a table row",
+			base:   md("# T", "", "## A", "", "| a | b |"),
+			ours:   md("# T", "", "## A", "", "| a | b ours |"),
+			theirs: md("# T", "", "## A", "", "| a | b theirs |"),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			// The heading keeps its text, and so its section, on each side.
+			name:   "a heading in the lines both change",
+			base:   md("# T", "", "## A", "a1"),
+			ours:   md("# T", "", "## A ##", "a1 ours"),
+			theirs: md("# T", "", "## A", "new a1"),
 			where:  `section "T > A": both sides change the same lines`,
 		},
 		{
@@ -325,6 +396,18 @@ func TestSentencesCutsTokensThatJoinBack(t *testing.T) {
 	want := []string{"  ", "- One.", " ", "Two?", "  ", "e.g.", " ", "three!", "\n", "\n", "no end\t", "\n"}
 	if !slices.Equal(got, want) {
 		t.Errorf("sentences %q, want %q", got, want)
+	}
+	if back := strings.Join(got, ""); back != strings.Join(lines, "\n")+"\n" {
+		t.Errorf("tokens join to %q, want the lines back", back)
+	}
+}
+
+func TestWordsCutsTokensThatJoinBack(t *testing.T) {
+	lines := []string{"  | `a b` |x|", "", "end.\t "}
+	got := words(lines)
+	want := []string{"  ", "|", " ", "`a", " ", "b`", " ", "|x|", "\n", "\n", "end.", "\t ", "\n"}
+	if !slices.Equal(got, want) {
+		t.Errorf("words %q, want %q", got, want)
 	}
 	if back := strings.Join(got, ""); back != strings.Join(lines, "\n")+"\n" {
 		t.Errorf("tokens join to %q, want the lines back", back)
