@@ -7,7 +7,7 @@ count: 1
 cost: 10m
 first_reported: 2026-11-17T08:25:17Z
 last_reported: 2026-11-17T08:25:17Z
-updated: 2026-11-17T08:25:17Z
+updated: 2026-11-17T08:32:49Z
 ---
 
 # I-0399 flaiover still compares state names in the epic filters and the move route, so an operator's own accepted or cancelled lane is not seen as closed there
@@ -22,3 +22,5 @@ Story: S-0758.
 S-0758 moved the fifteen views its criteria list, and their callers, to read a state's kind from workflow.ts. A search after that found state names still compared outside its list: the open-epic filter `status !== 'done' && status !== 'cancelled'` in flaiover/src/routes/design/+page.svelte, lib/components/DeploySettings.svelte, and lib/components/NewItemForm.svelte; `body.to === 'cancelled'` (the dry-run preview) and `body.to === 'done'` (the acceptance's longer timeout) in routes/api/items/[id]/move/+server.ts; and the move to `ready` that lib/components/design/ProposeChange.svelte posts. With a workflow whose accepted or cancelled lane has another name, those epic lists keep closed epics, and the move route treats a cancel or an acceptance as a plain move. Each should read the flow from board.get as the other views now do.
 
 ## Remediation
+
+Story S-0838 remediates this issue, created from it at 2026-11-17T08:32:49Z.
