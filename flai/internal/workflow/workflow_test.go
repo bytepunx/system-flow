@@ -185,6 +185,39 @@ func TestParseRefusesWhatDoesNotParse(t *testing.T) {
 		{"point of another shape", withTimer("{name: lead, title: Lead, from: started, to: completed}"), 11, "timers[0].from", "a point is created, completed"},
 		{"unknown counts", withTimer("{name: lead, title: Lead, from: created, to: completed, counts: all}"), 11, "timers[0].counts", `counts "all"`},
 		{"timer name twice", strings.Replace(withTimer("{name: wait, title: Wait, sum: [backlog]}"), "sum: [backlog]}\n", "sum: [backlog]}\n  - {name: wait, title: Again, sum: [done]}\n", 1), 12, "timers[1].name", "also timers[0]'s"},
+		{"verify at the top", swap("status: active\n", "status: active\nverify: all\n"), 5, "verify", "unknown field"},
+		{"verify of another word", swap("to: done}", "to: done, verify: static}"), 9, "transitions[0].verify", "a single suite is a list of one"},
+		{"verify of no value", swap("to: done}", "to: done, verify: null}"), 9, "transitions[0].verify", "verify gives no value"},
+		{"verify of an empty list", swap("to: done}", "to: done, verify: []}"), 9, "transitions[0].verify", "give suites, or all"},
+		{"verify naming all in a list", swap("to: done}", "to: done, verify: [all, static]}"), 9, "transitions[0].verify[0]", "write all alone"},
+		{"verify naming a suite not kebab-case", swap("to: done}", "to: done, verify: [Static]}"), 9, "transitions[0].verify[0]", `suite "Static" is not kebab-case`},
+		{"verify naming a suite twice", swap("to: done}", "to: done, verify: [static, static]}"), 9, "transitions[0].verify[1]", "suite static is named twice"},
+		{"verify naming a mapping", swap("to: done}", "to: done, verify: [static, {a: b}]}"), 9, "transitions[0].verify[1]", "named by a word"},
+		{"verify's mapping with another key", swap("to: done}", "to: done, verify: {suites: all, colour: blue}}"), 9, "transitions[0].verify.colour", "unknown field"},
+		{"verify's mapping without suites", swap("to: done}", "to: done, verify: {severity: warn}}"), 9, "transitions[0].verify", "needs suites"},
+		{"verify's suites of no value", swap("to: done}", "to: done, verify: {suites: null}}"), 9, "transitions[0].verify.suites", "verify's suites is all or a list"},
+		{"verify's suites an empty list", swap("to: done}", "to: done, verify: {suites: []}}"), 9, "transitions[0].verify.suites", "give suites, or all"},
+		{"verify's suites naming a suite twice", swap("to: done}", "to: done, verify: {suites: [static, static]}}"), 9, "transitions[0].verify.suites[1]", "named twice"},
+		{"verify's unknown severity", swap("to: done}", "to: done, verify: {suites: all, severity: loud}}"), 9, "transitions[0].verify.severity", `verify's severity "loud" is not one of refuse, warn`},
+		{"runs not a mapping", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: all}"), 7, "states[1].runs", "runs is a mapping"},
+		{"runs of no value", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: null}"), 7, "states[1].runs", "runs gives no value"},
+		{"runs naming nothing", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {}}"), 7, "states[1].runs", "state done's runs names nothing"},
+		{"runs with another key", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {suites: all, colour: blue}}"), 7, "states[1].runs.colour", "unknown field"},
+		{"runs' suites of no value", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {suites: null}}"), 7, "states[1].runs.suites", "runs gives suites no value"},
+		{"runs' suites naming all in a list", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {suites: [static, all]}}"), 7, "states[1].runs.suites[1]", "write all alone"},
+		{"runs' suites an empty list", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {suites: []}}"), 7, "states[1].runs.suites", "give suites, or all"},
+		{"runs' unknown kluster step", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {kluster: [deploy, test]}}"), 7, "states[1].runs.kluster[1]", `kluster step "test" is not one of deploy, checks`},
+		{"runs' kluster step twice", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {kluster: [checks, checks]}}"), 7, "states[1].runs.kluster[1]", "kluster step checks is named twice"},
+		{"runs' kluster empty", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {kluster: []}}"), 7, "states[1].runs.kluster", "state done's kluster is empty"},
+		{"runs' kluster of no value", swap("{name: done, kind: accepted}", "{name: done, kind: accepted, runs: {kluster: null}}"), 7, "states[1].runs.kluster", "runs gives kluster no value"},
+		{"verify_at not a mapping", swap("transitions:\n", "verify_at: all\ntransitions:\n"), 8, "verify_at", "verify_at is a mapping"},
+		{"verify_at of no value", swap("transitions:\n", "verify_at:\ntransitions:\n"), 8, "verify_at", "verify_at gives no value"},
+		{"verify_at naming no point", swap("transitions:\n", "verify_at: {}\ntransitions:\n"), 8, "verify_at", "verify_at names no point"},
+		{"verify_at with another point", swap("transitions:\n", "verify_at:\n  batch: all\n  nightly: [static]\ntransitions:\n"), 10, "verify_at.nightly", "unknown field"},
+		{"verify_at's point of no value", swap("transitions:\n", "verify_at: {publish: null}\ntransitions:\n"), 8, "verify_at.publish", "verify_at gives publish no value"},
+		{"verify_at's point of another word", swap("transitions:\n", "verify_at: {batch: every}\ntransitions:\n"), 8, "verify_at.batch", "suites are all, or a list"},
+		{"verify_at's point an empty list", swap("transitions:\n", "verify_at: {batch: []}\ntransitions:\n"), 8, "verify_at.batch", "give suites, or all"},
+		{"verify_at's point naming a suite twice", swap("transitions:\n", "verify_at:\n  ci: [static, static]\ntransitions:\n"), 9, "verify_at.ci[1]", "suite static is named twice"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -199,6 +232,87 @@ func TestParseRefusesWhatDoesNotParse(t *testing.T) {
 				t.Errorf("Error %q lacks the message", p.Error())
 			}
 		})
+	}
+}
+
+// suited is a file giving verify on a transition in each of its forms, runs
+// on a state with suites, kluster, or both, and verify_at.
+const suited = `---
+title: Board
+updated: 2026-11-17
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true}
+  - {name: review, kind: waiting, runs: {kluster: [deploy, checks]}}
+  - name: integration
+    kind: waiting
+    runs:
+      suites: [integration, smoke]
+      kluster: [deploy]
+  - {name: done, kind: accepted}
+transitions:
+  - {from: backlog, to: review, verify: all}
+  - {from: review, to: integration, verify: [static, behavior]}
+  - from: integration
+    to: done
+    verify:
+      suites: all
+      severity: warn
+  - {from: review, to: done, verify: {suites: [behavior]}}
+  - {from: backlog, to: done}
+verify_at:
+  batch: all
+  ci:
+    - static
+    - behavior
+---
+`
+
+// S-0806: a transition's verify, a state's runs, and verify_at parse in each
+// of their forms, each with its line (ADR-0312 §2, §4, §6).
+func TestParseReadsVerifyRunsAndVerifyAt(t *testing.T) {
+	w := mustParse(t, suited)
+	verify := func(i int) Verify {
+		t.Helper()
+		if w.Transitions[i].Verify == nil {
+			t.Fatalf("transitions[%d] has no verify", i)
+		}
+		return *w.Transitions[i].Verify
+	}
+	if v := verify(0); !v.Suites.All || v.Suites.Names != nil || v.Suites.Line != 15 || v.Severity != "" || v.Line != 15 {
+		t.Errorf("verify: all: %+v", v)
+	}
+	if v := verify(1); v.Suites.All || !slices.Equal(v.Suites.Names, []string{"static", "behavior"}) || v.Suites.Line != 16 || v.Line != 16 {
+		t.Errorf("verify: [static, behavior]: %+v", v)
+	}
+	if v := verify(2); !v.Suites.All || v.Suites.Line != 20 || v.Severity != SeverityWarn || v.Line != 19 {
+		t.Errorf("verify: {suites: all, severity: warn}: %+v", v)
+	}
+	if v := verify(3); !slices.Equal(v.Suites.Names, []string{"behavior"}) || v.Severity != "" || v.Line != 22 {
+		t.Errorf("verify: {suites: [behavior]}: %+v", v)
+	}
+	if w.Transitions[4].Verify != nil {
+		t.Errorf("transitions[4] gives no verify, got %+v", *w.Transitions[4].Verify)
+	}
+	if w.States[0].Runs != nil {
+		t.Errorf("backlog gives no runs, got %+v", *w.States[0].Runs)
+	}
+	if r := w.States[1].Runs; r == nil || r.Suites != nil || !slices.Equal(r.Kluster, KlusterSteps) || r.Line != 7 {
+		t.Errorf("review's runs: %+v", r)
+	}
+	r := w.States[2].Runs
+	if r == nil || r.Suites == nil || !slices.Equal(r.Suites.Names, []string{"integration", "smoke"}) || r.Suites.Line != 11 || !slices.Equal(r.Kluster, []string{KlusterDeploy}) || r.Line != 10 {
+		t.Errorf("integration's runs: %+v", r)
+	}
+	at := w.VerifyAt
+	if at.Batch == nil || !at.Batch.All || at.Batch.Line != 25 || at.Publish != nil || at.CI == nil || !slices.Equal(at.CI.Names, []string{"static", "behavior"}) || at.CI.Line != 27 {
+		t.Errorf("verify_at: %+v", at)
+	}
+	if at.At(VerifyAtBatch) != at.Batch || at.At(VerifyAtPublish) != nil || at.At(VerifyAtCI) != at.CI || at.At("nightly") != nil {
+		t.Error("VerifyAt.At does not give each point's suites")
+	}
+	if m := mustParse(t, minimal); m.VerifyAt != (VerifyAt{}) || m.Transitions[0].Verify != nil || m.States[0].Runs != nil {
+		t.Errorf("a file giving none of them: %+v", m)
 	}
 }
 

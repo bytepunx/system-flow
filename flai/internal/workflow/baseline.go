@@ -38,12 +38,22 @@ func (w Workflow) Clone() Workflow {
 	out.States = make([]State, len(w.States))
 	for i, s := range w.States {
 		s.Types, s.Aliases = slices.Clone(s.Types), slices.Clone(s.Aliases)
+		if s.Runs != nil {
+			r := *s.Runs
+			r.Suites, r.Kluster = cloneSuites(r.Suites), slices.Clone(r.Kluster)
+			s.Runs = &r
+		}
 		out.States[i] = s
 	}
 	out.Transitions = make([]Transition, len(w.Transitions))
 	for i, t := range w.Transitions {
 		t.From, t.Types, t.By = slices.Clone(t.From), slices.Clone(t.Types), slices.Clone(t.By)
 		t.Rules, t.Effects = slices.Clone(t.Rules), slices.Clone(t.Effects)
+		if t.Verify != nil {
+			v := *t.Verify
+			v.Suites.Names = slices.Clone(v.Suites.Names)
+			t.Verify = &v
+		}
 		out.Transitions[i] = t
 	}
 	out.Timers = make([]Timer, len(w.Timers))
@@ -52,6 +62,8 @@ func (w Workflow) Clone() Workflow {
 		t.Sum, t.Types = slices.Clone(t.Sum), slices.Clone(t.Types)
 		out.Timers[i] = t
 	}
+	v := w.VerifyAt
+	out.VerifyAt = VerifyAt{Batch: cloneSuites(v.Batch), Publish: cloneSuites(v.Publish), CI: cloneSuites(v.CI)}
 	return out
 }
 

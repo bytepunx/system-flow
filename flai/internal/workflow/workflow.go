@@ -98,7 +98,8 @@ const (
 var Statuses = []string{"draft", "active", "deprecated"}
 
 // Workflow is a workflow file read: its states in board order, its
-// transitions in file order, and its timers.
+// transitions in file order, its timers, and the suites its points outside
+// an item's moves run.
 type Workflow struct {
 	Path        string       `json:"path"`
 	Title       string       `json:"title"`
@@ -107,6 +108,7 @@ type Workflow struct {
 	States      []State      `json:"states"`
 	Transitions []Transition `json:"transitions"`
 	Timers      []Timer      `json:"timers"`
+	VerifyAt    VerifyAt     `json:"verify_at,omitzero"`
 }
 
 // State is one column of the board.
@@ -119,6 +121,9 @@ type State struct {
 	Order   bool     `yaml:"order" json:"order"`
 	Limit   bool     `yaml:"limit" json:"limit"`
 	Aliases []string `yaml:"aliases" json:"aliases"`
+	// Runs is what the state runs when a story enters it, nil for nothing
+	// (ADR-0312 §4).
+	Runs *Runs `yaml:"runs" json:"runs,omitempty"`
 	// Line is the file line the state's entry starts on.
 	Line int `yaml:"-" json:"line"`
 }
@@ -131,6 +136,9 @@ type Transition struct {
 	By      []string  `json:"by"`
 	Rules   []RuleRef `json:"rules"`
 	Effects []string  `json:"effects"`
+	// Verify is the suites a move by the transition needs passed, nil for
+	// none (ADR-0312 §2).
+	Verify *Verify `json:"verify,omitempty"`
 	// Line is the file line the transition's entry starts on.
 	Line int `json:"line"`
 }
@@ -220,12 +228,19 @@ func Parse(rel, content string) (Workflow, *Problem) {
 			return Workflow{}, &Problem{Path: rel, Line: 2, Code: CodeFile, Message: "front matter is not a mapping of fields; give each field as key: value, as ADR-0301 §1 lists them"}
 		}
 		p.walk(node, "")
-		if err := yaml.NodeToValue(node, &raw, yaml.Strict()); err != nil {
+		err := noValue(node, "verify_at", "verify_at gives no value; give it a mapping of batch, publish, and ci, or leave it out: "+verifyAtShape)
+		if err == nil {
+			err = yaml.NodeToValue(node, &raw, yaml.Strict())
+		}
+		if err != nil {
 			line, msg, pos := yamlError(err)
 			return Workflow{}, &Problem{Path: rel, Line: line, Field: p.fieldAt(pos), Code: CodeFile, Message: fmt.Sprintf("%s; give each field the shape ADR-0301 §1 gives it", msg)}
 		}
 	}
 	w := Workflow{Path: rel, Title: raw.Title, Updated: raw.Updated, Status: raw.Status, States: raw.States, Transitions: raw.Transitions, Timers: raw.Timers}
+	if raw.VerifyAt != nil {
+		w.VerifyAt = *raw.VerifyAt
+	}
 	if prob := p.validate(&w); prob != nil {
 		return Workflow{}, prob
 	}
@@ -260,6 +275,7 @@ type rawFile struct {
 	States      []State      `yaml:"states"`
 	Transitions []Transition `yaml:"transitions"`
 	Timers      []Timer      `yaml:"timers"`
+	VerifyAt    *VerifyAt    `yaml:"verify_at"`
 }
 
 // UnmarshalYAML reads a state and the line its entry starts on.
@@ -268,10 +284,16 @@ func (s *State) UnmarshalYAML(n ast.Node) error {
 	if pairs(n) == nil {
 		return shapeError(n, "a state is a mapping, such as {name: ready, kind: queue}")
 	}
+	if err := noValue(n, "runs", "runs gives no value; "+runsShape+", or leave runs out"); err != nil {
+		return err
+	}
 	if err := yaml.NodeToValue(n, (*fields)(s), yaml.Strict()); err != nil {
 		return err
 	}
 	s.Line = n.GetToken().Position.Line
+	if s.Runs != nil {
+		s.Runs.Line = pairLine(n, "runs")
+	}
 	return nil
 }
 
@@ -287,11 +309,18 @@ func (t *Transition) UnmarshalYAML(n ast.Node) error {
 		By      []string  `yaml:"by"`
 		Rules   []RuleRef `yaml:"rules"`
 		Effects []string  `yaml:"effects"`
+		Verify  *Verify   `yaml:"verify"`
+	}
+	if err := noValue(n, "verify", "verify gives no value; "+verifyShape+", or leave verify out"); err != nil {
+		return err
 	}
 	if err := yaml.NodeToValue(n, &f, yaml.Strict()); err != nil {
 		return err
 	}
-	*t = Transition{From: f.From, To: f.To, Types: f.Types, By: f.By, Rules: f.Rules, Effects: f.Effects, Line: n.GetToken().Position.Line}
+	if f.Verify != nil {
+		f.Verify.Line = pairLine(n, "verify")
+	}
+	*t = Transition{From: f.From, To: f.To, Types: f.Types, By: f.By, Rules: f.Rules, Effects: f.Effects, Verify: f.Verify, Line: n.GetToken().Position.Line}
 	return nil
 }
 
@@ -495,8 +524,8 @@ func (p *reader) fail(field, format string, args ...any) *Problem {
 	return &Problem{Path: p.rel, Line: p.line(field), Field: field, Code: CodeFile, Message: fmt.Sprintf(format, args...)}
 }
 
-// validate is the first value of w outside what ADR-0301 §1, §3, and §5
-// allow, in file order.
+// validate is the first value of w outside what ADR-0301 §1, §3, and §5 and
+// ADR-0312 §2, §4, and §6 allow, in file order.
 func (p *reader) validate(w *Workflow) *Problem {
 	if strings.TrimSpace(w.Title) == "" {
 		return p.fail("title", "front matter needs title, the document's title")
@@ -525,7 +554,10 @@ func (p *reader) validate(w *Workflow) *Problem {
 	if prob := p.transitions(w); prob != nil {
 		return prob
 	}
-	return p.timers(w)
+	if prob := p.timers(w); prob != nil {
+		return prob
+	}
+	return p.verifyAt(w.VerifyAt)
 }
 
 func (p *reader) states(w *Workflow) *Problem {
@@ -556,6 +588,9 @@ func (p *reader) states(w *Workflow) *Problem {
 		}
 		if s.Order && s.Kind != KindQueue {
 			return p.fail(at+".order", "state %s is %s, and only a queue state reads in the pull order", s.Name, s.Kind)
+		}
+		if prob := p.runs(at, s); prob != nil {
+			return prob
 		}
 	}
 	for i, s := range w.States {
@@ -622,6 +657,9 @@ func (p *reader) transitions(w *Workflow) *Problem {
 			if !slices.Contains(Effects, e) {
 				return p.fail(fmt.Sprintf("%s.effects[%d]", at, j), "effect %q is not one of %s (ADR-0301 §3)", e, strings.Join(Effects, ", "))
 			}
+		}
+		if prob := p.verify(at, t.Verify); prob != nil {
+			return prob
 		}
 		types := t.Types
 		if len(types) == 0 {
