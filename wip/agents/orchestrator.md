@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2227.0069
-accrued_seconds: 1571922
-tasks_completed: 3763
-last_run: 2026-11-16T23:59:11Z
+accrued_cost: 2227.8275
+accrued_seconds: 1572186
+tasks_completed: 3768
+last_run: 2026-11-17T01:36:26Z
 ---
 
 # Orchestrator activity
@@ -26376,6 +26376,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2638 USD, estimated
+
+### 2026-11-17T01:33:19Z
+
+- Summary: Accepted S-0804 at 83391696 under accept_reviews: close-out passed every step at the branch head, verifier matched all nine criteria to changed files, dry run listed no blocker; merged, overlaps notified to S-0742, S-0747, S-0805.
+- Items: S-0804
+- Seconds: 106
+- Cost: 0.3584 USD, estimated
+
+### 2026-11-17T01:33:58Z
+
+- Summary: Started the publish formula after S-0804's acceptance: instance S-0816, moved to ready; policy threshold met with count 1 at threshold 1 (value 0 of 1000, S-0804 unvalued); commit 37c9bca8c.
+- Items: S-0816, S-0804
+- Seconds: 39
+- Cost: 0.0829 USD, estimated
+
+### 2026-11-17T01:34:58Z
+
+- Summary: Ready-empty and TH-1261 (board starved, flai serve's notice, left alone): promote_candidates lists none after S-0804's acceptance (S-0810 and S-0814 still wait on S-0806, S-0807, S-0753; the rest held by after or overlap with S-0805). Drafts left: S-0815 waits on TH-1257 (my recommendation pending), S-0241 on TH-1165. E-0034's plan candidate is alex's confirmation on TH-1228, so no planner. flai order --by throughput --apply: no ready stories to order; S-0816, the publish instance, is the one ready story.
+- Items: S-0815, S-0241, S-0816
+- Seconds: 60
+- Cost: 0.1279 USD, estimated
+
+### 2026-11-17T01:35:25Z
+
+- Summary: I accepted S-0804 and started a release. Nothing new can move to ready yet, and nothing needs you right now.
+- Items: none
+- Seconds: 27
+- Cost: 0.1411 USD, estimated
+
+### 2026-11-17T01:36:26Z
+
+- Summary: Release due for S-0804 (threshold: count 1 of 1, value 0 of 1000 USD, S-0804 unvalued): did not run the publish formula, since its instance S-0816, made at 01:33:37Z, is already in progress (T-3488 done) and publishes the same batch. TH-1261 needed nothing: flai serve resolved it once S-0816 could start.
+- Items: S-0804, S-0816
+- Seconds: 32
+- Cost: 0.1103 USD, estimated
 
 ## Refusals
 

@@ -2,9 +2,9 @@
 id: D-0612
 title: A host API method the dashboard calls touches writes_methods.go to register it, guardreads_test.go to list it as a read or a write, and flaiover's agent.ts REQUIRED_METHODS, which hostapi's contract_test.go checks against flai's table
 kind: decision
-sources: [S-0757, T-3181, S-0785, T-3354]
+sources: [S-0757, T-3181, S-0785, T-3354, S-0804, T-3430]
 topics: [flai, flaiover, dashboard, planning]
-paths: [flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/guardreads_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flai/internal/hostapi/writes_actions.go, flai/internal/serve/serve.go]
+paths: [flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/guardreads_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flai/internal/hostapi/writes_actions.go, flai/internal/serve/serve.go, flai/internal/guard/guard_tables.go, flai/internal/hostapi/writes_test.go]
 date: 2026-11-13
 status: active
 absorbed_by: ""
@@ -31,3 +31,12 @@ S-0785 confirmed it when it added `log.read` (T-3354, [ADR-0300](../adrs/0300-th
 > Plan: layer 1 holds T-3354 (Go host method log.read, plus REQUIRED_METHODS in flaiover's agent.ts, which contract_test.go checks, D-0612) …
 
 T-3354's touches also took `writes_actions.go` and `serve.go`, for the `Host.ServeDir` that flai serve sets so `log.read` can read its state folder.
+
+S-0804 met it again when it added the host read `resolve.status` (T-3430, [ADR-0313](../adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md)). Its narrative, `wip/archive/agents/S-0804.md`, records under Decisions:
+
+> T-3430 widened to the method lists a new host read must join: guard_tables.go's HostAPIReads, hostapi writes_test.go's good and refused tables, guardreads_test.go's comment, and flaiover's REQUIRED_METHODS in agent.ts, which the contract test checks; made by the story's agent after the sub-agent named them.
+
+So a new host read also touches:
+
+- `flai/internal/guard/guard_tables.go`, whose `HostAPIReads` lets every agent run it through `flai hostapi` (D-0538).
+- `flai/internal/hostapi/writes_test.go`, whose good and refused tables list it.

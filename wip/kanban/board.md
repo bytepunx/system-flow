@@ -6,8 +6,7 @@ wip_limits:
   ready: 10
   in-progress: 3
   review: 6
-order:
-  - S-0816
+order: []
 ---
 
 # Board

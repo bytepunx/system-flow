@@ -3,12 +3,18 @@ id: T-3490
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0816
 owner: alex
 created: 2026-11-17T01:33:37Z
-updated: 2026-11-17T01:33:37Z
-transitions: []
+updated: 2026-11-17T01:36:45Z
+transitions:
+  - to: ready
+    at: 2026-11-17T01:36:44Z
+    by: agent-S-0816
+  - to: in-progress
+    at: 2026-11-17T01:36:45Z
+    by: agent-S-0816
 stream: S-0816
 tags: []
 after: [T-3489]
