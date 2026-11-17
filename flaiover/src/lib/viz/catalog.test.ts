@@ -7,6 +7,10 @@ import {
 	KINDS,
 	PLANNING_KINDS,
 	STRATEGIC_KINDS,
+	isTimerKind,
+	timerCharts,
+	timerKind,
+	timerName,
 	TITLES,
 	USAGE_KINDS
 } from './catalog';
@@ -44,6 +48,36 @@ describe('CHART_GROUPS', () => {
 describe('TITLES', () => {
 	it('gives every kind a title', () => {
 		for (const kind of KINDS) expect(TITLES[kind], kind).toMatch(/\S/);
+	});
+});
+
+// S-0754: a chart for each of the workflow's own timers, at /charts/timer-<name>
+describe('the charts of the workflow timers', () => {
+	it('names a timer chart by its timer, and no catalogue kind as one', () => {
+		expect(timerKind('testing-wait')).toBe('timer-testing-wait');
+		expect(timerName('timer-testing-wait')).toBe('testing-wait');
+		expect(isTimerKind('timer-testing-wait')).toBe(true);
+		expect(isTimerKind('timer-')).toBe(false);
+		expect(timerName('timer-')).toBeUndefined();
+		for (const kind of KINDS) {
+			expect(isTimerKind(kind), kind).toBe(false);
+			expect(timerName(kind), kind).toBeUndefined();
+		}
+	});
+
+	it('lists the timer charts in the order given, titled by the timer, else its name', () => {
+		expect(
+			timerCharts([
+				{ name: 'testing-wait', title: 'Testing Wait' },
+				{ name: 'rework', title: '' },
+				{ name: 'soak' }
+			])
+		).toEqual([
+			{ kind: 'timer-testing-wait', title: 'Testing Wait' },
+			{ kind: 'timer-rework', title: 'rework' },
+			{ kind: 'timer-soak', title: 'soak' }
+		]);
+		expect(timerCharts([])).toEqual([]);
 	});
 });
 

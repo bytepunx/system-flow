@@ -2,13 +2,16 @@
 // measured, and how to read it, written from design/system/metrics.md, which defines every figure,
 // with the anchor of the heading there that does. Plain text: a span in backticks names a field,
 // a command, or a file, and the component draws it as code.
-import type { Kind } from './catalog';
-import { plural } from './charts';
+import { isTimerKind, timerName, timerTitle, type ChartKind, type Kind } from './catalog';
+import { plural, type Timer } from './charts';
 
 /** What a chart shows, how its figures are measured, how to read it, and where metrics.md defines them. */
 export type Explainer = { what: string; how: string; read: string; metrics: string };
-/** What an explainer may name: the report's item type (story, task, epic) and the bucket the chart is laid out in (hour, day, week). */
-export type ExplainContext = { type: string; bucket: string };
+/**
+ * What an explainer may name: the report's item type (story, task, epic), the bucket the chart is
+ * laid out in (hour, day, week), and on a timer's chart the timer, when the report defines it.
+ */
+export type ExplainContext = { type: string; bucket: string; timer?: Timer };
 
 /** The words an explainer is written with: the type, its plural and article, the bucket, and its plural. */
 type Words = {
@@ -52,6 +55,7 @@ const COORDINATION = 'coordination';
 const QUEUE = 'merge-queue-(s-0404)';
 const DIGEST = 'digest-(s-0434)';
 const CONCURRENCY = 'concurrency-and-the-ready-wait-(s-0551)';
+const CHARTS = 'charts';
 
 /** The note every chart of spend over time carried under it. */
 const spendNote = (w: Words) =>
@@ -72,6 +76,24 @@ const NEAREST_RANK =
 	'nearest-rank percentiles: the p-th is the value at position `ceil(p/100 × n)` of the sorted values';
 const CYCLE =
 	'from its first move to `in-progress`, `started`, to its last transition, the move to `done` or `cancelled`, `completed`';
+
+/** The items a timer's p50 and p85 are over, by its `counts`. */
+const COUNTS: Record<Timer['counts'], string> = {
+	accepted: 'those in a state of kind `accepted` alone, cancelled ones left out',
+	closed: 'cancelled ones included'
+};
+
+/** The explainer of the chart of one of the workflow's own timers, drawn as Cycle Time (S-0754). */
+function timerExplainer(w: Words, name: string, timer?: Timer): Explainer {
+	const title = timer ? timerTitle(timer) : name;
+	const over = (timer && COUNTS[timer.counts]) ?? 'those its `counts` takes';
+	return {
+		what: `One point per ${w.type} completed in the window that has a value for ${title}, at the moment it was completed and as high as that value in days, coloured by its nature. Two dashed lines mark the p50 and the p85 of the timer. ${title}, \`${name}\`, is one of the workflow's own timers, which the front matter of \`design/workflows/board.md\` defines beside the baseline's four.`,
+		how: `${w.A}'s value is the time the timer measures, from its \`created\` and its transitions: \`items[].timers\` in \`flai stats --json\`, under the timer's name. ${w.A} the timer has no value for is left out. The lines are the timer's \`p50_seconds\` and \`p85_seconds\` in \`summary.timers\`, over the ${w.types} completed in the window with a value, ${over}, ${NEAREST_RANK}.`,
+		read: `Half the ${w.types} took no longer than the p50 line, and 85% no longer than the p85 line. Points far above the p85 line are the ones to look into.`,
+		metrics: CHARTS
+	};
+}
 
 const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 	'cycle-time': (w) => ({
@@ -256,7 +278,8 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 	})
 };
 
-/** The explainer of a chart kind. */
-export function explain(kind: Kind, ctx: ExplainContext): Explainer {
+/** The explainer of a chart kind, a timer's chart among them. */
+export function explain(kind: ChartKind, ctx: ExplainContext): Explainer {
+	if (isTimerKind(kind)) return timerExplainer(words(ctx), timerName(kind), ctx.timer);
 	return EXPLAINERS[kind](words(ctx));
 }

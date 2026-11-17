@@ -34,6 +34,7 @@
 		human,
 		isClaimsKind,
 		isForecastKind,
+		isTimerKind,
 		KINDS,
 		normalise,
 		PLANNING_KINDS,
@@ -48,7 +49,11 @@
 		strategicKinds,
 		strategicRatio,
 		strategicRows,
+		timerCharts,
+		timerName,
+		timerOf,
 		titleOf,
+		TITLES,
 		USAGE_KINDS,
 		WINDOWS,
 		withUsage,
@@ -57,6 +62,7 @@
 		withoutValueNow,
 		strategicCost,
 		type BucketSize,
+		type ChartKind,
 		type ErrorField,
 		type ErrorFilter,
 		type ErrorSpread,
@@ -90,10 +96,16 @@
 	// and from a flai that sends no lanes, they stack the states the report carries
 	let flow = $state<Flow | undefined>(undefined);
 
-	const kind = $derived(
-		(KINDS as readonly string[]).includes(page.params.kind ?? '')
-			? (page.params.kind as Kind)
-			: 'cycle-time'
+	// a catalogue chart, or the chart of one of the workflow's own timers (S-0754); else Cycle Time
+	const kind = $derived.by((): ChartKind => {
+		const param = page.params.kind ?? '';
+		if ((KINDS as readonly string[]).includes(param)) return param as Kind;
+		return isTimerKind(param) ? param : 'cycle-time';
+	});
+	// the name of the timer a timer's chart draws, and the report's definition of it
+	const timerShown = $derived(timerName(kind));
+	const timer = $derived(
+		report && timerShown !== undefined ? timerOf(report, timerShown) : undefined
 	);
 	const t = $derived(theme(dark));
 	const shown = $derived(controls(kind));
@@ -171,7 +183,22 @@
 		return '';
 	});
 	const buckets = $derived(bucketsFor(since));
-	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
+	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket, report?.timers));
+	// Cycle Time and the charts of the workflow's own timers link to each other (S-0754)
+	const timerLinks = $derived(
+		report?.timers?.length && (kind === 'cycle-time' || timerShown !== undefined)
+			? [{ kind: 'cycle-time', title: TITLES['cycle-time'] }, ...timerCharts(report.timers)]
+			: []
+	);
+	/** The p50 and p85 the summary shows: the timer's on its chart, else cycle time's. */
+	const durationSummary = $derived.by(() => {
+		if (timerShown === undefined)
+			return s
+				? `cycle p50 ${human(s.cycle_time.p50_seconds)} p85 ${human(s.cycle_time.p85_seconds)}`
+				: '';
+		const d = s?.timers?.[timerShown];
+		return `${title} p50 ${p(d?.p50_seconds)} p85 ${p(d?.p85_seconds)}`;
+	});
 	const spend = $derived(report?.usage?.spend?.[report.type]);
 	// the items the window holds, which the tables list as the charts plot them (S-0166)
 	// $ / Item also lists the items only strategic agents spent on, as it draws them (ADR-0083)
@@ -179,6 +206,15 @@
 		report ? (kind === 'cost' ? withCost : withUsage)(report, epic || undefined) : []
 	);
 	const completed = $derived(report ? completedIn(report) : []);
+	// the items a timer's chart plots, with their value of it
+	const timed = $derived(
+		timerShown === undefined
+			? []
+			: completed.flatMap((i) => {
+					const seconds = i.timers?.[timerShown];
+					return seconds !== undefined && (!epic || i.parent === epic) ? [{ ...i, seconds }] : [];
+				})
+	);
 	// the stories touches drift draws, done in the window, as it draws them (S-0214)
 	const drifted = $derived(report && kind === 'touches-drift' ? driftedIn(report) : []);
 	// what Coordination states beside it: the stories started on a share and the hold saved (S-0337)
@@ -354,8 +390,32 @@
 			The flai on the host sends no strategic use per day, which this chart is drawn from: it is
 			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
 		</p>
+	{:else if timerShown !== undefined && report && !timer}
+		<p class="mb-2 text-sm text-muted" data-testid="timer-none">
+			The report has no timer named <code>{timerShown}</code>, which this chart is drawn from:
+			either the workflow, <code>design/workflows/board.md</code>, defines none of that name, or the
+			flai on the host is older than the dashboard and sends no timers. Then upgrade it with
+			<code>flai self-upgrade</code>.
+		</p>
+	{:else if timer && report && !timer.types.includes(report.type)}
+		<p class="mb-2 text-sm text-muted" data-testid="timer-type">
+			{title} does not time {plural(report.type)}: it times {timer.types.map(plural).join(', ')}.
+			Choose one of those types.
+		</p>
 	{/if}
 	<Chart {option} theme={t} height={380} />
+	{#if timerLinks.length > 0}
+		<p class="mt-2 text-sm" data-testid="timer-charts">
+			Timers:
+			{#each timerLinks as l (l.kind)}
+				{#if l.kind === kind}
+					<span class="mx-1 font-medium" aria-current="page">{l.title}</span>
+				{:else}
+					<a class="mx-1 underline" href={resolve('/charts/[kind]', { kind: l.kind })}>{l.title}</a>
+				{/if}
+			{/each}
+		</p>
+	{/if}
 	{#if kind === 'strategic-cost' && report && strategic.length > 0}
 		<p class="mt-2 text-xs text-muted" data-testid="strategic-figures">
 			{#if ratio}<span data-testid="strategic-ratio"
@@ -421,7 +481,12 @@
 		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">{unvaluedText}</p>
 	{/if}
 	<div class="mt-4">
-		<ChartExplainer {kind} type={report?.type ?? asType} bucket={report?.usage?.bucket ?? bucket} />
+		<ChartExplainer
+			{kind}
+			{timer}
+			type={report?.type ?? asType}
+			bucket={report?.usage?.bucket ?? bucket}
+		/>
 	</div>
 {:else}
 	<p class="text-sm text-muted">Loading…</p>
@@ -506,9 +571,7 @@
 		<span class="text-xs text-muted"
 			>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
 				1
-			)}/week · cycle p50 {human(s.cycle_time.p50_seconds)} p85 {human(
-				s.cycle_time.p85_seconds
-			)}</span
+			)}/week · {durationSummary}</span
 		>
 	{/if}
 </div>
@@ -789,6 +852,27 @@
 								><td class="pr-4 font-mono">{w.week}</td><td>{w.done}</td></tr
 							>{/each}</tbody
 					>
+				</table>
+			{:else if timerShown !== undefined}
+				<table class="min-w-full" data-testid="timer-table">
+					<thead>
+						<tr class="text-left text-muted">
+							<th class="pr-4">item</th>
+							<th class="pr-4">nature</th>
+							<th class="pr-4">completed</th>
+							<th>{title}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each timed as i (i.id)}
+							<tr>
+								<td class="pr-4 font-mono">{i.id}</td>
+								<td class="py-0.5 pr-4"><KindChips nature={i.nature} /></td>
+								<td class="pr-4">{i.completed ? localDate(i.completed) : ''}</td>
+								<td>{human(i.seconds)}</td>
+							</tr>
+						{/each}
+					</tbody>
 				</table>
 			{:else if report}
 				<table class="min-w-full">

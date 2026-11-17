@@ -48,6 +48,9 @@ import {
 	tokensPerDollar,
 	tokensPerItem,
 	tokensSpent,
+	timerChart,
+	timerOf,
+	hasTimer,
 	models,
 	spendRows,
 	strategicRatio,
@@ -92,6 +95,7 @@ import {
 	type QueueWeek,
 	type Report,
 	type StrategicDay,
+	type Timer,
 	type WaitWeek
 } from './charts';
 import { CATEGORICAL, modelSlot, modelSymbol, ORDER_SLOT, theme, TYPE_SLOT } from './palette';
@@ -1822,6 +1826,124 @@ const forecasting: Report = {
 		}
 	}
 };
+
+// S-0754: a timer of the operator's own, as flai stats --json sends it (S-0752): S-001 waited half
+// a day for testing and S-002 a day and a half; S-004, still open, has a value but is not done,
+// and S-005, done, has none, so both are left out.
+const testingWait: Timer = {
+	name: 'testing-wait',
+	title: 'Testing Wait',
+	types: ['story'],
+	counts: 'accepted'
+};
+const timed: Record<string, Record<string, number>> = {
+	'S-001': { 'testing-wait': 43200 },
+	'S-002': { 'testing-wait': 129600 },
+	'S-004': { 'testing-wait': 3600 }
+};
+const timing: Report = {
+	...report,
+	timers: [testingWait],
+	summary: {
+		...report.summary,
+		timers: {
+			'testing-wait': {
+				count: 2,
+				p50_seconds: 43200,
+				p85_seconds: 129600,
+				max_seconds: 129600,
+				mean_seconds: 86400
+			}
+		}
+	},
+	items: [
+		...report.items.map((i) => (timed[i.id] ? { ...i, timers: timed[i.id] } : i)),
+		{
+			id: 'S-005',
+			type: 'story',
+			nature: 'feature',
+			title: 'Five',
+			status: 'done',
+			created: '2026-08-18T09:00:00Z',
+			started: '2026-08-19T09:00:00Z',
+			completed: '2026-08-20T09:00:00Z',
+			cycle_time_seconds: 86400,
+			blocked_seconds: 0,
+			time_in_state_seconds: { 'in-progress': 86400 }
+		}
+	]
+};
+type Scatter = {
+	series: {
+		name: string;
+		data: { value: [string, number]; id: string }[];
+		markLine?: { data: { name: string; yAxis: number }[] };
+	}[];
+	yAxis: { name: string };
+};
+const points = (o: Scatter) => o.series.map((s) => [s.name, s.data.map((d) => [d.id, d.value])]);
+
+describe("the charts of the workflow's own timers (S-0754)", () => {
+	it('plots each item done in the window with a value, in days, with the p50 and p85 lines', () => {
+		const o = timerChart(timing, light, 'testing-wait') as Scatter;
+		expect(points(o)).toEqual([
+			['feature', [['S-001', ['2026-08-03T12:00:00Z', 0.5]]]],
+			['improvement', [['S-002', ['2026-08-12T09:30:00Z', 1.5]]]]
+		]);
+		expect(o.series[0].markLine?.data.map((d) => [d.name, d.yAxis])).toEqual([
+			['p50', 0.5],
+			['p85', 1.5]
+		]);
+		expect(o.series[1].markLine).toBeUndefined();
+		expect(o.yAxis.name).toBe('days');
+		// narrowed by the epic, as Cycle Time is
+		expect((timerChart(timing, light, 'testing-wait', 'E-999') as Scatter).series).toEqual([]);
+	});
+
+	it("draws the timer's chart for its kind, as the baseline's Cycle Time from its own fields", () => {
+		const o = build('timer-testing-wait', timing, light) as Scatter;
+		expect(o.series).toEqual((timerChart(timing, light, 'testing-wait') as Scatter).series);
+		// Cycle Time still plots S-005, which has a cycle time and no testing wait
+		const ct = build('cycle-time', timing, light) as Scatter;
+		expect(ct.series.flatMap((s) => s.data.map((d) => d.id))).toEqual(['S-001', 'S-005', 'S-002']);
+		expect(ct.series).toEqual((cycleTime(timing, light) as Scatter).series);
+	});
+
+	it('draws an empty chart of a timer the report does not define, and no lines without its spread', () => {
+		expect((timerChart(timing, light, 'soak') as Scatter).series).toEqual([]);
+		expect((build('timer-soak', timing, light) as Scatter).series).toEqual([]);
+		expect((build('timer-testing-wait', report, light) as Scatter).series).toEqual([]);
+		const unspread: Report = { ...timing, summary: report.summary };
+		const o = timerChart(unspread, light, 'testing-wait') as Scatter;
+		expect(o.series.map((s) => s.markLine)).toEqual([undefined, undefined]);
+	});
+
+	it("chooses a timer's chart as Cycle Time, and titles it by the timer, else by its name", () => {
+		expect(controls('timer-testing-wait')).toEqual(controls('cycle-time'));
+		expect(controls('timer-testing-wait')).toEqual({
+			type: true,
+			epic: true,
+			bucket: false,
+			nature: false,
+			model: false
+		});
+		expect(titleOf('timer-testing-wait', 'day', timing.timers)).toBe('Testing Wait');
+		expect(titleOf('timer-testing-wait')).toBe('testing-wait');
+		expect(titleOf('timer-soak', 'day', [testingWait])).toBe('soak');
+		expect(titleOf('cycle-time', 'day', [testingWait])).toBe('Cycle Time');
+	});
+
+	it('says whether the report defines a timer, and keeps timers absent when flai sends none', () => {
+		expect(hasTimer(timing, 'testing-wait')).toBe(true);
+		expect(timerOf(timing, 'testing-wait')).toEqual(testingWait);
+		expect(hasTimer(timing, 'soak')).toBe(false);
+		expect(hasTimer(report, 'testing-wait')).toBe(false);
+		expect(normalise(timing).timers).toEqual([testingWait]);
+		expect(normalise(timing).summary.timers).toEqual(timing.summary.timers);
+		expect('timers' in normalise(report)).toBe(false);
+		expect('timers' in normalise(report).summary).toBe(false);
+	});
+});
 
 describe('planning charts', () => {
 	type Scatter = {

@@ -2359,3 +2359,153 @@ describe("the charts by state stack the board's lanes (S-0754)", () => {
 		expect(drawn()).toEqual(Object.keys(counts));
 	});
 });
+
+describe("the charts of the workflow's own timers (S-0754)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const testingWait = {
+		name: 'testing-wait',
+		title: 'Testing Wait',
+		types: ['story'],
+		counts: 'accepted'
+	};
+	const done = (id: string, completed: string, timers?: Record<string, number>) => ({
+		id,
+		type: 'story',
+		nature: 'feature',
+		title: id,
+		status: 'done',
+		created: '2026-09-01T00:00:00Z',
+		started: '2026-09-01T00:00:00Z',
+		completed,
+		cycle_time_seconds: 3600,
+		blocked_seconds: 0,
+		time_in_state_seconds: {},
+		...(timers ? { timers } : {})
+	});
+	// S-0001 waited half a day for testing; S-0002 has no value, so the timer's chart leaves it out
+	const items = [
+		done('S-0001', '2026-09-28T21:00:00Z', { 'testing-wait': 43200 }),
+		done('S-0002', '2026-09-09T21:00:00Z')
+	];
+	const spread = { count: 1, p50_seconds: 43200, p85_seconds: 86400, max_seconds: 86400 };
+	const timing = {
+		items,
+		timers: [testingWait],
+		summary: { ...summary, timers: { 'testing-wait': { ...spread, mean_seconds: 43200 } } }
+	};
+	/** What flai answers beside the report of reportIn; each test changes it. */
+	let answered: Record<string, unknown> = {};
+	beforeEach(() => {
+		answered = timing;
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const q = new URL(url, 'http://localhost').searchParams;
+			return answer({ ...reportIn(q.get('bucket') ?? 'day'), type: q.get('type'), ...answered });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const controls = () =>
+		[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0]);
+	const TIMER_CHARTS = '[data-testid="timer-charts"]';
+	const links = () =>
+		[...document.querySelectorAll(`${TIMER_CHARTS} a`)].map((a) => [
+			a.textContent?.trim(),
+			a.getAttribute('href')
+		]);
+	type Drawn = {
+		series: {
+			data: { id: string; value: [string, number] }[];
+			markLine?: { data: { name: string; yAxis: number }[] };
+		}[];
+	};
+
+	it("draws a timer of the operator's own under its title, as Cycle Time is drawn", async () => {
+		await open('timer-testing-wait');
+		expect(text('h1')).toBe('Testing Wait');
+		expect(document.title).toBe('Testing Wait · flaiover');
+		const drawn = setOption.mock.calls.at(-1)![0] as Drawn;
+		expect(drawn.series.map((s) => s.data.map((d) => [d.id, d.value[1]]))).toEqual([
+			[['S-0001', 0.5]]
+		]);
+		expect(drawn.series[0].markLine?.data.map((d) => [d.name, d.yAxis])).toEqual([
+			['p50', 0.5],
+			['p85', 1]
+		]);
+		expect(controls()).toEqual(['window', 'type', 'epic']);
+		expect(document.querySelector('[data-testid="timer-none"]')).toBeNull();
+		expect(document.querySelector('[data-testid="timer-type"]')).toBeNull();
+		expect(summaryStrip()!.textContent).toContain('Testing Wait p50 12h p85 1d');
+		expect(summaryStrip()!.textContent).not.toContain('cycle p50');
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'One point per story completed in the window that has a value for Testing Wait'
+		);
+		expect(document.querySelector('[data-testid="explainer-metrics"]')!.getAttribute('href')).toBe(
+			'/docs/design/system/metrics.md#charts'
+		);
+		// the links to Cycle Time and the other timers, the chart shown not a link
+		expect(text(TIMER_CHARTS)).toContain('Testing Wait');
+		expect(links()).toEqual([['Cycle Time', '/charts/cycle-time']]);
+		expectOrder('h1', chartEl(), TIMER_CHARTS, EXPLAINER, WINDOW, summaryStrip(), tableView());
+		// the table lists the items the chart plots
+		const rows = [...document.querySelectorAll('[data-testid="timer-table"] tbody tr')].map((tr) =>
+			[...tr.querySelectorAll('td')].map((td) => td.textContent?.trim())
+		);
+		expect(rows.map((r) => [r[0], r[3]])).toEqual([['S-0001', '12h']]);
+		expect(text('[data-testid="timer-table"] thead')).toContain('Testing Wait');
+	});
+
+	it("links Cycle Time to the workflow's own timers, and only when it defines some", async () => {
+		await open('cycle-time');
+		expect(text('h1')).toBe('Cycle Time');
+		expect(links()).toEqual([['Testing Wait', '/charts/timer-testing-wait']]);
+		expect(summaryStrip()!.textContent).toContain('cycle p50');
+		expect(document.querySelector('[data-testid="timer-table"]')).toBeNull();
+		unmount(c!);
+		document.body.innerHTML = '';
+		answered = { items };
+		await open('cycle-time');
+		expect(document.querySelector(TIMER_CHARTS)).toBeNull();
+		// nothing stands between the title and the chart
+		expect(document.querySelector('h1')!.nextElementSibling).toBe(chartEl());
+	});
+
+	it('says so when the report has no timer of that name, or the timer does not time the type', async () => {
+		// as a flai older than S-0752 answers: no timers, and no item valued by one
+		answered = { items: [done('S-0001', '2026-09-28T21:00:00Z')] };
+		await open('timer-testing-wait');
+		expect(text('h1')).toBe('testing-wait');
+		expect(text('[data-testid="timer-none"]')).toContain(
+			'The report has no timer named testing-wait'
+		);
+		expect(text('[data-testid="timer-none"]')).toContain('flai self-upgrade');
+		expectOrder('h1', '[data-testid="timer-none"]', chartEl());
+		const drawn = setOption.mock.calls.at(-1)![0] as Drawn;
+		expect(drawn.series).toEqual([]);
+		expect(summaryStrip()!.textContent).toContain('testing-wait p50 - p85 -');
+		unmount(c!);
+		document.body.innerHTML = '';
+		answered = { ...timing, timers: [{ ...testingWait, types: ['task'] }] };
+		await open('timer-testing-wait');
+		expect(document.querySelector('[data-testid="timer-none"]')).toBeNull();
+		expect(text('[data-testid="timer-type"]')).toBe(
+			'Testing Wait does not time stories: it times tasks. Choose one of those types.'
+		);
+	});
+});

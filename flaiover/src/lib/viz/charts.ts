@@ -28,6 +28,10 @@ import {
 	FORECAST_KINDS,
 	STRATEGIC_KINDS,
 	TITLES,
+	isTimerKind,
+	timerName,
+	timerTitle,
+	type ChartKind,
 	type ClaimsKind,
 	type ForecastKind,
 	type Kind,
@@ -53,6 +57,8 @@ export type Summary = {
 	queue_time: Distribution;
 	flow_efficiency: number;
 	time_in_state_share: Record<string, number>;
+	/** The distribution of each own timer that takes the report's type, by name (S-0752). */
+	timers?: Record<string, Distribution>;
 };
 export type ItemMetrics = {
 	id: string;
@@ -91,6 +97,17 @@ export type ItemMetrics = {
 	wait_reviewers_seconds?: number;
 	/** Its waits in the merge queue that ended in the window, summed (S-0404); absent with none. */
 	queue_wait_seconds?: number;
+	/** Its value of each own timer that has one, by name (S-0752); absent with none. */
+	timers?: Record<string, number>;
+};
+/** One of the workflow's own timers, beyond the baseline's four (S-0752, ADR-0317). */
+export type Timer = {
+	name: string;
+	title: string;
+	/** The item types it times. */
+	types: string[];
+	/** The items its distribution is over: those in an accepted state, or cancelled ones too. */
+	counts: 'accepted' | 'closed';
 };
 /** The count of a set of errors and the p50 and p85 of their absolute values, absent when empty. */
 export type ErrorSpread = { count: number; p50_seconds?: number; p85_seconds?: number };
@@ -492,6 +509,8 @@ export type Report = {
 	queue?: Queue;
 	/** Absent when flai cannot read the digest, and from a flai older than S-0434. */
 	digest?: Digest;
+	/** The workflow's own timers, in file order; absent with none, and from flai before S-0752. */
+	timers?: Timer[];
 };
 
 /**
@@ -541,11 +560,24 @@ export {
 	PLANNING_KINDS,
 	STRATEGIC_KINDS,
 	TITLES,
-	USAGE_KINDS
+	USAGE_KINDS,
+	isTimerKind,
+	timerCharts,
+	timerKind,
+	timerName,
+	timerTitle
 } from './catalog';
-export type { ChartGroupKey, ClaimsKind, ForecastKind, Kind, PlanningKind } from './catalog';
+export type {
+	ChartGroupKey,
+	ChartKind,
+	ClaimsKind,
+	ForecastKind,
+	Kind,
+	PlanningKind,
+	TimerKind
+} from './catalog';
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
-export const SPEND_KINDS: readonly Kind[] = [
+export const SPEND_KINDS: readonly ChartKind[] = [
 	'token-rate',
 	'tokens-spent',
 	'tokens-per-item',
@@ -556,7 +588,7 @@ export const SPEND_KINDS: readonly Kind[] = [
 	'cost-per-model'
 ];
 /** The charts per item, one line per item type: every type is drawn, so none is chosen. */
-export const PER_ITEM_KINDS: readonly Kind[] = ['tokens-per-item', 'cost-per-item'];
+export const PER_ITEM_KINDS: readonly ChartKind[] = ['tokens-per-item', 'cost-per-item'];
 /** The windows the charts page offers. */
 export const WINDOWS = ['1d', '7d', '30d', '90d', '365d'] as const;
 /** The buckets a window can be laid out in: flai lays out by the hour over 31 days or less. */
@@ -565,11 +597,19 @@ export function bucketsFor(since: string): BucketSize[] {
 	return BUCKETS.filter((b) => b !== 'hour' || days <= MAX_HOUR_WINDOW_DAYS);
 }
 /** Whether a chart is drawn from the forecast errors, and narrowed by nature and model. */
-export const isForecastKind = (kind: Kind): kind is ForecastKind =>
-	(FORECAST_KINDS as readonly Kind[]).includes(kind);
+export const isForecastKind = (kind: ChartKind): kind is ForecastKind =>
+	(FORECAST_KINDS as readonly string[]).includes(kind);
 /** Whether a chart is drawn from `claims`. */
-export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
-	(CLAIMS_KINDS as readonly Kind[]).includes(kind);
+export const isClaimsKind = (kind: ChartKind): kind is ClaimsKind =>
+	(CLAIMS_KINDS as readonly string[]).includes(kind);
+/** Which of the page's controls a chart offers. */
+export type Controls = {
+	type: boolean;
+	epic: boolean;
+	bucket: boolean;
+	nature: boolean;
+	model: boolean;
+};
 /**
  * The controls a chart uses. Spend over time and waiting are summed by flai, so no epic narrows
  * them; a chart per item shows every type, so none is chosen. The forecast charts read the
@@ -579,9 +619,11 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * only the type is chosen. Cost of delay takes the window alone, and so does the merge queue,
  * whose weeks flai counts from its event log, whatever the type, and the digest, whose weeks count
  * the stories completed, whatever the type. Concurrency is of the type chosen, over every item of
- * it, so no epic narrows it.
+ * it, so no epic narrows it. A chart of one of the workflow's own timers is chosen as Cycle Time
+ * is.
  */
-export function controls(kind: Kind) {
+export function controls(kind: ChartKind): Controls {
+	if (isTimerKind(kind)) return controls('cycle-time');
 	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
 		return { type: true, epic: false, bucket: false, nature: false, model: false };
 	if (isClaimsKind(kind) || kind === 'queue' || kind === 'digest')
@@ -607,8 +649,20 @@ export function controls(kind: Kind) {
 }
 /** A bucket's name in a title: Hour, Day, Week. */
 const titled = (bucket: BucketSize) => bucket[0].toUpperCase() + bucket.slice(1);
-/** A chart's title: the charts of what a bucket spent are named for the bucket (S-0169). */
-export function titleOf(kind: Kind, bucket: BucketSize = 'day'): string {
+/**
+ * A chart's title: the charts of what a bucket spent are named for the bucket (S-0169), and the
+ * chart of a timer for the timer among those given, else by its name.
+ */
+export function titleOf(
+	kind: ChartKind,
+	bucket: BucketSize = 'day',
+	timers: readonly Timer[] = []
+): string {
+	if (isTimerKind(kind)) {
+		const name = timerName(kind);
+		const timer = timers.find((x) => x.name === name);
+		return timer ? timerTitle(timer) : name;
+	}
 	if (kind === 'tokens-spent') return `Tokens / ${titled(bucket)}`;
 	if (kind === 'cost-spent') return `$ / ${titled(bucket)}`;
 	return TITLES[kind];
@@ -772,10 +826,19 @@ function refLine(t: Theme, data: Opt[], formatter: string): Opt {
 	};
 }
 
-/** Cycle time scatter: one point per completed item, p50 and p85 reference lines, coloured by nature (at most three groups per the all-pairs rule; the rest fold into Other). */
-export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
+/** What a chart of durations plots: each item's seconds, and the distribution its lines mark. */
+type Durations = {
+	seconds: (i: ItemMetrics) => number | undefined;
+	spread?: Distribution;
+};
+/**
+ * A scatter of durations: one point per item completed in the window with a value, p50 and p85
+ * reference lines from the distribution, coloured by nature (at most three groups per the
+ * all-pairs rule; the rest fold into Other).
+ */
+function durationScatter(r: Report, t: Theme, d: Durations, epic?: string): Opt {
 	const done = completedIn(r).filter(
-		(i) => i.cycle_time_seconds !== undefined && (!epic || i.parent === epic)
+		(i) => d.seconds(i) !== undefined && (!epic || i.parent === epic)
 	);
 	const natures = [...new Set(done.map((i) => i.nature))];
 	const top = natures.slice(0, 3);
@@ -788,17 +851,17 @@ export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
 		data: done
 			.filter((i) => (g === 'other' ? !top.includes(i.nature) : i.nature === g))
 			.map((i) => ({
-				value: [i.completed, days(i.cycle_time_seconds!)],
+				value: [i.completed, days(d.seconds(i)!)],
 				id: i.id,
 				title: i.title
 			})),
 		markLine:
-			gi === 0
+			gi === 0 && d.spread
 				? refLine(
 						t,
 						[
-							{ yAxis: days(r.summary.cycle_time.p50_seconds), name: 'p50' },
-							{ yAxis: days(r.summary.cycle_time.p85_seconds), name: 'p85' }
+							{ yAxis: days(d.spread.p50_seconds), name: 'p50' },
+							{ yAxis: days(d.spread.p85_seconds), name: 'p85' }
 						],
 						'{b}'
 					)
@@ -815,6 +878,32 @@ export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
 		series
 	});
 }
+
+/** Cycle time scatter: the baseline's cycle timer, drawn from its own fields. */
+export const cycleTime = (r: Report, t: Theme, epic?: string): Opt =>
+	durationScatter(
+		r,
+		t,
+		{ seconds: (i) => i.cycle_time_seconds, spread: r.summary.cycle_time },
+		epic
+	);
+
+/** The report's own timer of that name: undefined when its workflow defines none of that name. */
+export const timerOf = (r: Report, name: string): Timer | undefined =>
+	r.timers?.find((x) => x.name === name);
+/** Whether the report's workflow defines a timer of its own of that name. */
+export const hasTimer = (r: Report, name: string) => timerOf(r, name) !== undefined;
+/**
+ * The scatter of one of the workflow's own timers, drawn as Cycle Time is (S-0754): an unknown
+ * timer has no values, so it draws an empty chart.
+ */
+export const timerChart = (r: Report, t: Theme, name: string, epic?: string): Opt =>
+	durationScatter(
+		r,
+		t,
+		{ seconds: (i) => i.timers?.[name], spread: r.summary.timers?.[name] },
+		epic
+	);
 
 /** Burn-up: scope and done lines for the whole set or one epic. */
 export function burnUp(r: Report, t: Theme, epic = 'all'): Opt {
@@ -1711,7 +1800,7 @@ export type SpendRow = Spend & { at: string; of: string; mean_tokens?: number; m
  * and then per model, and for cost per bucket what strategic agents spent in it (S-0225), which
  * may be all a bucket holds. Newest first.
  */
-export function spendRows(r: Report, kind: Kind): SpendRow[] {
+export function spendRows(r: Report, kind: ChartKind): SpendRow[] {
 	const rows: SpendRow[] = [];
 	const put = (b: Bucket, of: string, s: Spend, means: boolean) =>
 		rows.push({
@@ -3061,10 +3150,10 @@ export function codOrder(r: Report, t: Theme): Opt {
 
 /**
  * A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic; the
- * charts by state stack the flow's lanes.
+ * charts by state stack the flow's lanes, and a timer's chart draws that timer.
  */
 export function build(
-	kind: Kind,
+	kind: ChartKind,
 	report: Report,
 	t: Theme,
 	epic?: string,
@@ -3072,6 +3161,7 @@ export function build(
 	flow?: Flow
 ): Opt {
 	const r = normalise(report);
+	if (isTimerKind(kind)) return timerChart(r, t, timerName(kind), epic);
 	switch (kind) {
 		case 'cycle-time':
 			return cycleTime(r, t, epic);

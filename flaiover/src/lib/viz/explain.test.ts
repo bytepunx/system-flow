@@ -177,6 +177,46 @@ describe('explain', () => {
 		expect(all('digest', { type: 'epic', bucket: 'week' })).toBe(digest);
 	});
 
+	// S-0754: the chart of one of the workflow's own timers, drawn as Cycle Time is
+	it("explains a timer's chart by the timer, and anchors it at metrics.md § Charts", () => {
+		const timer = {
+			name: 'testing-wait',
+			title: 'Testing Wait',
+			types: ['story'],
+			counts: 'accepted' as const
+		};
+		const e = explain('timer-testing-wait', { ...STORY_DAY, timer });
+		expect(e.what).toContain(
+			'One point per story completed in the window that has a value for Testing Wait'
+		);
+		expect(e.what).toContain('`testing-wait`');
+		expect(e.what).toContain("one of the workflow's own timers");
+		expect(e.what).toContain('`design/workflows/board.md`');
+		expect(e.how).toContain('`items[].timers`');
+		expect(e.how).toContain('`summary.timers`');
+		expect(e.how).toContain('cancelled ones left out');
+		expect(e.how).toContain('nearest-rank');
+		expect(e.read).toBe(
+			'Half the stories took no longer than the p50 line, and 85% no longer than the p85 line. Points far above the p85 line are the ones to look into.'
+		);
+		const closed = explain('timer-testing-wait', {
+			...STORY_DAY,
+			timer: { ...timer, counts: 'closed' }
+		});
+		expect(closed.how).toContain('cancelled ones included');
+		expect(e.metrics).toBe('charts');
+		expect(anchors).toContain(e.metrics);
+		// a timer the report does not define is named by its name
+		const unknown = explain('timer-soak', { type: 'task', bucket: 'day' });
+		expect(unknown.what).toContain(
+			'One point per task completed in the window that has a value for soak'
+		);
+		for (const part of [e.what, e.how, e.read, unknown.what, unknown.how, unknown.read]) {
+			expect(balanced(part)).toBe(true);
+			expect(part).not.toMatch(/\$\{|undefined/);
+		}
+	});
+
 	it('names the type and the bucket from the context', () => {
 		const epic: ExplainContext = { type: 'epic', bucket: 'day' };
 		expect(explain('cycle-time', epic).what).toContain('One point per epic completed');

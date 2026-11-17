@@ -4,7 +4,8 @@
 	// Open on the first visit; opening or closing it holds for every chart in this browser.
 	import { resolve } from '$app/paths';
 	import { explain } from '$lib/viz/explain';
-	import type { Kind } from '$lib/viz/catalog';
+	import type { ChartKind } from '$lib/viz/catalog';
+	import type { Timer } from '$lib/viz/charts';
 	import { chartExplainer } from '$lib/chartexplainer.svelte';
 	import { projectState } from '$lib/project.svelte';
 	import { withProject } from '$lib/sitemenu';
@@ -12,16 +13,19 @@
 	let {
 		kind,
 		type,
-		bucket
+		bucket,
+		timer
 	}: {
-		kind: Kind;
+		kind: ChartKind;
 		/** The item type the chart reads: story, task, or epic. */
 		type: string;
 		/** What the chart is laid out in: hour, day, or week. */
 		bucket: string;
+		/** On a timer's chart, the report's definition of the timer, when it has one (S-0754). */
+		timer?: Timer;
 	} = $props();
 
-	const e = $derived(explain(kind, { type, bucket }));
+	const e = $derived(explain(kind, { type, bucket, timer }));
 	const parts = $derived(
 		[
 			{ key: 'what', text: e.what },
