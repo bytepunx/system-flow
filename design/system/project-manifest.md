@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-11-13
+updated: 2026-11-17
 status: active
 topics: [cli, template]
 ---
@@ -53,6 +53,7 @@ dashboard:
   allow_unsigned: false                      # optional, default unset, the host's dashboard.allow_unsigned; true or false overrides it here (S-0239)
 tests:                                       # optional (S-0273): the test tiers, cheapest first, that flai test runs; default one plain tier, scripts/test.sh
   - name: unit                               # unique among the tiers
+    suite: behavior                          # optional (S-0805): a kebab-case label several tiers may share; default the tier's name (ADR-0312)
     command: [go, test, -json, "{packages}"] # an argument list; {packages}, {importers}, or {files}, an argument of its own, stands for what the paths selected
     dir: flai                                # optional: the folder it runs in, from the root; default the root
     paths: ["flai/**", "!flai/testdata/**"]  # globs from the root that select it, as claims.shared; ! takes paths out; required unless all_only or manual
@@ -206,6 +207,15 @@ Rules:
 - `dashboard.allow_unsigned`, when set, is this project's allowance for unsigned builds, over `dashboard.allow_unsigned` in the host's flai configuration (S-0239, [ADR-0070](../adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)): `true` allows them for this project, `false` refuses them though the host allows them, and unset leaves the host's. `flai serve` reads it before each dial, and `flai dashboard` when it starts the container. What the allowance lets through and how it is shown is in [release-signing.md](release-signing.md#the-development-case). An older flai ignores it.
 - `tests` lists the project's test tiers, cheapest first, which `flai test` runs for the paths each selects (S-0273), and `flai verify` runs for what a story's branch changed against the main branch (S-0270). A tier has:
   - `name`, unique among the tiers.
+  - `suite` (S-0805, [ADR-0312](../adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md) §1), a kebab-case label for the suite the tier belongs to. Unset, the tier is the suite of its own name. Several tiers may share one, and a suite is whatever the project calls it: flai gives no suite a meaning. `flai test --suite <name>` runs only that suite's tiers ([flai-cli.md](flai-cli.md)), and until the workflow file names suites (later stories of ADR-0312) nothing else reads it. A `manual` tier belongs to its suite and still runs only when it is named. `flai check` refuses a suite that is not kebab-case, as a `manifest.tests` error; a tier's name is not held to it. `verify.Tier` keeps only the suite a tier gives, so the verify fingerprint of a project whose tiers give none is unchanged. An older flai ignores the key. The template's manifest labels `markdown` `static`, `test` `behavior`, `integration` `integration`, and `smoke` `smoke`. This repository's suites are:
+
+    | Suite | Tiers |
+    |-------|-------|
+    | `static` | `gofmt`, `vet`, `golangci-lint`, `shellcheck`, `markdown`, `flaiover-lint`, `svelte-check` |
+    | `behavior` | `go-test`, `settings-index`, `vitest`, `flaiover-flai`, `design-routes`, `template`, `flaiover` |
+    | `integration` | `integration`, `race` |
+    | `smoke` | `smoke`, `gateway` |
+
   - `command`, an argument list run as it stands, never through a shell. `{packages}`, `{importers}`, and `{files}`, each as an argument of its own, stand for what the tier's paths selected, and `flai test` fills them. `{packages}` is the Go packages that hold the selected files, and `{files}` is the files. A tier whose placeholder comes to nothing, such as `{packages}` for files no Go package holds, is left out. Under `flai test --all`, with no `all_command`, `{packages}` and `{importers}` are `./...` and `{files}` is `.`. Any other argument that is a word in braces, such as `{story}`, and a placeholder inside a longer argument are refused.
 
     `{importers}` (S-0364) is the packages `{packages}` names and every package of the same Go module that imports one of them, directly or through other packages. An import counts in a package's own files and in its test files, external `_test` packages included. Each package is written `./x/y`, relative to the tier's `dir`, and the list is sorted. flai reads the module path from the `go.mod` in the tier's `dir`, and each `.go` file's imports from the checkout. It skips the folders the go tool ignores: `testdata` and names beginning with `.` or `_`. It ignores build constraints, so the set is never smaller than the go tool's. With no `go.mod` in the tier's `dir`, `{importers}` is what `{packages}` is.
@@ -332,7 +342,7 @@ Rules:
   | `roles.<name>.permissions.answer_threads` | choice: `off`, `recommend`, `autonomous` | `off` | How the role `<name>`, one a role file defines, may reply on a thread it did not open, with the calls its file lists under this setting: off never, recommend with a recommendation, and autonomous with a recommendation or an answer citing its source (S-0420) |
   | `threads.remind_after` | duration | unset | How long a thread may await you before flai serve reminds you of it through the host's channel; unset or 0, there are no reminders |
   | `threads.remind_every` | duration | `24h` | How often flai serve reminds you again of a thread that still awaits you, once threads.remind_after has passed; more than zero |
-  | `tests` | tests | one `plain` tier running `scripts/test.sh`, when it exists | The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none |
+  | `tests` | tests | one `plain` tier running `scripts/test.sh`, when it exists | The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, the format of its output, and the suite it belongs to, which defaults to its name; unset, one plain tier runs scripts/test.sh when it exists, and [] means none |
   | `acceptance.mode` | choice: `local`, `pull-request` | `local` | How a story in review is accepted: local merges its branch on this machine, as flai accept does, and pull-request merges it through a pull request on the project's forge |
   | `acceptance.forge` | choice: `github` | `github` | The forge pull-request acceptance goes through, reached at the origin remote with the token the host names; unused under local |
   | `acceptance.merge_method` | choice: `merge`, `squash`, `rebase` | `merge` | How the forge merges an accepted pull request: merge with a merge commit, squash into one commit, or rebase the commits onto the base; unused under local |
