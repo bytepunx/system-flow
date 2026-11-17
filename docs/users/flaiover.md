@@ -455,10 +455,11 @@ About this chart explains the chart in three short paragraphs: what it draws, ho
 
 | Chart | Shows |
 |-------|-------|
-| Cycle Time | One point per item completed in the window, with the p50 and p85 lines |
+| Cycle Time | One point per item completed in the window, with the p50 and p85 lines. When the workflow defines timers of its own, a line under the chart links to each timer's chart |
+| A workflow's own timer | One chart per timer your workflow, `design/workflows/board.md`, defines beyond lead, cycle, queue, and review time, titled by the timer: one point per item completed in the window with a value, with the p50 and p85 lines, as Cycle Time. Reach it from the line under Cycle Time. A timer you add to the workflow gets its chart with no change to the dashboard |
 | Burn-up | Scope against done, each day of the window |
-| Cumulative Flow | How many items sit in each state, each day of the window |
-| Time in State | A bar for each day of the window with items completed: how long, on average, those items spent in each state. Hover a bar for the items it averages; the table lists each item. Under it, the share of all their time per state |
+| Cumulative Flow | How many items sit in each state, each day of the window. The bands are your workflow's states in its order, cancelled left out, coloured as the board colours them |
+| Time in State | A bar for each day of the window with items completed: how long, on average, those items spent in each state. Hover a bar for the items it averages; the table lists each item. Under it, the share of all their time per state. The states are your workflow's, as on Cumulative Flow |
 | Throughput | Completions per week of the window, by nature, weeks with none included |
 | Concurrency | How much of the window had none, one, two, or more items in progress at once: a bar per number, as a percent of the window, with the bars past the board's in-progress limit in a colour of their own for stories. Under the bars, the mean number in progress while any was, and the ready wait, how long ready work waited to start, at p50 and p85 in hours. Choose the window and the item type ([Concurrency and the ready wait](../../design/system/metrics.md#concurrency-and-the-ready-wait-s-0551)) |
 | Agent Waiting | How long agents waited on someone else, mostly you, each week of the window: on their threads and in review, stacked, with review split into its time on checks and on reviewers when stories are accepted through pull requests, and the mean wait per item as a dashed line. The table under it lists the ten longest waits ([Agent waiting](#agent-waiting)) |
@@ -538,7 +539,7 @@ The planning group also has three charts of cost of delay: what a week of waitin
 
 | Chart | Shows |
 |-------|-------|
-| CoD Outstanding | For each day of the window, the cost of delay per week of the stories in each column at the end of the day, stacked: backlog, ready, in progress, and review, in the colours of Cumulative Flow |
+| CoD Outstanding | For each day of the window, the cost of delay per week of the stories in each column at the end of the day, stacked: the open states of your workflow, on the default board backlog, ready, in progress, and review, in the colours of Cumulative Flow |
 | CoD Incurred | What waiting cost in each week of the window, as bars, with the mean per week so far as a dashed line |
 | CoD by Order | What the stories in ready now will cost by the time each is pulled, under three orders: the board's pull order, by cost of delay, and by WSJF. One step line per order, rising at each story's projected pull. The time axis runs from now to the last pull, not over the window |
 
