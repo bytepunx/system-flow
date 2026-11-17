@@ -3,14 +3,17 @@ id: S-0819
 type: story
 nature: remediation
 title: flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T02:47:36Z
-updated: 2026-11-17T04:46:05Z
+updated: 2026-11-17T07:12:21Z
 transitions:
   - to: ready
     at: 2026-11-17T03:37:47Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T07:12:21Z
+    by: agent-S-0819
 tags: [flai, guard]
 topics: [guard, delegation]
 touches: [flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/transcript.go, flai/internal/guard/transcript_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/adrs, design/adrs/README.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]

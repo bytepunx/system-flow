@@ -3,10 +3,10 @@ id: S-0817
 type: story
 nature: improvement
 title: Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-17T02:26:33Z
-updated: 2026-11-17T04:29:20Z
+updated: 2026-11-17T07:12:11Z
 transitions:
   - to: ready
     at: 2026-11-17T02:33:25Z
@@ -19,6 +19,9 @@ transitions:
     by: agent-S-0817
   - to: in-progress
     at: 2026-11-17T04:29:20Z
+    by: alex
+  - to: review
+    at: 2026-11-17T07:12:11Z
     by: alex
 tags: []
 topics: [merge, sync, acceptance]
