@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -103,8 +104,9 @@ func slug(title string) string {
 
 // New writes a new entry in the checkout's digest folder, creating the
 // folder when it is missing, and checks what it wrote with Validate and
-// opts.Env. When the check reports anything, it removes the file and any
-// folder it created and returns a *RefusedError.
+// opts.Env and with the project's markdown lint. When the check reports
+// anything, it removes the file and any folder it created and returns a
+// *RefusedError.
 func New(repo *workitem.Repo, r execx.Runner, opts NewOptions) (Result, error) {
 	title := strings.Join(strings.Fields(opts.Title), " ")
 	if title == "" {
@@ -168,7 +170,11 @@ func New(repo *workitem.Repo, r execx.Runner, opts NewOptions) (Result, error) {
 		return fail(fmt.Errorf("reading back the digest entry %s: %w", e.Path, err))
 	}
 	got, problems := Validate(name, string(written), opts.Env)
-	if len(problems) > 0 {
+	found, err := lint(repo, file, "", string(written))
+	if err != nil {
+		return fail(err)
+	}
+	if problems = append(problems, found...); len(problems) > 0 {
 		return fail(&RefusedError{Path: e.Path, Problems: problems})
 	}
 	got.Path = e.Path
@@ -176,9 +182,9 @@ func New(repo *workitem.Repo, r execx.Runner, opts NewOptions) (Result, error) {
 }
 
 // Edit changes an entry's body, topics, paths, sources, or asked_again, and
-// keeps every other byte of the file. When the check reports a problem the
-// change introduced, it puts the file back as it was and returns a
-// *RefusedError. A change that leaves the file as it was writes nothing.
+// keeps every other byte of the file. When the check or the project's
+// markdown lint reports a problem the change introduced, it puts the file
+// back as it was and returns a *RefusedError. A change that leaves the file as it was writes nothing.
 func Edit(repo *workitem.Repo, id string, opts EditOptions) (Result, error) {
 	e, err := Get(repo, id)
 	if err != nil {
@@ -226,7 +232,15 @@ func Edit(repo *workitem.Repo, id string, opts EditOptions) (Result, error) {
 		return Result{}, fmt.Errorf("writing the digest entry %s: %w", e.Path, err)
 	}
 	got, after := Validate(name, text, opts.Env)
-	if added := introduced(before, after); len(added) > 0 {
+	added := introduced(before, after)
+	found, lerr := lint(repo, file, string(data), text)
+	if lerr != nil {
+		if err := atomicfile.WriteFile(file, data, 0o644); err != nil {
+			return Result{}, errors.Join(lerr, fmt.Errorf("putting %s back failed; restore it with git: %w", e.Path, err))
+		}
+		return Result{}, lerr
+	}
+	if added = append(added, found...); len(added) > 0 {
 		if err := atomicfile.WriteFile(file, data, 0o644); err != nil {
 			return Result{}, errors.Join(&RefusedError{Path: e.Path, Problems: added}, fmt.Errorf("putting %s back failed; restore it with git: %w", e.Path, err))
 		}
@@ -235,6 +249,28 @@ func Edit(repo *workitem.Repo, id string, opts EditOptions) (Result, error) {
 	got.Path = e.Path
 	res.Title, res.Entry = got.Title, got
 	return res, nil
+}
+
+// lint is the markdown findings a write to file brings, as problems: what the
+// project's markdownlint configuration reports in after that before did not
+// have (I-0363). An entry is written in the checkout flai digest runs in,
+// the main checkout for the curator, where no story's lint runs, and flai
+// check lints only wip, so a finding not refused here reaches main. A
+// project with no markdownlint configuration is not linted.
+func lint(repo *workitem.Repo, file, before, after string) ([]Problem, error) {
+	err := repo.LintGuard(file, before, after)
+	var le *mdlint.Error
+	if !errors.As(err, &le) {
+		if err != nil {
+			return nil, fmt.Errorf("linting the digest entry %s: %w", file, err)
+		}
+		return nil, nil
+	}
+	out := make([]Problem, len(le.Findings))
+	for i, f := range le.Findings {
+		out[i] = Problem{Line: f.Line, Rule: "markdown." + f.Rule, Message: f.String()}
+	}
+	return out, nil
 }
 
 // introduced is the problems in after that before does not have as many of,

@@ -166,6 +166,52 @@ func TestNewRefusesAndLeavesNothing(t *testing.T) {
 	}
 }
 
+// d0592 is line 17 of D-0592 as the curator wrote it through flai digest
+// new: markdownlint-cli2 reports MD038 on it, and so does mdlint (I-0363).
+const d0592 = "`storygit`'s sync result carries JSON tags (`RegeneratedAtHead []string \\`json:\"regenerated_at_head\"\\`` in `flai/internal/storygit/sync.go`). But `flai stream sync --json` does not marshal that struct. `flai/cmd/stream.go` builds its own `map[string]any`."
+
+// I-0363: New and Edit refuse an entry whose markdown the project's lint
+// rejects, as flai's wip writers do, leaving nothing written; a finding the
+// entry had before an edit does not refuse it; and a project with no
+// markdownlint configuration is not linted.
+func TestWritesRefuseWhatTheMarkdownLintRejects(t *testing.T) {
+	r := newRepo(t)
+	if _, err := New(r, fakeGit{}, NewOptions{Title: "Unlinted", Kind: "decision", Sources: []string{"S-0001"}, Body: d0592, Env: everything}); err != nil {
+		t.Fatalf("no markdownlint configuration: %v", err)
+	}
+
+	r = newRepo(t)
+	write(t, r.Root, ".markdownlint.yaml", "default: false\nMD038: true\n")
+	_, err := New(r, fakeGit{}, NewOptions{Title: "Linted", Kind: "decision", Sources: []string{"S-0001"}, Body: d0592, Env: everything})
+	var refused *RefusedError
+	if !errors.As(err, &refused) || len(refused.Problems) != 1 || refused.Problems[0].Rule != "markdown.MD038" || refused.Problems[0].Line != 17 {
+		t.Fatalf("want one markdown.MD038 refused at line 17, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "no-space-in-code") {
+		t.Errorf("the refusal does not give markdownlint's message:\n%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(r.Root, "design")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the refused entry's folders are still there: %v", err)
+	}
+
+	rel := "design/digest/" + goodName
+	write(t, r.Root, rel, edited)
+	body := d0592
+	if _, err := Edit(r, "D-0003", EditOptions{Body: &body, Env: everything}); !errors.As(err, &refused) || len(refused.Problems) != 1 || refused.Problems[0].Rule != "markdown.MD038" {
+		t.Errorf("an edit that brings MD038: want it refused, got %v", err)
+	}
+	if got := readFile(t, r, rel); got != edited {
+		t.Errorf("the refused edit was not put back:\n%s", got)
+	}
+
+	had := strings.Replace(edited, "The first body.", d0592, 1)
+	write(t, r.Root, rel, had)
+	topics := []string{"digest"}
+	if _, err := Edit(r, "D-0003", EditOptions{Topics: &topics, Env: everything}); err != nil {
+		t.Errorf("a finding the entry already had refused the edit: %v", err)
+	}
+}
+
 // edited is an entry written by hand, with a block list, which Edit keeps
 // byte for byte except for what it is given.
 const edited = `---

@@ -135,9 +135,11 @@ from, at least one, each in the project or its archive. --source, --topic,
 and --path are repeatable, or comma separated. The body is a few sentences
 below the heading; it says where a secret lives, never its value.
 
-The check runs on what was written: when it reports anything, such as a
-source that names nothing or text with the shape of a key or token, the file
-is removed, each problem is printed, and the exit code is 4.`,
+The check and the project's markdown lint run on what was written: when
+they report anything, such as a source that names nothing, text with the
+shape of a key or token, or markdown the project's markdownlint
+configuration rejects, the file is removed, each problem is printed, and the
+exit code is 4.`,
 		Example: `  flai digest new "Story worktrees install with the project's pnpm store" --kind cause --source I-0177 --source S-0481 --topic flaiover --path scripts/flaiover-install.sh
   flai digest new "The digest lives under design/digest" --kind answer --source TH-0476 --body-file answer.md --json`,
 		Args: cobra.ExactArgs(1),
@@ -194,9 +196,9 @@ that part of the entry, and leaves the rest of the file as it was: --body or
 flag an empty value, such as --topic=, to empty it. The ID may be written in
 any padding: D-7 is D-0007.
 
-The check runs on what was written: when it reports a problem the change
-introduced, the file is put back as it was, each problem is printed, and
-the exit code is 4.`,
+The check and the project's markdown lint run on what was written: when
+they report a problem the change introduced, the file is put back as it
+was, each problem is printed, and the exit code is 4.`,
 		Example: `  flai digest edit D-0007 --topic cli --topic go
   flai digest edit D-0007 --asked-again TH-0512 --asked-again TH-0530 --json
   flai digest edit D-0007 --body-file - < body.md`,
