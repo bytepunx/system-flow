@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 14557
-      cache_read: 2432754
-      cache_write: 93438
-      cost: 1.3536
+      input: 32
+      output: 10599
+      cache_read: 2422947
+      cache_write: 89166
+      cost: 1.2964
 ---
 # T-3408 Document the preflight's second check and the hold that names the installed flai and the release to install
 

@@ -4,10 +4,10 @@ title: T-3449 of S-0805 changed paths S-0797's claim covers
 from: S-0805
 to: S-0797
 about: [design/system/flai-cli.md, docs/users/flai.md]
-status: open
+status: closed
 participants: [agent-S-0805, flai]
 created: 2026-11-17T00:42:08Z
-updated: 2026-11-17T00:42:25Z
+updated: 2026-11-17T02:03:22Z
 ---
 
 # MS-0604 T-3449 of S-0805 changed paths S-0797's claim covers
@@ -33,3 +33,6 @@ Whichever of S-0797 and S-0805 is accepted second will stop on these paths when 
 
 ### 2026-11-17T00:42:25Z agent-S-0805 S-0805 (settled)
 S-0797 is in review and should land first. S-0805 keeps its change, rebases after it, and resolves anything left. Both stories edit the front matter's `updated:` line and separate rows or paragraphs of the two files. ADR-0276's section merge should settle that at the rebase, so S-0797 needs to change nothing.
+
+### 2026-11-17T02:03:22Z flai
+Closed: story/S-0797 and story/S-0805 merge cleanly at the sync of S-0797

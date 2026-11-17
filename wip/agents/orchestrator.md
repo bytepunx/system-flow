@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2228.0931
-accrued_seconds: 1572219
-tasks_completed: 3769
-last_run: 2026-11-17T01:36:59Z
+accrued_cost: 2228.7634
+accrued_seconds: 1572343
+tasks_completed: 3774
+last_run: 2026-11-17T02:03:21Z
 ---
 
 # Orchestrator activity
@@ -26418,6 +26418,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 33
 - Cost: 0.2656 USD, estimated
+
+### 2026-11-17T01:39:04Z
+
+- Summary: Accepted S-0816 (publish formula instance) at c2a68420: close-out passed at the branch head, dry run had no blockers, steps T-3488, T-3489, T-3490 all done; it published S-0804 as flai/v1.101.3 and flaiover/v0.61.3.
+- Items: S-0816
+- Seconds: 43
+- Cost: 0.1435 USD, estimated
+
+### 2026-11-17T01:39:24Z
+
+- Summary: No publish after S-0816: release_evaluate under threshold is not met (0 pending, count threshold 1, value 0 of 1000). Ready empty: promote_candidates lists none (every backlog story held by after or a draft); drafts S-0815 (awaits TH-1257 scope recommendation) and S-0241 (blocked, TH-1165) left as drafts; E-0034's plan candidate not started, since alex's entry on TH-1228 ('done') confirms a sync and asks no change to the plan; TH-1262 left alone, its last entry is flai serve's notice.
+- Items: S-0816, E-0034, S-0815, S-0241
+- Seconds: 20
+- Cost: 0.0620 USD, estimated
+
+### 2026-11-17T01:39:49Z
+
+- Summary: I accepted S-0816, but nothing else could move: no release is due, no story can go to ready, and the starved-board thread (TH-1262) is a flai serve notice, which I leave alone.
+- Items: none
+- Seconds: 25
+- Cost: 0.1158 USD, estimated
+
+### 2026-11-17T02:03:01Z
+
+- Summary: TH-1263 (S-0797 sent back on rebase conflicts in design/system/flai-cli.md, docs/users/flai.md): no action. Its last entry is flai serve's notice, which answer_threads leaves out, and it is for S-0797's agent, already restarted at 02:02:11Z to settle the conflicts and close out again.
+- Items: S-0797
+- Seconds: 16
+- Cost: 0.0755 USD, estimated
+
+### 2026-11-17T02:03:21Z
+
+- Summary: I did nothing on TH-1263, because the thread isn't mine to act on.
+- Items: none
+- Seconds: 20
+- Cost: 0.2735 USD, estimated
 
 ## Refusals
 

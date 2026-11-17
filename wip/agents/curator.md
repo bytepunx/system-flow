@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 335.8869
-accrued_seconds: 36976
-tasks_completed: 228
-last_run: 2026-11-16T06:25:07Z
+accrued_cost: 338.7046
+accrued_seconds: 37466
+tasks_completed: 230
+last_run: 2026-11-17T01:41:30Z
 ---
 
 # Curator activity
@@ -1835,3 +1835,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 42
 - Cost: 1.1103 USD, estimated
+
+### 2026-11-17T01:40:25Z
+
+- Summary: Wrote D-0651, merged S-0804/T-3430 into D-0612, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0804
+- Items: D-0449, D-0612, D-0648, D-0651
+- Seconds: 436
+- Cost: 2.3966 USD, estimated
+
+### 2026-11-17T01:41:30Z
+
+- Summary: I found nothing to take in, so I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. Harvest found no candidates since 2026-11-17T01:40:25Z. S-0816's one decision, that its agent works the publish formula's steps itself as its tasks, came just before that window, and ADR-0239 § "1. The instance's agent works the steps" already states it. No design document, convention, or ADR has changed since the last run checked the 246 active entries, so nothing new could be absorbed.
+- Trigger: accepted S-0816
+- Items: none
+- Seconds: 54
+- Cost: 0.4211 USD, estimated

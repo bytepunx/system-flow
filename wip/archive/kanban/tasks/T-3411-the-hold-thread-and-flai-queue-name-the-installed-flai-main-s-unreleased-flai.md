@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 18115
-      cache_read: 3027343
-      cache_write: 116275
-      cost: 1.6845
+      input: 39
+      output: 13189
+      cache_read: 3015138
+      cache_write: 110959
+      cost: 1.6133
 ---
 # T-3411 The hold thread and flai queue name the installed flai, main's unreleased flai commits, and the release to install, and I-0382 is closed
 

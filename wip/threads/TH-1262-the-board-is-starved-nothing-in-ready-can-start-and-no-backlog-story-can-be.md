@@ -3,10 +3,10 @@ id: TH-1262
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-17T01:37:46Z
-updated: 2026-11-17T01:37:46Z
+updated: 2026-11-17T02:02:11Z
 ---
 
 # TH-1262 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -38,3 +38,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0813 A tier's queue and when are read as the suites of the batch and the move to review, flai upgrade writes them into a project's file, and the two keys are retired: held by `after`; the root of its chain is S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke (in-progress).
 - S-0814 The review page and the board show the suites each step needs and ran, and follow a state's job in the activity stream: held by `after`; the roots of its chain are S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke (in-progress) and S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name (review).
 - S-0815 In a project made from the template, review needs only the fast suites and an integration state between review and done deploys where a cluster is configured and runs the integration and smoke suites: a draft; finalize it. It waits on TH-1257 Plan for S-0815: five tasks in three layers.
+
+### 2026-11-17T02:02:11Z flai serve
+Resolved: Every in-progress lane is taken, so the board is no longer starved.

@@ -3,10 +3,10 @@ id: S-0797
 type: story
 nature: remediation
 title: The merge queue's preflight holds the queue on main's files when the installed flai is older than the flai main's files are written for, and the hold cannot clear until a release is installed
-status: review
+status: done
 owner: alex
 created: 2026-11-16T00:41:48Z
-updated: 2026-11-16T04:06:58Z
+updated: 2026-11-17T02:26:31Z
 transitions:
   - to: ready
     at: 2026-11-16T01:45:13Z
@@ -17,9 +17,18 @@ transitions:
   - to: review
     at: 2026-11-16T04:06:58Z
     by: agent-S-0797
+  - to: in-progress
+    at: 2026-11-17T02:02:10Z
+    by: flai
+  - to: review
+    at: 2026-11-17T02:25:28Z
+    by: agent-S-0797
+  - to: done
+    at: 2026-11-17T02:26:31Z
+    by: alex
 tags: [merge-queue, flai]
 topics: [merge-queue, release]
-touches: [design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/queue_held_test.go, design/issues/I-0382-the-merge-queue-s-preflight-holds-the-queue-on-main-s-files-when-the-installed.md, design/issues/summary.md]
+touches: [design/adrs/README.md, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/adrs/0311-the-merge-queue-s-preflight-checks-main-again-with-a-flai-built-from-main-when.md, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/land_test.go, flai/internal/check/output.go, flai/internal/check/output_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/queue_held_test.go, design/issues/I-0382-the-merge-queue-s-preflight-holds-the-queue-on-main-s-files-when-the-installed.md, design/issues/summary.md, design/issues/I-0387-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md, design/issues/I-0395-testverifywritesitsprogresstostderronlywhenasked-fails-in-every-close-out-job.md, flai/cmd/verify_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,19 +36,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4074
+  seconds: 5471
   priced_by: harness
   turns:
     - day: 2026-11-16
       ceremony: 6
       work: 47
+    - day: 2026-11-17
+      ceremony: 1
+      hand_edits: 1
+      work: 28
   models:
     - model: claude-opus-5-5
-      input: 330
-      output: 120842
-      cache_read: 20194787
-      cache_write: 775644
-      cost: 11.2367
+      input: 396
+      output: 133025
+      cache_read: 30410133
+      cache_write: 1119111
+      cost: 16.2714
   strategic:
     - kind: planner
       seconds: 36
@@ -52,15 +65,15 @@ usage:
           cache_write: 37898
           cost: 0.681
     - kind: orchestrator
-      seconds: 176
+      seconds: 192
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 48
-          output: 369
-          cache_read: 1801001
-          cache_write: 249750
-          cost: 0.6245
+          input: 56
+          output: 431
+          cache_read: 1979793
+          cache_write: 316514
+          cost: 0.7
         - model: claude-sonnet-5-5
           input: 4
           output: 49
@@ -103,6 +116,7 @@ Proposed, for the story to settle in an ADR: the preflight tells a finding the i
 - T-3406 The preflight checks main again with the manifest's flai.command when the running flai is behind, and records the cause on a hold it cannot clear that way
 - T-3408 Document the preflight's second check and the hold that names the installed flai and the release to install
 - T-3411 The hold thread and flai queue name the installed flai, main's unreleased flai commits, and the release to install, and I-0382 is closed
+- T-3491 TestVerifyWritesItsProgressToStderrOnlyWhenAsked clears FLAI_VERIFY_PROGRESS before its run without it, so it passes in a close-out job (I-0395)
 
 ## Notes
 
@@ -131,3 +145,4 @@ Figures:
 
 - Forecast 1h30m, delivered by 05:23Z. flai's 33m is the median over large remediation stories, at size 17. It was raised for an ADR, a git comparison, a second check through `flai.command` in a scratch worktree, the hold's words, three documents, and a close-out of about 10m. S-0795 took 54m against a 40m forecast. The delivery moved by the same 57m from flai's 04:26.
 - Cost of delay 450 USD a week, as `flai cod` gives it from the inputs flai set from I-0382: 3h lost per cycle at 150 USD an hour, one cycle a week. It stands: the hold stopped every landing for about 3h, and the next format change will cause it again.
+- 2026-11-17T02:02:10Z: moved to in-progress: rebase and resolve job S-0797-20261117T020209Z: the rebase of story/S-0797 onto main stopped on conflicts in design/system/flai-cli.md, docs/users/flai.md, which flai aborted, so the branch is as it was; its agent settles it in the worktree and syncs it with flai stream sync S-0797

@@ -9,7 +9,7 @@ date: 2026-11-16
 status: absorbed
 absorbed_by: "design/system/template.md#upgrading-a-project"
 asked_again: []
-cited: []
+cited: [S-0815, T-3463, TH-1257]
 ---
 
 # D-0648 The template's design/workflows/board.md must equal flai's embedded baseline, flai/internal/workflow/baseline/board.md, byte for byte, so a story that changes the baseline board copies it to the template in the same story

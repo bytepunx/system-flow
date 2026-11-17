@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 24949
-      cache_read: 4169395
-      cache_write: 160139
-      cost: 2.3199
+      input: 54
+      output: 18165
+      cache_read: 4152586
+      cache_write: 152818
+      cost: 2.2219
 ---
 # T-3406 The preflight checks main again with the manifest's flai.command when the running flai is behind, and records the cause on a hold it cannot clear that way
 
