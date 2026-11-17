@@ -118,6 +118,9 @@ func TestAsTester(t *testing.T) {
 		testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf,
 		testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged,
 		testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged,
+		testSyncMergesByWordsATableRowAndASentenceMainInsertedOtherWordsInto,
+		testAcceptLandsAStoryThatInsertedOtherWordsIntoATableRowAndASentenceMainChanged,
+		testAcceptSendsBackAStoryThatInsertedWordsWhereMainInsertedIntoATableRow,
 		testSyncMergesTwoStoriesChangelogLinesByUnion,
 		testSyncTrialMergeReadsMergeUnionFromTheMainCheckout,
 		testSyncPutsTheBranchsChangelogLinesBackUnderUnreleased,
@@ -1712,6 +1715,7 @@ const (
 	adaptersFirstMain    = "The container harness runs the agent in a container of flai's own."
 	adaptersSecondMain   = "It mounts the story's worktree read-write and nothing else."
 	adaptersSecondStorys = "It mounts the story's worktree and the shared cache."
+	adaptersSecondAtMain = "It mounts the story's worktree read-only and nothing else."
 	adaptersThirdStorys  = "It ends when the agent ends, and removes the container."
 )
 
@@ -1724,31 +1728,38 @@ func adaptersText(sentences ...string) string {
 		"## Today\n\nOne harness.\n"
 }
 
-// sentenceStories commits adaptersDoc on main, makes S-0001 and S-0002 in
-// progress, whose branches change its paragraph to ones and to twos, and
-// accepts S-0001, as S-0666 was accepted before S-0688 (I-0346). The
-// project's manifest shares no path, so adaptersDoc is outside claims.shared.
-// It fails t unless git's own merge of story/S-0002 onto main then conflicts
-// in adaptersDoc, so that a rebase without the section merge would stop. It
-// returns the main checkout and S-0002's worktree.
+// sentenceStories is docStories on adaptersDoc, whose paragraph S-0001's
+// branch changes to ones and S-0002's to twos, as S-0666 was accepted before
+// S-0688 (I-0346).
 func sentenceStories(t *testing.T, ones, twos []string) (root, wt string) {
 	t.Helper()
+	return docStories(t, adaptersDoc, adaptersText(adaptersFirst, adaptersSecond, adaptersThird), adaptersText(ones...), adaptersText(twos...))
+}
+
+// docStories commits doc on main as base, makes S-0001 and S-0002 in
+// progress, whose branches change it to one and to two, and accepts S-0001.
+// The project's manifest shares no path, so doc is outside claims.shared. It
+// fails t unless git's own merge of story/S-0002 onto main then conflicts in
+// doc, so that a rebase without the section merge would stop. It returns the
+// main checkout and S-0002's worktree.
+func docStories(t *testing.T, doc, base, one, two string) (root, wt string) {
+	t.Helper()
 	root = syncProject(t)
-	_ = os.MkdirAll(filepath.Join(root, "design", "system"), 0o755)
-	_ = os.WriteFile(filepath.Join(root, filepath.FromSlash(adaptersDoc)), []byte(adaptersText(adaptersFirst, adaptersSecond, adaptersThird)), 0o644)
-	gitIn(t, root, "add", adaptersDoc)
-	gitIn(t, root, "commit", "-q", "-m", "docs: agent adapters")
-	one := openSyncStory(t, root, 1, adaptersDoc)
-	wt = openSyncStory(t, root, 2, adaptersDoc)
-	commitIn(t, one, adaptersDoc, adaptersText(ones...))
-	commitIn(t, wt, adaptersDoc, adaptersText(twos...))
+	_ = os.MkdirAll(filepath.Dir(filepath.Join(root, filepath.FromSlash(doc))), 0o755)
+	_ = os.WriteFile(filepath.Join(root, filepath.FromSlash(doc)), []byte(base), 0o644)
+	gitIn(t, root, "add", doc)
+	gitIn(t, root, "commit", "-q", "-m", "docs: "+doc)
+	first := openSyncStory(t, root, 1, doc)
+	wt = openSyncStory(t, root, 2, doc)
+	commitIn(t, first, doc, one)
+	commitIn(t, wt, doc, two)
 	issueStoryInReview(t, root, "S-0001", "T-0001")
 	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
 		t.Fatalf("acceptance of S-0001: %d %s", code, errOut)
 	}
 	raw, err := storygit.TrialMerge(execx.System{}, root, "main", "story/S-0002")
-	if err != nil || !slices.Contains(raw, adaptersDoc) {
-		t.Fatalf("git's merge onto main does not conflict in %s: %v %q", adaptersDoc, err, raw)
+	if err != nil || !slices.Contains(raw, doc) {
+		t.Fatalf("git's merge onto main does not conflict in %s: %v %q", doc, err, raw)
 	}
 	return root, wt
 }
@@ -1760,23 +1771,34 @@ func sentenceStories(t *testing.T, ones, twos []string) (root, wt string) {
 // sentences, keeping main's sentence and the story's, and finishes the rebase
 // with no conflict left in the worktree.
 func testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf(t *testing.T) {
-	_, wt := sentenceStories(t,
+	root, wt := sentenceStories(t,
 		[]string{adaptersFirstMain, adaptersSecond, adaptersThird},
 		[]string{adaptersFirst, adaptersSecond, adaptersThirdStorys})
+	syncSettles(t, root, wt, adaptersDoc, adaptersText(adaptersFirstMain, adaptersSecond, adaptersThirdStorys))
+}
 
+// syncSettles runs S-0002's sync in wt and fails t unless it finishes the
+// rebase with doc merged, no conflict left, nothing of main's undone, and
+// doc on the branch as want.
+func syncSettles(t *testing.T, root, wt, doc, want string) {
+	t.Helper()
 	js, errOut, code := runIn(t, wt, "--json", "stream", "sync", "S-0002")
 	if code != 0 {
-		t.Fatalf("the sync stopped on %s: %d %s %s", adaptersDoc, code, js, errOut)
+		t.Fatalf("the sync stopped on %s: %d %s %s", doc, code, js, errOut)
 	}
 	var res struct {
-		OK     bool     `json:"ok"`
-		Merged []string `json:"merged"`
+		OK         bool              `json:"ok"`
+		Merged     []string          `json:"merged"`
+		UndoesMain []storygit.Undone `json:"undoes_main"`
 	}
 	if err := json.Unmarshal([]byte(js), &res); err != nil {
 		t.Fatalf("%v: %s", err, js)
 	}
-	if !res.OK || !slices.Equal(res.Merged, []string{adaptersDoc}) {
-		t.Errorf("sync --json: ok %v, merged %q; want %s merged", res.OK, res.Merged, adaptersDoc)
+	if !res.OK || !slices.Equal(res.Merged, []string{doc}) {
+		t.Errorf("sync --json: ok %v, merged %q; want %s merged", res.OK, res.Merged, doc)
+	}
+	if len(res.UndoesMain) != 0 {
+		t.Errorf("the merge undoes main's change: %+v", res.UndoesMain)
 	}
 	if storygit.RebaseInProgress(execx.System{}, wt) {
 		t.Fatal("the rebase is left in progress")
@@ -1787,19 +1809,78 @@ func testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf(t *testing.
 	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
 		t.Errorf("the worktree is not clean after the sync: %s", st)
 	}
-	if got := gitIn(t, wt, "log", "--format=%s", "main..HEAD"); got != "change "+adaptersDoc {
+	if got := gitIn(t, wt, "log", "--format=%s", "main..HEAD"); got != "change "+doc {
 		t.Errorf("story/S-0002's commits on main:\n%s", got)
 	}
-	isAdapters(t, "the branch's "+adaptersDoc, gitIn(t, wt, "show", "HEAD:"+adaptersDoc), adaptersFirstMain, adaptersSecond, adaptersThirdStorys)
+	isText(t, "the branch's "+doc, gitIn(t, wt, "show", "HEAD:"+doc), want)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if undone, err := storygit.RecordedUndone(execx.System{}, repo, "S-0002"); err != nil || len(undone) != 0 {
+		t.Errorf("S-0002's record holds paths it undoes of main: %v %+v", err, undone)
+	}
 }
 
-// isAdapters fails t unless text is adaptersDoc with its paragraph of
-// sentences, as git show prints it.
-func isAdapters(t *testing.T, where, text string, sentences ...string) {
+// isText fails t unless text, as git show prints it, is want.
+func isText(t *testing.T, where, text, want string) {
 	t.Helper()
-	if want := adaptersText(sentences...); text != strings.TrimSuffix(want, "\n") {
+	if text != strings.TrimSuffix(want, "\n") {
 		t.Errorf("%s:\n%s\nwant:\n%s", where, text, want)
 	}
+}
+
+// cliDoc is a design document outside claims.shared, shaped as
+// design/system/flai-cli.md was when I-0387 met it: a section with a table
+// row and a paragraph, each one line, into which main and a story each
+// inserted words at different places.
+const cliDoc = "design/system/flai-cli.md"
+
+// The table row and the paragraph's first sentence of cliDoc's section: as
+// main had them before either story, with words main inserted, with words the
+// story inserted at another place, with both, and with words the story
+// inserted where main inserted its own.
+const (
+	cliRow        = "| `flai queue [--json]` | Lists the merge queue's entries in order. |"
+	cliRowMain    = "| `flai queue [--json]` | Lists the merge queue's waiting entries in order. |"
+	cliRowStorys  = "| `flai queue [--json]` | Lists the merge queue's entries in pull order. |"
+	cliRowBoth    = "| `flai queue [--json]` | Lists the merge queue's waiting entries in pull order. |"
+	cliRowAtMains = "| `flai queue [--json]` | Lists the merge queue's open entries in order. |"
+
+	cliSentence       = "With `--json` it prints the queue as one object."
+	cliSentenceMain   = "With `--json` it prints the whole queue as one object."
+	cliSentenceStorys = "With `--json` it prints the queue as one JSON object."
+	cliSentenceBoth   = "With `--json` it prints the whole queue as one JSON object."
+)
+
+// cliText is cliDoc with row as its commands table's last row and sentence
+// as the first of the paragraph after the table, each on one line as this
+// repository writes them.
+func cliText(row, sentence string) string {
+	return "---\ntitle: flai CLI\nupdated: 2026-11-16\nstatus: active\n---\n\n" +
+		"# flai CLI\n\nThe commands.\n\n" +
+		"## Commands\n\n| Command | What it does |\n| --- | --- |\n| `flai board` | Prints the board. |\n" + row + "\n\n" +
+		sentence + " Each entry names its story.\n\n" +
+		"## Today\n\nOne CLI.\n"
+}
+
+// cliStories is docStories on cliDoc, whose table row and sentence S-0001's
+// branch changes to rowOne and sentenceOne and S-0002's to rowTwo and
+// sentenceTwo, as S-0799 and S-0805 were accepted before S-0797 (I-0387).
+func cliStories(t *testing.T, rowOne, sentenceOne, rowTwo, sentenceTwo string) (root, wt string) {
+	t.Helper()
+	return docStories(t, cliDoc, cliText(cliRow, cliSentence), cliText(rowOne, sentenceOne), cliText(rowTwo, sentenceTwo))
+}
+
+// I-0387, ADR-0314: main and a story each inserted words at different places
+// of one table row and of one sentence of a paragraph of a design document,
+// which neither the line merge nor the sentence merge could keep both of, so
+// the story's sync stopped. The sync now merges those lines by their words,
+// keeping main's words and the story's, and finishes the rebase with nothing
+// of main's undone.
+func testSyncMergesByWordsATableRowAndASentenceMainInsertedOtherWordsInto(t *testing.T) {
+	root, wt := cliStories(t, cliRowMain, cliSentenceMain, cliRowStorys, cliSentenceStorys)
+	syncSettles(t, root, wt, cliDoc, cliText(cliRowBoth, cliSentenceBoth))
 }
 
 // sharedFriction is the issue file bumpStories records on main.

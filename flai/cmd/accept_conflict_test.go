@@ -403,16 +403,35 @@ func testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged(t *t
 	root, wt := sentenceStories(t,
 		[]string{adaptersFirstMain, adaptersSecond, adaptersThird},
 		[]string{adaptersFirst, adaptersSecond, adaptersThirdStorys})
+	acceptLands(t, root, wt, adaptersDoc, adaptersText(adaptersFirstMain, adaptersSecond, adaptersThirdStorys))
+}
+
+// I-0387, ADR-0314: S-0799 and S-0805 on main, and S-0797, each inserted
+// words at different places of one table row and of one sentence of a
+// paragraph of a design document; once the first was accepted, the second's
+// acceptance stopped on it and sent it back. The section merge now merges
+// those lines by their words, so the acceptance lands the story, with main's
+// words and the story's on main, and sends nothing back.
+func testAcceptLandsAStoryThatInsertedOtherWordsIntoATableRowAndASentenceMainChanged(t *testing.T) {
+	root, wt := cliStories(t, cliRowMain, cliSentenceMain, cliRowStorys, cliSentenceStorys)
+	acceptLands(t, root, wt, cliDoc, cliText(cliRowBoth, cliSentenceBoth))
+}
+
+// acceptLands puts S-0002 in review and fails t unless its acceptance lands
+// it with doc on main as want, removes its branch and worktree, archives it,
+// and opens no send-back thread.
+func acceptLands(t *testing.T, root, wt, doc, want string) {
+	t.Helper()
 	issueStoryInReview(t, root, "S-0002", "T-0002")
 
 	_, errOut, code := runIn(t, root, "accept", "S-0002", "--by", "alex")
 	if code != 0 {
-		t.Fatalf("the acceptance stopped on %s: %d %s", adaptersDoc, code, errOut)
+		t.Fatalf("the acceptance stopped on %s: %d %s", doc, code, errOut)
 	}
 	if strings.Contains(errOut, "sent back") {
 		t.Errorf("the story was sent back:\n%s", errOut)
 	}
-	isAdapters(t, "main's "+adaptersDoc, gitIn(t, root, "show", "main:"+adaptersDoc), adaptersFirstMain, adaptersSecond, adaptersThirdStorys)
+	isText(t, "main's "+doc, gitIn(t, root, "show", "main:"+doc), want)
 	if gitIn(t, root, "branch", "--list", "story/S-0002") != "" {
 		t.Error("an accepted story's branch is removed")
 	}
@@ -441,15 +460,33 @@ func testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged(t *t
 	}
 }
 
-// I-0346, ADR-0287: where both stories changed the same sentence of the
-// paragraph, each its own way, the sentence merge cannot keep both, so the
-// acceptance still sends the story back, as it sends back any rebase it
-// cannot settle: the worktree is clean at the branch's head, main keeps the
-// first story's sentence, and the story is in progress again, moved by flai.
+// I-0346, ADR-0287, ADR-0314: where both stories changed the same sentence of
+// the paragraph at the same point, each inserting its own word there, neither
+// the sentence merge nor the word merge can keep both, so the acceptance still
+// sends the story back, as it sends back any rebase it cannot settle: the
+// worktree is clean at the branch's head, main keeps the first story's
+// sentence, and the story is in progress again, moved by flai.
 func testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged(t *testing.T) {
 	root, wt := sentenceStories(t,
 		[]string{adaptersFirst, adaptersSecondMain, adaptersThird},
-		[]string{adaptersFirst, adaptersSecondStorys, adaptersThird})
+		[]string{adaptersFirst, adaptersSecondAtMain, adaptersThird})
+	acceptSendsBack(t, root, wt, adaptersDoc, adaptersText(adaptersFirst, adaptersSecondMain, adaptersThird))
+}
+
+// I-0387, ADR-0314: where both stories inserted different words at the same
+// place of a table row, the word merge cannot tell which go first, so the
+// acceptance still sends the story back.
+func testAcceptSendsBackAStoryThatInsertedWordsWhereMainInsertedIntoATableRow(t *testing.T) {
+	root, wt := cliStories(t, cliRowMain, cliSentence, cliRowAtMains, cliSentence)
+	acceptSendsBack(t, root, wt, cliDoc, cliText(cliRowMain, cliSentence))
+}
+
+// acceptSendsBack puts S-0002 in review and fails t unless its acceptance
+// stops on doc and sends it back, as it sends back any rebase it cannot
+// settle: the worktree is clean at the branch's head, main has not moved and
+// holds doc as want, and the story is in progress again, moved by flai.
+func acceptSendsBack(t *testing.T, root, wt, doc, want string) {
+	t.Helper()
 	issueStoryInReview(t, root, "S-0002", "T-0002")
 	head := gitIn(t, wt, "rev-parse", "HEAD")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
@@ -458,9 +495,9 @@ func testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged(t *t
 	if code == 0 {
 		t.Fatalf("the send back is not an acceptance: %d %s", code, errOut)
 	}
-	for _, want := range []string{"S-0002 was sent back to in-progress", "stopped on conflicts in " + adaptersDoc, "its agent resolves them on TH-"} {
-		if !strings.Contains(errOut, want) {
-			t.Errorf("the refusal must say %q:\n%s", want, errOut)
+	for _, says := range []string{"S-0002 was sent back to in-progress", "stopped on conflicts in " + doc, "its agent resolves them on TH-"} {
+		if !strings.Contains(errOut, says) {
+			t.Errorf("the refusal must say %q:\n%s", says, errOut)
 		}
 	}
 	if storygit.RebaseInProgress(execx.System{}, wt) {
@@ -475,7 +512,7 @@ func testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged(t *t
 	if got := gitIn(t, root, "rev-parse", "main"); got != mainBefore {
 		t.Errorf("main moved from %s to %s", mainBefore, got)
 	}
-	isAdapters(t, "main's "+adaptersDoc, gitIn(t, root, "show", "main:"+adaptersDoc), adaptersFirst, adaptersSecondMain, adaptersThird)
+	isText(t, "main's "+doc, gitIn(t, root, "show", "main:"+doc), want)
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
