@@ -2,12 +2,12 @@
 id: I-0356
 title: The dashboard's kluster setup form does not show kluster.agent_namespaces
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-13T08:42:09Z
 last_reported: 2026-11-13T08:42:09Z
-updated: 2026-11-17T08:17:22Z
+updated: 2026-11-17T10:09:14Z
 ---
 
 # I-0356 The dashboard's kluster setup form does not show kluster.agent_namespaces
@@ -24,3 +24,4 @@ S-0660 added kluster.agent_namespaces to the kluster: block and to flai manifest
 ## Remediation
 
 Story S-0830 remediates this issue, created from it at 2026-11-17T08:17:22Z.
+Closed 2026-11-17T10:09:14Z: S-0830: the dashboard's kluster setup form, DeploySettings, now shows kluster.agent_namespaces below the timeout, as its digits with the default as placeholder, and saves a change, or unsets the emptied key, through settings.manifest, which flai manifest set checks as a whole number (commit 2ce9ebb). DeploySettings.svelte.test.ts reproduces the cause: its I-0356 test fails against main's component, which showed no field, and passes with the fix.
