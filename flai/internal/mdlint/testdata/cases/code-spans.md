@@ -81,3 +81,11 @@ Hard `x
 y` seven.
 
 Escaped \` opens no code span, and `x``y ` holds a run of two.
+
+I-0363: escaped backticks in a code span, from D-0592.
+
+`storygit`'s sync result carries JSON tags (`RegeneratedAtHead []string \`json:"regenerated_at_head"\`` in `flai/internal/storygit/sync.go`). But`flai stream sync --json` does not marshal that struct. `flai/cmd/stream.go` builds its own `map[string]any`, one for a stopped sync and one for a finished one, naming each key. A field added to the result alone never reaches the command's output.
+
+As the curator first wrote it, which markdownlint reports too:
+
+`storygit`'s sync result carries JSON tags (`RegeneratedAtHead []string \`json:"regenerated_at_head"\`` in `flai/internal/storygit/sync.go`). But `flai stream sync --json` does not marshal that struct. `flai/cmd/stream.go` builds its own `map[string]any`, one for a stopped sync and one for a finished one, naming each key. A field added to the result alone never reaches the command's output.

@@ -90,6 +90,7 @@ code-spans.md:76 MD038
 code-spans.md:76 MD038
 code-spans.md:78 MD038
 code-spans.md:83 MD038
+code-spans.md:91 MD038
 email.md:3 MD034
 email.md:5 MD034
 email.md:7 MD034
