@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 348.4982
-accrued_seconds: 38955
-tasks_completed: 239
-last_run: 2026-11-17T07:55:08Z
+accrued_cost: 350.2055
+accrued_seconds: 39081
+tasks_completed: 240
+last_run: 2026-11-17T08:17:59Z
 ---
 
 # Curator activity
@@ -1923,3 +1923,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0554, D-0659
 - Seconds: 82
 - Cost: 0.8842 USD, estimated
+
+### 2026-11-17T08:17:59Z
+
+- Summary: I wrote no new entries, merged S-0805 into D-0449, absorbed D-0660 (by ADR-0305 § Decision) and D-0661 (by ADR-0312 § Decision), and `flai digest compact` compacted none; S-0805's other eight decisions were progress, conflict chatter, already in `flai-cli.md` or `project-manifest.md`, or answered by D-0661.
+- Trigger: accepted S-0805
+- Items: D-0449, D-0660, D-0661
+- Seconds: 126
+- Cost: 1.7073 USD, estimated

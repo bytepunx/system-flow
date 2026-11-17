@@ -56,15 +56,15 @@ usage:
       cost: 23.3516
   strategic:
     - kind: orchestrator
-      seconds: 108
+      seconds: 116
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 32
-          output: 192
-          cache_read: 1138985
-          cache_write: 139056
-          cost: 0.3847
+          input: 33
+          output: 194
+          cache_read: 1215070
+          cache_write: 143802
+          cost: 0.4097
 cost_of_delay:
   value: 106.89
   by: system-flow

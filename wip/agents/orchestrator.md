@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2238.2446
-accrued_seconds: 1574240
-tasks_completed: 3841
-last_run: 2026-11-17T08:16:51Z
+accrued_cost: 2238.5542
+accrued_seconds: 1574327
+tasks_completed: 3844
+last_run: 2026-11-17T08:18:18Z
 ---
 
 # Orchestrator activity
@@ -26922,6 +26922,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0826, S-0805
 - Seconds: 27
 - Cost: 0.0845 USD, estimated
+
+### 2026-11-17T08:17:37Z
+
+- Summary: ready-empty: S-0805's acceptance unheld S-0806, which started; ordered ready by throughput (S-0754 30m, S-0752 33m, S-0756 45m, S-0808 1h15m, S-0807 1h30m, S-0826 no forecast); promote_candidates lists none (rest held by after, or drafts S-0822 to S-0835 with no plan; planner on S-0822 runs, the rest follow one at a time). TH-1273 left alone: its last entry is flai serve's notice.
+- Items: S-0806, S-0822
+- Seconds: 46
+- Cost: 0.1381 USD, estimated
+
+### 2026-11-17T08:17:53Z
+
+- Summary: S-0750 accepted by alex by hand at 08:17:12Z while my re-verify job ran (it then stopped at integration on the merged branch); nothing more of mine on it. Release still met under threshold (2 accepted, 382.29 USD/week): no second formula run, since instance S-0826, in progress, publishes everything pending, S-0750 included.
+- Items: S-0750, S-0826
+- Seconds: 16
+- Cost: 0.0500 USD, estimated
+
+### 2026-11-17T08:18:18Z
+
+- Summary: I accepted S-0805, and you accepted S-0750 yourself. A publish instance, S-0826, is now running, and every reason this run was started for has been handled.
+- Items: none
+- Seconds: 25
+- Cost: 0.1215 USD, estimated
 
 ## Refusals
 

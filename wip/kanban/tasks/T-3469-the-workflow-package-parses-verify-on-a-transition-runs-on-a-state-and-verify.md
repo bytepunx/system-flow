@@ -3,12 +3,18 @@ id: T-3469
 type: task
 nature: feature
 title: The workflow package parses verify on a transition, runs on a state, and verify_at, and lists the suites a file names
-status: backlog
+status: in-progress
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:26Z
-updated: 2026-11-16T23:50:26Z
-transitions: []
+updated: 2026-11-17T08:17:47Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:17:41Z
+    by: agent-S-0806
+  - to: in-progress
+    at: 2026-11-17T08:17:47Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai]
 touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go]

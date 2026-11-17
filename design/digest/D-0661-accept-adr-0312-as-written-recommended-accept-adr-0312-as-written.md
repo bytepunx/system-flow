@@ -6,8 +6,8 @@ sources: [TH-1258]
 topics: [verify, workflow, cli, template, flai, go, conventions, code, all]
 paths: [design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md, design/adrs/README.md, flai/internal/manifest/manifest_tests.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/tests_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 date: 2026-11-17
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md#decision"
 asked_again: []
 cited: []
 ---

@@ -2,9 +2,9 @@
 id: D-0630
 title: A flai package reads the board's states through repo.Flow() and the workflow package's lookups, Kind, OfKind, Find, WithEffect, and Permits, not through a workitem helper
 kind: decision
-sources: [S-0746, S-0749]
+sources: [S-0746, S-0749, S-0750]
 topics: [flai, go, code]
-paths: [flai/internal/workflow, flai/internal/workitem/repo.go, flai/internal/mcpserver, flai/internal/storystart, flai/internal/taskdone, flai/internal/inbox, flai/internal/itemedit, flai/internal/storygit, flai/internal/guard, flai/internal/messages, flai/internal/planning]
+paths: [flai/internal/workflow, flai/internal/workitem/repo.go, flai/internal/mcpserver, flai/internal/storystart, flai/internal/taskdone, flai/internal/inbox, flai/internal/itemedit, flai/internal/storygit, flai/internal/guard, flai/internal/messages, flai/internal/planning, flai/internal/metrics]
 date: 2026-11-15
 status: active
 absorbed_by: ""
@@ -28,4 +28,8 @@ S-0749 followed this entry for the guard, messages, the forecast, prime packs, t
 
 So an E-0034 story moving a package onto kinds writes `XIn(flow workflow.Workflow, ...)` with the logic and keeps the old exported function as a wrapper that passes `workflow.Baseline()` or `repo.Flow()`, rather than changing each caller's signature.
 
-Sources: S-0746's and S-0749's narratives, `wip/archive/agents/S-0746.md` and `wip/archive/agents/S-0749.md`, § Decisions.
+S-0750 followed it for the metrics in `flai/internal/metrics` (`wip/archive/agents/S-0750.md`, § Decisions):
+
+> Following D-0630, the metrics read states through the workflow package's lookups (Kind, OfKind, WithEffect), not through a new workitem helper. committed and started are the first moves into the states the commit and pull transitions move to (ADR-0305 §5).
+
+Sources: S-0746's, S-0749's, and S-0750's narratives, `wip/archive/agents/S-0746.md`, `wip/archive/agents/S-0749.md`, and `wip/archive/agents/S-0750.md`, § Decisions.

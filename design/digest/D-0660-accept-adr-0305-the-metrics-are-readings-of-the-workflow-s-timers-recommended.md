@@ -6,8 +6,8 @@ sources: [TH-1223]
 topics: [cli, analysis, template, flai, go, code, all]
 paths: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md, flai/internal/metrics/claims_test.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/concurrency.go, flai/internal/metrics/reopen_test.go, flai/internal/metrics/stats_golden_test.go, flai/internal/metrics/testdata/good.stats.golden.json]
 date: 2026-11-17
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md#decision"
 asked_again: []
 cited: []
 ---
