@@ -2,12 +2,12 @@
 id: I-0370
 title: scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-13T20:39:18Z
 last_reported: 2026-11-13T20:39:18Z
-updated: 2026-11-17T08:32:52Z
+updated: 2026-11-17T12:55:36Z
 ---
 
 # I-0370 scripts/flai-test.sh's repository check fails on this host while story/S-0001, S-0002, S-0003, and S-0005 are never merged
@@ -24,3 +24,4 @@ S-0777 ran scripts/flai-test.sh on Linux, as its criterion 4 asks. Every Go tier
 ## Remediation
 
 Story S-0841 remediates this issue, created from it at 2026-11-17T08:32:52Z.
+Closed 2026-11-17T12:55:36Z: S-0841 verified the cause no longer occurs. The four branches came from S-0777's test run leaking `flai story start` into the main repository; S-0781 (I-0371) stopped the leak by setting GIT_CEILING_DIRECTORIES in the TestMain of flai/cmd and flai/internal/mcpserver, with TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch reproducing it, and deleted story/S-0001, S-0002, S-0003, and S-0005 with the operator's approval on TH-1190. On 2026-11-17 the main checkout has no story/S-000* branch and its unscoped flai check --strict reports no story.unaccepted.
