@@ -3,15 +3,18 @@ id: S-0806
 type: story
 nature: feature
 title: The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T08:15:47Z
+updated: 2026-11-17T08:16:01Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
     by: alex
+  - to: in-progress
+    at: 2026-11-17T08:16:01Z
+    by: agent-S-0806
 tags: [flai, template]
 topics: [verify, workflow]
 touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md]

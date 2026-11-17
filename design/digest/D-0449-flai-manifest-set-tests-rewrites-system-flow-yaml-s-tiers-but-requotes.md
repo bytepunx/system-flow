@@ -2,7 +2,7 @@
 id: D-0449
 title: "flai manifest set tests= rewrites system-flow.yaml's tiers but requotes unrelated paths lines, so a story that changes one tier hand-edits the manifest and validates it with flai check"
 kind: decision
-sources: [S-0547, S-0644]
+sources: [S-0547, S-0644, S-0805]
 topics: [testing, cli, flai]
 paths: [system-flow.yaml, flai/internal/manifest/settings.go, flai/internal/verify/select_test.go]
 date: 2026-11-02
@@ -20,4 +20,6 @@ So a story that changes one test tier while another open story also changes `sys
 
 S-0644 did the same when it added the `design-routes` tier: "The manifest's `tests` block is edited by hand, as S-0592 did for `settings-index` (38e021d62); no flai command writes it." A repository-manifest test in `flai/internal/verify/select_test.go` then holds the new tier in the manifest, as S-0644's `TestRepositoryManifestChecksTheDashboardDesignsRoutesWhenEitherChanges` does.
 
-Sources: S-0547's and S-0644's narratives, § Decisions.
+S-0805 held to it again when it gave every tier of this repository a `suite:` (`wip/archive/agents/S-0805.md`, § Decisions): "system-flow.yaml's tiers are edited by hand, not with flai manifest set tests=, which requotes unrelated paths lines (D-0449)."
+
+Sources: S-0547's, S-0644's, and S-0805's narratives, § Decisions.

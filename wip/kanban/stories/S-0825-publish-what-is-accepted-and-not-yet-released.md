@@ -3,16 +3,19 @@ id: S-0825
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-17T07:54:16Z
-updated: 2026-11-17T08:14:03Z
+updated: 2026-11-17T08:17:03Z
 transitions:
   - to: ready
     at: 2026-11-17T07:54:18Z
     by: system-flow
   - to: in-progress
     at: 2026-11-17T08:14:03Z
+    by: agent-S-0825
+  - to: review
+    at: 2026-11-17T08:17:03Z
     by: agent-S-0825
 tags: []
 touches: [wip/kanban/stories/S-0825-publish-what-is-accepted-and-not-yet-released.md]
@@ -23,19 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 75
+  seconds: 142
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-17
-      work: 13
+      work: 17
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 225
-      cache_read: 1411382
-      cache_write: 156186
-      cost: 0.5972
+      input: 36
+      output: 289
+      cache_read: 2119544
+      cache_write: 167825
+      cost: 0.8714
   strategic:
     - kind: orchestrator
       seconds: 42
@@ -63,9 +66,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3513 Fetch the remote's branch and tags
@@ -75,3 +78,10 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+Published on 2026-11-17 by step 3, `flai release --pending`, which pushed the branch and these tags:
+
+| Component | From | To | Tag | Items |
+|-----------|------|----|-----|-------|
+| flai | 1.102.0 | 1.103.0 | `flai/v1.103.0` | S-0742, S-0753, S-0817, S-0819 |
+| flaiover | 0.61.3 | 0.62.0 | `flaiover/v0.62.0` | S-0753 |

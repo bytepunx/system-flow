@@ -3,11 +3,11 @@ id: S-0750
 type: story
 nature: feature
 title: flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-17T08:13:56Z
+updated: 2026-11-17T08:17:12Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:20Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-17T08:13:56Z
     by: agent-S-0750
+  - to: done
+    at: 2026-11-17T08:17:12Z
+    by: alex
 blocked:
   - from: 2026-11-15T21:30:58Z
     until: 2026-11-15T21:53:40Z
@@ -53,15 +56,15 @@ usage:
       cost: 23.3516
   strategic:
     - kind: orchestrator
-      seconds: 86
+      seconds: 108
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 187
-          cache_read: 1013459
-          cache_write: 137453
-          cost: 0.3453
+          input: 32
+          output: 192
+          cache_read: 1138985
+          cache_write: 139056
+          cost: 0.3847
 cost_of_delay:
   value: 106.89
   by: system-flow

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2237.9777
-accrued_seconds: 1574148
-tasks_completed: 3838
-last_run: 2026-11-17T08:15:12Z
+accrued_cost: 2238.2446
+accrued_seconds: 1574240
+tasks_completed: 3841
+last_run: 2026-11-17T08:16:51Z
 ---
 
 # Orchestrator activity
@@ -26901,6 +26901,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0822
 - Seconds: 44
 - Cost: 0.3928 USD, estimated
+
+### 2026-11-17T08:16:02Z
+
+- Summary: Accepted S-0805 at 263658fccfe5 under accept_reviews: close-out passed at the branch head, the verifier matched all 5 criteria to changed files, dry run showed no blockers. Merged and archived 6 items.
+- Items: S-0805
+- Seconds: 43
+- Cost: 0.1430 USD, estimated
+
+### 2026-11-17T08:16:24Z
+
+- Summary: S-0750: verifier matched all 6 criteria at 551e6f95e591, but the accept dry run reports verify_behind_main after S-0805 landed (5 overlapping paths send back gofmt, vet, golangci-lint, markdown, integration, smoke). Asked flai serve for its close-out again, job S-0750-20261117T081621Z; left in review for a later run to accept on the new verdict.
+- Items: S-0750
+- Seconds: 22
+- Cost: 0.0394 USD, estimated
+
+### 2026-11-17T08:16:51Z
+
+- Summary: release_evaluate met after S-0805's acceptance under threshold (count 1 at or over 1; value 275.4 of 1000): started the publish formula, instance S-0826, now ready (commit 574235759).
+- Items: S-0826, S-0805
+- Seconds: 27
+- Cost: 0.0845 USD, estimated
 
 ## Refusals
 
