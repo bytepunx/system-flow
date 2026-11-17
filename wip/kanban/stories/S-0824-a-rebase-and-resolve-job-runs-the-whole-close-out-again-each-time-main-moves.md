@@ -6,7 +6,7 @@ title: A rebase and resolve job runs the whole close-out again each time main mo
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:20Z
-updated: 2026-11-17T08:32:35Z
+updated: 2026-11-17T08:34:32Z
 transitions: []
 tags: [flai, flaiover]
 topics: [verify, acceptance, serve, dashboard, template]
@@ -22,6 +22,15 @@ cost_of_delay:
     time_lost_per_cycle: 1h
     by: flai
     at: 2026-11-17T07:13:20Z
+  value: 150
+  by: planner-S-0824
+  at: 2026-11-17T08:32:55Z
+forecast:
+  duration: 2h30m
+  delivery: 2026-11-17T18:45:00Z
+  basis: "Its own forecast of 2h30m; 17th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0823."
+  by: flai
+  at: 2026-11-17T08:34:32Z
 ---
 # S-0824 A rebase and resolve job runs the whole close-out again each time main moves under it, so one took three rounds and 33 minutes while other stories were accepted
 
@@ -36,6 +45,12 @@ Decide, in an ADR refining ADR-0313 and ADR-0156, what a rebase and resolve job 
 - [ ] I-0398 is closed with `flai issue close I-0398 --reason` saying what fixed it
 
 ## Tasks
+- T-3551 An ADR decides what a rebase and resolve job's close-out owes when main moves under it, and how its record names the round
+- T-3552 flai verify --sync-only, when asked, passes a branch main outran while verify_behind_main would raise no blocker at the head it verified
+- T-3553 closeout.Status and the job's record say which round a close-out is on and why it started another, and resolve.status answers them
+- T-3554 A rebase and resolve job's close-out passes over a main that moved outside the story's change set, in both scripts and the container close-out
+- T-3555 The review page shows which round a close-out or Rebase and resolve job is on and why it started each round after the first
+- T-3556 The design and the user docs describe what a rebase and resolve job owes a moved main and how it names its rounds, and I-0398 is closed
 
 ## Notes
 

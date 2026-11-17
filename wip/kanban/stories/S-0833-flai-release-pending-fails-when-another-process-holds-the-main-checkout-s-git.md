@@ -3,11 +3,14 @@ id: S-0833
 type: story
 nature: remediation
 title: flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:27Z
-updated: 2026-11-17T08:32:48Z
-transitions: []
+updated: 2026-11-17T08:34:32Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:34:27Z
+    by: orchestrator
 tags: [flai, release, git]
 topics: [release]
 touches: [flai/cmd/release.go, flai/cmd/release_lock_test.go, docs/users/flai.md, design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md, design/issues/summary.md]
@@ -37,7 +40,16 @@ usage:
           cache_read: 4498452
           cache_write: 69861
           cost: 1.5422
-draft: true
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 11
+          cache_read: 45663
+          cache_write: 3959
+          cost: 0.0154
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -48,10 +60,13 @@ cost_of_delay:
   at: 2026-11-17T08:30:26Z
 forecast:
   duration: 18m
-  delivery: 2026-11-17T16:47:00Z
-  basis: "Its own forecast of 18m; 21st in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0831 and S-0832."
+  delivery: 2026-11-17T09:26:00Z
+  basis: "Its own forecast of 18m; 2nd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827 and S-0831."
   by: flai
-  at: 2026-11-17T08:32:48Z
+  at: 2026-11-17T08:34:32Z
+finalized:
+  by: orchestrator
+  at: 2026-11-17T08:33:51Z
 ---
 # S-0833 flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
 

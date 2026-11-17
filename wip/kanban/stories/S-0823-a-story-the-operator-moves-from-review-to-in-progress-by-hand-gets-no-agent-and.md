@@ -6,7 +6,7 @@ title: A story the operator moves from review to in-progress by hand gets no age
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:19Z
-updated: 2026-11-17T08:32:48Z
+updated: 2026-11-17T08:34:32Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/move.go, flai/cmd/move_sendback_test.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0397-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md, design/issues/summary.md]
@@ -36,7 +36,16 @@ usage:
           cache_read: 3285718
           cache_write: 47221
           cost: 1.1361
-draft: true
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 11
+          cache_read: 45662
+          cache_write: 3959
+          cost: 0.0154
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -47,10 +56,13 @@ cost_of_delay:
   at: 2026-11-17T08:30:28Z
 forecast:
   duration: 36m
-  delivery: 2026-11-17T15:00:00Z
-  basis: "Its own forecast of 36m; 14th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815 and S-0822."
+  delivery: 2026-11-17T15:05:00Z
+  basis: "Its own forecast of 36m; 16th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815 and S-0822."
   by: flai
-  at: 2026-11-17T08:32:48Z
+  at: 2026-11-17T08:34:32Z
+finalized:
+  by: orchestrator
+  at: 2026-11-17T08:33:53Z
 ---
 # S-0823 A story the operator moves from review to in-progress by hand gets no agent and no thread, so it waits in in-progress with nothing to bring it back
 

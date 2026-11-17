@@ -3,11 +3,14 @@ id: S-0831
 type: story
 nature: improvement
 title: The kluster send-back's texts to the agent do not say it can ask for its own deploy before review
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T08:32:48Z
-transitions: []
+updated: 2026-11-17T08:34:32Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:34:20Z
+    by: orchestrator
 tags: [flai, serve, kluster]
 topics: [kluster]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md]
@@ -37,7 +40,16 @@ usage:
           cache_read: 3001208
           cache_write: 42427
           cost: 0.9988
-draft: true
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 11
+          cache_read: 45663
+          cache_write: 3960
+          cost: 0.0154
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -48,10 +60,13 @@ cost_of_delay:
   at: 2026-11-17T08:29:20Z
 forecast:
   duration: 17m
-  delivery: 2026-11-17T16:33:00Z
-  basis: "Its own forecast of 17m; 19th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829 and S-0830."
+  delivery: 2026-11-17T09:16:00Z
+  basis: "Its own forecast of 17m; 1st in the pull order with an in-progress limit of 3, behind S-0752, S-0806 and S-0827."
   by: flai
-  at: 2026-11-17T08:32:48Z
+  at: 2026-11-17T08:34:32Z
+finalized:
+  by: orchestrator
+  at: 2026-11-17T08:33:51Z
 ---
 # S-0831 The kluster send-back's texts to the agent do not say it can ask for its own deploy before review
 

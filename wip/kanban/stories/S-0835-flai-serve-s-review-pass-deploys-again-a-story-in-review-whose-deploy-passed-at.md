@@ -6,7 +6,7 @@ title: "flai serve's review pass deploys again a story in review whose deploy pa
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-17T08:32:48Z
+updated: 2026-11-17T08:34:32Z
 transitions: []
 tags: [flai]
 topics: [kluster, deployment]
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:07Z
 forecast:
   duration: 50m
-  delivery: 2026-11-17T17:45:00Z
-  basis: "Its own forecast of 50m; 23rd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0831, S-0832, S-0833 and S-0834."
+  delivery: 2026-11-17T18:06:00Z
+  basis: "Its own forecast of 50m; 23rd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0832 and S-0834."
   by: flai
-  at: 2026-11-17T08:32:48Z
+  at: 2026-11-17T08:34:32Z
 ---
 # S-0835 flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone
 
