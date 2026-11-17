@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2232.5378
-accrued_seconds: 1573100
-tasks_completed: 3797
-last_run: 2026-11-17T03:26:35Z
+accrued_cost: 2234.1473
+accrued_seconds: 1573434
+tasks_completed: 3811
+last_run: 2026-11-17T03:39:03Z
 ---
 
 # Orchestrator activity
@@ -26615,6 +26615,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 20
 - Cost: 0.3711 USD, estimated
 
+### 2026-11-17T03:29:12Z
+
+- Summary: Accepted S-0820, the publish formula's instance that released flai/v1.102.0 (S-0739, S-0747), at f703b97112be: close-out passed at the head, verifier matched criteria 1-3 to T-3500, T-3501, T-3502 done, dry run listed no blocker.
+- Items: S-0820
+- Seconds: 53
+- Cost: 0.1721 USD, estimated
+
+### 2026-11-17T03:29:27Z
+
+- Summary: Did not publish after S-0820's acceptance: release_evaluate under threshold is not met, 0 accepted stories pending (count 0 of 1, 0 of 1000 USD/week).
+- Items: S-0820
+- Seconds: 15
+- Cost: 0.0571 USD, estimated
+
+### 2026-11-17T03:29:46Z
+
+- Summary: Ready was empty: promoted S-0753, the only candidate promote_candidates listed (rank 1 by throughput, 42m forecast), and applied flai order --by throughput.
+- Items: S-0753
+- Seconds: 19
+- Cost: 0.0894 USD, estimated
+
+### 2026-11-17T03:30:07Z
+
+- Summary: Started the planner for S-0819, the only item flai plan --candidates lists (no touches, forecast, cost of delay, or tasks), under plan_backlog_stories. Left S-0815 (TH-1257) and S-0241 (TH-1165) drafts: their threads await the operator.
+- Items: S-0819
+- Seconds: 21
+- Cost: 0.0301 USD, estimated
+
+### 2026-11-17T03:30:28Z
+
+- Summary: I accepted S-0820, the publish instance, and promoted S-0753 to fill the empty ready column. Both reasons for this run are done.
+- Items: none
+- Seconds: 21
+- Cost: 0.1469 USD, estimated
+
+### 2026-11-17T03:35:36Z
+
+- Summary: Left S-0819 a draft for now: flai promote --drafts lists it complete (2h forecast, 25 USD/week value), but planner-S-0819 is still running (it edited T-3504 at 03:35:14Z), and its Notes say it will ask about raising the cost of delay inputs on a plan thread that does not exist yet. I finalize it under finalize_drafts once I have settled that thread under plan_backlog_stories.
+- Items: S-0819
+- Seconds: 43
+- Cost: 0.2350 USD, estimated
+
+### 2026-11-17T03:35:54Z
+
+- Summary: I left S-0819 as a draft on purpose, and I'm ending this run.
+- Items: none
+- Seconds: 18
+- Cost: 0.0963 USD, estimated
+
+### 2026-11-17T03:36:56Z
+
+- Summary: Recommended an answer on TH-1271, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0819
+- Seconds: 35
+- Cost: 0.1037 USD, estimated
+
+### 2026-11-17T03:37:15Z
+
+- Summary: TH-1271: approved planner-S-0819's plan for S-0819 (5 tasks, 4 layers, 15 touches, 1h30m, 25 USD/week) and recommended, operator only, raising time_lost_per_cycle 10m→20m and closing duplicate I-0374 in T-3508; thread left open, since changing an existing input is the operator's
+- Items: S-0819
+- Seconds: 19
+- Cost: 0.0341 USD, estimated
+
+### 2026-11-17T03:37:30Z
+
+- Summary: Finalized draft S-0819 under finalize_drafts: flai promote --drafts lists it complete (position 2, 1h30m), and its criteria, touches, forecast, and 25 USD/week value fit together
+- Items: S-0819
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-17T03:37:52Z
+
+- Summary: Promoted S-0819 to ready under promote_to_ready (flai promote --candidates rank 1, throughput figure 1h30m; ready had room, 0 of 10), then applied flai order --by throughput: S-0819 first
+- Items: S-0819
+- Seconds: 22
+- Cost: 0.1051 USD, estimated
+
+### 2026-11-17T03:38:11Z
+
+- Summary: S-0819 is finalized and in ready, first in the pull order. TH-1271 stays open because one of its two questions is yours to answer.
+- Items: none
+- Seconds: 19
+- Cost: 0.2296 USD, estimated
+
+### 2026-11-17T03:38:44Z
+
+- Summary: planned:S-0819: nothing left to do. The earlier run already approved the plan on TH-1271, finalized S-0819, and moved it to ready, where it is the only story (ready order: S-0819 alone, policy throughput, forecast 1h30m). TH-1271's operator-only recommendation (time_lost_per_cycle 20m; T-3508 also closes I-0374) still waits for the operator.
+- Items: S-0819
+- Seconds: 15
+- Cost: 0.0876 USD, estimated
+
+### 2026-11-17T03:39:03Z
+
+- Summary: I had nothing to do for the reason planned:S-0819: an earlier orchestrator run had already acted on the plan.
+- Items: none
+- Seconds: 19
+- Cost: 0.2225 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -27348,6 +27446,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-11-16T23:49:18Z
+
+- Call: `flai serve agents --json`
+- Needs: none
+
+### 2026-11-17T03:35:28Z
 
 - Call: `flai serve agents --json`
 - Needs: none

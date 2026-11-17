@@ -3,11 +3,11 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-17T03:07:23Z
+updated: 2026-11-17T04:28:19Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:40Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-11-17T03:07:23Z
     by: agent-S-0742
+  - to: done
+    at: 2026-11-17T04:28:19Z
+    by: alex
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/flow.go, flai/internal/serve/kinds.go, flai/internal/serve/kinds_test.go, flai/internal/serve/serve.go, flai/internal/serve/role_events.go, flai/internal/serve/imagejob.go, design/system/workflow.md]

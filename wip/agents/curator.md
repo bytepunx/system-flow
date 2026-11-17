@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 342.9747
-accrued_seconds: 37960
-tasks_completed: 234
-last_run: 2026-11-17T02:52:58Z
+accrued_cost: 344.2534
+accrued_seconds: 38030
+tasks_completed: 235
+last_run: 2026-11-17T03:30:24Z
 ---
 
 # Curator activity
@@ -1883,3 +1883,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0637
 - Seconds: 105
 - Cost: 0.8271 USD, estimated
+
+### 2026-11-17T03:30:24Z
+
+- Summary: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The one candidate since 2026-11-17T02:52:58Z was S-0820's decision that publish steps run in the main checkout. `design/workflows/formulas/publish.md` already says so. No design document, convention, or ADR has changed since the last run, and none states D-0652 to D-0655.
+- Trigger: accepted S-0820
+- Items: D-0653
+- Seconds: 70
+- Cost: 1.2787 USD, estimated

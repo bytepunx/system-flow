@@ -3,15 +3,21 @@ id: S-0753
 type: story
 nature: feature
 title: The dashboard's board draws the columns, their kinds, and the moves between them from what flai gives, and holds no list of states of its own
-status: backlog
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:41Z
-updated: 2026-11-17T03:29:09Z
-transitions: []
+updated: 2026-11-17T04:21:57Z
+transitions:
+  - to: ready
+    at: 2026-11-17T03:29:40Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T03:29:48Z
+    by: agent-S-0753
 tags: [dashboard, cli]
 topics: [dashboard, cli]
-touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/lib/reorder.ts, flaiover/src/lib/reorder.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/routes/+page.svelte, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/lib/reorder.ts, flaiover/src/lib/reorder.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/routes/+page.svelte, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/CardMenu.svelte, flaiover/src/lib/components/LaneMenu.svelte, flaiover/src/lib/components/LaneMoveDialog.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, flaiover/src/lib/lanes.fixture.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/new/+page.svelte, flaiover/src/routes/overview.svelte.test.ts, design/components/flaiover/src/lib/components/CardMenu.examples.json, design/components/flaiover/src/lib/components/LaneMenu.examples.json, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go]
 after: [S-0739]
 agent:
   harness: claude-code
@@ -19,20 +25,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3132
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      hand_edits: 1
+      work: 42
+  models:
+    - model: claude-opus-5-5
+      input: 372
+      output: 1877
+      cache_read: 25925160
+      cache_write: 889016
+      cost: 10.2065
   strategic:
     - kind: orchestrator
-      seconds: 24
+      seconds: 43
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 40
-          cache_read: 288657
-          cache_write: 46066
-          cost: 0.0988
+          input: 14
+          output: 83
+          cache_read: 574680
+          cache_write: 49875
+          cost: 0.1882
 cost_of_delay:
   value: 74.82
   by: system-flow
@@ -55,7 +73,7 @@ The dashboard draws whatever board the workflow defines. `board.get` gives the c
 
 ## Acceptance criteria
 
-- [ ] `board.get` answers the workflow's columns, each with its name, kind, WIP limit, and whether it is ordered, and its transitions, each with from, to, who may make it, and whether it needs a reason
+- [x] `board.get` answers the workflow's columns, each with its name, kind, WIP limit, and whether it is ordered, and its transitions, each with from, to, who may make it, and whether it needs a reason
 - [ ] `board.ts`, `lanes.ts`, `lanecollapse.svelte.ts`, `reorder.ts`, `routes/board/+page.svelte`, and `routes/+page.svelte` hold no list of the six states: the board, the lane and card menus, drag and drop, the reason prompt, reordering, collapsing, and the home page's counts read the columns and transitions from `board.get`
 - [ ] A move the operator may not make from the board is not offered, and one flai refuses still shows flai's words
 - [ ] Tests draw a board for a workflow with a state renamed and one added between `in-progress` and `review`, with its lane, its WIP limit, and its moves
@@ -67,6 +85,7 @@ The dashboard draws whatever board the workflow defines. `board.get` gives the c
 - T-3244 board.get answers the workflow's columns with their kinds, WIP limits, and order, and its transitions with who may make each and its reason
 - T-3249 flaiover's board, lane and card menus, drag and drop, reason prompt, reordering, collapsing, and home page counts read the columns and moves from board.get
 - T-3250 flaiover-dashboard.md and the dashboard's user guide say the board's columns and moves come from the workflow
+- T-3509 board.limit takes the workflow's limited columns, and the lane and card menus' examples carry the flow
 
 ## Notes
 

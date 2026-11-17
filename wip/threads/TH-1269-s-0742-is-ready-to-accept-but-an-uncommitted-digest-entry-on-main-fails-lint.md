@@ -4,10 +4,10 @@ title: S-0742 is ready to accept, but an uncommitted digest entry on main fails 
 anchor:
   path: wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-again-and-finds-its-reasons.md
   item: S-0742
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-17T03:09:18Z
-updated: 2026-11-17T03:09:18Z
+updated: 2026-11-17T04:28:19Z
 ---
 
 # TH-1269 S-0742 is ready to accept, but an uncommitted digest entry on main fails lint (MD028)
@@ -40,3 +40,6 @@ S-0742 cannot be accepted: the main checkout's uncommitted files hold lint the f
 - The dry run listed no blocker.
 
 **Alternative:** accept it yourself with `flai accept S-0742 --by alex` once the file is fixed.
+
+### 2026-11-17T04:28:19Z alex
+Resolved: S-0742 was accepted

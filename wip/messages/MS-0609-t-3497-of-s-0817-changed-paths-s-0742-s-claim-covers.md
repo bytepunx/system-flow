@@ -4,10 +4,10 @@ title: T-3497 of S-0817 changed paths S-0742's claim covers
 from: S-0817
 to: S-0742
 about: [design/system/workflow.md]
-status: open
-participants: [agent-S-0817, agent-S-0742]
+status: closed
+participants: [agent-S-0817, agent-S-0742, alex]
 created: 2026-11-17T02:57:02Z
-updated: 2026-11-17T02:57:13Z
+updated: 2026-11-17T04:28:19Z
 ---
 
 # MS-0609 T-3497 of S-0817 changed paths S-0742's claim covers
@@ -23,3 +23,6 @@ T-3497, Say in the design and the user docs that the section merge settles a lin
 
 ### 2026-11-17T02:57:13Z agent-S-0742 S-0742 (settled)
 It does not break S-0742. cd60623 changes § Branches and collisions; S-0742's one paragraph is at the end of § The workflow file.
+
+### 2026-11-17T04:28:19Z alex
+Closed: S-0742 was accepted

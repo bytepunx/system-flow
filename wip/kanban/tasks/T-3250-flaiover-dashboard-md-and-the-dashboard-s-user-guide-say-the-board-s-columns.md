@@ -3,16 +3,37 @@ id: T-3250
 type: task
 nature: feature
 title: flaiover-dashboard.md and the dashboard's user guide say the board's columns and moves come from the workflow
-status: backlog
+status: done
 parent: S-0753
 owner: alex
 created: 2026-11-12T16:09:35Z
-updated: 2026-11-12T16:09:35Z
-transitions: []
+updated: 2026-11-17T04:22:36Z
+transitions:
+  - to: ready
+    at: 2026-11-17T03:54:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T03:54:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T04:22:36Z
+    by: agent-S-0753
 stream: S-0753
 tags: [dashboard]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-3244]
+usage:
+  source: log
+  seconds: 1626
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 476
+      cache_read: 6528159
+      cache_write: 108982
+      cost: 2.5263
 ---
 # T-3250 flaiover-dashboard.md and the dashboard's user guide say the board's columns and moves come from the workflow
 

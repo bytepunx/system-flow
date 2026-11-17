@@ -3,16 +3,37 @@ id: T-3249
 type: task
 nature: feature
 title: flaiover's board, lane and card menus, drag and drop, reason prompt, reordering, collapsing, and home page counts read the columns and moves from board.get
-status: backlog
+status: done
 parent: S-0753
 owner: alex
 created: 2026-11-12T16:09:32Z
-updated: 2026-11-12T16:09:32Z
-transitions: []
+updated: 2026-11-17T04:14:52Z
+transitions:
+  - to: ready
+    at: 2026-11-17T03:54:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T03:54:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T04:14:52Z
+    by: agent-S-0753
 stream: S-0753
 tags: [dashboard]
-touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/lib/reorder.ts, flaiover/src/lib/reorder.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/routes/+page.svelte]
+touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/lib/reorder.ts, flaiover/src/lib/reorder.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/routes/+page.svelte, flaiover/src/lib/components/CardMenu.svelte, flaiover/src/lib/components/LaneMenu.svelte, flaiover/src/lib/components/LaneMoveDialog.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, flaiover/src/lib/lanes.fixture.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/new/+page.svelte, flaiover/src/routes/overview.svelte.test.ts]
 after: [T-3244]
+usage:
+  source: log
+  seconds: 1201
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 779
+      cache_read: 13432066
+      cache_write: 254956
+      cost: 5.2097
 ---
 # T-3249 flaiover's board, lane and card menus, drag and drop, reason prompt, reordering, collapsing, and home page counts read the columns and moves from board.get
 
