@@ -2,12 +2,12 @@
 id: I-0327
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-09T23:09:47Z
 last_reported: 2026-11-09T23:09:47Z
-updated: 2026-11-17T08:17:17Z
+updated: 2026-11-17T08:45:09Z
 ---
 
 # I-0327 TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
@@ -26,3 +26,4 @@ S-0644 added the design-routes tier, which a change to flaiover/src/routes selec
 Story S-0693 remediates this issue, created from it at 2026-11-10T08:49:04Z.
 
 Story S-0827 remediates this issue, created from it at 2026-11-17T08:17:17Z.
+Closed 2026-11-17T08:45:09Z: S-0827 (T-3523) removed the testing.Short() gate from TestRepositoryManifestLintsChangedFlaioverFiles in flai/internal/verify/select_test.go. The test reads only system-flow.yaml and the file tree, keeps its monorepo-not-present skip, and now runs in make test and flai test's go-test tier, so a tier it must list fails there rather than first in the close-out's integration tier.
