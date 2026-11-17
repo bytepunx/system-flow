@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2246.3665
-accrued_seconds: 1575883
-tasks_completed: 3906
-last_run: 2026-11-17T10:04:55Z
+accrued_cost: 2247.2210
+accrued_seconds: 1576002
+tasks_completed: 3912
+last_run: 2026-11-17T10:07:10Z
 ---
 
 # Orchestrator activity
@@ -27377,6 +27377,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0831
 - Seconds: 38
 - Cost: 0.1222 USD, estimated
+
+### 2026-11-17T10:05:25Z
+
+- Summary: publish: released flai 1.105.1 -> 1.105.2 (tag flai/v1.105.2, pushed) bundling S-0831, under threshold policy: count 1 at or over threshold 1, value 12.5 USD/week. No publish formula, so release_publish (formula run refused: no formula named publish)
+- Items: S-0831
+- Seconds: 30
+- Cost: 0.1257 USD, estimated
+
+### 2026-11-17T10:05:49Z
+
+- Summary: ready: S-0830 was pulled to in-progress, so promoted S-0836 (45m, candidate rank 1 by throughput) to ready, back to 10/10; applied flai order --by throughput
+- Items: S-0836
+- Seconds: 24
+- Cost: 0.2202 USD, estimated
+
+### 2026-11-17T10:06:08Z
+
+- Summary: I accepted S-0831 and released it as flai 1.105.2. The ready column is back to 10 of 10.
+- Items: none
+- Seconds: 19
+- Cost: 0.1855 USD, estimated
+
+### 2026-11-17T10:06:42Z
+
+- Summary: Reordered: ready column already in throughput order (S-0811 34m first … S-0810 2h30m last), so nothing applied; ready is full at 10 of 10, so nothing promoted (candidates S-0828 rank 1, S-0834 rank 2 wait for room).
+- Items: S-0811, S-0823, S-0832, S-0809, S-0756, S-0836, S-0812, S-0808, S-0807, S-0810
+- Seconds: 18
+- Cost: 0.0831 USD, estimated
+
+### 2026-11-17T10:06:52Z
+
+- Summary: Release-due S-0831: did not publish; release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD, nothing pending): no accepted story is waiting for a release.
+- Items: S-0831
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-17T10:07:10Z
+
+- Summary: I changed nothing on the board and published no release. Neither reason called for a change.
+- Items: none
+- Seconds: 18
+- Cost: 0.2400 USD, estimated
 
 ## Refusals
 

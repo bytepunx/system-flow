@@ -3,16 +3,37 @@ id: T-3528
 type: task
 nature: remediation
 title: The design and the guides say the setup form sets kluster.agent_namespaces, and I-0356 is closed
-status: backlog
+status: done
 parent: S-0830
 owner: alex
 created: 2026-11-17T08:29:07Z
-updated: 2026-11-17T08:29:07Z
-transitions: []
+updated: 2026-11-17T10:09:22Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:06:23Z
+    by: agent-S-0830
+  - to: in-progress
+    at: 2026-11-17T10:08:35Z
+    by: agent-S-0830
+  - to: done
+    at: 2026-11-17T10:09:22Z
+    by: agent-S-0830
 stream: S-0830
 tags: [docs, kluster]
 touches: [design/system/flaiover-dashboard.md, design/system/kluster.md, docs/operators/settings.md, docs/users/flaiover.md]
 after: [T-3526]
+usage:
+  source: log
+  seconds: 47
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 3559
+      cache_read: 1911182
+      cache_write: 58774
+      cost: 0.9237
 ---
 # T-3528 The design and the guides say the setup form sets kluster.agent_namespaces, and I-0356 is closed
 

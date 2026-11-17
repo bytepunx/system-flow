@@ -3,10 +3,10 @@ id: S-0830
 type: story
 nature: remediation
 title: The dashboard's kluster setup form does not show kluster.agent_namespaces
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:22Z
-updated: 2026-11-17T10:04:54Z
+updated: 2026-11-17T10:14:13Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -14,18 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:04:54Z
     by: agent-S-0830
+  - to: review
+    at: 2026-11-17T10:12:48Z
+    by: agent-S-0830
+  - to: done
+    at: 2026-11-17T10:14:13Z
+    by: orchestrator
 tags: [flaiover, kluster]
 topics: [kluster]
-touches: [flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, flaiover/src/lib/server/repo.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json, design/system/flaiover-dashboard.md, design/system/kluster.md, docs/operators/settings.md, docs/users/flaiover.md]
+touches: [flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, flaiover/src/lib/server/repo.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json, design/system/flaiover-dashboard.md, design/system/kluster.md, docs/operators/settings.md, docs/users/flaiover.md, design/issues/I-0356-the-dashboard-s-kluster-setup-form-does-not-show-kluster-agent-namespaces.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 497
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      test_runs: 1
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 14984
+      cache_read: 8047025
+      cache_write: 247468
+      cost: 3.8892
   strategic:
     - kind: planner
       seconds: 16
@@ -84,8 +101,8 @@ finalized:
 This story remediates [I-0356](../../../design/issues/I-0356-the-dashboard-s-kluster-setup-form-does-not-show-kluster-agent-namespaces.md), "The dashboard's kluster setup form does not show kluster.agent_namespaces". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0356 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0356 is closed with `flai issue close I-0356 --reason` saying what fixed it
+- [x] The cause I-0356 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0356 is closed with `flai issue close I-0356 --reason` saying what fixed it
 
 ## Tasks
 - T-3526 The kluster setup form shows and saves kluster.agent_namespaces
@@ -118,3 +135,12 @@ Figures:
 
 - Forecast 25m, delivery 2026-11-17T15:09:00Z, as `flai forecast` gives them: the median of 68 done remediation stories in the medium band, times size 10 (2 criteria, 8 touches). It stands. Half the touches are one-sentence doc edits, and the basis already holds flaiover close-outs.
 - Cost of delay 25.00 USD a week, as `flai cod` works it from the inputs flai set from I-0356: 10m lost per 168h cycle at 150 USD an hour. It stands: one occurrence, and `flai manifest set` is a workaround.
+
+### Accepted by the orchestrator
+
+- Verified: 30d18f601884be6438a2f42c48c63546bc1bf192
+- At: 2026-11-17T10:14:13Z
+
+Verdict: pass
+- 1: flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/server/repo.ts, flaiover/src/lib/components/DeploySettings.svelte.test.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json
+- 2: design/issues/I-0356-the-dashboard-s-kluster-setup-form-does-not-show-kluster-agent-namespaces.md, design/issues/summary.md

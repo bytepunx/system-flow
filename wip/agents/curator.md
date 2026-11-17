@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 356.8669
-accrued_seconds: 39561
-tasks_completed: 247
-last_run: 2026-11-17T09:47:57Z
+accrued_cost: 358.0863
+accrued_seconds: 39680
+tasks_completed: 248
+last_run: 2026-11-17T10:07:06Z
 ---
 
 # Curator activity
@@ -1987,3 +1987,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0603, D-0663
 - Seconds: 93
 - Cost: 1.3815 USD, estimated
+
+### 2026-11-17T10:07:06Z
+
+- Summary: I found nothing to take in this run. I wrote no entries, merged none, absorbed none, and `flai digest compact` compacted none. The harvest since 09:47:57Z found 3 decisions in S-0831's narrative. Two were about how the agent worked, not facts worth keeping. The third, that the review deploys a story again only when its deploy and checks have not passed at its head, is now stated in `design/system/kluster.md` § The send-back (S-0694), "Back in review". The only design change since the last run is that kluster.md edit, and it states no active entry's fact.
+- Trigger: accepted S-0831
+- Items: none
+- Seconds: 119
+- Cost: 1.2194 USD, estimated

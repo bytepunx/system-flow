@@ -3,14 +3,17 @@ id: S-0823
 type: story
 nature: remediation
 title: A story the operator moves from review to in-progress by hand gets no agent and no thread, so it waits in in-progress with nothing to bring it back
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T07:13:19Z
-updated: 2026-11-17T10:04:15Z
+updated: 2026-11-17T10:12:56Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T10:12:56Z
+    by: agent-S-0823
 tags: [flai]
 touches: [flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/move.go, flai/cmd/move_sendback_test.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0397-a-story-the-operator-moves-from-review-to-in-progress-by-hand-gets-no-agent-and.md, design/issues/summary.md]
 agent:
@@ -40,15 +43,15 @@ usage:
           cache_write: 47221
           cost: 1.1361
     - kind: orchestrator
-      seconds: 19
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 56
-          cache_read: 222330
-          cache_write: 38249
-          cost: 0.0811
+          input: 6
+          output: 63
+          cache_read: 242901
+          cache_write: 44342
+          cost: 0.0894
         - model: claude-sonnet-5-5
           input: 2
           output: 269

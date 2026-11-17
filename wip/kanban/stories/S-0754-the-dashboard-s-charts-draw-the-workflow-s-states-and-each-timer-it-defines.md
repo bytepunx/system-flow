@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-17T09:45:10Z
+updated: 2026-11-17T10:14:13Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:53Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0754
 tags: [dashboard]
 topics: [dashboard, analysis]
-touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/viz/explain.ts]
 after: [S-0752, S-0753]
 agent:
   harness: claude-code

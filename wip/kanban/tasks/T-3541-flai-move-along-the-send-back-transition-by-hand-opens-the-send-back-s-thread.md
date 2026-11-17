@@ -3,12 +3,18 @@ id: T-3541
 type: task
 nature: remediation
 title: flai move along the send-back transition by hand opens the send back's thread with the move's reason
-status: backlog
+status: in-progress
 parent: S-0823
 owner: alex
 created: 2026-11-17T08:30:49Z
-updated: 2026-11-17T08:30:49Z
-transitions: []
+updated: 2026-11-17T10:14:03Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:14:00Z
+    by: agent-S-0823
+  - to: in-progress
+    at: 2026-11-17T10:14:03Z
+    by: agent-S-0823
 stream: S-0823
 tags: [flai]
 touches: [flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/move.go, flai/cmd/move_sendback_test.go, docs/users/flai-reference.md]

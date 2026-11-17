@@ -3,15 +3,36 @@ id: T-3526
 type: task
 nature: remediation
 title: The kluster setup form shows and saves kluster.agent_namespaces
-status: backlog
+status: done
 parent: S-0830
 owner: alex
 created: 2026-11-17T08:28:58Z
-updated: 2026-11-17T08:28:58Z
-transitions: []
+updated: 2026-11-17T10:08:21Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:06:23Z
+    by: agent-S-0830
+  - to: in-progress
+    at: 2026-11-17T10:06:23Z
+    by: agent-S-0830
+  - to: done
+    at: 2026-11-17T10:08:21Z
+    by: agent-S-0830
 stream: S-0830
 tags: [flaiover, kluster]
 touches: [flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, flaiover/src/lib/server/repo.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json]
+usage:
+  source: log
+  seconds: 118
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 3256
+      cache_read: 1748588
+      cache_write: 53774
+      cost: 0.8451
 ---
 # T-3526 The kluster setup form shows and saves kluster.agent_namespaces
 
