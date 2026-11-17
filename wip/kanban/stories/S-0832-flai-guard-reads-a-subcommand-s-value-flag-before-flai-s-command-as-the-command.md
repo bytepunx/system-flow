@@ -3,11 +3,14 @@ id: S-0832
 type: story
 nature: remediation
 title: flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:26Z
-updated: 2026-11-17T09:16:30Z
-transitions: []
+updated: 2026-11-17T10:04:15Z
+transitions:
+  - to: ready
+    at: 2026-11-17T10:04:07Z
+    by: orchestrator
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md]
 agent:
@@ -56,10 +59,10 @@ cost_of_delay:
   at: 2026-11-17T08:30:33Z
 forecast:
   duration: 40m
-  delivery: 2026-11-17T17:11:00Z
-  basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0806, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829 and S-0830."
+  delivery: 2026-11-17T11:21:00Z
+  basis: "Its own forecast of 40m; 4th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0830, S-0811 and S-0823."
   by: flai
-  at: 2026-11-17T09:16:30Z
+  at: 2026-11-17T10:04:15Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:54Z
