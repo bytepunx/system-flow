@@ -6,7 +6,7 @@ title: Stories of one epic rewrite the same section of one design document, so a
 status: backlog
 owner: alex
 created: 2026-11-17T02:26:33Z
-updated: 2026-11-17T02:32:00Z
+updated: 2026-11-17T02:32:48Z
 transitions: []
 tags: []
 topics: [merge, sync, acceptance]
@@ -21,6 +21,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 283
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 52
+          output: 19991
+          cache_read: 3454967
+          cache_write: 172382
+          cost: 2.4701
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -48,10 +58,10 @@ cost_of_delay:
   at: 2026-11-17T02:31:15Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T11:44:00Z
-  basis: "S-0719, the same shape (ADR, merge code, two real-git reproductions, four documents, issue close), took 42m of agent time against 1h; this one adds table rows and a same-point refusal, so 1h."
-  by: planner-S-0817
-  at: 2026-11-17T02:31:15Z
+  delivery: 2026-11-17T12:19:00Z
+  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0241, S-0752, S-0753, S-0754, S-0756, S-0758, S-0806, S-0807, S-0808, S-0809, S-0810, S-0811, S-0812, S-0813, S-0814 and S-0815."
+  by: flai
+  at: 2026-11-17T02:32:48Z
 ---
 # S-0817 Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
 
