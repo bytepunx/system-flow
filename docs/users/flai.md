@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-16
+updated: 2026-11-17
 status: active
 ---
 
@@ -3413,7 +3413,13 @@ close-out running: close-out job S-0031-20261116T020000Z runs at S-0031's head 9
 
 `queue_tiers_why` names the job too. Once the job ends, preview again.
 
-A story in review that cannot be accepted, for a verify behind main or any other blocker `flai accept --dry-run` lists, is its agent's to settle, not yours (S-0788, [ADR-0302](../../design/adrs/0302-the-operator-sends-a-review-story-that-cannot-be-accepted-back-to-its-agent-to.md)). `flai accept S-0031 --resolve`, and the dashboard's Rebase and resolve button on the story, accepts nothing: it sends the story back to in-progress, as `flai`, and opens a thread on it titled `Acceptance sent back: ...`, or writes on the one still open, listing each blocker. `flai serve` starts the story's agent on that thread; the agent rebases the branch onto main with `flai stream sync`, takes each blocker's recommended action, closes out again, and moves the story back to review, and `flai serve` then resolves the thread. A story not in review, or one nothing holds, is refused with exit 4: accept that one instead. So is a story held only by a verify behind main that your acceptance would enqueue. `--resolve` is yours alone: it is refused with `--dry-run`, `--yes`, `--batch`, the flags of an acceptance, and `--by orchestrator`.
+A story in review that cannot be accepted, for a verify behind main or any other blocker `flai accept --dry-run` lists, most often needs only a rebase onto main and a close-out over it, which `flai serve` does for you with no agent (S-0804, [ADR-0313](../../design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md)). `flai accept S-0031 --resolve`, and the dashboard's Rebase and resolve button on the story, accepts nothing: it asks `flai serve` for a rebase and resolve job and answers at once with the job's id and where its output is kept, `.flai-cache/verify/jobs/S-0031.log`. The story stays in review while the job runs. The job rebases `story/S-0031` onto main as `flai stream sync` does, then runs the story's close-out at the rebased head, writing a line to the log as each step and tier starts and ends. How it ends:
+
+- **The rebase is clean and the close-out passes.** The story stays in review, with nothing sent back and no agent started. Preview again, and accept it.
+- **The rebase stops on conflicts.** The job aborts the rebase, so the branch is as it was, and sends the story back to in-progress, as `flai`, with a thread titled `Acceptance sent back: ...` naming the paths in conflict, or a note on the one still open.
+- **A step of the close-out fails, or the sync cannot run.** The job sends the story back the same way, with the thread naming the step, its findings, and the job's log.
+
+`flai serve` starts the story's agent on that thread; the agent settles it, closes out again, and moves the story back to review, and `flai serve` then resolves the thread. A blocker the rebase and the close-out do not settle, such as uncommitted files in the main checkout, still holds the story once the job passes: settle it yourself, or send the story back. Asking again while a job of the story runs, a rebase and resolve or a close-out, starts nothing and names that job. When `flai serve` restarts during a job, the job ends `interrupted` and nothing is sent back: ask again. With `--json` the answer is `{id, job, started, running, log, reason}`. A story not in review, or one nothing holds, is refused with exit 4: accept that one instead. So is a story held only by a verify behind main that your acceptance would enqueue, and so is a request when `flai serve` is not running for the project: start it with `flai host start serve`. `--resolve` is yours alone: it is refused with `--dry-run`, `--yes`, `--batch`, the flags of an acceptance, and `--by orchestrator`.
 
 While the `kluster` host action is on, every acceptance also waits for the story's deploy into its kluster namespace. It is refused with the blocker `kluster` until the deploy, and while `checks` is on the checks run against it, passed at the story's head, and `--without-kluster` lands the story anyway, recorded in its Notes ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail)).
 

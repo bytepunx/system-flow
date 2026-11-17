@@ -4,7 +4,7 @@ title: "The operator sends a review story that cannot be accepted back to its ag
 status: accepted
 date: 2026-11-14
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0313]
 refines: [ADR-0248, ADR-0291]
 topics: [flai, cli, dashboard]
 ---
