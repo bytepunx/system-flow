@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-16T06:24:20Z
+updated: 2026-11-17T01:32:54Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
@@ -24,25 +24,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 23
-          cache_read: 191799
-          cache_write: 31841
-          cost: 0.0648
+          input: 5
+          output: 38
+          cache_read: 288656
+          cache_write: 46065
+          cost: 0.0988
 cost_of_delay:
   value: 80.17
   by: system-flow
   at: 2026-11-14T17:44:16Z
 forecast:
   duration: 45m
-  delivery: 2026-11-16T08:43:00Z
-  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0750, S-0241, S-0752, S-0753 and S-0754."
+  delivery: 2026-11-17T04:25:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0241, S-0752, S-0753 and S-0754."
   by: flai
-  at: 2026-11-16T06:24:20Z
+  at: 2026-11-17T01:32:54Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:59Z
