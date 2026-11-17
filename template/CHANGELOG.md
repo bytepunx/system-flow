@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0806 The board's workflow file, `design/workflows/board.md`, gives today's behaviour as data: `verify: {suites: all, severity: warn}` on the move to review, `verify: all` on the acceptance, `runs: {kluster: [deploy, checks]}` on `review`, and `verify_at: {batch: all, ci: all}`, and its body says what they mean; nothing reads them to decide a run yet (patch, ADR-0312).
+
 ## 1.1.45 - 2026-11-17
 
 - S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke (patch).

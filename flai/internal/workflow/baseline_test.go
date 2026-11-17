@@ -242,6 +242,50 @@ func timerForm(tm Timer) string {
 	return s
 }
 
+// S-0806: the baseline names the suites and cluster steps today runs, as
+// ADR-0312 §8 gives them: every suite at warn on the move to review, every
+// suite on the acceptance, the cluster's deploy and checks on entering
+// review, and every suite in the batch and in CI, none at publish. No other
+// transition gives verify and no other state gives runs.
+func TestBaselineVerifyAndRunsAreTodays(t *testing.T) {
+	w := Baseline()
+	all := func(s *Suites) bool { return s != nil && s.All && len(s.Names) == 0 }
+	toReview, ok := w.Find(TypeStory, "in-progress", "review")
+	if !ok || toReview.Verify == nil || !all(&toReview.Verify.Suites) || toReview.Verify.Severity != SeverityWarn {
+		t.Errorf("the move to review verifies %+v, want all at warn", toReview.Verify)
+	}
+	for _, typ := range []string{TypeEpic, TypeStory} {
+		accept, ok := w.WithEffect(typ, EffectAccept)
+		if !ok || accept.Verify == nil || !all(&accept.Verify.Suites) || accept.Verify.Severity != "" {
+			t.Errorf("%s: the acceptance verifies %+v, want all at refuse", typ, accept.Verify)
+		}
+	}
+	for _, tr := range w.Transitions {
+		if tr.Verify == nil {
+			continue
+		}
+		accepts := slices.Contains(tr.Effects, EffectAccept)
+		toReview := slices.Equal(tr.From, []string{"in-progress"}) && tr.To == "review"
+		if !accepts && !toReview {
+			t.Errorf("transition %v to %s gives verify %+v, want none", tr.From, tr.To, tr.Verify)
+		}
+	}
+	for _, s := range w.States {
+		if s.Name != "review" {
+			if s.Runs != nil {
+				t.Errorf("state %s runs %+v, want nothing", s.Name, s.Runs)
+			}
+			continue
+		}
+		if s.Runs == nil || s.Runs.Suites != nil || !slices.Equal(s.Runs.Kluster, []string{KlusterDeploy, KlusterChecks}) {
+			t.Errorf("review runs %+v, want kluster [deploy, checks] and no suites", s.Runs)
+		}
+	}
+	if v := w.VerifyAt; !all(v.Batch) || !all(v.CI) || v.Publish != nil {
+		t.Errorf("verify_at is batch %+v publish %+v ci %+v, want batch all, ci all, no publish", v.Batch, v.Publish, v.CI)
+	}
+}
+
 // S-0737: each call to Baseline gives a copy of its own, so that one
 // caller's change does not reach the next.
 func TestBaselineIsACopy(t *testing.T) {
@@ -251,9 +295,18 @@ func TestBaselineIsACopy(t *testing.T) {
 	a.Transitions[0].From[0] = "changed"
 	a.Transitions[0].Rules[0].Rule = "changed"
 	a.Timers[1].From.State = "changed"
+	a.States[3].Runs.Kluster[0] = "changed"
+	a.Transitions[2].Verify.Suites.All = false
+	a.Transitions[2].Verify.Severity = "changed"
+	a.VerifyAt.Batch.All = false
+	a.VerifyAt.CI.All = false
 	b := Baseline()
 	if b.States[0].Name != "backlog" || b.States[1].Types[0] != TypeEpic || b.Transitions[0].From[0] != "backlog" ||
 		b.Transitions[0].Rules[0].Rule != "criteria-present" || b.Timers[1].From.State != "in-progress" {
 		t.Errorf("a change to one copy reached the next: %+v", b)
+	}
+	if b.States[3].Runs.Kluster[0] != KlusterDeploy || !b.Transitions[2].Verify.Suites.All || b.Transitions[2].Verify.Severity != SeverityWarn ||
+		!b.VerifyAt.Batch.All || !b.VerifyAt.CI.All {
+		t.Errorf("a change to one copy's verify, runs, or verify_at reached the next: %+v %+v %+v", b.States[3].Runs, b.Transitions[2].Verify, b.VerifyAt)
 	}
 }
