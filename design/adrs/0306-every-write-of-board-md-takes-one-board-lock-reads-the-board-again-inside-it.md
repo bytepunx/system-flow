@@ -1,8 +1,8 @@
 ---
 id: ADR-0306
 title: "Every write of board.md takes one board lock, reads the board again inside it, and normalises the pull order against the items before it writes"
-status: proposed
-date: 2026-11-15
+status: accepted
+date: 2026-11-17
 supersedes: []
 superseded_by: []
 ---
