@@ -90,6 +90,56 @@ func TestFlaiKlusterWritesAreTheOperators(t *testing.T) {
 	}
 }
 
+// S-0829, I-0355: flai kluster status and deployments are reads every agent
+// may run (kluster.md § Reads). A sub-agent of every kind of session, and a
+// strategic role held by its file, runs them in any form a line runs flai,
+// where they once fell through to the generic refusal, since no read table
+// listed kluster; the writes stay refused to them all.
+func TestEverySubAgentAndRoleReadsTheKluster(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "kluster")
+	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "task"; return e }
+	sessions := []struct {
+		name  string
+		guard Guard
+		sub   bool
+	}{
+		{"story's agent's sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true}, true},
+		{"read-only sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true, ReadOnly: func(string) bool { return true }}, true},
+		{"operator's sub-agent", Guard{Commands: commands}, true},
+		{"planner's sub-agent", Guard{Commands: commands, Role: RolePlan}, true},
+		{"planner", Guard{Commands: commands, Role: RolePlan}, false},
+		{"orchestrator", Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, false},
+		{"analyzer", Guard{Commands: commands, Role: RoleAnalyze}, false},
+		{"curator", Guard{Commands: commands, Role: RoleCurate}, false},
+		{"session flai serve started", Guard{Commands: commands, Served: true}, false},
+	}
+	reads := []string{
+		"flai kluster status",
+		"flai kluster status --json",
+		"scripts/flai.sh kluster status --json",
+		"cd /w && /home/alex/.flai/bin/flai kluster deployments",
+		"flai kluster deployments --json --with-limit",
+	}
+	for _, s := range sessions {
+		for _, line := range reads {
+			e := bash("", line)
+			if s.sub {
+				e = sub(e)
+			}
+			if why := s.guard.Check(e); why != "" {
+				t.Errorf("%s: %q refused: %s", s.name, line, why)
+			}
+		}
+		e := bash("", "flai kluster up")
+		if s.sub {
+			e = sub(e)
+		}
+		if why := s.guard.Check(e); !strings.Contains(why, "shared infrastructure on the operator's machine") {
+			t.Errorf("%s: flai kluster up: %q", s.name, why)
+		}
+	}
+}
+
 // klusterTool is a call of the MCP tool tool naming story, "" for none.
 func klusterTool(tool, story string) Event {
 	e := Event{ToolName: MCPPrefix + tool}

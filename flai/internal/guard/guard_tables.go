@@ -67,7 +67,10 @@ const (
 // flai digest list and show read the digest (S-0428). flai subproject list
 // reads the manifest's sub-projects, and flai subproject alone prints its
 // help (S-0491). flai formula list and show read the formulas, and flai
-// formula alone prints its help (S-0421).
+// formula alone prints its help (S-0421). flai kluster status and
+// deployments read the project's cluster and its deployments, open to every
+// agent (kluster.md, What the agent runs against its namespace; S-0829,
+// I-0355).
 var cliReads = map[string][]string{
 	"board":      {""},
 	"check":      nil,
@@ -80,6 +83,7 @@ var cliReads = map[string][]string{
 	"formula":    {"", "list", "show"},
 	"help":       nil,
 	"issue":      {"list"},
+	"kluster":    {"status", "deployments"},
 	"message":    {"list", "show"},
 	"prime":      nil,
 	"shared":     {"list", "check"},
