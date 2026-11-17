@@ -3,15 +3,36 @@ id: T-3559
 type: task
 nature: remediation
 title: The guard lets every sub-agent and strategic role run flai kluster status and deployments
-status: backlog
+status: done
 parent: S-0829
 owner: alex
 created: 2026-11-17T12:28:43Z
-updated: 2026-11-17T12:28:43Z
-transitions: []
+updated: 2026-11-17T13:11:25Z
+transitions:
+  - to: ready
+    at: 2026-11-17T13:04:58Z
+    by: agent-S-0829
+  - to: in-progress
+    at: 2026-11-17T13:04:58Z
+    by: agent-S-0829
+  - to: done
+    at: 2026-11-17T13:11:25Z
+    by: agent-S-0829
 stream: S-0829
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/kluster_test.go]
+usage:
+  source: log
+  seconds: 387
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 757
+      cache_read: 458061
+      cache_write: 16851
+      cost: 0.2416
 ---
 # T-3559 The guard lets every sub-agent and strategic role run flai kluster status and deployments
 

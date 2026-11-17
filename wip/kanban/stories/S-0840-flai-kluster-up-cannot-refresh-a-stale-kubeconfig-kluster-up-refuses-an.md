@@ -3,14 +3,17 @@ id: S-0840
 type: story
 nature: remediation
 title: "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:51Z
-updated: 2026-11-17T12:57:33Z
+updated: 2026-11-17T13:22:14Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T13:22:14Z
+    by: agent-S-0840
 tags: [flai, kluster]
 topics: [kluster]
 touches: [flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, design/system/kluster.md, design/tech/kluster.md]

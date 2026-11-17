@@ -6,7 +6,7 @@ title: workitem's Item.Closed and PlanArchive read the baseline's done and cance
 status: ready
 owner: alex
 created: 2026-11-17T08:32:53Z
-updated: 2026-11-17T12:57:33Z
+updated: 2026-11-17T13:23:37Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:29:22Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T15:12:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0806, S-0829, S-0834, S-0811, S-0840 and S-0809."
+  delivery: 2026-11-17T15:01:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0840, S-0811 and S-0809."
   by: flai
-  at: 2026-11-17T12:57:33Z
+  at: 2026-11-17T13:23:37Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:33Z

@@ -3,10 +3,10 @@ id: S-0829
 type: story
 nature: remediation
 title: A sub-agent's flai kluster status falls through to the guard's generic refusal, against kluster.md's rule that status is a read every agent may run
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:21Z
-updated: 2026-11-17T12:56:17Z
+updated: 2026-11-17T13:23:36Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T12:56:17Z
     by: agent-S-0829
+  - to: review
+    at: 2026-11-17T13:22:06Z
+    by: agent-S-0829
+  - to: done
+    at: 2026-11-17T13:23:36Z
+    by: orchestrator
 tags: []
 topics: [guard, kluster]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/kluster_test.go, design/system/flai-cli.md, design/system/kluster.md, design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md]
@@ -23,9 +29,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1561
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 11308
+      cache_read: 6845590
+      cache_write: 251828
+      cost: 3.6102
   strategic:
     - kind: planner
       seconds: 181
@@ -78,8 +95,8 @@ finalized:
 This story remediates [I-0355](../../../design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md), "A sub-agent's flai kluster status falls through to the guard's generic refusal, against kluster.md's rule that status is a read every agent may run". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0355 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0355 is closed with `flai issue close I-0355 --reason` saying what fixed it
+- [x] The cause I-0355 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0355 is closed with `flai issue close I-0355 --reason` saying what fixed it
 
 ## Tasks
 - T-3559 The guard lets every sub-agent and strategic role run flai kluster status and deployments
@@ -109,3 +126,12 @@ Left out: `flai/internal/guard/guard.go`, whose comment already says status read
 Forecast: `flai forecast` gave 6m with no touches, and 20m with these six (147 s per unit of size over 70 done remediation stories, size 8). Set to 40m: S-0680, the same kind of fix (a missing guard read form, its docs, and closing the issue in three tasks), took 2178 s, and a close-out here alone takes about 10m. The delivery, 2026-11-17T18:49:00Z, is kept as `flai forecast` worked it out from the pull order.
 
 Cost of delay: `flai cod` gives 12.50 USD a week from the operator's input, 5m lost per 168h cycle at 150 USD an hour. Kept as it stands: one instance, and a sub-agent can still work around it by asking the story's agent.
+
+### Accepted by the orchestrator
+
+- Verified: 209451e0ad8f2eaeff9e920e4f9b4427858cd629
+- At: 2026-11-17T13:23:36Z
+
+Verdict: pass at 209451e0ad8f2eaeff9e920e4f9b4427858cd629
+- 1: flai/internal/guard/guard_tables.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md
+- 2: design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md

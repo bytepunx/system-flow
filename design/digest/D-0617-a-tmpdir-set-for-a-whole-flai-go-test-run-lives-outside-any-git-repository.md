@@ -2,9 +2,9 @@
 id: D-0617
 title: A TMPDIR set for a whole flai go test run lives outside any git repository, under /tmp from mktemp -d, never under the worktree's bin/, since about 150 tests fail when their temp folders sit inside a git repository and under a system-flow.yaml
 kind: decision
-sources: [S-0777, I-0371, S-0781]
+sources: [S-0777, I-0371, S-0781, I-0370, S-0841]
 topics: [flai, go, testing, code, cli]
-paths: [flai, flai/cmd/cmd_test.go, flai/internal/mcpserver/server_test.go, flai/cmd/story_start_test.go]
+paths: [flai, flai/cmd/cmd_test.go, flai/internal/mcpserver/server_test.go, flai/cmd/story_start_test.go, design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md]
 date: 2026-11-13
 status: active
 absorbed_by: ""
@@ -26,6 +26,12 @@ That discarded run also leaked branches into the main repository (I-0371, fixed 
 the TestMain of flai/cmd and flai/internal/mcpserver set GIT_CEILING_DIRECTORIES to the temporary folder, with TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch reproducing the leak (T-3343); the four branches were deleted and their worktrees pruned on the operator's word on TH-1190 (T-3345)
 ```
 
-A later story that sets TMPDIR for a go test run makes it with `mktemp -d` under `/tmp`, removes it after, and records the exception to the `bin/<story>/` rule in its Decisions. Failures under a TMPDIR inside the worktree say nothing about the change. A new test package whose tests make temp projects without `git init` sets `GIT_CEILING_DIRECTORIES` to its temp folder in its TestMain, as flai/cmd and flai/internal/mcpserver do.
+The same leak made `scripts/flai-test.sh`'s repository check fail on this host (I-0370). S-0841 closed I-0370 with no new code, since the cause no longer occurs. From S-0841's Decisions (`wip/archive/agents/S-0841.md`):
 
-Sources: S-0777 (wip/archive/agents/S-0777.md, Decisions); I-0371 and S-0781 (wip/archive/agents/S-0781.md).
+```text
+Criterion 1's reproducer is S-0781's TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch; no new code, since the cause no longer occurs (D-0625 for the branch deletion).
+```
+
+A later story that sets TMPDIR for a go test run makes it with `mktemp -d` under `/tmp`, removes it after, and records the exception to the `bin/<story>/` rule in its Decisions. Failures under a TMPDIR inside the worktree say nothing about the change. A new test package whose tests make temp projects without `git init` sets `GIT_CEILING_DIRECTORIES` to its temp folder in its TestMain, as flai/cmd and flai/internal/mcpserver do. A failure caused by stray `story/S-000*` branches points to this leak; TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch is its reproducer.
+
+Sources: S-0777 (wip/archive/agents/S-0777.md, Decisions); I-0371 and S-0781 (wip/archive/agents/S-0781.md); I-0370 and S-0841 (wip/archive/agents/S-0841.md, Decisions).

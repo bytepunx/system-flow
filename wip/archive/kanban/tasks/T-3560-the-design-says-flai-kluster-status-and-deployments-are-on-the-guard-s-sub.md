@@ -3,16 +3,37 @@ id: T-3560
 type: task
 nature: remediation
 title: The design says flai kluster status and deployments are on the guard's sub-agent reads
-status: backlog
+status: done
 parent: S-0829
 owner: alex
 created: 2026-11-17T12:28:56Z
-updated: 2026-11-17T12:28:56Z
-transitions: []
+updated: 2026-11-17T13:12:01Z
+transitions:
+  - to: ready
+    at: 2026-11-17T13:11:41Z
+    by: agent-S-0829
+  - to: in-progress
+    at: 2026-11-17T13:11:42Z
+    by: agent-S-0829
+  - to: done
+    at: 2026-11-17T13:12:01Z
+    by: agent-S-0829
 stream: S-0829
 tags: [docs, guard]
 touches: [design/system/flai-cli.md, design/system/kluster.md]
 after: [T-3559]
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1195
+      cache_read: 723355
+      cache_write: 26610
+      cost: 0.3815
 ---
 # T-3560 The design says flai kluster status and deployments are on the guard's sub-agent reads
 

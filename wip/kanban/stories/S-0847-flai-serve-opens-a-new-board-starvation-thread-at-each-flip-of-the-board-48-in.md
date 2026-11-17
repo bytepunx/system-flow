@@ -6,7 +6,7 @@ title: flai serve opens a new board-starvation thread at each flip of the board,
 status: backlog
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-17T12:57:33Z
+updated: 2026-11-17T13:23:37Z
 transitions: []
 tags: [flai, serve]
 topics: [threads, ready, orchestration]
@@ -73,10 +73,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:58Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T23:58:00Z
-  basis: "Its own forecast of 1h; 22nd in the pull order with an in-progress limit of 3, behind S-0806, S-0829, S-0834, S-0811, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843, S-0844, S-0845 and S-0846."
+  delivery: 2026-11-18T00:07:00Z
+  basis: "Its own forecast of 1h; 21st in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0840, S-0811, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843, S-0844, S-0845 and S-0846."
   by: flai
-  at: 2026-11-17T12:57:33Z
+  at: 2026-11-17T13:23:37Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z

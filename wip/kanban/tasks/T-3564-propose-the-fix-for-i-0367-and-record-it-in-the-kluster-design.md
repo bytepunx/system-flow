@@ -3,12 +3,18 @@ id: T-3564
 type: task
 nature: remediation
 title: Propose the fix for I-0367 and record it in the kluster design
-status: backlog
+status: in-progress
 parent: S-0840
 owner: alex
 created: 2026-11-17T12:29:10Z
-updated: 2026-11-17T12:29:10Z
-transitions: []
+updated: 2026-11-17T13:23:27Z
+transitions:
+  - to: ready
+    at: 2026-11-17T13:23:26Z
+    by: agent-S-0840
+  - to: in-progress
+    at: 2026-11-17T13:23:27Z
+    by: agent-S-0840
 stream: S-0840
 tags: [kluster, design]
 touches: [design/system/kluster.md, design/tech/kluster.md]

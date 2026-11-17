@@ -6,7 +6,7 @@ title: A publish the orchestrator starts is a release_publish call and makes no 
 status: backlog
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-17T12:57:33Z
+updated: 2026-11-17T13:23:37Z
 transitions: []
 tags: [flai, template]
 topics: [release, orchestration, upgrade]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T12:39:39Z
 forecast:
   duration: 1h38m
-  delivery: 2026-11-17T22:26:00Z
-  basis: "Its own forecast of 1h38m; 16th in the pull order with an in-progress limit of 3, behind S-0806, S-0829, S-0834, S-0811, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824 and S-0835."
+  delivery: 2026-11-17T22:48:00Z
+  basis: "Its own forecast of 1h38m; 15th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0840, S-0811, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824 and S-0835."
   by: flai
-  at: 2026-11-17T12:57:33Z
+  at: 2026-11-17T13:23:37Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:09Z
