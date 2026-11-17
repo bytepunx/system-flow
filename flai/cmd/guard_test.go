@@ -798,6 +798,95 @@ func TestGuardRefusesTheStorysAgentsWaitOnItsSubAgents(t *testing.T) {
 	wait("the sub-agent stopped", 0, "")
 }
 
+// I-0376, ADR-0315: a foreground sub-agent that ended on an API error fires
+// no SubagentStop, so the record kept it and the guard refused the story's
+// agent every later wait_for_events. Once the launch's result is in the
+// session transcript the hook input names, the guard drops it from the
+// record and lets the wait through; a sub-agent whose result is not there,
+// one launched in the background, and a transcript it cannot read still hold
+// the wait.
+func TestGuardLetsTheStorysAgentWaitOnceAForegroundSubAgentEndedOnAnError(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	t.Setenv("FLAI_STORY", "S-0001")
+	root := tempProject(t)
+	if _, errOut, code := runIn(t, root, "story", "new", "Slice"); code != 0 {
+		t.Fatal(errOut)
+	}
+	record := filepath.Join(root, ".flai-cache", "guard", "s1.json")
+	// the session's transcript and the sub-agents' meta files beside it, as
+	// Claude Code 2.1.325 wrote them for S-0738's T-3202 sub-agent
+	transcript := filepath.Join(t.TempDir(), "s1.jsonl")
+	meta := func(id, launch, shape string) {
+		t.Helper()
+		dir := filepath.Join(strings.TrimSuffix(transcript, ".jsonl"), "subagents")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		content := `{"agentType":"general-purpose","toolUseId":"` + launch + `","spawnDepth":1,"requestShape":"` + shape + `","finished":true}`
+		if err := os.WriteFile(filepath.Join(dir, "agent-"+id+".meta.json"), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	appendLines := func(lines ...string) {
+		t.Helper()
+		f, err := os.OpenFile(transcript, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = f.Close() }()
+		for _, l := range lines {
+			if _, err := f.WriteString(l + "\n"); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	launch := func(id string) string {
+		return `{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"` + id + `","name":"Agent","input":{"description":"T-3202","run_in_background":false}}]}}`
+	}
+	waitIn := func(path string) string {
+		return `{"session_id":"s1","transcript_path":"` + path + `","hook_event_name":"PreToolUse","tool_name":"mcp__flai__wait_for_events","tool_input":{"timeout_seconds":600}}`
+	}
+	wait := func(what, path string, code int, err string) {
+		t.Helper()
+		_, errOut, got := runStdin(t, root, waitIn(path), "guard")
+		if got != code || (err == "" && errOut != "") || !strings.Contains(errOut, err) {
+			t.Errorf("%s: code %d, stderr %q", what, got, errOut)
+		}
+	}
+	hook := func(in string) {
+		t.Helper()
+		if _, errOut, code := runStdin(t, root, in, "guard"); code != 0 {
+			t.Fatalf("%s: code %d, stderr %q", in, code, errOut)
+		}
+	}
+
+	hook(subAgentHook("SubagentStart", "ac8d9be303813c862", "general-purpose"))
+	meta("ac8d9be303813c862", "toolu_01Jb", "foreground")
+	appendLines(launch("toolu_01Jb"))
+	wait("the launch has no result yet", transcript, 2, "general-purpose ac8d9be303813c862")
+	// the sub-agent ends on an API error: its result is an error string with
+	// no agentId, and no SubagentStop comes
+	appendLines(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Agent terminated early due to an API error: API Error: Unable to connect to API: SSL certificate hostname mismatch (error type server_error)","is_error":true,"tool_use_id":"toolu_01Jb"}]},"toolUseResult":"Error: Agent terminated early due to an API error"}`)
+	wait("the launch's result is in the transcript", transcript, 0, "")
+	if _, err := os.Stat(record); !os.IsNotExist(err) {
+		t.Errorf("the ended sub-agent's record is left: %v", err)
+	}
+
+	// a background launch's notice is no result: the sub-agent still runs
+	hook(subAgentHook("SubagentStart", "acf8eff006f041f85", "general-purpose"))
+	meta("acf8eff006f041f85", "toolu_02Bg", "background")
+	appendLines(launch("toolu_02Bg"), `{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":[{"type":"text","text":"Async agent launched successfully."}],"tool_use_id":"toolu_02Bg"}]},"toolUseResult":{"isAsync":true,"status":"async_launched","agentId":"acf8eff006f041f85"}}`)
+	wait("a background sub-agent running", transcript, 2, "general-purpose acf8eff006f041f85")
+	// a transcript the guard cannot read, or none named, prunes nothing
+	wait("an unreadable transcript", filepath.Join(t.TempDir(), "gone.jsonl"), 2, "session transcript unreadable")
+	if _, errOut, code := runStdin(t, root, waitHook, "guard"); code != 2 || !strings.Contains(errOut, "general-purpose acf8eff006f041f85") {
+		t.Errorf("no transcript named: code %d, stderr %q", code, errOut)
+	}
+	hook(subAgentHook("SubagentStop", "acf8eff006f041f85", "general-purpose"))
+	wait("the background sub-agent stopped", transcript, 0, "")
+}
+
 // S-0353: flai guard reads the input with the reader --harness names,
 // claude-code by default; a harness with no reader passes the call, with a
 // warning on standard error naming the readers there are.

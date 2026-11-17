@@ -367,7 +367,7 @@ neither is set, a file edit does not run it.`,
 				g.AutoApprove = a.guardAutoApprove()
 			}
 			if g.Role == "" && g.Story != "" && !call.Subagent {
-				a.holdWaits(&g, call.Session)
+				a.holdWaits(&g, call.Session, call.Transcript)
 			}
 			if call.Subagent && call.Kind == guard.Shell {
 				g.ReadOnly = a.guardReadOnly()
@@ -519,11 +519,13 @@ func (a *app) recordSubAgent(ch guard.SubAgentChange) {
 }
 
 // holdWaits gives g what it needs to hold a story's agent's wait_for_events:
-// the sub-agents session's record lists as running, and whether a thread on
-// the story is open, each read from the project only when the call is
-// decided on. A project, a record, or threads it cannot read are warned of
-// and let the call through.
-func (a *app) holdWaits(g *guard.Guard, session string) {
+// the sub-agents session's record lists as running, once those whose
+// foreground launch has its result in the session's transcript are dropped
+// from it (ADR-0315), and whether a thread on the story is open, each read
+// from the project only when the call is decided on. A project, a record, or
+// threads it cannot read are warned of and let the call through; a
+// transcript it cannot read is warned of and prunes nothing.
+func (a *app) holdWaits(g *guard.Guard, session, transcript string) {
 	project := sync.OnceValues(a.guardProject)
 	g.Running = func() ([]guard.SubAgent, error) {
 		repo, err := project()
@@ -531,11 +533,13 @@ func (a *app) holdWaits(g *guard.Guard, session string) {
 			a.logger().Warn("project unreadable, the story's agent's wait is let through", "component", "guard", "err", err.Error())
 			return nil, err
 		}
-		running, err := guard.Running(filepath.Join(repo.CacheDir(), guard.RecordDir), session)
+		dir := filepath.Join(repo.CacheDir(), guard.RecordDir)
+		running, err := guard.Running(dir, session)
 		if err != nil {
 			a.logger().Warn("sub-agents unreadable, the story's agent's wait is let through", "component", "guard", "err", err.Error())
+			return running, err
 		}
-		return running, err
+		return a.pruneEnded(dir, session, transcript, running), nil
 	}
 	g.ThreadOpen = func() (bool, error) {
 		repo, err := project()
@@ -548,4 +552,38 @@ func (a *app) holdWaits(g *guard.Guard, session string) {
 		a.logger().Warn("threads unreadable, the story's agent's wait is let through", "component", "guard", "story", g.Story, "err", err.Error())
 		return false, err
 	}
+}
+
+// pruneEnded drops from running, and from session's record in dir, the
+// sub-agents whose foreground launch has its result in the session's
+// transcript (ADR-0315): such a sub-agent has ended though no SubagentStop
+// reported it, as one that ends on an API error does (I-0376). With no
+// sub-agent running it reads nothing. A transcript it cannot read is warned
+// of, and one it is not given, as another harness's input may name none, is
+// logged at debug; running is then kept. A record it cannot write is warned
+// of, and the ended sub-agents are left out of the decision all the same.
+func (a *app) pruneEnded(dir, session, transcript string, running []guard.SubAgent) []guard.SubAgent {
+	if len(running) == 0 {
+		return running
+	}
+	if transcript == "" {
+		a.logger().Debug("no session transcript named, the record of running sub-agents is kept", "component", "guard")
+		return running
+	}
+	ids := make([]string, len(running))
+	for i, s := range running {
+		ids[i] = s.ID
+	}
+	ended, err := guard.EndedSubAgents(transcript, ids)
+	if err != nil {
+		a.logger().Warn("session transcript unreadable, the record of running sub-agents is kept", "component", "guard", "err", err.Error())
+		return running
+	}
+	if len(ended) == 0 {
+		return running
+	}
+	if err := guard.Forget(dir, session, ended); err != nil {
+		a.logger().Warn("ended sub-agents not dropped from the record", "component", "guard", "agent_ids", ended, "err", err.Error())
+	}
+	return slices.DeleteFunc(running, func(s guard.SubAgent) bool { return slices.Contains(ended, s.ID) })
 }
