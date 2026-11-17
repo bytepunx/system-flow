@@ -263,11 +263,12 @@ type SentBack struct {
 
 // then is what follows the agent's fix of a story sent back on thread: the
 // push of its pull request, from the merge queue its batching again, from an
-// acceptance its acceptance again, or from its kluster namespace its deploy
-// again in place.
+// acceptance its acceptance again, or from its kluster namespace the deploy
+// the agent may ask for before review (ADR-0292 §1, §3), and the review's
+// deploy again in place of one that has not passed at the head.
 func (b *SentBack) then(story string) string {
 	if b.Kluster {
-		return fmt.Sprintf("flai serve deploys %[1]s again in place once it is back in review, at a new commit or the same one, and resolves %[2]s once that deploy and its checks pass. When the cause is outside the story, such as the cluster's services, say so on %[2]s rather than change the branch for it", story, b.Thread)
+		return fmt.Sprintf("before that move, you may ask flai serve to deploy %[1]s at its committed head with the flai MCP tool kluster_deploy (flai kluster deploy %[1]s --job on the host), which runs its checks once the deploy passes while the checks host action is on, and hold wait_for_events for %[1]s's kluster event, again each time it returns; a deploy and its checks that pass at the head resolve %[2]s. Back in review, at a new commit or the same one, flai serve deploys %[1]s again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head, and resolves %[2]s once they pass. When the cause is outside the story, such as the cluster's services, say so on %[2]s rather than change the branch for it", story, b.Thread)
 	}
 	if b.Acceptance {
 		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review, and it is accepted again", story, b.Thread)

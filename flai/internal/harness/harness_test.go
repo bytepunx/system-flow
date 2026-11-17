@@ -683,6 +683,42 @@ func TestAnAgentAnAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
 	}
 }
 
+// I-0357, ADR-0292 §1, §3: an agent whose story its kluster namespace sent
+// back is told, in its last session and in a new one, that it may ask for its
+// own deploy before review and wait for the story's kluster event, that a
+// passing deploy and checks at the head resolve the thread, and that the
+// review deploys again only what has not passed at the head, not that flai
+// serve always deploys it again.
+func TestAnAgentItsKlusterSentBackIsToldItMayDeployBeforeReview(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0013", What: "flai serve's kluster deploy of S-0104 failed at the deploy step, at commit abc1234", Kluster: true}
+	for _, resumed := range []bool{true, false} {
+		r.SentBack.Resumed = resumed
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := st.Argv[2]
+		for _, want := range []string{
+			"move S-0104 to review again; before that move, you may ask flai serve to deploy S-0104 at its committed head with the flai MCP tool kluster_deploy (flai kluster deploy S-0104 --job on the host), which runs its checks once the deploy passes while the checks host action is on,",
+			"hold wait_for_events for S-0104's kluster event",
+			"a deploy and its checks that pass at the head resolve TH-0013.",
+			"flai serve deploys S-0104 again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head, and resolves TH-0013 once they pass.",
+			"say so on TH-0013 rather than change the branch for it.",
+		} {
+			if !strings.Contains(p, want) {
+				t.Errorf("resumed %v: the prompt lacks %q:\n%s", resumed, want, p)
+			}
+		}
+		for _, not := range []string{"pushes the fix", "merge queue", "deploys S-0104 again in place once it is back in review"} {
+			if strings.Contains(p, not) {
+				t.Errorf("resumed %v: the prompt says %q of a story its kluster sent back:\n%s", resumed, not, p)
+			}
+		}
+	}
+}
+
 // S-0140: an agent started to commit a story's worktree is told to do that
 // and nothing else; the operator's command is told the worktree.
 func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {

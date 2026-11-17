@@ -3828,8 +3828,9 @@ func (lab *agentLab) klusterSendBack(story string, checks bool) *threads.Thread 
 // ADR-0254 §5a: a story flai serve's kluster pass sent back to in-progress,
 // as flai, after its deploy or its checks run against its namespace failed,
 // gets its agent started once, in its last session, told the thread, what
-// failed, and that flai serve deploys it again in place; a second look starts
-// no second agent.
+// failed, that it may ask for its own deploy before review, and that flai
+// serve deploys it again in place only when that has not passed at its head
+// (I-0357); a second look starts no second agent.
 func TestAStoryTheKlusterSentBackGetsItsAgentOnce(t *testing.T) {
 	for _, c := range []struct {
 		name   string
@@ -3875,7 +3876,8 @@ func TestAStoryTheKlusterSentBackGetsItsAgentOnce(t *testing.T) {
 			got, _ := os.ReadFile(out)
 			for _, want := range []string{
 				"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": " + fmt.Sprintf(c.what, id),
-				"move " + id + " to review again; flai serve deploys " + id + " again in place once it is back in review",
+				"move " + id + " to review again; before that move, you may ask flai serve to deploy " + id + " at its committed head with the flai MCP tool kluster_deploy (flai kluster deploy " + id + " --job on the host)",
+				"flai serve deploys " + id + " again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head",
 				"--resume " + first.Session,
 			} {
 				if !strings.Contains(string(got), want) {
