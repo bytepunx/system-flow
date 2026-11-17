@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 338.7046
-accrued_seconds: 37466
-tasks_completed: 230
-last_run: 2026-11-17T01:41:30Z
+accrued_cost: 339.3741
+accrued_seconds: 37563
+tasks_completed: 231
+last_run: 2026-11-17T02:28:16Z
 ---
 
 # Curator activity
@@ -1851,3 +1851,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 54
 - Cost: 0.4211 USD, estimated
+
+### 2026-11-17T02:28:16Z
+
+- Summary: I wrote D-0652 (from I-0395: Go tests inside a close-out job inherit `FLAI_VERIFY_PROGRESS=1`, so a test that expects no progress output clears it with `t.Setenv` first), merged none, absorbed none, and `flai digest compact` compacted none; S-0797's ten narrative decisions are already in ADR-0311 or are progress notes, and nothing outside S-0797's preflight docs changed since the last full absorption sweep.
+- Trigger: accepted S-0797
+- Items: D-0652
+- Seconds: 97
+- Cost: 0.6695 USD, estimated

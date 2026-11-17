@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2228.7634
-accrued_seconds: 1572343
-tasks_completed: 3774
-last_run: 2026-11-17T02:03:21Z
+accrued_cost: 2229.4358
+accrued_seconds: 1572543
+tasks_completed: 3779
+last_run: 2026-11-17T02:29:40Z
 ---
 
 # Orchestrator activity
@@ -26453,6 +26453,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2735 USD, estimated
+
+### 2026-11-17T02:27:43Z
+
+- Summary: After alex accepted S-0797, release_evaluate was met under threshold (count 1 at or over 1; value 450 of 1000 USD/week). Ran flai formula run publish --ready --autocommit: instance S-0818 (tasks T-3492..T-3494), now in ready, committed 73299cef0. Applied flai order --by throughput: S-0818 is rank 1 of 1 (no forecast duration).
+- Items: S-0797, S-0818
+- Seconds: 99
+- Cost: 0.2739 USD, estimated
+
+### 2026-11-17T02:27:54Z
+
+- Summary: Ready was empty. promote_candidates listed none. Started the planner for S-0817, which flai plan --candidates lists (no touches, forecast, cost of delay value, or tasks). Opened TH-1265 because flai promote --drafts lists the S-0817 draft as incomplete. Did not start the planner for E-0034: alex's entry on TH-1228 ('done') confirms a sync and asks for no change to the plan. Left the S-0815 draft (pending recommendation on TH-1257) and the S-0241 draft (blocked, TH-1165). Left TH-1264 alone because it is flai serve's notice.
+- Items: S-0817, E-0034, S-0815, S-0241
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T02:28:51Z
+
+- Summary: All three reasons are handled. The release for S-0797 is under way: S-0818 has started, and its agent picked it up.
+- Items: none
+- Seconds: 57
+- Cost: 0.1329 USD, estimated
+
+### 2026-11-17T02:29:20Z
+
+- Summary: Release due for S-0797 (threshold met: count 1 of 1, value 450 USD/week): started no publish formula, because its instance S-0818 already exists and is in progress (T-3492 done); a second run would duplicate it. TH-1264 (board starved) is already resolved by flai serve, since S-0818 could start; nothing to do on it.
+- Items: S-0797, S-0818
+- Seconds: 13
+- Cost: 0.0899 USD, estimated
+
+### 2026-11-17T02:29:40Z
+
+- Summary: I started no new release: a release of S-0797 is already under way, and the starvation thread had already closed itself.
+- Items: none
+- Seconds: 20
+- Cost: 0.1757 USD, estimated
 
 ## Refusals
 
