@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2238.7725
-accrued_seconds: 1574392
-tasks_completed: 3846
-last_run: 2026-11-17T08:19:32Z
+accrued_cost: 2239.3775
+accrued_seconds: 1574523
+tasks_completed: 3851
+last_run: 2026-11-17T08:22:00Z
 ---
 
 # Orchestrator activity
@@ -26957,6 +26957,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0825
 - Seconds: 13
 - Cost: 0.0000 USD
+
+### 2026-11-17T08:20:06Z
+
+- Summary: Accepted S-0825 (publish instance for flai 1.103.0, flaiover 0.62.0) at e2e5959 once the curator's D-0630 edit was committed: evidence T-3513, T-3514, T-3515 done. A formula instance publishes nothing new itself; S-0826 has since published flai 1.104.0 and template 1.1.45 for S-0750 and S-0805, so no further publish run.
+- Items: S-0825, S-0826
+- Seconds: 34
+- Cost: 0.0694 USD, estimated
+
+### 2026-11-17T08:20:21Z
+
+- Summary: After accepting S-0825: release_evaluate not met under threshold (count 0 of 1, value 0 of 1000); no publish.
+- Items: S-0825
+- Seconds: 15
+- Cost: 0.0704 USD, estimated
+
+### 2026-11-17T08:20:40Z
+
+- Summary: I accepted S-0825 and handled the two release reasons. Nothing is left to publish.
+- Items: none
+- Seconds: 19
+- Cost: 0.1880 USD, estimated
+
+### 2026-11-17T08:21:45Z
+
+- Summary: Recommended an answer on TH-1274, citing design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+- Items: S-0822
+- Seconds: 48
+- Cost: 0.2419 USD, estimated
+
+### 2026-11-17T08:22:00Z
+
+- Summary: Recommended `stop` on TH-1274 (planner-S-0822's question): changing ADR-0313 §6 is a decision not yet recorded, so it awaits the operator; thread left open
+- Items: S-0822, TH-1274
+- Seconds: 15
+- Cost: 0.0353 USD, estimated
 
 ## Refusals
 

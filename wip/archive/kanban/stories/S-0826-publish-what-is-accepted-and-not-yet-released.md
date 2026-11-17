@@ -3,10 +3,10 @@ id: S-0826
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:16:46Z
-updated: 2026-11-17T08:19:56Z
+updated: 2026-11-17T08:22:23Z
 transitions:
   - to: ready
     at: 2026-11-17T08:16:48Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:17:31Z
     by: agent-S-0826
+  - to: review
+    at: 2026-11-17T08:20:16Z
+    by: agent-S-0826
+  - to: done
+    at: 2026-11-17T08:22:23Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0826-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,32 +29,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 149
-  estimated: true
-  priced_by: estimate
+  seconds: 201
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 2
+      ceremony: 3
       hand_edits: 1
-      work: 17
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 445
-      cache_read: 2601429
-      cache_write: 164005
-      cost: 1.0538
+      input: 62
+      output: 8521
+      cache_read: 4455187
+      cache_write: 174268
+      cost: 2.4558
   strategic:
     - kind: orchestrator
-      seconds: 39
+      seconds: 56
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 46
-          cache_read: 370539
-          cache_write: 41784
-          cost: 0.1277
+          input: 9
+          output: 53
+          cache_read: 480872
+          cache_write: 43513
+          cost: 0.1624
         - model: claude-sonnet-5-5
           input: 1
           output: 12
@@ -84,3 +89,13 @@ Published on 2026-11-17 by step 3, with S-0750 and S-0805, and pushed:
 |-----------|------|----|----------------|
 | flai | 1.103.0 | 1.104.0 | `flai/v1.104.0` |
 | template | 1.1.44 | 1.1.45 | template repository v1.1.45 (315ea50) |
+
+### Accepted by the orchestrator
+
+- Verified: d399d4365fb3f7e51f171fbd04b0ab89945a3227
+- At: 2026-11-17T08:22:23Z
+
+Verdict: pass. Every step of the publish instance is done, and flai/v1.104.0 is tagged and pushed.
+- 1: T-3517 done
+- 2: T-3518 done
+- 3: T-3519 done

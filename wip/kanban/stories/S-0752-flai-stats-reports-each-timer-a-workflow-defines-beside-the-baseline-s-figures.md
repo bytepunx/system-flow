@@ -3,15 +3,18 @@ id: S-0752
 type: story
 nature: feature
 title: flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-17T08:17:15Z
+updated: 2026-11-17T08:20:32Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:51Z
     by: alex
+  - to: in-progress
+    at: 2026-11-17T08:20:32Z
+    by: agent-S-0752
 tags: [cli]
 topics: [cli, analysis]
 touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/internal/metrics/window.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]

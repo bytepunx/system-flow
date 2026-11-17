@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 350.9647
-accrued_seconds: 39151
-tasks_completed: 241
-last_run: 2026-11-17T08:19:23Z
+accrued_cost: 351.3529
+accrued_seconds: 39191
+tasks_completed: 242
+last_run: 2026-11-17T08:20:47Z
 ---
 
 # Curator activity
@@ -1939,3 +1939,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0630
 - Seconds: 70
 - Cost: 0.7592 USD, estimated
+
+### 2026-11-17T08:20:47Z
+
+- Summary: I found nothing to take in: wrote none, merged none, absorbed none, and `flai digest compact` compacted none. The one harvested candidate was progress from S-0825's release formula run, and no design, convention, or ADR file changed since 08:19:23Z.
+- Trigger: accepted S-0825
+- Items: none
+- Seconds: 40
+- Cost: 0.3882 USD, estimated

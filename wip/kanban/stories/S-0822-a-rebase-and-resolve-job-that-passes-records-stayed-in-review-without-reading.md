@@ -6,7 +6,7 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-17T08:19:55Z
+updated: 2026-11-17T08:21:08Z
 transitions: []
 tags: [flai, flaiover]
 agent:
@@ -20,21 +20,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 67
+      seconds: 130
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 81
-          cache_read: 783588
-          cache_write: 96802
-          cost: 0.2725
+          input: 35
+          output: 218
+          cache_read: 1503587
+          cache_write: 185428
+          cost: 0.523
         - model: claude-sonnet-5-5
-          input: 16
-          output: 841
-          cache_read: 167575
-          cache_write: 67904
-          cost: 0.1893
+          input: 20
+          output: 1495
+          cache_read: 188416
+          cache_write: 79678
+          cost: 0.216
 draft: true
 cost_of_delay:
   inputs:
@@ -57,6 +57,7 @@ When a rebase and resolve job passes, `settle` in `flai/internal/serve/resolvejo
 ## Tasks
 - T-3520 settle reads the story again and records left review for a story no longer in review
 - T-3521 The review page shows a rebase and resolve job that ended with its story out of review
+- T-3522 The design and the user docs name the left review outcome, and I-0396 is closed
 
 ## Notes
 
