@@ -7,7 +7,7 @@ count: 1
 cost: 8m
 first_reported: 2026-11-16T06:16:21Z
 last_reported: 2026-11-16T06:16:21Z
-updated: 2026-11-16T06:16:21Z
+updated: 2026-11-17T08:32:57Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ closeouts.weeks[] W46 failed 11; the serve journal names each as "interrupted, f
 ## Remediation
 
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
+
+Story S-0846 remediates this issue, created from it at 2026-11-17T08:32:57Z.
