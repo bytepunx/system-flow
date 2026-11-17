@@ -3,11 +3,11 @@ id: I-0388
 title: flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch
 class: efficiency
 status: open
-count: 2
-cost: 13m
+count: 3
+cost: 15m
 first_reported: 2026-11-16T06:16:21Z
-last_reported: 2026-11-17T09:43:10Z
-updated: 2026-11-17T09:43:10Z
+last_reported: 2026-11-17T09:43:23Z
+updated: 2026-11-17T09:43:23Z
 usage:
   strategic:
     - kind: analyzer
@@ -42,6 +42,10 @@ Analysis 2026-11-16: 12 close-outs in W46 ended "interrupted, flai serve stopped
 ### 2026-11-17T09:43:10Z
 Story: S-0831.
 S-0831's close-out job S-0831-20261117T091529Z, asked for at 09:15:29Z, ended interrupted at 09:33:37Z in its integration tier, while flai 1.104.1 and then 1.105.0 were published on main; the job asked for again at 09:33:42Z reused gofmt, vet, golangci-lint, and markdown, ran integration again from scratch (9m13s), and passed at 09:42:56Z.
+
+### 2026-11-17T09:43:23Z
+Story: S-0806.
+S-0806's close-out job S-0806-20261117T091319Z was terminated at 09:33:30Z in round 2, 9m36s into the integration tier, after flai 1.105.0 was published. The log reads "Terminated", the integration tier "stopped: context canceled", and the verdict "interrupted". Asked again, it passed in 9m8s from scratch. It cost about 20 minutes of wall clock.
 
 ## Impact
 closeouts.weeks[] W46 failed 11; the serve journal names each as "interrupted, flai serve stopped while it ran" (S-0603, S-0606, S-0689, S-0706, S-0715, S-0730, S-0742, S-0743, S-0748, S-0750, S-0759), 2 more in W45 and 2 in W47. The journal holds 16 "it installed it and restarts" auto-upgrade entries in W46 (59 over the window) and 48 flai/v* tags in W46 under the threshold release policy. closeouts p50 474 s in W46. ADR-0158 waits for writes before the restart and says nothing of the close-out jobs ADR-0229 added.
