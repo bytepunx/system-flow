@@ -1,8 +1,8 @@
 ---
 id: ADR-0312
 title: "A tier belongs to a suite, and the workflow file names the suites a transition needs, a state runs on entry with the cluster's deploy and checks, and the batch, the publish, and CI run"
-status: proposed
-date: 2026-11-16
+status: accepted
+date: 2026-11-17
 supersedes: []
 superseded_by: []
 refines: [ADR-0174, ADR-0254, ADR-0291, ADR-0301]
