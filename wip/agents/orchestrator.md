@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2236.8115
-accrued_seconds: 1573930
-tasks_completed: 3831
-last_run: 2026-11-17T07:47:29Z
+accrued_cost: 2237.9777
+accrued_seconds: 1574148
+tasks_completed: 3838
+last_run: 2026-11-17T08:15:12Z
 ---
 
 # Orchestrator activity
@@ -26852,6 +26852,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 24
 - Cost: 0.1337 USD, estimated
+
+### 2026-11-17T07:54:23Z
+
+- Summary: S-0819 (review reason) was already accepted by alex at 07:53:28Z before I could accept it; the verifier passed it at 736a9cab. release_evaluate met under threshold (4 pending, count threshold 1; value 842.34 of 1000), so I started the publish formula: instance S-0825, now ready, bundling S-0742, S-0753, S-0817, S-0819 (commit f39224175).
+- Items: S-0819, S-0825, S-0742, S-0753, S-0817
+- Seconds: 75
+- Cost: 0.2821 USD, estimated
+
+### 2026-11-17T07:54:43Z
+
+- Summary: Ordered ready by throughput after S-0825 entered: S-0754 30m, S-0752 33m, S-0756 45m, S-0808 1h15m, S-0806 1h20m, S-0807 1h30m, S-0825 last (no forecast duration).
+- Items: S-0825
+- Seconds: 20
+- Cost: 0.0590 USD, estimated
+
+### 2026-11-17T07:55:10Z
+
+- Summary: I did not accept S-0819: the operator (alex) accepted it at 07:53:28Z, before my review finished. That acceptance made a release due, so I started the publish formula. Its instance is S-0825, now in ready.
+- Items: none
+- Seconds: 27
+- Cost: 0.1584 USD, estimated
+
+### 2026-11-17T07:55:41Z
+
+- Summary: Release due after S-0819's acceptance: release_evaluate met under threshold (4 accepted unreleased, count threshold 1, value 842.34 USD/week); publish formula instance S-0825 already in ready covers this batch, so no second instance started.
+- Items: S-0819, S-0825
+- Seconds: 15
+- Cost: 0.0955 USD, estimated
+
+### 2026-11-17T07:55:55Z
+
+- Summary: Pull order changed: applied flai order --by throughput; ready order S-0754 (30m), S-0752 (33m), S-0756 (45m), S-0808 (1h15m), S-0806 (1h20m), S-0807 (1h30m), S-0825 (no forecast). promote_candidates lists none to promote.
+- Items: S-0754, S-0752, S-0756, S-0808, S-0806, S-0807, S-0825
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-17T07:56:18Z
+
+- Summary: I acted on both reasons and did not start a second release.
+- Items: none
+- Seconds: 23
+- Cost: 0.1784 USD, estimated
+
+### 2026-11-17T08:15:12Z
+
+- Summary: Started the planner for S-0822, first story flai plan --candidates lists (no touches, forecast, value, or tasks); skipped E-0034, whose listing is the operator's confirmation on TH-1258 that changes no plan. S-0823 and S-0824 wait their turn, one at a time.
+- Items: S-0822
+- Seconds: 44
+- Cost: 0.3928 USD, estimated
 
 ## Refusals
 

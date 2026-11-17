@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 5449
-      cache_read: 1682102
-      cache_write: 80217
-      cost: 0.9857
+      input: 19
+      output: 3577
+      cache_read: 1688872
+      cache_write: 65706
+      cost: 0.8725
 ---
 # T-3448 The template's manifest labels its tiers static, behavior, integration, and smoke, and this repository's manifest labels its own, with no change to what runs
 

@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/adrs/README.md, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md]
 usage:
   source: log
-  seconds: 3560
+  seconds: 3577
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 228
-      output: 76680
-      cache_read: 19888783
-      cache_write: 632166
-      cost: 9.2132
+      input: 199
+      output: 55993
+      cache_read: 20903061
+      cache_write: 585215
+      cost: 9.0313
 ---
 # T-3236 Write and accept the metrics ADR that defines lead, cycle, queue, and review time and time in state as readings of the workflow's timers
 

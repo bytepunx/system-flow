@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 12546
-      cache_read: 3872470
-      cache_write: 184672
-      cost: 2.2693
+      input: 43
+      output: 8236
+      cache_read: 3888054
+      cache_write: 151265
+      cost: 2.0087
 ---
 # T-3447 flai test --suite and the MCP tool test run the tiers of one suite that the paths select, or under --all every one but a manual tier
 

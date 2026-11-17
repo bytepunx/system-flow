@@ -3,17 +3,20 @@ id: S-0805
 type: story
 nature: feature
 title: A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:41:56Z
-updated: 2026-11-17T07:47:49Z
+updated: 2026-11-17T08:13:53Z
 transitions:
   - to: ready
     at: 2026-11-16T23:51:58Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-16T23:52:21Z
+    by: agent-S-0805
+  - to: review
+    at: 2026-11-17T08:13:53Z
     by: agent-S-0805
 blocked:
   - from: 2026-11-17T00:54:07Z
@@ -38,22 +41,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3815
+  seconds: 5459
   priced_by: harness
   turns:
     - day: 2026-11-16
       work: 24
     - day: 2026-11-17
-      ceremony: 3
+      ceremony: 4
       hand_edits: 1
-      work: 44
+      work: 83
   models:
     - model: claude-opus-5-5
-      input: 366
-      output: 80061
-      cache_read: 24712600
-      cache_write: 1178507
-      cost: 14.482
+      input: 450
+      output: 85336
+      cache_read: 40287346
+      cache_write: 1567384
+      cost: 20.8138
   strategic:
     - kind: planner
       seconds: 49

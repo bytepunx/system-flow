@@ -2,7 +2,7 @@
 id: D-0554
 title: A story's agent works a task itself, not through a task sub-agent, when the task is a few lines in a file it has already read, since a hand-off would cost more reading than the edit
 kind: decision
-sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795]
+sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819]
 topics: [delegation, code, testing]
 paths: [design/conventions/delegation.md]
 date: 2026-11-10
@@ -48,4 +48,10 @@ S-0730, which made flai guard refuse a Write that replaces a work item file whol
 
 S-0795, a remediation of I-0369 in two tasks (D-0649), worked both itself, from its Decisions (`wip/archive/agents/S-0795.md`): T-3392 "not a task sub-agent: the change is a few lines in files already read, so a sub-agent would cost more than it saves", and T-3393 because "its loaded runs are hand go test runs (D-0492), and a sub-agent may not run them for the story any more cheaply".
 
-Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795 (`wip/archive/agents/<story>.md`, Decisions).
+S-0819, which made flai guard forget a foreground sub-agent once its result is in the session transcript (ADR-0315), handed T-3505 and T-3507 to two task sub-agents at once and worked T-3506 itself, from its Decisions (`wip/archive/agents/S-0819.md`):
+
+```text
+T-3506 was worked here rather than by a sub-agent: it is about 40 lines on code already reviewed.
+```
+
+Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819 (`wip/archive/agents/<story>.md`, Decisions).

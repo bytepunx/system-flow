@@ -9,7 +9,7 @@ date: 2026-11-17
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0819, TH-1271]
 ---
 
 # D-0659 Plan for S-0819: the guard forgets a foreground sub-agent once its result is in the session transcript: Recommended: say yes to both questions

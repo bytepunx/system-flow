@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 67
-      output: 22592
-      cache_read: 5859858
-      cache_write: 186256
-      cost: 2.7145
+      input: 56
+      output: 15700
+      cache_read: 5861003
+      cache_write: 164088
+      cost: 2.5323
 ---
 # T-3237 The metrics' claims, waiting, coordination, cost of delay, close-outs, and spend read a state's kind instead of its name
 

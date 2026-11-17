@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 6138
-      cache_read: 1894636
-      cache_write: 90352
-      cost: 1.1103
+      input: 21
+      output: 4029
+      cache_read: 1902261
+      cache_write: 74008
+      cost: 0.9828
 ---
 # T-3446 A tier's suite is read from the manifest, defaults to its name, and flai check refuses one that is not kebab-case
 

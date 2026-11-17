@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 587
-      cache_read: 152235
-      cache_write: 4839
-      cost: 0.0705
+      input: 1
+      output: 408
+      cache_read: 152265
+      cache_write: 4263
+      cost: 0.0658
 ---
 # T-3242 metrics.md defines lead, cycle, queue, and review time and time in state from their timers and links the ADR
 

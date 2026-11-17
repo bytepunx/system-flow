@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 17623
-      cache_read: 4570932
-      cache_write: 145287
-      cost: 2.1174
+      input: 43
+      output: 12247
+      cache_read: 4571825
+      cache_write: 127996
+      cost: 1.9753
 ---
 # T-3246 The metrics derive each item's durations and the aggregates from the baseline's timers, with flai stats byte for byte as before
 

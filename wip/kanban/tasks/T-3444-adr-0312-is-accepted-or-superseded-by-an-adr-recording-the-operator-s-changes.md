@@ -23,16 +23,16 @@ tags: [flai]
 touches: [design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md, design/adrs/README.md]
 usage:
   source: log
-  seconds: 3764
+  seconds: 3805
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 231
-      output: 50552
-      cache_read: 15604117
-      cache_write: 744137
-      cost: 9.1443
+      input: 187
+      output: 35431
+      cache_read: 16726967
+      cache_write: 650765
+      cost: 8.6417
 ---
 # T-3444 ADR-0312 is accepted, or superseded by an ADR recording the operator's changes
 

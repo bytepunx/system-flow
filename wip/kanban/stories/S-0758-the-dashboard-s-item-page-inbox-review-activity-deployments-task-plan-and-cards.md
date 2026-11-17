@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:04:18Z
-updated: 2026-11-17T07:52:40Z
+updated: 2026-11-17T08:12:42Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:57Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0758
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/workflow.ts, flaiover/src/lib/workflow.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/taskplan.ts, flaiover/src/lib/inbox.svelte.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/CancelConfirm.svelte, flaiover/src/lib/components/ForgeStatus.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/viz/palette.ts, design/system/flaiover-dashboard.md]
+touches: [flaiover/src/lib/workflow.ts, flaiover/src/lib/workflow.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/taskplan.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/CancelConfirm.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/viz/palette.ts, design/system/flaiover-dashboard.md, flaiover/src/lib/lanes.fixture.ts, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/CancelConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte.test.ts]
 after: [S-0753]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1177
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      ceremony: 5
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 368
+      output: 1927
+      cache_read: 17366155
+      cache_write: 655366
+      cost: 6.8632
   strategic:
     - kind: orchestrator
       seconds: 22
@@ -75,6 +87,7 @@ Beyond the board and the charts, about fifteen of flaiover's views and helpers c
 - T-3256 The touches, activity, task plan, inbox, and palette helpers read a state's kind
 - T-3257 The card, cancel, forge status, review, inbox, wait table, and source picker components read a state's kind, tested on a state of the workflow's own
 - T-3258 flaiover-dashboard.md says the dashboard's views read a state's kind from flai
+- T-3516 The views that call the helpers and components pass them the board's flow
 
 ## Notes
 
