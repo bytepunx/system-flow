@@ -4,10 +4,10 @@ title: "S-0747 cannot be enqueued: its branch is 43 commits behind main again, a
 anchor:
   path: wip/kanban/stories/S-0747-the-host-api-s-writes-kluster-components-and-people-methods-act-on-a-state-s.md
   item: S-0747
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-16T04:15:18Z
-updated: 2026-11-16T04:15:18Z
+updated: 2026-11-17T02:48:12Z
 ---
 
 # TH-1246 S-0747 cannot be enqueued: its branch is 43 commits behind main again, and the close-out stops at sync
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0747-the-host-api-s-writes-kluster-components-and-people
 **Why it matters:** S-0756 is held by `after` on S-0747, and the board is starved (TH-1244).
 
 Syncing the branch is the story's work, not mine.
+
+### 2026-11-17T02:48:12Z alex
+Resolved: S-0747 was accepted

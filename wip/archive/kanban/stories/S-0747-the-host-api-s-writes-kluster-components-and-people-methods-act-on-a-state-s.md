@@ -3,11 +3,11 @@ id: S-0747
 type: story
 nature: feature
 title: The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:29Z
-updated: 2026-11-15T02:43:17Z
+updated: 2026-11-17T02:48:12Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:13Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T02:43:17Z
     by: agent-S-0747
+  - to: done
+    at: 2026-11-17T02:48:12Z
+    by: alex
 tags: [cli]
 topics: [cli, dashboard]
 touches: [flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/people.go, flai/internal/hostapi/people_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md]

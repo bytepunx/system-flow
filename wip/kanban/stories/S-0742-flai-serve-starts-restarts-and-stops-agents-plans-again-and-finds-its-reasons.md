@@ -3,11 +3,11 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: review
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-15T02:21:10Z
+updated: 2026-11-17T02:47:46Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:40Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T02:21:10Z
     by: agent-S-0742
+  - to: in-progress
+    at: 2026-11-17T02:47:46Z
+    by: flai
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/flow.go, flai/internal/serve/kinds.go, flai/internal/serve/kinds_test.go, flai/internal/serve/serve.go, flai/internal/serve/role_events.go, flai/internal/serve/imagejob.go, design/system/workflow.md]
@@ -112,3 +115,4 @@ flai serve runs a story's agent when the story makes the transition whose effect
 - Tasks: T-3213 (agents), T-3215 (ready-empty and replanning), T-3216 (strategic roles), and T-3217 (the rest), all in one layer: no two share a path.
 - Forecast 1h20m, `flai forecast`'s 109 s per unit of size for size 43, up from its 1h4m for the first draft's 35 once the test files and `agents.go` were added. The work is wide but mechanical, and the four tasks can run at once.
 - Cost of delay: 142.52 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 1h20m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+- 2026-11-17T02:47:46Z: moved to in-progress: the rebase of story/S-0742 onto main stopped on conflicts in flai/internal/serve/replan.go, which the acceptance of S-0742 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0742
