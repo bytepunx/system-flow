@@ -3,11 +3,11 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-17T02:47:46Z
+updated: 2026-11-17T03:07:23Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:40Z
@@ -21,6 +21,9 @@ transitions:
   - to: in-progress
     at: 2026-11-17T02:47:46Z
     by: flai
+  - to: review
+    at: 2026-11-17T03:07:23Z
+    by: agent-S-0742
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/flow.go, flai/internal/serve/kinds.go, flai/internal/serve/kinds_test.go, flai/internal/serve/serve.go, flai/internal/serve/role_events.go, flai/internal/serve/imagejob.go, design/system/workflow.md]
@@ -32,37 +35,41 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3936
+  seconds: 5109
   priced_by: harness
   turns:
     - day: 2026-11-15
       ceremony: 5
       test_runs: 4
       work: 135
+    - day: 2026-11-17
+      ceremony: 3
+      test_runs: 3
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 676
-      output: 193226
-      cache_read: 65532154
-      cache_write: 1505936
-      cost: 25.6622
+      input: 772
+      output: 209851
+      cache_read: 84973603
+      cache_write: 1955105
+      cost: 33.4767
   strategic:
     - kind: orchestrator
-      seconds: 223
+      seconds: 324
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 465
-          cache_read: 2038949
-          cache_write: 236226
-          cost: 0.6834
+          input: 90
+          output: 738
+          cache_read: 3476445
+          cache_write: 397258
+          cost: 1.1758
         - model: claude-sonnet-5-5
-          input: 10
-          output: 87
-          cache_read: 71557
-          cache_write: 58434
-          cost: 0.1023
+          input: 14
+          output: 119
+          cache_read: 85445
+          cache_write: 93430
+          cost: 0.1414
 cost_of_delay:
   value: 142.52
   by: system-flow
@@ -99,6 +106,7 @@ flai serve runs a story's agent when the story makes the transition whose effect
 - T-3217 flai serve's usage, budget, confirmations, reminders, commits, checks, and upgrades read a state's kind
 - T-3370 flai serve carries the workflow its passes read, and names the pull, the active-work room, and the kinds they read it by
 - T-3372 workflow.md says how flai serve reads the workflow's kinds and the pull
+- T-3503 S-0742 settles its rebase onto S-0748 and S-0755: replays keeps main's lines, and the built-in triggers are read on the project's board by kind
 
 ## Notes
 

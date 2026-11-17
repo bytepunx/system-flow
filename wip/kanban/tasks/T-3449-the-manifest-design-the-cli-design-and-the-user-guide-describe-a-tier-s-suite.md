@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 4080
-      cache_read: 1175520
-      cache_write: 43329
-      cost: 0.5857
+      input: 17
+      output: 3764
+      cache_read: 1161926
+      cache_write: 55411
+      cost: 0.6809
 ---
 # T-3449 The manifest design, the CLI design, and the user guide describe a tier's suite and flai test --suite
 

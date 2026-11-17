@@ -3,16 +3,19 @@ id: S-0817
 type: story
 nature: improvement
 title: Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-17T02:26:33Z
-updated: 2026-11-17T02:33:33Z
+updated: 2026-11-17T03:23:24Z
 transitions:
   - to: ready
     at: 2026-11-17T02:33:25Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-17T02:33:33Z
+    by: agent-S-0817
+  - to: review
+    at: 2026-11-17T03:23:24Z
     by: agent-S-0817
 tags: []
 topics: [merge, sync, acceptance]
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 137
-  estimated: true
-  priced_by: estimate
+  seconds: 3006
+  priced_by: harness
   turns:
     - day: 2026-11-17
       ceremony: 1
-      work: 16
+      work: 41
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 300
-      cache_read: 2267004
-      cache_write: 218829
-      cost: 0.9454
+      input: 222
+      output: 85192
+      cache_read: 12294950
+      cache_write: 647167
+      cost: 8.215
   strategic:
     - kind: planner
       seconds: 283
@@ -100,8 +102,8 @@ finalized:
 This story remediates [I-0387](../../../design/issues/I-0387-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md), "Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle", which the analysis in [2026-11-16-all.md](../../../design/analysis/2026-11-16-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0387 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0387 is closed with `flai issue close I-0387 --reason` saying what fixed it
+- [x] The cause I-0387 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0387 is closed with `flai issue close I-0387 --reason` saying what fixed it
 
 ## Tasks
 - T-3495 ADR: the section merge merges by its words a line both sides change, refining ADR-0287

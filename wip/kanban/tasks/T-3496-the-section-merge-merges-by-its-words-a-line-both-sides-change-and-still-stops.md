@@ -3,11 +3,11 @@ id: T-3496
 type: task
 nature: improvement
 title: The section merge merges by its words a line both sides change, and still stops on the same word or the same point
-status: in-progress
+status: done
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:40Z
-updated: 2026-11-17T02:36:05Z
+updated: 2026-11-17T02:56:42Z
 transitions:
   - to: ready
     at: 2026-11-17T02:36:04Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T02:36:05Z
     by: agent-S-0817
+  - to: done
+    at: 2026-11-17T02:56:42Z
+    by: agent-S-0817
 stream: S-0817
 tags: [flai, merge]
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go]
 after: [T-3495]
+usage:
+  source: log
+  seconds: 1237
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 10661
+      cache_read: 1538608
+      cache_write: 80987
+      cost: 1.028
 ---
 # T-3496 The section merge merges by its words a line both sides change, and still stops on the same word or the same point
 

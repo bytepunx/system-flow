@@ -3,16 +3,37 @@ id: T-3499
 type: task
 nature: improvement
 title: Close I-0387, saying the section merge now settles a line two stories change in different words
-status: backlog
+status: done
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:32:00Z
-updated: 2026-11-17T02:32:00Z
-transitions: []
+updated: 2026-11-17T03:13:35Z
+transitions:
+  - to: ready
+    at: 2026-11-17T03:13:21Z
+    by: agent-S-0817
+  - to: in-progress
+    at: 2026-11-17T03:13:21Z
+    by: agent-S-0817
+  - to: done
+    at: 2026-11-17T03:13:35Z
+    by: agent-S-0817
 stream: S-0817
 tags: [issues]
 touches: [design/issues/I-0387-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md, design/issues/summary.md]
 after: [T-3498, T-3497]
+usage:
+  source: log
+  seconds: 14
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 3762
+      cache_read: 542931
+      cache_write: 28578
+      cost: 0.3628
 ---
 # T-3499 Close I-0387, saying the section merge now settles a line two stories change in different words
 

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 1675
-      cache_read: 567965
-      cache_write: 13052
-      cost: 0.2224
+      input: 5
+      output: 1400
+      cache_read: 566770
+      cache_write: 13040
+      cost: 0.2233
 ---
 # T-3370 flai serve carries the workflow its passes read, and names the pull, the active-work room, and the kinds they read it by
 

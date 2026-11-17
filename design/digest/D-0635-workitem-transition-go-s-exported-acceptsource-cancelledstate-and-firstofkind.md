@@ -18,6 +18,6 @@ S-0744 added exported helpers to `flai/internal/workitem/transition.go` that fin
 
 > The exported helpers in workitem/transition.go overlap S-0739's unexported ones in workitem/flow.go (acceptSource, cancelledState, firstOfKind) and S-0746's in mcpserver; they are distinct identifiers, so both merge, and one can replace the other once both are accepted.
 
-S-0746 is accepted. S-0739 was in review on 2026-11-15, so `flow.go`'s unexported copies reach main with it. A later E-0034 story that needs one of these lookups calls `transition.go`'s exported helper, or `repo.Flow()` and the workflow package's lookups as D-0630 says, and adds no third copy. A story that tidies `workitem` can fold `flow.go`'s copies into `transition.go`'s once S-0739 is accepted.
+S-0746 and S-0739 are both accepted, S-0739 on 2026-11-17. On main, `flai/internal/workitem/flow.go`'s `acceptSource`, `cancelledState`, and `firstOfKind` stand beside `transition.go`'s `AcceptSource`, `CancelledState`, and `FirstOfKind`. A later E-0034 story that needs one of these lookups calls `transition.go`'s exported helper, or `repo.Flow()` and the workflow package's lookups as D-0630 says, and adds no third copy. A story that tidies `workitem` can now fold `flow.go`'s copies into `transition.go`'s.
 
-Source: S-0744's narrative, `wip/archive/agents/S-0744.md`, § Decisions.
+Source: S-0744's narrative, `wip/archive/agents/S-0744.md`, § Decisions; S-0739's, `wip/archive/agents/S-0739.md`.

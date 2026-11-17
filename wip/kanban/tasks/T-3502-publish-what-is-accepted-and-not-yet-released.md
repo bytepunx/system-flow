@@ -3,12 +3,18 @@ id: T-3502
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0820
 owner: alex
 created: 2026-11-17T02:48:43Z
-updated: 2026-11-17T02:48:43Z
-transitions: []
+updated: 2026-11-17T03:26:15Z
+transitions:
+  - to: ready
+    at: 2026-11-17T03:26:15Z
+    by: agent-S-0820
+  - to: in-progress
+    at: 2026-11-17T03:26:15Z
+    by: agent-S-0820
 stream: S-0820
 tags: []
 after: [T-3501]

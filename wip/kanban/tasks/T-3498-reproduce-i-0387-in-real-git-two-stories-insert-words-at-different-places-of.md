@@ -3,19 +3,37 @@ id: T-3498
 type: task
 nature: improvement
 title: "Reproduce I-0387 in real git: two stories insert words at different places of one table row and one sentence, and neither sync nor acceptance stops"
-status: ready
+status: done
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:55Z
-updated: 2026-11-17T02:36:05Z
+updated: 2026-11-17T03:10:46Z
 transitions:
   - to: ready
     at: 2026-11-17T02:36:05Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-17T02:57:22Z
+    by: agent-S-0817
+  - to: done
+    at: 2026-11-17T03:10:46Z
+    by: agent-S-0817
 stream: S-0817
 tags: [flai, merge, test]
 touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
 after: [T-3496]
+usage:
+  source: log
+  seconds: 804
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 27340
+      cache_read: 3945714
+      cache_write: 207690
+      cost: 2.6364
 ---
 # T-3498 Reproduce I-0387 in real git: two stories insert words at different places of one table row and one sentence, and neither sync nor acceptance stops
 

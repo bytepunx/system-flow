@@ -4,10 +4,10 @@ title: "Acceptance sent back: story/S-0742 stopped rebasing onto main on conflic
 anchor:
   path: wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-again-and-finds-its-reasons.md
   item: S-0742
-status: open
-participants: [flai]
+status: resolved
+participants: [flai, flai serve]
 created: 2026-11-17T02:47:46Z
-updated: 2026-11-17T02:47:46Z
+updated: 2026-11-17T03:07:24Z
 ---
 
 # TH-1268 Acceptance sent back: story/S-0742 stopped rebasing onto main on conflicts in flai/internal/serve/replan.go
@@ -22,3 +22,6 @@ The acceptance of S-0742 by alex rebased `story/S-0742` onto `main`, and the reb
 - `flai/internal/serve/replan.go`
 
 flai aborted the rebase, so `story/S-0742` and `main` are as they were, and moved S-0742 back to in-progress. This thread is for S-0742's agent, which settles the conflicts; the operator does not. In its worktree, run `flai stream sync S-0742`, resolve each path it stops on, `git add` it, and run `flai stream sync S-0742` again, which continues the rebase; then close out and move S-0742 to review again. flai serve resolves this thread once S-0742 is back in review.
+
+### 2026-11-17T03:07:24Z flai serve
+Resolved: S-0742 is back in review since 2026-11-17T03:07:23Z, after the send back; its next acceptance takes it up again

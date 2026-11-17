@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2230.3925
-accrued_seconds: 1572692
-tasks_completed: 3785
-last_run: 2026-11-17T02:34:42Z
+accrued_cost: 2231.8360
+accrued_seconds: 1572946
+tasks_completed: 3795
+last_run: 2026-11-17T03:09:29Z
 ---
 
 # Orchestrator activity
@@ -26530,6 +26530,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.4125 USD, estimated
+
+### 2026-11-17T02:48:49Z
+
+- Summary: Started the publish formula (flai formula run publish --ready --autocommit) as S-0820, in ready at c505ee496, for release-due S-0739/S-0747: threshold policy met, count 2 at or over 1 (value 147.87 USD under 1000), nothing held by whole_epics.
+- Items: S-0820, S-0739, S-0747
+- Seconds: 37
+- Cost: 0.1120 USD, estimated
+
+### 2026-11-17T02:49:04Z
+
+- Summary: Left TH-1268 alone: it is flai's send-back notice on S-0742 (rebase conflict in flai/internal/serve/replan.go), for S-0742's agent, which flai serve started; no orchestrator action is owed.
+- Items: S-0742
+- Seconds: 15
+- Cost: 0.0223 USD, estimated
+
+### 2026-11-17T02:49:22Z
+
+- Summary: Ordered the ready column by throughput after S-0820 entered it: S-0820 alone, rank 1, no forecast duration.
+- Items: S-0820
+- Seconds: 18
+- Cost: 0.0226 USD, estimated
+
+### 2026-11-17T02:49:43Z
+
+- Summary: I started the release: S-0739 and S-0747 go out through the publish formula as story S-0820.
+- Items: none
+- Seconds: 21
+- Cost: 0.1301 USD, estimated
+
+### 2026-11-17T02:50:16Z
+
+- Summary: release-due S-0747: started no second publish. Threshold policy met (count 2 at or over 1; value 147.87 USD under 1000; nothing held by whole_epics), but publish instance S-0820, ready since 02:48:46Z, already covers S-0739 and S-0747.
+- Items: S-0747, S-0820
+- Seconds: 16
+- Cost: 0.0929 USD, estimated
+
+### 2026-11-17T02:50:37Z
+
+- Summary: I didn't start a second publish run for S-0747. Story S-0820 already publishes both stories waiting for release, S-0739 and S-0747.
+- Items: none
+- Seconds: 21
+- Cost: 0.2331 USD, estimated
+
+### 2026-11-17T02:57:26Z
+
+- Summary: Resolved my thread TH-1233 on S-0742: agent-S-0742 fixed the stale reasonsOf test call (T-3503, now 412724d1f on story/S-0742). S-0742 is in progress; it is verified and enqueued once it returns to review with a passing close-out.
+- Items: S-0742
+- Seconds: 19
+- Cost: 0.1414 USD, estimated
+
+### 2026-11-17T02:57:43Z
+
+- Summary: I've resolved TH-1233, the thread I opened on S-0742, because the problem it raised is fixed.
+- Items: none
+- Seconds: 17
+- Cost: 0.1134 USD, estimated
+
+### 2026-11-17T03:09:06Z
+
+- Summary: Verified S-0742 at 412724d1 (close-out passed every step; verifier matched all 5 criteria; dry run had no blocker), but accept was refused: the main checkout's uncommitted design/digest/D-0653-…md has MD028 (blank line inside blockquote, line 20) that the markdown fix cannot fix. S-0742 left in review; thread opened for the operator.
+- Items: S-0742
+- Seconds: 67
+- Cost: 0.3678 USD, estimated
+
+### 2026-11-17T03:09:29Z
+
+- Summary: S-0742 is not accepted yet. The story is ready, but flai refused the acceptance because of a lint error in a separate file in the main checkout. S-0742 stays in review.
+- Items: none
+- Seconds: 23
+- Cost: 0.2079 USD, estimated
 
 ## Refusals
 

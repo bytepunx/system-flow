@@ -2,9 +2,9 @@
 id: D-0637
 title: A test of a package moved onto a state's kind runs it on a workflow that renames in-progress and review with no alias and adds an active state between them, as serve's flow_test.go renamedFlow does, so that no comparison by name passes by accident
 kind: decision
-sources: [S-0743]
+sources: [S-0743, S-0739, S-0747]
 topics: [flai, go, code]
-paths: [flai/internal/serve/flow_test.go, flai/internal/workitem/rules_test.go]
+paths: [flai/internal/serve/flow_test.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/hostapi/flow.go, flai/internal/hostapi/writes_test.go]
 date: 2026-11-15
 status: active
 absorbed_by: ""
@@ -20,6 +20,18 @@ S-0743 moved flai serve's kluster deploys, forge pass, and merge queue off the n
 
 The fixture is `renamedFlow` in `flai/internal/serve/flow_test.go`, parsed by `renamedWorkflow(t)` for `Options.Workflow`: `doing` and `awaiting` stand for in-progress and review, and `testing`, of kind `active`, sits between them. A pass that still reads a state's name deploys, pushes, queues, or sends back the wrong story under it.
 
-So a later E-0034 story that moves a package onto kinds tests it on a board of that shape, not only on the baseline, and not on `repoWithWorkflow`'s fixture in `flai/internal/workitem/rules_test.go` alone (D-0627), whose `review` alias would let a name comparison pass.
+S-0739 gave `flai/internal/workitem` a shared fixture of the same kind, in `flai/internal/workitem/workflow_fixture_test.go` (`wip/archive/agents/S-0739.md`, § Decisions):
 
-Source: S-0743's narrative, `wip/archive/agents/S-0743.md`, § Decisions.
+> The shared test workflow renames `in-progress` to `doing` and adds `testing`, of kind `active` with a limit, between it and `review`, so the pull's target, two active states, and the epic's walk through an added state are all exercised.
+
+Its helpers are `testFlow(t)`, which parses `testFlowFile` afresh so a test may change it, `withTestFlow(t, r)`, which sets a `Repo` to run it, and `inTestFlow`, which maps a baseline state's name to the fixture's. It renames `in-progress` with no alias, but keeps `review` by name.
+
+S-0747 gave `flai/internal/hostapi` a hook of its own, because `workitem.Open` always gives the baseline (`wip/archive/agents/S-0747.md`, § Decisions):
+
+> Tests need another workflow, and workitem.Open always gives the baseline: T-3228 adds flai/internal/hostapi/flow.go, an openRepo helper with a test hook that sets the opened Repo's Workflow (S-0737's hook), and the reads of T-3229 use it.
+
+Every host API method opens its repository through `openRepo(root)` in `flai/internal/hostapi/flow.go`, which sets the package variable `testFlow` on the `Repo` when a test has set it. A test calls `withWorkflow(t, text)` in `flai/internal/hostapi/writes_test.go`, which parses the text and restores `testFlow` when the test ends. Its fixture, `testingWorkflow`, adds `testing` of kind `active`, renames review to `acceptance-review`, done to `shipped`, and cancelled to `dropped`, and puts `reason-given` on the cancel and send-back transitions as the baseline has them. It keeps `review` as an alias of `acceptance-review`.
+
+So a later E-0034 story that moves a package onto kinds tests it on a board of that shape, not only on the baseline. In `workitem` it uses `withTestFlow`; in `hostapi` it opens the repository through `openRepo` and uses `withWorkflow`, and adds no second hook. Elsewhere it renames the waiting state too, as `renamedFlow` does, and does not lean on `repoWithWorkflow`'s fixture in `flai/internal/workitem/rules_test.go` alone (D-0627), whose `review` alias would let a name comparison pass. The `workitem` and `hostapi` fixtures keep that alias too.
+
+Sources: S-0743's, S-0739's, and S-0747's narratives, `wip/archive/agents/S-0743.md`, `wip/archive/agents/S-0739.md`, and `wip/archive/agents/S-0747.md`, § Decisions.

@@ -3,11 +3,11 @@ id: T-3497
 type: task
 nature: improvement
 title: Say in the design and the user docs that the section merge settles a line both sides change in different words
-status: in-progress
+status: done
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:46Z
-updated: 2026-11-17T02:36:05Z
+updated: 2026-11-17T02:57:05Z
 transitions:
   - to: ready
     at: 2026-11-17T02:36:04Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T02:36:05Z
     by: agent-S-0817
+  - to: done
+    at: 2026-11-17T02:57:05Z
+    by: agent-S-0817
 stream: S-0817
 tags: [docs, merge]
 touches: [design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-3495]
+usage:
+  source: log
+  seconds: 1260
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 10116
+      cache_read: 1459877
+      cache_write: 76843
+      cost: 0.9754
 ---
 # T-3497 Say in the design and the user docs that the section merge settles a line both sides change in different words
 

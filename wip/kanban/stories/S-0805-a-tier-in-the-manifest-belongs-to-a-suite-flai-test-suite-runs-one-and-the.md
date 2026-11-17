@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:41:56Z
-updated: 2026-11-17T02:47:35Z
+updated: 2026-11-17T02:48:57Z
 transitions:
   - to: ready
     at: 2026-11-16T23:51:58Z
@@ -25,6 +25,8 @@ blocked:
   - from: 2026-11-17T01:19:16Z
     until: 2026-11-17T02:47:35Z
     reason: awaiting the operator on TH-1258
+  - from: 2026-11-17T02:48:57Z
+    reason: awaiting the operator on TH-1258
 tags: [flai, template]
 topics: [verify, workflow]
 touches: [design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md, design/adrs/README.md, flai/internal/manifest/manifest_tests.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/tests_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
@@ -35,22 +37,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3744
+  seconds: 3815
   priced_by: harness
   turns:
     - day: 2026-11-16
       work: 24
     - day: 2026-11-17
-      ceremony: 1
+      ceremony: 3
       hand_edits: 1
-      work: 40
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 352
-      output: 78280
-      cache_read: 22551808
-      cache_write: 831244
-      cost: 11.236
+      input: 366
+      output: 80061
+      cache_read: 24712600
+      cache_write: 1178507
+      cost: 14.482
   strategic:
     - kind: planner
       seconds: 49

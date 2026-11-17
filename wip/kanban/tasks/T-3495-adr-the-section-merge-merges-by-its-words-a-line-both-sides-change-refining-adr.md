@@ -23,16 +23,16 @@ tags: [adr, merge]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 35
+  seconds: 36
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 37
-      cache_read: 691864
-      cache_write: 3516
-      cost: 0.2645
+      input: 12
+      output: 4661
+      cache_read: 672615
+      cache_write: 35404
+      cost: 0.4494
 ---
 # T-3495 ADR: the section merge merges by its words a line both sides change, refining ADR-0287
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 340.8770
-accrued_seconds: 37653
-tasks_completed: 232
-last_run: 2026-11-17T02:34:23Z
+accrued_cost: 342.9747
+accrued_seconds: 37960
+tasks_completed: 234
+last_run: 2026-11-17T02:52:58Z
 ---
 
 # Curator activity
@@ -1867,3 +1867,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0613
 - Seconds: 90
 - Cost: 1.5029 USD, estimated
+
+### 2026-11-17T02:51:02Z
+
+- Summary: I wrote D-0653, D-0654 and D-0655, merged S-0739 into D-0637 and D-0635, absorbed nothing, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0739
+- Items: D-0635, D-0637, D-0653, D-0654, D-0655
+- Seconds: 202
+- Cost: 1.2706 USD, estimated
+
+### 2026-11-17T02:52:58Z
+
+- Summary: I merged S-0747 into D-0637, wrote no entries, absorbed none, and `flai digest compact` compacted none; harvest since 2026-11-17T02:51:02Z found nothing, but the last run had missed S-0747's six decisions, so I took them in: D-0637 now records the host API's `openRepo`/`withWorkflow` test hook, its other decisions are progress or already in `design/system/flaiover-dashboard.md` § Writes, and its note that `kluster.DeployBy` and `flai move`'s reason check still read state names is out of date on main.
+- Trigger: accepted S-0747
+- Items: D-0637
+- Seconds: 105
+- Cost: 0.8271 USD, estimated

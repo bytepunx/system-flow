@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 1056
-      cache_read: 358307
-      cache_write: 8234
-      cost: 0.1403
+      input: 3
+      output: 883
+      cache_read: 357553
+      cache_write: 8227
+      cost: 0.1409
 ---
 # T-3372 workflow.md says how flai serve reads the workflow's kinds and the pull
 
