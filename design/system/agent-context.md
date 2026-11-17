@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-11-11
+updated: 2026-11-17
 status: active
 topics: [cli, conventions]
 ---
@@ -313,11 +313,11 @@ S-0285 measured on Claude Code 2.1.290, headless as `flai serve` runs it: a laun
 [ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md) settles it:
 
 - **How to wait.** The start prompt, `delegation.md`, and the `wait_for_events` description say to launch every sub-agent with `run_in_background` set to false, a layer's in one message, so that each result comes back as the tool's result however long it runs; never to end the turn while a sub-agent runs in the background; and that `wait_for_events` is for a thread awaiting the designer.
-- **What flai records.** The template's `.claude/settings.json` also runs `flai guard` as a `SubagentStart` and a `SubagentStop` hook, behind `[ -n "$FLAI_STORY" ] || exit 0`, so only in a story's agent's session. It keeps the session's running sub-agents in `.flai-cache/guard/<session_id>.json` in the project's main checkout, under a lock, since a layer's sub-agents start at once. These hooks never refuse and print nothing.
+- **What flai records.** The template's `.claude/settings.json` also runs `flai guard` as a `SubagentStart` and a `SubagentStop` hook, behind `[ -n "$FLAI_STORY" ] || exit 0`, so only in a story's agent's session. It keeps the session's running sub-agents in `.flai-cache/guard/<session_id>.json` in the project's main checkout, under a lock, since a layer's sub-agents start at once. These hooks never refuse and print nothing. Since S-0819 ([ADR-0315](../adrs/0315-flai-guard-forgets-a-foreground-sub-agent-once-its-launch-s-result-is-in-the.md)) the guard also prunes the record at the story's agent's `wait_for_events`, under the same lock, before it decides. It reads the session transcript the hook input's `transcript_path` names and drops each sub-agent whose foreground launch has its result there, an error or not. A result names its sub-agent by its `agentId`, or by the launch's `tool_use_id`, which the sub-agent's `subagents/agent-<id>.meta.json` beside the transcript gives as its `toolUseId`. A background launch's notice is not a result. A transcript it cannot read prunes nothing, and the record decides as before.
 - **What flai refuses.** As the `PreToolUse` hook, it refuses the story's agent's own `wait_for_events` (no `agent_id`, `FLAI_STORY` set, no `FLAI_ROLE`) while the record lists a running sub-agent and no unresolved thread is on the story or one of its tasks. The refusal names the running sub-agents and says how to wait. A wait with such a thread open passes and returns on the designer's answer.
 - **It fails open.** A record, a project, or threads it cannot read let the call through, as the guard does elsewhere.
 
-The planner, the orchestrator, and an interactive session are not affected. A session that ended with a sub-agent out leaves it in its record, since no `SubagentStop` fires; that costs nothing for the wait the rule allows. Whether `flai serve` restarts a story's agent that ended without finishing stays open on I-0084. This repository runs the hooks as `scripts/flai.sh guard`.
+The planner, the orchestrator, and an interactive session are not affected. A sub-agent that ends with no `SubagentStop` stays in the record. ADR-0092 took that as costless, and it was not: on 2026-11-15 two foreground task sub-agents ended on an API error, fired no `SubagentStop`, and held their story agents' `wait_for_events` for the rest of the session ([I-0374](../issues/I-0374-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md), [I-0376](../issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md)). Since ADR-0315 such a foreground sub-agent no longer holds the wait: its launch's result is in the transcript by the agent's next call, so the prune drops it. A background sub-agent that ends with no `SubagentStop` still holds the wait, because its launch's result is the notice. A session that ended with a sub-agent out leaves it in a record that no later session reads. Whether `flai serve` restarts a story's agent that ended without finishing stays open on I-0084. This repository runs the hooks as `scripts/flai.sh guard`.
 
 ### Questions
 
