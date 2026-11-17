@@ -18,14 +18,17 @@
 	// each token that differs marked with its two values. A proposal that leaves the list, accepted
 	// or cancelled, takes its comparison with it; once accepted, its tokens are the main branch's,
 	// read on the document change its merge makes. Request a change turns the operator's words into
-	// a ready story with topic design under the open epic they choose. Comparing waits while the
-	// tokens are being edited.
+	// a ready story with topic design under the open epic they choose; which epics are open, and the
+	// lane the story is moved to, are read from the board's flow, /api/board (S-0838). Comparing
+	// waits while the tokens are being edited.
 	import type { DesignContrast, DesignProposal, DesignSystem, DesignTheme } from '$lib/server/repo';
 	import { api } from '$lib/api';
 	import { onMount, tick } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { follow } from '$lib/events';
+	import type { Flow } from '$lib/lanes';
+	import { isOpen } from '$lib/workflow';
 	import { enhance, render } from '$lib/markdown';
 	import { themeState } from '$lib/theme.svelte';
 	import { projectState } from '$lib/project.svelte';
@@ -97,6 +100,7 @@
 	let chosen = $state<Chosen | null>(null);
 	let epics = $state<Epic[]>([]);
 	let epicsError = $state<string | null>(null);
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 
 	const saved = $derived(design?.themes ?? []);
 	// A plain token file's one value serves both themes, so a light edit reaches dark even before,
@@ -236,13 +240,23 @@
 		void readProposal(id);
 	}
 
-	/** The open epics a requested change may go under, as the new-item form offers them. */
+	/**
+	 * The open epics a requested change may go under, as the new-item form offers them, and the
+	 * board's flow, which says which states are closed and where the request is moved.
+	 */
 	async function loadEpics() {
 		try {
-			const r = await api('/api/items?type=epic&archived=false');
+			const [r, b] = await Promise.all([
+				api('/api/items?type=epic&archived=false'),
+				api('/api/board')
+			]);
 			const body = await r.json().catch(() => ({}));
 			if (!r.ok) throw new Error(body.error ?? r.statusText);
-			epics = (body as Epic[]).filter((e) => e.status !== 'done' && e.status !== 'cancelled');
+			const board = await b.json().catch(() => ({}));
+			if (!b.ok) throw new Error(`the board answered ${board.error ?? b.statusText}`);
+			const read: Flow = { lanes: board.lanes ?? [], transitions: board.transitions ?? [] };
+			flow = read;
+			epics = (body as Epic[]).filter((e) => isOpen(read, e.status));
 			epicsError = null;
 		} catch (e) {
 			epicsError = `Could not read the epics: ${errorText(e)}`;
@@ -716,6 +730,6 @@
 				{epicsError}
 			</p>
 		{/if}
-		<ProposeChange {epics} tokens={design.path} stylesheet={design.stylesheet} />
+		<ProposeChange {epics} {flow} tokens={design.path} stylesheet={design.stylesheet} />
 	</section>
 {/if}

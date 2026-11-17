@@ -13,6 +13,266 @@
             "title": "A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent"
           }
         ],
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": [
+            {
+              "from": [
+                "backlog"
+              ],
+              "to": "ready",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [
+                "commit"
+              ],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "ready"
+              ],
+              "to": "in-progress",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [
+                "pull"
+              ],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "in-progress"
+              ],
+              "to": "review",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "review"
+              ],
+              "to": "done",
+              "types": [
+                "epic",
+                "story"
+              ],
+              "by": [
+                "acceptance"
+              ],
+              "effects": [
+                "accept"
+              ],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "review"
+              ],
+              "to": "done",
+              "types": [
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "in-progress"
+              ],
+              "to": "done",
+              "types": [
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "review"
+              ],
+              "to": "in-progress",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [
+                "send-back"
+              ],
+              "reason": true,
+              "operator": true
+            },
+            {
+              "from": [
+                "in-progress"
+              ],
+              "to": "ready",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "ready"
+              ],
+              "to": "backlog",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [],
+              "reason": false,
+              "operator": true
+            },
+            {
+              "from": [
+                "backlog",
+                "ready",
+                "in-progress"
+              ],
+              "to": "cancelled",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [
+                "cancel"
+              ],
+              "reason": true,
+              "operator": true
+            },
+            {
+              "from": [
+                "review"
+              ],
+              "to": "cancelled",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "cascade"
+              ],
+              "effects": [
+                "cancel"
+              ],
+              "reason": true,
+              "operator": false
+            },
+            {
+              "from": [
+                "cancelled"
+              ],
+              "to": "backlog",
+              "types": [
+                "epic",
+                "story",
+                "task"
+              ],
+              "by": [
+                "anyone"
+              ],
+              "effects": [
+                "reopen"
+              ],
+              "reason": false,
+              "operator": true
+            }
+          ]
+        },
         "tokens": "design/system/design-system.tokens.json"
       }
     }

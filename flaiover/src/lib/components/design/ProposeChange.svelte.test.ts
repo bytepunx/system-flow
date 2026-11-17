@@ -1,9 +1,13 @@
 // S-0384: the Design page's request form makes a story under the epic chosen, with topic design,
 // the operator's words as its goal, fixed criteria, and the token file and the stylesheet in its
 // touches, and moves it to ready; a refusal of either step is shown in flai's words.
+// S-0838 (I-0399): it moves the story to the first queue lane the workflow's pull leaves, whatever
+// its name, and says so when the workflow has none.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ProposeChange from './ProposeChange.svelte';
+import type { Flow } from '$lib/lanes';
+import { baselineFlow, renamedFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -71,7 +75,7 @@ describe('ProposeChange (S-0384)', () => {
 		const oncreated = vi.fn();
 		c = mount(ProposeChange, {
 			target: document.body,
-			props: { epics: EPICS, tokens: TOKENS, oncreated, ...props }
+			props: { epics: EPICS, flow: baselineFlow, tokens: TOKENS, oncreated, ...props }
 		});
 		flushSync();
 		return oncreated;
@@ -155,7 +159,7 @@ describe('ProposeChange (S-0384)', () => {
 		fill();
 		await submit();
 		const created = q('propose-created');
-		expect(words(created)).toBe('S-0400 is ready for a story’s agent to pull.');
+		expect(words(created)).toBe('S-0400 is in ready for a story’s agent to pull.');
 		expect(created.querySelector('a')!.getAttribute('href')).toBe('/items/S-0400');
 		expect(q<HTMLInputElement>('propose-title').value).toBe('');
 		expect(q<HTMLTextAreaElement>('propose-request').value).toBe('');
@@ -202,6 +206,44 @@ describe('ProposeChange (S-0384)', () => {
 		// It exists, so its words are cleared and it is not made again.
 		expect(q<HTMLInputElement>('propose-title').value).toBe('');
 		expect(button().disabled).toBe(true);
+		expect(oncreated).toHaveBeenCalledWith('S-0400');
+	});
+
+	it('moves the story to the queue lane the pull leaves, by its name in the workflow', async () => {
+		const calls = backend();
+		render({ flow: renamedFlow });
+		expect(words(q('propose-about'))).toContain(`changes ${TOKENS}, moved to queued for`);
+		fill();
+		await submit();
+		expect(calls[1]).toEqual({ url: '/api/items/S-0400/move', body: { to: 'queued' } });
+		expect(words(q('propose-created'))).toBe('S-0400 is in queued for a story’s agent to pull.');
+	});
+
+	it('names the lanes of a refused move by the workflow', async () => {
+		backend(undefined, () => refused('the queued limit is reached'));
+		render({ flow: renamedFlow });
+		fill();
+		await submit();
+		expect(words(q('propose-error'))).toBe(
+			'S-0400 was created and is in backlog, but moving it to queued was refused: the queued limit is reached'
+		);
+	});
+
+	it('makes the story but moves it nowhere, saying why, when no queue lane is pulled from', async () => {
+		const noPull: Flow = {
+			lanes: baselineFlow.lanes,
+			transitions: baselineFlow.transitions.filter((m) => !m.effects.includes('pull'))
+		};
+		const calls = backend();
+		const oncreated = render({ flow: noPull });
+		expect(words(q('propose-about'))).toMatch(/changes design\/system\/tokens\.json\.$/);
+		fill();
+		await submit();
+		expect(calls.map((c) => c.url)).toEqual(['/api/items']);
+		expect(words(q('propose-error'))).toBe(
+			'S-0400 was created and is in backlog, but the workflow has no queue lane an agent pulls from to move it to.'
+		);
+		expect(words(q('propose-created'))).toBe('S-0400 is in backlog.');
 		expect(oncreated).toHaveBeenCalledWith('S-0400');
 	});
 

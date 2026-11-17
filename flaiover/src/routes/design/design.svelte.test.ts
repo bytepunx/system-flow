@@ -10,6 +10,7 @@
 // S-0384: the page lists the open stories that propose a change to the design system, compares
 // the one chosen with the main branch's tokens, closes it when it leaves the list, and offers the
 // form that requests a change under an open epic.
+// S-0838 (I-0399): an epic is open by its lane's kind in the board's flow, not by its state's name.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,8 @@ import type { DesignSystem, DesignToken } from '$lib/server/repo';
 import { composeTokenFile, editKey } from '$lib/design/tokens';
 import { draftKey, loadDraft, saveDraft } from '$lib/design/draft';
 import { projectState } from '$lib/project.svelte';
+import type { Flow } from '$lib/lanes';
+import { baselineFlow, renamedFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -112,6 +115,7 @@ const guidanceDoc = {
 const guidanceUrl = `/api/docs/file?path=${encodeURIComponent(GUIDANCE)}`;
 const PROPOSALS = '/api/design/proposals';
 const EPICS = '/api/items?type=epic&archived=false';
+const BOARD = '/api/board';
 
 describe('the design page (S-0382)', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -129,6 +133,7 @@ describe('the design page (S-0382)', () => {
 			if (url === '/api/design') return design();
 			if (url === guidanceUrl) return guidance();
 			if (url === PROPOSALS || url === EPICS) return answer([]);
+			if (url === BOARD) return answer(baselineFlow);
 			return answer({ error: `unexpected ${url}` }, 404);
 		});
 	}
@@ -259,6 +264,7 @@ describe('editing the design system on the design page (S-0383)', { timeout: 15_
 			if (url === '/api/design') return answer(design);
 			if (url === guidanceUrl) return answer(guidanceDoc);
 			if (url === PROPOSALS || url === EPICS) return answer([]);
+			if (url === BOARD) return answer(baselineFlow);
 			if (url === '/api/design/tokens' && init?.method === 'PUT') {
 				const body = JSON.parse(String(init.body)) as Record<string, unknown>;
 				puts.push(body);
@@ -660,6 +666,13 @@ const EPIC_LIST = [
 	{ id: 'E-0003', title: 'Dropped', status: 'cancelled' },
 	{ id: 'E-0004', title: 'Design system', status: 'backlog' }
 ];
+// The same epics on a workflow whose accepted and cancelled lanes are named shipped and dropped.
+const RENAMED_EPICS = [
+	{ id: 'E-0001', title: 'Dashboard', status: 'in-progress' },
+	{ id: 'E-0002', title: 'Shipped', status: 'shipped' },
+	{ id: 'E-0003', title: 'Dropped', status: 'dropped' },
+	{ id: 'E-0004', title: 'Design system', status: 'queued' }
+];
 const STORY = '/api/design?story=';
 
 describe('the proposals and the request for a change on the design page (S-0384)', () => {
@@ -667,6 +680,8 @@ describe('the proposals and the request for a change on the design page (S-0384)
 	let main: DesignSystem;
 	let list: () => unknown;
 	let story: (id: string) => unknown;
+	let epicList: unknown[];
+	let flow: Flow;
 
 	// S-0390's design system: the main branch's with a bluer light primary.
 	const proposed = () => {
@@ -686,19 +701,25 @@ describe('the proposals and the request for a change on the design page (S-0384)
 		document.body.innerHTML = '';
 	});
 
-	// Serves design.get, the guidance, the proposals, the epics, and a proposal's design.get.
+	// Serves design.get, the guidance, the proposals, the epics, the board's flow, and a
+	// proposal's design.get.
 	async function show(
 		proposals: unknown[] = [BLUER, ACCENT],
-		design: DesignSystem = withStylesheet()
+		design: DesignSystem = withStylesheet(),
+		epics: unknown[] = EPIC_LIST,
+		board: Flow = baselineFlow
 	) {
 		main = design;
+		epicList = epics;
+		flow = board;
 		list = () => answer(proposals);
 		story = (id) => (id === 'S-0390' ? answer(proposed()) : answer({ error: `no ${id}` }, 404));
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/design') return answer(main);
 			if (url === guidanceUrl) return answer(guidanceDoc);
 			if (url === PROPOSALS) return list();
-			if (url === EPICS) return answer(EPIC_LIST);
+			if (url === EPICS) return answer(epicList);
+			if (url === BOARD) return answer(flow);
 			if (url.startsWith(STORY)) return story(decodeURIComponent(url.slice(STORY.length)));
 			return answer({ error: `unexpected ${url}` }, 404);
 		});
@@ -836,6 +857,25 @@ describe('the proposals and the request for a change on the design page (S-0384)
 		const offered = [...q('propose-epic')!.querySelectorAll('option')].map((o) => o.value);
 		expect(offered).toEqual(['', 'E-0001', 'E-0004']);
 		expect(words(q('propose-about'))).toContain(`${TOKENS} and ${STYLESHEET}`);
+	});
+
+	it("offers only the epics in an open lane by the board's flow, whatever the lanes are named", async () => {
+		await show([], withStylesheet(), RENAMED_EPICS, renamedFlow);
+		const offered = [...q('propose-epic')!.querySelectorAll('option')].map((o) => o.value);
+		expect(offered).toEqual(['', 'E-0001', 'E-0004']);
+		expect(words(q('propose-about'))).toContain("moved to queued for a story's agent to pull");
+	});
+
+	it("says so when the board's flow cannot be read, offering no epic", async () => {
+		await show();
+		api.mockImplementation(async (url: string) =>
+			url === BOARD ? answer({ error: 'flai is not answering' }, 502) : answer([])
+		);
+		followed.of.item();
+		await settle();
+		expect(words(q('design-request')!.querySelector('p'))).toBe(
+			'Could not read the epics: the board answered flai is not answering'
+		);
 	});
 
 	it('closes the comparison and holds compare back while the tokens are edited', async () => {

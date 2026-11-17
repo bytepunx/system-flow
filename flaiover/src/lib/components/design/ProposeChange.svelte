@@ -1,26 +1,32 @@
 <!--
 	The Design page's request form (S-0384, ADR-0151 § 3): the operator's request for a change to
 	the design system, in their words, becomes a story under the epic they choose, made with
-	flai's item.new as the board's new-item form makes one, and moved to ready for a story's agent
-	to pull. The operator wrote it, so it is not a draft. Its goal is their words; its criteria are
-	fixed: the tokens as asked, the stylesheet in step, the UI's tests passing. Its topic is design
-	and its touches are the token file and, when the manifest names one, the stylesheet.
+	flai's item.new as the board's new-item form makes one, and moved to the first queue lane the
+	workflow's pull leaves, ready on the baseline (S-0838), for a story's agent to pull. The
+	operator wrote it, so it is not a draft. Its goal is their words; its criteria are fixed: the
+	tokens as asked, the stylesheet in step, the UI's tests passing. Its topic is design and its
+	touches are the token file and, when the manifest names one, the stylesheet.
 -->
 <script lang="ts">
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { NATURES } from '$lib/natures';
+	import type { Flow } from '$lib/lanes';
+	import { isPullable, stateTitle } from '$lib/workflow';
 
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 
 	let {
 		epics,
+		flow,
 		tokens,
 		stylesheet,
 		oncreated
 	}: {
 		/** The open epics the story may go under. */
 		epics: readonly { id: string; title: string }[];
+		/** The board's lanes and transitions, as /api/board answers them. */
+		flow: Flow;
 		/** The token file's repository path: design.get's path. */
 		tokens: string;
 		/** The stylesheet the tokens are written into, when the manifest names one. */
@@ -42,8 +48,8 @@
 	let busy = $state(false);
 	let error = $state<string | null>(null);
 	let findings = $state<Finding[]>([]);
-	/** The story made, and whether it reached ready. */
-	let made = $state<{ id: string; ready: boolean } | null>(null);
+	/** The story made, and the title of the lane it was moved to, none when it was not moved. */
+	let made = $state<{ id: string; moved: string | null } | null>(null);
 
 	// The epic chosen must be one offered: a closed epic drops out, and a lone epic is chosen.
 	$effect(() => {
@@ -51,6 +57,17 @@
 		if (!parent && epics.length === 1) parent = epics[0].id;
 	});
 
+	// The lane the story is moved to, the first queue lane an agent pulls from, and the lane
+	// item.new makes it in, the initial one.
+	const pullable = $derived(
+		flow.lanes.find((l) => l.kind === 'queue' && isPullable(flow, l.name))?.name
+	);
+	const initial = $derived(
+		stateTitle(flow, (flow.lanes.find((l) => l.initial) ?? flow.lanes[0])?.name)
+	);
+	const pulledFrom = $derived(
+		pullable ? `, moved to ${stateTitle(flow, pullable)} for a story's agent to pull` : ''
+	);
 	const touches = $derived(stylesheet ? [tokens, stylesheet] : [tokens]);
 	const ready = $derived(parent !== '' && title.trim() !== '' && request.trim() !== '' && !busy);
 
@@ -98,15 +115,22 @@
 			// The story exists from here on, so its words are cleared whatever the move answers.
 			title = '';
 			request = '';
+			const to = pullable;
+			if (!to) {
+				made = { id, moved: null };
+				error = `${id} was created and is in ${initial}, but the workflow has no queue lane an agent pulls from to move it to.`;
+				oncreated?.(id);
+				return;
+			}
 			const m = await api(`/api/items/${id}/move`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ to: 'ready' })
+				body: JSON.stringify({ to })
 			});
-			made = { id, ready: m.ok };
+			made = { id, moved: m.ok ? stateTitle(flow, to) : null };
 			if (!m.ok) {
 				const why = (await refusal(m)).error;
-				error = `${id} was created and is in backlog, but moving it to ready was refused: ${why}`;
+				error = `${id} was created and is in ${initial}, but moving it to ${stateTitle(flow, to)} was refused: ${why}`;
 			}
 			oncreated?.(id);
 		} catch (err) {
@@ -120,7 +144,7 @@
 <form class="space-y-3" onsubmit={submit} data-testid="propose-change">
 	<p class="text-sm text-muted" data-testid="propose-about">
 		Your request becomes the goal of a story with topic <code>design</code> that changes
-		{touches.join(' and ')}, moved to ready for a story's agent to pull.
+		{touches.join(' and ')}{pulledFrom}.
 	</p>
 	<div class="flex flex-wrap items-end gap-4">
 		<label class="text-sm">
@@ -183,7 +207,7 @@
 	{#if made}
 		<p class="text-sm" data-testid="propose-created">
 			<a class="underline" href={resolve('/items/[id]', { id: made.id })}>{made.id}</a>
-			{made.ready ? 'is ready for a story’s agent to pull.' : 'is in backlog.'}
+			is in {made.moved ? `${made.moved} for a story’s agent to pull.` : `${initial}.`}
 		</p>
 	{/if}
 
