@@ -2,7 +2,8 @@
 // answers for the baseline workflow (flai/internal/workflow/baseline/board.md), as
 // TestBoardViewLanesAreTheWorkflowsColumns and TestBoardViewTransitionsAreTheWorkflows in
 // flai/internal/workitem give them, and for the workflow those tests also run: in-progress
-// renamed doing, and testing, an active lane with a WIP limit, added between it and review.
+// renamed doing, and testing, an active lane with a WIP limit, added between it and review; and
+// for the baseline with that testing lane added after in-progress, which keeps its name (S-0758).
 import type { Flow, Lane, Move } from './lanes';
 
 const all = ['epic', 'story', 'task'];
@@ -73,6 +74,39 @@ export const testingFlow: Flow = {
 		move(['doing'], 'ready'),
 		move(['ready'], 'backlog'),
 		move(['backlog', 'ready', 'doing', 'testing'], 'cancelled', {
+			effects: ['cancel'],
+			reason: true
+		}),
+		move(['review'], 'cancelled', {
+			by: ['cascade'],
+			effects: ['cancel'],
+			reason: true,
+			operator: false
+		}),
+		move(['cancelled'], 'backlog', { effects: ['reopen'] })
+	]
+};
+
+/** The baseline workflow with testing added after in-progress, which keeps its name (S-0758). */
+export const addedStateFlow: Flow = {
+	lanes: [
+		...baselineLanes.slice(0, 3),
+		{ name: 'testing', title: 'testing', kind: 'active', wip_limit: 2, takes_limit: true },
+		...baselineLanes.slice(3)
+	],
+	transitions: [
+		move(['backlog'], 'ready', { effects: ['commit'] }),
+		move(['ready'], 'in-progress', { effects: ['pull'] }),
+		move(['in-progress'], 'testing'),
+		move(['in-progress', 'testing'], 'review'),
+		move(['review'], 'done', { types: ['epic', 'story'], by: ['acceptance'], effects: ['accept'] }),
+		move(['review'], 'done', { types: ['task'] }),
+		move(['in-progress', 'testing'], 'done', { types: ['task'] }),
+		move(['review'], 'in-progress', { effects: ['send-back'], reason: true }),
+		move(['testing'], 'in-progress'),
+		move(['in-progress'], 'ready'),
+		move(['ready'], 'backlog'),
+		move(['backlog', 'ready', 'in-progress', 'testing'], 'cancelled', {
 			effects: ['cancel'],
 			reason: true
 		}),
