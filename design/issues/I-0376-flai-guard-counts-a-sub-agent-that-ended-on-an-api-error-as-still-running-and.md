@@ -2,12 +2,12 @@
 id: I-0376
 title: flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-15T01:05:45Z
 last_reported: 2026-11-15T01:05:45Z
-updated: 2026-11-17T02:47:36Z
+updated: 2026-11-17T07:40:30Z
 ---
 
 # I-0376 flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out
@@ -24,3 +24,4 @@ S-0739's T-3203 sub-agent (general-purpose, foreground) ended with an API error 
 ## Remediation
 
 Story S-0819 remediates this issue, created from it at 2026-11-17T02:47:36Z.
+Closed 2026-11-17T07:40:30Z: S-0819: flai guard now drops from a session's record, at the story agent's wait_for_events, each sub-agent whose foreground launch has its result in the session transcript, error or not (ADR-0315), so a sub-agent that ended on an API error with no SubagentStop no longer holds the wait. TestGuardLetsTheStorysAgentWaitOnceAForegroundSubAgentEndedOnAnError in flai/cmd/guard_test.go reproduces it.
