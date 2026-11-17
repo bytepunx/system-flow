@@ -239,7 +239,8 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) []string {
 }
 
 // undoneWorkers bounds how many stories boardUndone reads at once, each read
-// being a git process per recorded path.
+// being one git rev-parse, one git diff of the story's branch, and one per
+// distinct old base its record names, whatever its number of paths (I-0349).
 const undoneWorkers = 8
 
 // mayUndo reports whether the undone paths of a story in the state status
@@ -263,7 +264,8 @@ func activeOrWaiting(wf workflow.Workflow, status string) bool {
 }
 
 // boardUndone sets UndoesMain on each story card in a column mayUndo names,
-// reading the stories at once on at most undoneWorkers goroutines (S-0604).
+// reading the stories at once on at most undoneWorkers goroutines (S-0604),
+// each with the few git processes storygit.RecordedUndone runs (S-0828).
 // Each story has its own record file and each card its own slot, so the
 // reads share no write.
 func boardUndone(r execx.Runner, repo *workitem.Repo, v *workitem.BoardView) {

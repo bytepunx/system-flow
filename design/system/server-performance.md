@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-11-11
+updated: 2026-11-17
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -866,9 +866,52 @@ The merge queue's git no longer grows with the stories in review. In this reposi
 
 The host was quiet. I-0333's calls of 300 ms or more were at a load near 100, and at a load of 6 neither build had one. So these runs show the git a call runs and what it costs, not the condition I-0333 names. Three more pairs ran from 08:47:44 to 08:48:46 UTC at loads of 6.4 to 10.9. Stories left review meanwhile, so those in review fell from 4 to 1, and main moved. Before ran one `git rev-parse` for each story in review, and after one `git for-each-ref` whatever their number. In each build one of this repository's 15 calls at once took 300 ms or more, 391 ms before and 328 ms after. `undone.read` was the largest part of both, 214 and 118 ms.
 
-What is left is `undone.read`, now the largest part of this repository's call. S-0693, in progress, has an undone record of 20 paths. On every `board.get`, `boardUndone` (`flai/internal/hostapi/hostapi.go`) runs `storygit.RecordedUndone` for it: one `git rev-parse --abbrev-ref HEAD` and one `git diff` for each recorded path, one after another. That is 100 to 131 ms of each call here, more than half of it. The merge queue's `git status`, 21 to 27 ms, runs once a call while a story in review has a passing verify.
+What is left is `undone.read`, now the largest part of this repository's call. S-0693, in progress, has an undone record of 20 paths. On every `board.get`, `boardUndone` (`flai/internal/hostapi/hostapi.go`) runs `storygit.RecordedUndone` for it: one `git rev-parse --abbrev-ref HEAD` and one `git diff` for each recorded path, one after another. That is 100 to 131 ms of each call here, more than half of it. The merge queue's `git status`, 21 to 27 ms, runs once a call while a story in review has a passing verify. S-0828 batches those diffs: [The undone record's git diffs batched (S-0828)](#the-undone-records-git-diffs-batched-s-0828).
 
 The program wrote nothing of its own. The files under this repository's `.flai-cache` that changed, worktrees aside, changed after it ended.
+
+### The undone record's git diffs batched (S-0828)
+
+This section remedies [I-0349](../issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md), the `undone.read` that [S-0698](#the-merge-queues-git-read-once-s-0698) left as the largest part of this repository's `board.get`.
+
+#### Cause
+
+`storygit.RecordedUndone` (`flai/internal/storygit/undone.go`) checks each path of a story's undone record ([ADR-0155](../adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)) against the main branch now. It ran one `git diff main story/S-nnnn -- <path>` for each recorded path. For each path the branch still removed lines of, it ran a second, `git diff <old_base> main -- <path>`. Each process waited for the one before. A record of 20 paths ran 20 diffs when the branch no longer removed lines of any, as S-0693's did, and 40 when it removed lines of all. Every caller paid it: `board.get` for each story card with a record, the merge queue's eligibility, the acceptance preview, `flai stream restore`, and the sync.
+
+#### Fix
+
+- `RecordedUndone` runs one `git diff` of the main branch against the story's branch for all the record's paths.
+- It then groups the paths the branch still removes lines of by the old base each was found at, and runs one `git diff <old_base> main` for each group.
+- `readHunksOf` splits each diff's output by file. It finds a file by its exact header, `diff --git a/<path> b/<path>`, among the paths it asked for. It passes `--src-prefix=a/ --dst-prefix=b/`, so a host's `diff.noprefix` or `diff.mnemonicPrefix` cannot change the header, and `core.quotePath=false`, so a path with a space or a non-ASCII letter is printed as it is. A path git still quotes, one with a quote, a backslash, or a control character, matches no header, and is read with a diff of its own. A path git prints no diff for has no lines.
+- What it does with the lines is unchanged: `atPositions`, `undoneLines`, `notKept`, the record written again without the paths that drop out, and the error texts. `FindUndone`, which the sync runs once per rebase, keeps its diffs per path: it is not on any read path.
+
+So a story's read runs one `git rev-parse` of the main branch's name and at most one `git diff` for its branch and one per distinct old base, whatever the number of paths. A record's paths have one old base unless syncs found them at different bases.
+
+#### Measured on a scratch repository
+
+- On 2026-11-17 between 12:06:57 and 12:07:09 UTC on the operator's host (WSL2, 24 cores, git 2.47.3, Go 1.26.0), at a one-minute load of 5.5 to 6.3.
+- No story on this host has an undone record whose branch still exists. S-0693's record of 14 paths and S-0761's of 1 are left from stories accepted or cancelled since, whose branches are gone, and `board.get` does not read them. So the measurement built its own repository under the worktree's git-ignored `bin/S-0828/`.
+- The repository has 20 markdown files of 300 lines. `main` adds one line at line 151 of each. `story/S-0001` merges `main` keeping its own tree, so its branch removes that line from every file, as a revert replayed over main's change does. Its record names the 20 paths, each with main's line and the one old base. A second repository is the same with one file.
+- A program built against each of two copies of the tracked files under `flai/` called `storygit.RecordedUndone` through a runner that counts the git processes it starts and runs them with `execx.System`. Before is `main` at a28e30e45, the story's base. After is `story/S-0828` at 7ec18138a, with T-3525. Each call was given the record afresh, so every call read every path. A warm-up call, then 50 timed calls. The builds ran in turn, before, after, before, after, on the 20-path record, then once each on the 1-path record.
+
+| 20 recorded paths, one old base | Before | After |
+|---------------------------------|--------|-------|
+| `git diff` a call | 40 | 2 |
+| `git rev-parse` a call | 1 | 1 |
+| A call, p50, first and second run | 98.5 and 103.4 ms | 11.6 and 11.8 ms |
+| A call, p90 | 107 and 116 ms | 13.3 and 12.7 ms |
+| A call, max | 110 and 128 ms | 15.1 and 15.2 ms |
+
+| 1 recorded path | Before | After |
+|-----------------|--------|-------|
+| `git diff` a call | 2 | 2 |
+| A call, p50 (max) | 6.9 ms (11.5) | 6.5 ms (8.4) |
+
+A process costs about 2.5 ms here, and the read's time is the processes it runs. With 20 paths the read fell from about 100 ms to about 12 ms, and it no longer grows with the paths: 20 paths cost twice what 1 path costs, where they cost 15 times as much. S-0693's 20-path record ran 20 diffs, the branch diff for each path, because its branch no longer removed lines of any; it would now run one. In S-0698's figures that was 107 to 126 ms of a 150 to 187 ms `board.get` here; by these figures it would be two processes, about 5 to 6 ms. `board.get` itself was not measured again, since no story here has a record to read.
+
+Keeping the answer while the story's branch head and main's are unchanged, as S-0678 keeps the trial merges, is not worth a story now. Knowing the heads needs a `git rev-parse` or a `git for-each-ref`, 2 to 3 ms, which is most of what the read's three processes now cost, and the kept answer would have to be dropped whenever the record is written again. Only a board with many stories holding records at once would gain from it, and `boardUndone` reads up to 8 of them at once already.
+
+The program wrote only under `bin/S-0828/`, which is git-ignored and outside the main checkout's `.flai-cache`.
 
 ### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
 
