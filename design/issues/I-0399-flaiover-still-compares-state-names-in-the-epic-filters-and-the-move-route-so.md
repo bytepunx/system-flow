@@ -2,12 +2,12 @@
 id: I-0399
 title: flaiover still compares state names in the epic filters and the move route, so an operator's own accepted or cancelled lane is not seen as closed there
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-17T08:25:17Z
 last_reported: 2026-11-17T08:25:17Z
-updated: 2026-11-17T08:32:49Z
+updated: 2026-11-17T12:50:34Z
 ---
 
 # I-0399 flaiover still compares state names in the epic filters and the move route, so an operator's own accepted or cancelled lane is not seen as closed there
@@ -24,3 +24,4 @@ S-0758 moved the fifteen views its criteria list, and their callers, to read a s
 ## Remediation
 
 Story S-0838 remediates this issue, created from it at 2026-11-17T08:32:49Z.
+Closed 2026-11-17T12:50:34Z: S-0838: each site now reads the board's flow and asks $lib/workflow what a state is. The open-epic lists of the Design page, NewItemForm, and DeploySettings use isOpen; ProposeChange moves to the first queue lane isPullable names; and the move route uses isCancelled for the dry-run preview (refusing a dry run to any other lane) and isAccepted for the acceptance's timeout. renamedFlow in lanes.fixture.ts, with ready, done, and cancelled renamed, reproduces the cause in kinds.test.ts and in each view's test.
