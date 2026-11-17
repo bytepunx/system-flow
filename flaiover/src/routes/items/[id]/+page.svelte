@@ -43,6 +43,17 @@
 	} from '$lib/planning';
 	import { startable, type Hold, type StoryActivity } from '$lib/activity';
 	import type { TaskPlan as Plan } from '$lib/taskplan';
+	import type { Flow } from '$lib/lanes';
+	import {
+		isAccepted,
+		isOpen,
+		isPullable,
+		isUnderway,
+		isWaiting,
+		itemMoves,
+		stateTitle,
+		type ItemMove
+	} from '$lib/workflow';
 
 	type Transition = { to: string; at: string; by: string };
 	type Block = { from: string; until?: string; reason: string };
@@ -92,24 +103,16 @@
 	let findings = $state<Finding[]>([]);
 	let saved = $state<string[]>([]);
 	let writable = $state(false);
+	// The board's lanes and moves from board.get (S-0758), asked with writable: what the item's state
+	// is, and the moves offered from it, come from them; empty until read.
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 	let content: HTMLElement | undefined = $state();
 	let entry = $state('');
 
 	const id = $derived(page.params.id ?? '');
-	const allowed: Record<string, string[]> = {
-		backlog: ['ready', 'cancelled'],
-		ready: ['in-progress', 'cancelled'],
-		'in-progress': ['review', 'cancelled'],
-		review: ['done', 'in-progress']
-	};
-	const moves = $derived(
-		item
-			? [
-					...(allowed[item.status] ?? []),
-					...(item.type === 'task' && item.status === 'in-progress' ? ['done'] : [])
-				]
-			: []
-	);
+	// The moves the workflow lets a person make from the item's state (S-0758): forward, then send
+	// back, then cancel.
+	const moves = $derived(item ? itemMoves(flow, item.status, item.type) : []);
 	const blocked = $derived((item?.blocked ?? []).some((b) => !b.until));
 	// A story an agent wrote that the operator has not finalized (S-0199): it says so, and the
 	// operator takes it as their own with Finalize (S-0201).
@@ -125,8 +128,8 @@
 	// orchestrator's acceptance writes its evidence under ### Accepted by the orchestrator in the
 	// story's Notes, which the line links to by the heading's anchor when the body has it.
 	const accepted = $derived.by(() => {
-		if (item?.type !== 'story' || item.status !== 'done') return null;
-		const t = [...item.transitions].reverse().find((t) => t.to === 'done');
+		if (item?.type !== 'story' || !isAccepted(flow, item.status)) return null;
+		const t = [...item.transitions].reverse().find((t) => isAccepted(flow, t.to));
 		if (!t) return null;
 		const evidence =
 			t.by === 'orchestrator' &&
@@ -154,11 +157,7 @@
 	);
 	// A story under this epic (S-0191): only an open epic, since the form offers no other as a parent.
 	const childQuery = $derived(
-		writable &&
-			item?.type === 'epic' &&
-			!item.archived &&
-			item.status !== 'done' &&
-			item.status !== 'cancelled'
+		writable && item?.type === 'epic' && !item.archived && isOpen(flow, item.status)
 			? `?type=story&parent=${encodeURIComponent(item.id)}`
 			: null
 	);
@@ -169,11 +168,7 @@
 	// The story whose branch a file named in the body or a thread saves on from the editor (S-0378):
 	// an open story's, while its worktree holds the branch.
 	const branch = $derived(
-		item?.type === 'story' &&
-			!item.archived &&
-			(item.status === 'in-progress' || item.status === 'review')
-			? item.id
-			: undefined
+		item?.type === 'story' && !item.archived && isUnderway(flow, item.status) ? item.id : undefined
 	);
 	const narrative = $derived(
 		item?.type === 'story'
@@ -188,7 +183,8 @@
 	// conversations, closed ones too, so the page reads both itself.
 	let threads = $state<{ status: string }[]>([]);
 	let conversations = $state(0);
-	// Whether flai serve's agent action is on, asked for a ready story only, where Start agent needs it.
+	// Whether flai serve's agent action is on, asked only for a story in a state agents pull from,
+	// where Start agent needs it.
 	let agentsOn = $state(false);
 	// The pane shown, bound to the sidebar: an action above that needs the body shows its pane.
 	let shown = $state<string>();
@@ -227,7 +223,7 @@
 		const agent =
 			!!activity ||
 			!!pullRequest ||
-			startable(activity, agentsOn, item.status, writable && !item.archived);
+			startable(activity, agentsOn, item.status, writable && !item.archived, flow);
 		const all: (SidebarEntry | false)[] = [
 			{ id: 'story', label: kind, mode: 'pane' },
 			children.length > 0 && {
@@ -274,7 +270,7 @@
 		if (item?.id === of.id) conversations = Array.isArray(data) ? data.length : 0;
 	}
 	async function askAgents(of: Item) {
-		if (of.type !== 'story' || of.status !== 'ready' || !writable || of.archived) {
+		if (of.type !== 'story' || !isPullable(flow, of.status) || !writable || of.archived) {
 			agentsOn = false;
 			return;
 		}
@@ -302,11 +298,7 @@
 		const epic = await api(`/api/items/${encodeURIComponent(of.parent)}`)
 			.then((r) => (r.ok ? r.json() : null))
 			.catch(() => null);
-		const open =
-			!!epic?.item &&
-			!epic.item.archived &&
-			epic.item.status !== 'done' &&
-			epic.item.status !== 'cancelled';
+		const open = !!epic?.item && !epic.item.archived && isOpen(flow, epic.item.status);
 		if (open && parentFor === key) openParent = of.parent;
 	}
 	// Asked at every load, so a story flai sends back for a failed check shows it as it moves.
@@ -334,7 +326,9 @@
 		expectedCost = data.expected_cost;
 		undoesMain = data.undoes_main ?? [];
 		if (writableFor !== item!.id) {
-			writable = (await (await api('/api/board')).json()).writable;
+			const board = await (await api('/api/board')).json();
+			writable = board.writable;
+			flow = { lanes: board.lanes ?? [], transitions: board.transitions ?? [] };
 			writableFor = item!.id;
 		}
 		void askParent(item!);
@@ -371,8 +365,7 @@
 			!!item &&
 			!item.archived &&
 			(item.type === 'story' || item.type === 'epic') &&
-			item.status !== 'done' &&
-			item.status !== 'cancelled'
+			isOpen(flow, item.status)
 	);
 
 	/** The rendered criteria become tickable in place: each tick is an edit of the body by flai. */
@@ -448,26 +441,29 @@
 		else notice = `done${data.warnings?.length ? ': ' + data.warnings.join(' ') : ''}`;
 		await load();
 	}
-	let accepting = $state(false);
-	function move(to: string) {
-		// A story going to done is an acceptance: confirm with the plan first (S-0046).
-		if (to === 'done' && item?.type === 'story' && item.status === 'review' && !accepting) {
-			accepting = true;
+	// The state a confirmed acceptance or cancellation moves the item to, while it is confirmed.
+	let accepting = $state<string | null>(null);
+	let cancelling = $state<string | null>(null);
+	function move(m: ItemMove) {
+		// A story's move that accepts it is an acceptance: confirm with the plan first (S-0046).
+		if (m.effects.includes('accept') && item?.type === 'story') {
+			accepting = m.to;
 			return;
 		}
-		// A cancellation takes everything open under the item with it: show that first (S-0070).
-		if (to === 'cancelled') {
-			cancelling = true;
+		// A cancellation takes everything open under the item with it: show that first, and take
+		// its reason there (S-0070).
+		if (m.effects.includes('cancel')) {
+			cancelling = m.to;
 			return;
 		}
+		// Any other move the workflow asks a reason for, such as a send-back, asks for it here.
 		let reason: string | undefined;
-		if (item?.status === 'review' && to === 'in-progress') {
-			reason = prompt(`Reason for ${to}:`) ?? undefined;
+		if (m.reason) {
+			reason = prompt(`Reason for ${m.title}:`) ?? undefined;
 			if (!reason) return;
 		}
-		post(`/api/items/${id}/move`, { to, reason });
+		post(`/api/items/${id}/move`, { to: m.to, reason });
 	}
-	let cancelling = $state(false);
 	function block() {
 		const reason = prompt('Why is it blocked?');
 		if (reason) post(`/api/items/${id}/block`, { reason });
@@ -479,10 +475,10 @@
 {#if accepting && item}
 	<AcceptConfirm
 		id={item.id}
-		oncancel={() => (accepting = false)}
+		oncancel={() => (accepting = null)}
 		onconfirm={async () => {
-			await post(`/api/items/${item!.id}/move`, { to: 'done' });
-			accepting = false;
+			await post(`/api/items/${item!.id}/move`, { to: accepting });
+			accepting = null;
 		}}
 	/>
 {/if}
@@ -490,10 +486,11 @@
 {#if cancelling && item}
 	<CancelConfirm
 		id={item.id}
-		oncancel={() => (cancelling = false)}
+		{flow}
+		oncancel={() => (cancelling = null)}
 		onconfirm={async (reason) => {
-			await post(`/api/items/${item!.id}/move`, { to: 'cancelled', reason });
-			cancelling = false;
+			await post(`/api/items/${item!.id}/move`, { to: cancelling, reason });
+			cancelling = null;
 		}}
 	/>
 {/if}
@@ -543,7 +540,7 @@
 			</div>
 			<p class="mt-1 text-sm text-muted" data-testid="item-line">
 				<KindChips type={item.type} nature={item.nature} /> ·
-				<span class="font-medium">{item.status}</span>
+				<span class="font-medium">{stateTitle(flow, item.status)}</span>
 				{#if blocked}<span class="ml-1 font-semibold text-danger">BLOCKED</span>{/if}
 				{#if hold && item.type === 'story'}<span
 						class="ml-1 font-semibold text-warn"
@@ -589,11 +586,11 @@
 			{/if}
 			{#if writable && !item.archived}
 				<div class="mt-3 flex flex-wrap gap-2">
-					{#each moves as to (to)}
+					{#each moves as m (m.to)}
 						<button
 							type="button"
 							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
-							onclick={() => move(to)}>→ {to}</button
+							onclick={() => move(m)}>→ {m.title}</button
 						>
 					{/each}
 					{#if canEdit && !editing}
@@ -626,7 +623,7 @@
 							class="rounded border border-line-strong px-2 py-1 text-xs"
 							onclick={() => post(`/api/items/${id}/unblock`, {})}>unblock</button
 						>
-					{:else if item.status !== 'done' && item.status !== 'cancelled'}
+					{:else if isOpen(flow, item.status)}
 						<button
 							type="button"
 							class="rounded border border-line-strong px-2 py-1 text-xs"
@@ -649,7 +646,7 @@
 				{#if item}
 					{#if id === 'story'}
 						<div class="space-y-4">
-							{#if item.type === 'story' && item.status === 'review'}
+							{#if item.type === 'story' && isWaiting(flow, item.status)}
 								<p class="text-sm">
 									<a
 										class="rounded border border-line-strong px-2 py-1 hover:bg-raised"

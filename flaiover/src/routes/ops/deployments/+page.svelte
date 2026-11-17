@@ -41,6 +41,8 @@
 	} from '$lib/server/repo';
 	import type { SidebarEntry } from '$lib/pagesidebar.svelte';
 	import { api } from '$lib/api';
+	import type { Flow } from '$lib/lanes';
+	import { isActive, isWaiting, kindOf, stateTitle } from '$lib/workflow';
 	import { localTime } from '$lib/localtime';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -75,6 +77,9 @@
 	let picked = $state<string>();
 	// The step whose log Build or Logs opens at, from a row's step badge or its log link.
 	let stepAt = $state<string>();
+	// The board's lanes and moves, from board.get (S-0758), which name a story's column; empty until
+	// read, and from a flai that cannot answer them.
+	let flow = $state<Flow>({ lanes: [], transitions: [] });
 
 	// Whether the block names a deploy, as kluster.status says; undefined from a flai older than
 	// S-0586, or when it could not be read, and then Deploy and Promote are offered as before.
@@ -90,9 +95,11 @@
 	const main = $derived(data?.deployments.find((d) => d.default));
 	const disabled = $derived(busy || runs || !!off);
 	// The stories in progress or in review with no deployment: undeployed from a flai of S-0663 or
-	// later, else the stories in review an older flai lists.
+	// later, else the stories in review an older flai lists, in the board's first waiting lane, or in
+	// review when the board's lanes are not at hand.
+	const reviewColumn = $derived(flow.lanes.find((l) => l.kind === 'waiting')?.name ?? 'review');
 	const pending = $derived<KlusterUndeployed[]>(
-		data?.undeployed ?? (data?.review ?? []).map((r) => ({ ...r, column: 'review' }))
+		data?.undeployed ?? (data?.review ?? []).map((r) => ({ ...r, column: reviewColumn }))
 	);
 	const nothing = $derived(!!data && data.deployments.length === 0 && pending.length === 0);
 	// The story namespaces of stories in progress against kluster.agent_namespaces, and the newest
@@ -170,11 +177,22 @@
 					: 'bg-surface text-muted';
 	// a step's name as the page shows it: a component's build by the component
 	const stepLabel = (s: KlusterStep) => (s.name.startsWith('build-') ? s.name.slice(6) : s.name);
-	// a story's column as the page says it, and its badge's tone, as DeploymentRow shows them
+	// a story's column as the page says it, by its lane's kind: the board's first active lane in
+	// progress, its first waiting lane in review, any other by its title; and its badge's tone, an
+	// active lane's as work under way, as DeploymentRow shows them
+	const leadsKind = (c: string) => flow.lanes.find((l) => l.kind === kindOf(flow, c))?.name === c;
 	const columnText = (c: string) =>
-		c === 'in-progress' ? 'in progress' : c === 'review' ? 'in review' : c;
+		isActive(flow, c) && leadsKind(c)
+			? 'in progress'
+			: isWaiting(flow, c) && leadsKind(c)
+				? 'in review'
+				: stateTitle(flow, c);
+	const columnSentence = (c: string) => {
+		const text = columnText(c);
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	};
 	const columnTone = (c: string) =>
-		c === 'in-progress'
+		isActive(flow, c)
 			? 'ml-1 rounded bg-info-soft px-2 py-0.5 text-xs text-info'
 			: 'ml-1 rounded bg-surface px-2 py-0.5 text-xs text-muted';
 	const forwardKey = (ns: string, service: string, port: number) => `${ns}/${service}/${port}`;
@@ -220,6 +238,18 @@
 			if (data.enabled) refused = false;
 		} catch (e) {
 			error = `Could not read the deployments: ${errorText(e)}`;
+		}
+	}
+
+	/** Reads the board's lanes and moves; a failed read leaves the columns named as flai sends them. */
+	async function loadFlow() {
+		try {
+			const r = await api('/api/board');
+			if (!r.ok) return;
+			const b = await r.json();
+			flow = { lanes: b.lanes ?? [], transitions: b.transitions ?? [] };
+		} catch {
+			// unknown: each column is shown by the name flai sends
 		}
 	}
 
@@ -296,6 +326,7 @@
 	onMount(() => {
 		void loadDeployments();
 		void loadStatus();
+		void loadFlow();
 		// asked again only while a job runs: nothing else here changes without the page asking
 		const timer = setInterval(() => {
 			if (runs) void loadDeployments();
@@ -550,8 +581,8 @@
 			<div class="flex gap-2">{@render deployButton(r.story)}</div>
 		</div>
 		<p class="mt-2 text-sm text-muted" data-testid="deployment-outcome">
-			{r.column === 'in-progress' ? 'In progress' : 'In review'}, not deployed{#if r.head}; its head
-				is <code class="font-mono">{short(r.head)}</code>{/if}.
+			{columnSentence(r.column)}, not deployed{#if r.head}; its head is
+				<code class="font-mono">{short(r.head)}</code>{/if}.
 		</p>
 		{#if r.head_error}<p class="mt-1 text-sm text-muted">{r.head_error}</p>{/if}
 	</li>

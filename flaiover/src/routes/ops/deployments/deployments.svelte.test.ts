@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterDeployment, KlusterDeployments, KlusterJob } from '$lib/server/repo';
 import { localTime } from '$lib/localtime';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -167,6 +168,8 @@ describe('Deployments page (S-0581)', () => {
 	let writes: Record<string, ReturnType<typeof answer>> = {};
 	// what GET /api/kluster, kluster.status, answers: only block and deployable are read here
 	let status: ReturnType<typeof answer> = answer({ block: true, deployable: true });
+	// what GET /api/board answers: only its lanes and transitions are read here
+	let board: ReturnType<typeof answer> = answer(baselineFlow);
 
 	const show = async () => {
 		c = mount(DeploymentsPage, { target: document.body });
@@ -183,10 +186,12 @@ describe('Deployments page (S-0581)', () => {
 		reads = [answer(list())];
 		writes = {};
 		status = answer({ block: true, deployable: true });
+		board = answer(baselineFlow);
 		api.mockReset();
 		api.mockImplementation(async (path: string) => {
 			if (path === '/api/kluster/deployments') return reads.length > 1 ? reads.shift()! : reads[0];
 			if (path === '/api/kluster') return status;
+			if (path === '/api/board') return board;
 			if (path.startsWith('/api/kluster/log?'))
 				return answer({ exists: true, offset: 0, next: 4, size: 4, text: 'log\n' });
 			if (path.startsWith('/api/items?')) return answer([]);
@@ -817,6 +822,34 @@ describe('Deployments page (S-0581)', () => {
 		expect(buttonIn(waiting, 'Deploy')).toBeDefined();
 		expect(buttonIn(waiting, 'Teardown')).toBeUndefined();
 		expect(said(rowOf('S-0584'), 'deployment-outcome')).toContain('In review, not deployed');
+	});
+
+	// S-0758: a story in a state the workflow adds between in-progress and review is named by its
+	// lane's title, its badge toned as work under way.
+	it('names the column of a story in a state added after in-progress by its title', async () => {
+		board = answer(addedStateFlow);
+		reads = [
+			answer(
+				list({
+					deployments: [main()],
+					review: [],
+					undeployed: [
+						{ story: 'S-0758', title: 'In testing', head: HEAD, column: 'testing' },
+						{ story: 'S-0665', title: 'In progress', head: HEAD, column: 'in-progress' }
+					]
+				})
+			)
+		];
+		await show();
+		const testing = rowOf('S-0758');
+		expect(said(testing, 'deployment-column')).toBe('testing');
+		expect(testing.querySelector('[data-testid="deployment-column"]')!.className).toContain(
+			'text-info'
+		);
+		expect(said(testing, 'deployment-outcome')).toBe(
+			'Testing, not deployed; its head is 0123456789ab.'
+		);
+		expect(said(rowOf('S-0665'), 'deployment-column')).toBe('in progress');
 	});
 
 	it('deploys, runs the checks of, and tears down a story in progress, each through flai', async () => {

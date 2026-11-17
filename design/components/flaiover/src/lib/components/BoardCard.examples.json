@@ -21,6 +21,50 @@
             "layers": 3
           }
         },
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
+        },
         "draggable": true,
         "activity": {
           "state": "working",
@@ -50,6 +94,50 @@
           "blocked": false,
           "age_seconds": 5400
         },
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
+        },
         "queue": {
           "place": 1
         }
@@ -68,6 +156,50 @@
           "status": "review",
           "blocked": false,
           "age_seconds": 86400
+        },
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
         },
         "queue": {
           "reasons": [
@@ -101,6 +233,50 @@
           "blocked": true,
           "draft": true,
           "age_seconds": 259200
+        },
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
         }
       },
       "width": 320
@@ -117,6 +293,50 @@
           "status": "in-progress",
           "blocked": false,
           "age_seconds": 1800
+        },
+        "flow": {
+          "lanes": [
+            {
+              "name": "backlog",
+              "title": "backlog",
+              "kind": "queue",
+              "ordered": true,
+              "initial": true
+            },
+            {
+              "name": "ready",
+              "title": "ready",
+              "kind": "queue",
+              "wip_limit": 5,
+              "takes_limit": true,
+              "ordered": true
+            },
+            {
+              "name": "in-progress",
+              "title": "in-progress",
+              "kind": "active",
+              "wip_limit": 2,
+              "takes_limit": true
+            },
+            {
+              "name": "review",
+              "title": "review",
+              "kind": "waiting",
+              "wip_limit": 3,
+              "takes_limit": true
+            },
+            {
+              "name": "done",
+              "title": "done",
+              "kind": "accepted"
+            },
+            {
+              "name": "cancelled",
+              "title": "cancelled",
+              "kind": "cancelled"
+            }
+          ],
+          "transitions": []
         }
       },
       "width": 320

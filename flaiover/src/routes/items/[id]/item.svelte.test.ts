@@ -39,11 +39,15 @@ const changed = (path: string) => events.heard.forEach((l) => l.change?.(path));
 import ItemPage from './+page.svelte';
 import { inboxState } from '$lib/inbox.svelte';
 import { page } from '$app/state';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
+import type { Flow } from '$lib/lanes';
 
 const home = 'http://localhost/items/S-0154';
 const scrollIntoView = Element.prototype.scrollIntoView;
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
+// What GET /api/board answers: whether the dashboard may write, and the board's lanes and moves.
+const board = (writable: boolean, flow: Flow = baselineFlow) => answer({ writable, ...flow });
 const settle = async () => {
 	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
@@ -138,7 +142,7 @@ describe('the item page (S-0154)', () => {
 	const serve = (item: typeof story, children: unknown[] = []) =>
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/items/S-0154') return answer({ item, children });
-			if (url === '/api/board') return answer({ writable: false });
+			if (url === '/api/board') return board(false);
 			if (url.startsWith('/api/threads')) return answer([]);
 			return answer({ enabled: false });
 		});
@@ -215,7 +219,7 @@ describe('the item page (S-0154)', () => {
 		};
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/items/S-0154') return answer({ item: story, children: [] });
-			if (url === '/api/board') return answer({ writable: false });
+			if (url === '/api/board') return board(false);
 			if (url.startsWith('/api/threads')) return answer([reply]);
 			if (url === '/api/host-agent')
 				return answer({
@@ -241,7 +245,7 @@ describe('the item page (S-0154)', () => {
 		};
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/items/S-0154') return answer({ item: ticked, children: [] });
-			if (url === '/api/board') return answer({ writable: true });
+			if (url === '/api/board') return board(true);
 			if (url === '/api/items/S-0154/edit')
 				return { ok: false, json: async () => ({ error: 'the story is being edited' }) };
 			if (url.startsWith('/api/threads')) return answer([]);
@@ -263,7 +267,7 @@ describe('the item page (S-0154)', () => {
 		const show = async (item: Record<string, unknown>, writable = true) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -303,7 +307,7 @@ describe('the item page (S-0154)', () => {
 		const show = async (item: Record<string, unknown>, writable = true) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -352,7 +356,7 @@ describe('the item page (S-0154)', () => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
 				if (url === '/api/items/E-0013') return parent();
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -552,7 +556,7 @@ describe('the item page (S-0154)', () => {
 						children: [],
 						expected_cost: { cost: 12, from: 'forecast', estimated: true }
 					});
-				if (url === '/api/board') return answer({ writable: false });
+				if (url === '/api/board') return board(false);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -587,7 +591,7 @@ describe('the item page (S-0154)', () => {
 		) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children });
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -634,7 +638,7 @@ describe('the item page (S-0154)', () => {
 					current = { ...draftStory, draft: false };
 					return answer({ id: 'S-0154', draft: false, warnings: [] });
 				}
-				if (url === '/api/board') return answer({ writable: true });
+				if (url === '/api/board') return board(true);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -653,7 +657,7 @@ describe('the item page (S-0154)', () => {
 				if (url === '/api/items/S-0154') return answer({ item: draftStory, children: [] });
 				if (url === '/api/items/S-0154/finalize')
 					return { ok: false, json: async () => ({ error: 'S-0154 is not a draft' }) };
-				if (url === '/api/board') return answer({ writable: true });
+				if (url === '/api/board') return board(true);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -687,7 +691,7 @@ describe('the item page (S-0154)', () => {
 		const show = async (item: Record<string, unknown>, writable = true, enabled = true) => {
 			api.mockImplementation(async (url: string, init?: RequestInit) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer([]);
 				if (url === `/api/items/${item.id}/plan` && init?.method === 'POST')
 					return {
@@ -781,7 +785,7 @@ describe('the item page (S-0154)', () => {
 		const show = (p?: unknown) =>
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item: story, children, plan: p });
-				if (url === '/api/board') return answer({ writable: false });
+				if (url === '/api/board') return board(false);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -920,7 +924,7 @@ describe('the item page (S-0154)', () => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154')
 					return answer({ item: story, children: [], ...(undoes_main ? { undoes_main } : {}) });
-				if (url === '/api/board') return answer({ writable: false });
+				if (url === '/api/board') return board(false);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -970,7 +974,7 @@ describe('the item page (S-0154)', () => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
 				if (url.endsWith('/forge')) return forge();
-				if (url === '/api/board') return answer({ writable: false });
+				if (url === '/api/board') return board(false);
 				if (url.startsWith('/api/threads')) return answer([]);
 				return answer({ enabled: false });
 			});
@@ -1036,7 +1040,7 @@ describe('the item page (S-0154)', () => {
 		) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
-				if (url === '/api/board') return answer({ writable: false });
+				if (url === '/api/board') return board(false);
 				if (url.startsWith('/api/threads')) return answer([]);
 				if (url.startsWith('/api/messages'))
 					return answer(url.includes('all=1') ? all : conversations);
@@ -1107,7 +1111,7 @@ describe('the item page (S-0154)', () => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154')
 					return answer({ item: { ...story, status: 'review' }, children: [] });
-				if (url === '/api/board') return answer({ writable: true });
+				if (url === '/api/board') return board(true);
 				if (url.startsWith('/api/threads')) return answer([]);
 				if (url === '/api/items/S-0154/acceptance')
 					return answer({ id: 'S-0154', blockers: [], plan: null });
@@ -1181,7 +1185,7 @@ describe('the item page (S-0154)', () => {
 		const full = (url: string) => {
 			if (url === '/api/items/S-0154')
 				return answer({ item: { ...story, owner: 'alex' }, children: [task] });
-			if (url === '/api/board') return answer({ writable: true });
+			if (url === '/api/board') return board(true);
 			if (url.startsWith('/api/threads'))
 				return answer([
 					thread('TH-0040', 'Dots or a bar'),
@@ -1202,7 +1206,7 @@ describe('the item page (S-0154)', () => {
 		) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children });
-				if (url === '/api/board') return answer({ writable });
+				if (url === '/api/board') return board(writable);
 				if (url.startsWith('/api/threads')) return answer(threads);
 				return answer({ enabled: false });
 			});
@@ -1369,7 +1373,7 @@ describe('the item page (S-0154)', () => {
 		it("shows the body's pane when edit… is pressed on another", async () => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item: story, children: [] });
-				if (url === '/api/board') return answer({ writable: true });
+				if (url === '/api/board') return board(true);
 				if (url === '/api/items/S-0154/edit')
 					return { ok: false, json: async () => ({ error: 'the story is being edited' }) };
 				if (url.startsWith('/api/threads')) return answer([]);
@@ -1382,6 +1386,129 @@ describe('the item page (S-0154)', () => {
 			await settle();
 			expect(showing()).toBe('story');
 			expect(asked('/api/items/S-0154/edit')).toBeGreaterThan(0);
+		});
+	});
+
+	// S-0758: the moves offered, and whether each asks a reason, are the workflow's, read from the
+	// board's lanes and transitions, so a state the workflow adds is offered what it allows.
+	describe('its moves (S-0758)', () => {
+		const show = async (item: Record<string, unknown>, flow: Flow = baselineFlow) => {
+			api.mockImplementation(async (url: string, init?: RequestInit) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/board') return board(true, flow);
+				if (url.startsWith('/api/threads')) return answer([]);
+				if (url === '/api/items/S-0154/move' && init?.method === 'POST')
+					return answer(JSON.parse(String(init.body)).dry_run ? { cancelled: [] } : {});
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const offered = () =>
+			[...document.querySelectorAll('button')]
+				.map((b) => b.textContent!.trim())
+				.filter((t) => t.startsWith('→ '));
+		const click = (text: string) =>
+			[...document.querySelectorAll('button')].find((b) => b.textContent!.trim() === text)!.click();
+		// the moves posted, not the cancellation's dry run
+		const moved = () =>
+			api.mock.calls
+				.filter(([u, init]) => u === '/api/items/S-0154/move' && init?.method === 'POST')
+				.map(([, init]) => JSON.parse(String(init.body)))
+				.filter((b) => !b.dry_run);
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+		};
+		afterEach(() => vi.unstubAllGlobals());
+
+		it('offers what the baseline offers today, a task in progress done too', async () => {
+			await show({ ...story, status: 'backlog' });
+			expect(offered()).toEqual(['→ ready', '→ cancelled']);
+			again();
+			await show({ ...story, status: 'ready' });
+			expect(offered()).toEqual(['→ in-progress', '→ cancelled']);
+			again();
+			await show(story);
+			expect(offered()).toEqual(['→ review', '→ cancelled']);
+			again();
+			await show({ ...story, status: 'review' });
+			expect(offered()).toEqual(['→ done', '→ in-progress']);
+			again();
+			await show({ ...story, id: 'T-0553', type: 'task', status: 'in-progress' });
+			expect(offered()).toEqual(['→ review', '→ done', '→ cancelled']);
+			again();
+			await show({ ...story, status: 'done' });
+			expect(offered()).toEqual([]);
+		});
+
+		it('offers a story in testing only the moves its transitions allow, and a cancel asks a reason', async () => {
+			await show({ ...story, status: 'testing' }, addedStateFlow);
+			expect(document.querySelector('[data-testid="item-line"]')!.textContent).toContain('testing');
+			expect(offered()).toEqual(['→ review', '→ cancelled']);
+			// still open, so it is edited and blocked here
+			expect(document.querySelector('[data-testid="edit-item"]')).not.toBeNull();
+			click('→ cancelled');
+			await settle();
+			const dialog = document.querySelector('[role="dialog"]')!;
+			expect(dialog.querySelector('textarea')).not.toBeNull();
+			const confirm = [...dialog.querySelectorAll('button')].find(
+				(b) => b.textContent!.trim() === 'Cancel S-0154'
+			)!;
+			expect(confirm.disabled).toBe(true);
+			const reason = dialog.querySelector('textarea')!;
+			reason.value = 'Not wanted';
+			reason.dispatchEvent(new Event('input'));
+			flushSync();
+			confirm.click();
+			await settle();
+			expect(moved()).toEqual([{ to: 'cancelled', reason: 'Not wanted' }]);
+		});
+
+		it('moves a story in testing on to review without asking a reason', async () => {
+			const prompt = vi.fn(() => 'unasked');
+			vi.stubGlobal('prompt', prompt);
+			await show({ ...story, status: 'testing' }, addedStateFlow);
+			click('→ review');
+			await settle();
+			expect(prompt).not.toHaveBeenCalled();
+			expect(moved()).toEqual([{ to: 'review' }]);
+		});
+
+		it('lists the Agent pane of a story in a state an agent pulls from while agents are on', async () => {
+			for (const [status, listed] of [
+				['ready', true],
+				['backlog', false]
+			] as const) {
+				api.mockImplementation(async (url: string) => {
+					if (url === '/api/items/S-0154')
+						return answer({ item: { ...story, status }, children: [] });
+					if (url === '/api/board') return board(true);
+					if (url.startsWith('/api/threads')) return answer([]);
+					if (url === '/api/host-agent')
+						return answer({ enabled: true, state: { command: 'claude', stories: {} } });
+					return answer({ enabled: false });
+				});
+				c = mount(ItemPage, { target: document.body });
+				await settle();
+				expect(panes().includes('agent'), status).toBe(listed);
+				again();
+			}
+		});
+
+		it('asks a reason for sending a story in review back, and moves nothing without one', async () => {
+			const prompt = vi.fn((): string | null => null);
+			vi.stubGlobal('prompt', prompt);
+			await show({ ...story, status: 'review' });
+			click('→ in-progress');
+			await settle();
+			expect(prompt).toHaveBeenCalledWith('Reason for in-progress:');
+			expect(moved()).toEqual([]);
+			prompt.mockReturnValue('The tests fail');
+			click('→ in-progress');
+			await settle();
+			expect(moved()).toEqual([{ to: 'in-progress', reason: 'The tests fail' }]);
 		});
 	});
 

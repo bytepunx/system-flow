@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 import type { Component } from '$lib/server/repo';
+import { addedStateFlow, baselineFlow } from '$lib/lanes.fixture';
 import SourcePicker, { openStories, type ChangedComponent } from './SourcePicker.svelte';
 
 const STORIES = [
@@ -29,11 +30,27 @@ describe('openStories', () => {
 			],
 			review: [card('S-0442', 'story', 'review')]
 		};
-		expect(openStories(columns)).toEqual([
+		expect(openStories(columns, baselineFlow)).toEqual([
 			{ id: 'S-0441', title: 'S-0441', status: 'in-progress' },
 			{ id: 'S-0442', title: 'S-0442', status: 'review' }
 		]);
-		expect(openStories({})).toEqual([]);
+		expect(openStories({}, baselineFlow)).toEqual([]);
+	});
+
+	// S-0758: underway is a lane's kind, so a state the workflow adds is offered in its board place
+	it('lists a story in a state added between in-progress and review, in board order', () => {
+		const card = (id: string, status: string) => ({ id, type: 'story', title: id, status });
+		const columns = {
+			review: [card('S-0442', 'review')],
+			testing: [card('S-0444', 'testing')],
+			'in-progress': [card('S-0441', 'in-progress')]
+		};
+		expect(openStories(columns, addedStateFlow).map((s) => s.id)).toEqual([
+			'S-0441',
+			'S-0444',
+			'S-0442'
+		]);
+		expect(openStories(columns)).toEqual([]);
 	});
 });
 
