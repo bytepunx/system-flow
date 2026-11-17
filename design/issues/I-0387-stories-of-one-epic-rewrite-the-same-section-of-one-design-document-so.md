@@ -7,7 +7,7 @@ count: 2
 cost: 18m
 first_reported: 2026-11-16T06:16:15Z
 last_reported: 2026-11-17T02:03:50Z
-updated: 2026-11-17T02:03:50Z
+updated: 2026-11-17T02:26:33Z
 usage:
   strategic:
     - kind: analyzer
@@ -51,3 +51,5 @@ coordination.weeks[] W46 conflicts.met_accept 12 (W44 4, W45 4), met_sync 22. .f
 ## Remediation
 
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
+
+Story S-0817 remediates this issue, created from it at 2026-11-17T02:26:33Z.
