@@ -367,6 +367,177 @@ export function runningNote(job: CloseoutProgress): string {
 	return `Close-out running${at}: job ${job.id}${step}${since}.`;
 }
 
+/**
+ * What accept.resolve answers once flai serve took the request (S-0804): the story, the job's ID,
+ * whether this request started it or one of the story ran already, where its output is, and what
+ * it does, in a sentence.
+ */
+export type ResolveStarted = {
+	id: string;
+	job: string;
+	started: boolean;
+	running: boolean;
+	log: string;
+	reason: string;
+};
+/** A step or tier of a job as its log's progress lines show it (closeout.StepProgress). */
+export type JobStep = {
+	name: string;
+	kind: 'step' | 'tier';
+	/** Who ran it: flai verify, or the resolve job itself. */
+	source: 'verify' | 'resolve';
+	/** Absent for a tier that ended without running, as one reused or skipped. */
+	started?: string;
+	/** Absent, with outcome, while it runs. */
+	ended?: string;
+	outcome?: string;
+};
+/**
+ * A story's last close-out or Rebase and resolve job as resolve.status answers it (closeout.JobStatus
+ * and whether it runs): when it started and ended, its verdict and the step it stopped at, how a
+ * resolve job ended and why, the step and tier it is on, its steps, and where its log is.
+ */
+export type ResolveJob = {
+	id: string;
+	story: string;
+	/** resolve for a Rebase and resolve; absent for a close-out. */
+	kind?: string;
+	by: string;
+	started: string;
+	head?: string;
+	ended?: string;
+	exit_code?: number;
+	/** passed, stopped, failed, or interrupted, when flai serve's restart cut the job short. */
+	verdict?: string;
+	stopped_at?: string;
+	commit?: string;
+	duration_ms?: number;
+	/** stayed in review or sent back, once a resolve job ended; absent for one interrupted. */
+	outcome?: string;
+	thread?: string;
+	conflicts?: string[];
+	reason?: string;
+	step?: string;
+	tier?: string;
+	steps?: JobStep[];
+	log: string;
+	running: boolean;
+};
+/** What resolve.status answers: the story, and its last job, absent when it has had none. */
+export type ResolveStatus = { id: string; job?: ResolveJob };
+
+/** How a job ended, as the review page says it. */
+export type JobEndKind = 'stayed' | 'sent-back' | 'interrupted' | 'closed-out';
+/** A job's end as the review page shows it: what came of it, why, and what it names. */
+export type JobEnd = {
+	kind: JobEndKind;
+	headline: string;
+	reason: string;
+	/** The send-back thread, when the job opened one. */
+	thread: string;
+	/** The paths the rebase stopped on, which the job aborted. */
+	conflicts: string[];
+	/** The step a close-out stopped at; empty when none. */
+	stoppedAt: string;
+};
+/** A job as the review page shows it while it runs and once it ended. */
+export type JobView = {
+	/** Rebase and resolve, or Close-out. */
+	label: string;
+	running: boolean;
+	/** The steps it is on, outermost first, such as close-out › flai verify › check; empty when its log cannot say. */
+	step: string;
+	/** The tiers running, comma-separated; empty when none does. */
+	tiers: string;
+	/** Null while it runs. */
+	end: JobEnd | null;
+};
+
+/** A span of milliseconds as the review page counts it up: 7s, 1m 05s, 1h 02m. */
+export function elapsed(ms: number): string {
+	const s = Math.max(0, Math.floor(ms / 1000));
+	const m = Math.floor(s / 60);
+	const h = Math.floor(m / 60);
+	const two = (n: number) => String(n).padStart(2, '0');
+	if (h) return `${h}h ${two(m % 60)}m`;
+	return m ? `${m}m ${two(s % 60)}s` : `${s}s`;
+}
+
+/**
+ * How long a job has run at now, in milliseconds since the epoch, while it runs; once it ended,
+ * how long it ran, from its duration or its start and end. Empty when its start cannot be read.
+ */
+export function jobElapsed(job: ResolveJob, now: number): string {
+	if (!job.running && job.duration_ms !== undefined) return elapsed(job.duration_ms);
+	const from = Date.parse(job.started);
+	const to = !job.running && job.ended ? Date.parse(job.ended) : now;
+	return Number.isFinite(from) && Number.isFinite(to) ? elapsed(to - from) : '';
+}
+
+/** The send back's words for a close-out that did not pass: the step it stopped at, or failed. */
+function stopped(job: ResolveJob): string {
+	return job.stopped_at ? `stopped at ${job.stopped_at}` : 'failed';
+}
+
+/** How an ended job came out, from its outcome, else its verdict. */
+function endOf(job: ResolveJob): JobEnd {
+	const base = {
+		reason: job.reason ?? '',
+		thread: job.thread ?? '',
+		conflicts: job.conflicts ?? [],
+		stoppedAt: job.stopped_at ?? ''
+	};
+	if (job.verdict === 'interrupted')
+		return {
+			...base,
+			kind: 'interrupted',
+			headline: `Interrupted: flai serve restarted while job ${job.id} ran; nothing was sent back`
+		};
+	if (job.outcome === 'stayed in review')
+		return {
+			...base,
+			kind: 'stayed',
+			headline: `Stayed in review: ${job.story} is ready to accept`
+		};
+	if (job.outcome === 'sent back')
+		return {
+			...base,
+			kind: 'sent-back',
+			headline: base.conflicts.length
+				? 'Sent back to in-progress: the rebase stopped on conflicts'
+				: job.stopped_at === 'rebase'
+					? 'Sent back to in-progress: the rebase did not end clean'
+					: `Sent back to in-progress: the close-out ${stopped(job)}`
+		};
+	return {
+		...base,
+		kind: 'closed-out',
+		headline:
+			job.verdict === 'passed'
+				? 'The close-out passed; no Rebase and resolve ran'
+				: `The close-out ${stopped(job)}; no Rebase and resolve ran`
+	};
+}
+
+/**
+ * A close-out or Rebase and resolve job as the review page shows it (S-0804). While it runs, the
+ * steps it is on: the resolve job's own (the rebase, or the close-out), then the close-out's step
+ * as flai serve names it, then flai verify's, and the tiers running. Once it ended, how: a resolve
+ * job that stayed in review, one sent back with its thread and the paths in conflict or the step,
+ * one interrupted, or a close-out's verdict.
+ */
+export function jobView(job: ResolveJob): JobView {
+	const label = job.kind === 'resolve' ? 'Rebase and resolve' : 'Close-out';
+	if (!job.running) return { label, running: false, step: '', tiers: '', end: endOf(job) };
+	const on = (job.steps ?? []).filter((s) => s.started && !s.ended);
+	const names = on.filter((s) => s.kind === 'step' && s.source === 'resolve').map((s) => s.name);
+	if (job.step && !names.includes(job.step)) names.push(job.step);
+	names.push(...on.filter((s) => s.kind === 'step' && s.source === 'verify').map((s) => s.name));
+	const tiers = on.filter((s) => s.kind === 'tier').map((s) => s.name);
+	if (job.tier && !tiers.includes(job.tier)) tiers.push(job.tier);
+	return { label, running: true, step: names.join(' › '), tiers: tiers.join(', '), end: null };
+}
+
 /** A deploy or a checks run of the story's namespace as the review page shows it (S-0662). */
 export type KlusterRunView = {
 	/** A deploy's or teardown's, or a checks run's: their logs are shown in different places. */

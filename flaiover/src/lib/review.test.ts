@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	CHECKS_LOG_HREF,
 	criteriaOf,
+	elapsed,
+	jobElapsed,
+	jobView,
 	klusterView,
 	patchLines,
 	patchRuns,
@@ -9,7 +12,9 @@ import {
 	sectionOf,
 	toggleCriterion,
 	verifyView,
+	type JobStep,
 	type KlusterEvidence,
+	type ResolveJob,
 	type VerifyReport
 } from './review';
 
@@ -551,5 +556,160 @@ describe('klusterView (S-0662)', () => {
 				'/ops/deployments'
 			)
 		).toBeNull();
+	});
+});
+
+describe('a close-out or Rebase and resolve job (S-0804)', () => {
+	const at = (s: number) => new Date(Date.UTC(2026, 10, 16, 22, 30, s)).toISOString();
+	const running: ResolveJob = {
+		id: 'S-0041-20261116T223000Z',
+		story: 'S-0041',
+		kind: 'resolve',
+		by: 'alex',
+		started: at(0),
+		log: '/repo/.flai-cache/verify/jobs/S-0041.log',
+		running: true
+	};
+	const step = (
+		name: string,
+		kind: JobStep['kind'],
+		source: JobStep['source'],
+		started: number,
+		end?: number,
+		outcome?: string
+	): JobStep => ({
+		name,
+		kind,
+		source,
+		started: at(started),
+		...(end === undefined ? {} : { ended: at(end), outcome })
+	});
+	const ended = (over: Partial<ResolveJob>): ResolveJob => ({
+		...running,
+		running: false,
+		ended: at(40),
+		duration_ms: 40000,
+		...over
+	});
+
+	it('counts the time up in seconds, minutes, and hours', () => {
+		expect(elapsed(-5)).toBe('0s');
+		expect(elapsed(7400)).toBe('7s');
+		expect(elapsed(65000)).toBe('1m 05s');
+		expect(elapsed(3720000)).toBe('1h 02m');
+	});
+
+	it('times a running job to now, and an ended one by its duration or its end', () => {
+		expect(jobElapsed(running, Date.parse(at(12)))).toBe('12s');
+		expect(jobElapsed(ended({}), Date.parse(at(59)))).toBe('40s');
+		expect(jobElapsed(ended({ duration_ms: undefined }), Date.parse(at(59)))).toBe('40s');
+		expect(jobElapsed({ ...running, started: 'not a time' }, 0)).toBe('');
+	});
+
+	it('names the rebase while it runs, and nothing when the log cannot say', () => {
+		expect(jobView(running)).toEqual({
+			label: 'Rebase and resolve',
+			running: true,
+			step: '',
+			tiers: '',
+			end: null
+		});
+		const rebasing = jobView({
+			...running,
+			step: 'rebase',
+			steps: [step('rebase', 'step', 'resolve', 0)]
+		});
+		expect(rebasing.step).toBe('rebase');
+	});
+
+	it('names the close-out, its step, flai verify’s step, and the tiers running, outermost first', () => {
+		const v = jobView({
+			...running,
+			step: 'flai verify',
+			tier: 'go-test',
+			steps: [
+				step('rebase', 'step', 'resolve', 0, 1, 'passed'),
+				step('close-out', 'step', 'resolve', 2),
+				step('check', 'step', 'verify', 3, 4, 'passed'),
+				step('tiers', 'step', 'verify', 5),
+				{ name: 'markdown', kind: 'tier', source: 'verify', ended: at(5), outcome: 'reused' },
+				step('go-test', 'tier', 'verify', 6),
+				step('lint', 'tier', 'verify', 7)
+			]
+		});
+		expect(v.step).toBe('close-out › flai verify › tiers');
+		expect(v.tiers).toBe('go-test, lint');
+		expect(v.end).toBeNull();
+	});
+
+	it('says a job that stayed in review stayed, with why', () => {
+		const reason =
+			'the rebase of story/S-0041 onto main was clean and its close-out passed at 0123456789ab, so S-0041 stays in review, ready to accept';
+		const v = jobView(ended({ verdict: 'passed', outcome: 'stayed in review', reason }));
+		expect(v.running).toBe(false);
+		expect(v.end).toEqual({
+			kind: 'stayed',
+			headline: 'Stayed in review: S-0041 is ready to accept',
+			reason,
+			thread: '',
+			conflicts: [],
+			stoppedAt: ''
+		});
+	});
+
+	it('says a job sent back on conflicts names the paths and the thread', () => {
+		const v = jobView(
+			ended({
+				verdict: 'stopped',
+				stopped_at: 'rebase',
+				outcome: 'sent back',
+				thread: 'TH-0042',
+				conflicts: ['docs/a.md', 'docs/b.md'],
+				reason: 'the rebase stopped on conflicts in docs/a.md and docs/b.md'
+			})
+		);
+		expect(v.end).toMatchObject({
+			kind: 'sent-back',
+			headline: 'Sent back to in-progress: the rebase stopped on conflicts',
+			thread: 'TH-0042',
+			conflicts: ['docs/a.md', 'docs/b.md']
+		});
+		const unclean = jobView(
+			ended({ verdict: 'stopped', stopped_at: 'rebase', outcome: 'sent back', thread: 'TH-0042' })
+		);
+		expect(unclean.end?.headline).toBe('Sent back to in-progress: the rebase did not end clean');
+	});
+
+	it('says a job sent back after its close-out names the step it stopped at, or that it failed', () => {
+		const stoppedAt = jobView(
+			ended({ verdict: 'stopped', stopped_at: 'go-test', outcome: 'sent back', thread: 'TH-0042' })
+		);
+		expect(stoppedAt.end).toMatchObject({
+			kind: 'sent-back',
+			headline: 'Sent back to in-progress: the close-out stopped at go-test',
+			stoppedAt: 'go-test'
+		});
+		const failed = jobView(ended({ verdict: 'failed', outcome: 'sent back', thread: 'TH-0042' }));
+		expect(failed.end?.headline).toBe('Sent back to in-progress: the close-out failed');
+	});
+
+	it('says a job flai serve’s restart interrupted sent nothing back', () => {
+		const v = jobView(ended({ verdict: 'interrupted', exit_code: -1 }));
+		expect(v.end).toMatchObject({
+			kind: 'interrupted',
+			headline:
+				'Interrupted: flai serve restarted while job S-0041-20261116T223000Z ran; nothing was sent back'
+		});
+	});
+
+	it('says how a close-out that was not a Rebase and resolve ended', () => {
+		const passed = jobView(ended({ kind: undefined, verdict: 'passed' }));
+		expect(passed.label).toBe('Close-out');
+		expect(passed.end).toMatchObject({
+			kind: 'closed-out',
+			headline: 'The close-out passed; no Rebase and resolve ran'
+		});
+		const stopped = jobView(ended({ kind: undefined, verdict: 'stopped', stopped_at: 'lint' }));
+		expect(stopped.end?.headline).toBe('The close-out stopped at lint; no Rebase and resolve ran');
 	});
 });

@@ -74,6 +74,10 @@ function backend(over: {
 	move?: () => unknown;
 	/** Rebase and resolve, POST /api/items/[id]/resolve (ADR-0302). */
 	resolve?: () => unknown;
+	/** The story's last job, GET /api/items/[id]/resolve, resolve.status (S-0804), afresh on each read. */
+	resolveStatus?: () => unknown;
+	/** A log on the host, GET /api/log?path=&offset=, log.read. */
+	log?: (path: string, offset: number) => unknown;
 	diff?: () => unknown;
 	checksStatuses?: unknown[];
 	checksRun?: () => unknown;
@@ -135,6 +139,15 @@ function backend(over: {
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
 		if (url.endsWith('/resolve') && init?.method === 'POST')
 			return over.resolve ? over.resolve() : json({ error: 'no resolve' }, 500);
+		if (url.endsWith('/resolve'))
+			return over.resolveStatus ? over.resolveStatus() : json({ id: 'S-0041' });
+		if (url.startsWith('/api/log?')) {
+			const q = new URLSearchParams(url.slice('/api/log?'.length));
+			const [path, offset] = [q.get('path') ?? '', Number(q.get('offset'))];
+			return over.log
+				? over.log(path, offset)
+				: json({ path, exists: false, offset, next: offset, size: 0, text: '' });
+		}
 		if (url.endsWith('/restore') && init?.method === 'POST')
 			return over.restore ? over.restore() : json({ restored: true });
 		if (url === '/api/threads' && init?.method === 'POST')
@@ -790,7 +803,7 @@ describe('Review', () => {
 			const box = offer()!.closest('[role=alert]')!;
 			expect(box.textContent).toContain('This cannot be accepted from here yet');
 			expect(box.textContent?.replace(/\s+/g, ' ')).toContain(
-				'Sends S-0041 back to its agent, which rebases story/S-0041 onto main'
+				'Asks flai serve to rebase story/S-0041 onto main and close it out again, with no agent'
 			);
 			expect(button('Accept').disabled).toBe(true);
 			unmount(c);
@@ -802,7 +815,8 @@ describe('Review', () => {
 			expect(offer()).toBeNull();
 		});
 
-		it('sends the story back and shows the notice with the thread and what its agent resolves', async () => {
+		// an older flai's accept.resolve sent the story back to its agent at once (ADR-0302)
+		it('shows an older flai’s send back as the notice with the thread and what its agent resolves', async () => {
 			backend({ preview: held, resolve: sentBack });
 			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 			await settle();
@@ -842,7 +856,7 @@ describe('Review', () => {
 			await settle();
 			const error = document.querySelector('[data-testid="resolve-error"]')!;
 			expect(error.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-				`S-0041 was not sent back. flai said: ${why}`
+				`Nothing started for S-0041. flai said: ${why}`
 			);
 			expect(document.querySelector('[data-testid="accept-sent-back"]')).toBeNull();
 			expect(offer()?.disabled).toBe(false);
@@ -884,6 +898,271 @@ describe('Review', () => {
 			await settle();
 			const box = offer()!.closest('[data-testid="queue-refusal"]');
 			expect(box).not.toBeNull();
+		});
+
+		// S-0804: flai serve rebases the branch and closes it out as a job, and the page follows it
+		// to its end in a collapsible stream, then says how it ended.
+		describe('the job', () => {
+			const JOB = 'S-0041-20261116T223000Z';
+			const LOG = '/repo/.flai-cache/verify/jobs/S-0041.log';
+			const STARTED = '2026-11-16T22:30:00.000Z';
+			const at = (s: number) => new Date(Date.parse(STARTED) + s * 1000).toISOString();
+			const started = `rebase and resolve job ${JOB} started for S-0041: flai serve rebases story/S-0041 onto the main branch and closes it out at the rebased head; its output is in ${LOG}`;
+			const answer = () =>
+				json({ id: 'S-0041', job: JOB, started: true, running: false, log: LOG, reason: started });
+			const job = (over: Record<string, unknown> = {}) => ({
+				id: JOB,
+				story: 'S-0041',
+				kind: 'resolve',
+				by: 'alex',
+				started: STARTED,
+				log: LOG,
+				running: true,
+				...over
+			});
+			const ended = (over: Record<string, unknown>) =>
+				job({ running: false, ended: at(40), duration_ms: 40000, ...over });
+			/** Each read of resolve.status answers the next of these, the last again and again. */
+			const statuses = (...jobs: Record<string, unknown>[]) => {
+				let n = 0;
+				return () => json({ id: 'S-0041', job: jobs[Math.min(n++, jobs.length - 1)] });
+			};
+			/** The job's log as it is written so far, read from an offset as log.read reads it. */
+			let written = '';
+			const log = (path: string, offset: number) =>
+				json({
+					path,
+					exists: true,
+					offset,
+					next: written.length,
+					size: written.length,
+					text: written.slice(offset)
+				});
+			const flush = async () => {
+				for (let i = 0; i < 12; i++) await vi.advanceTimersByTimeAsync(0);
+				flushSync();
+			};
+			const shown = (testid: string) => {
+				const el = document.querySelector(`[data-testid="${testid}"]`);
+				return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+			};
+			beforeEach(() => {
+				written = '';
+			});
+			afterEach(() => {
+				vi.useRealTimers();
+			});
+
+			it('follows a job it started to its end without a reload, and says it stayed in review', async () => {
+				let previews = 0;
+				const preview = () => (previews++ ? { branch: 'story/S-0041', plan: null } : held);
+				const resolveStatus = statuses(
+					job({
+						step: 'rebase',
+						steps: [{ name: 'rebase', kind: 'step', source: 'resolve', started: at(0) }]
+					}),
+					job({
+						step: 'flai verify',
+						tier: 'go-test',
+						steps: [
+							{
+								name: 'rebase',
+								kind: 'step',
+								source: 'resolve',
+								started: at(0),
+								ended: at(2),
+								outcome: 'passed'
+							},
+							{ name: 'close-out', kind: 'step', source: 'resolve', started: at(3) },
+							{ name: 'tiers', kind: 'step', source: 'verify', started: at(4) },
+							{ name: 'go-test', kind: 'tier', source: 'verify', started: at(5) }
+						]
+					}),
+					ended({
+						verdict: 'passed',
+						outcome: 'stayed in review',
+						commit: '0123456789abcdef',
+						reason:
+							'the rebase of story/S-0041 onto main was clean and its close-out passed at 0123456789ab, so S-0041 stays in review, ready to accept'
+					})
+				);
+				backend({ preview, resolve: answer, log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				expect(document.querySelector('[data-testid="resolve-job"]')).toBeNull();
+				backend({ preview, resolve: answer, resolveStatus, log });
+				vi.useFakeTimers({
+					toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
+				});
+				vi.setSystemTime(Date.parse(at(5)));
+				written = 'resolve: S-0041 2026-11-16T22:30:00Z step started rebase\n';
+				offer()!.click();
+				await flush();
+				expect(calls('/api/items/S-0041/resolve')).toHaveLength(1);
+				const box = document.querySelector('[data-testid="resolve-job"]')!;
+				expect(box.getAttribute('data-running')).toBe('true');
+				expect(shown('resolve-answer')).toBe(started);
+				expect(shown('resolve-progress')).toBe('At rebase, for 5s.');
+				// the output, in a stream that opens and closes, as it is written
+				const feed = box.querySelector<HTMLDetailsElement>('[data-testid="log-feed"]')!;
+				expect(feed.open).toBe(true);
+				expect(feed.getAttribute('data-outcome')).toBe('running');
+				expect(shown('log-feed-text')).toContain('step started rebase');
+				expect(offer()).toBeNull();
+				expect(button('Accept').disabled).toBe(true);
+				// the time counts up each second
+				await vi.advanceTimersByTimeAsync(1000);
+				flushSync();
+				expect(shown('resolve-progress')).toBe('At rebase, for 6s.');
+				written += 'resolve: S-0041 2026-11-16T22:30:03Z step started close-out\n';
+				await vi.advanceTimersByTimeAsync(1000);
+				await flush();
+				expect(shown('resolve-progress')).toBe(
+					'At close-out › flai verify › tiers, tiers go-test, for 7s.'
+				);
+				expect(shown('log-feed-text')).toContain('step started close-out');
+				await vi.advanceTimersByTimeAsync(2000);
+				await flush();
+				expect(box.getAttribute('data-running')).toBe('false');
+				const end = document.querySelector('[data-testid="resolve-end"]')!;
+				expect(end.getAttribute('role')).toBe('status');
+				expect(end.getAttribute('data-end')).toBe('stayed');
+				expect(end.textContent).toContain('Stayed in review: S-0041 is ready to accept');
+				expect(shown('resolve-reason')).toContain('was clean and its close-out passed');
+				expect(end.textContent).toContain('Ran for 40s.');
+				expect(feed.getAttribute('data-outcome')).toBe('passed');
+				expect(document.querySelector('[data-testid="resolve-thread"]')).toBeNull();
+				// the story and its preview read again: what the job settled no longer holds Accept
+				expect(previews).toBe(2);
+				expect(button('Accept').disabled).toBe(false);
+			});
+
+			it('says a job sent back on conflicts names the paths and the thread', async () => {
+				const reason =
+					'rebase and resolve job S-0041-20261116T223000Z: the rebase of story/S-0041 onto main stopped on conflicts in docs/a.md and docs/b.md, which flai aborted, so the branch is as it was';
+				const sentBack = ended({
+					verdict: 'stopped',
+					stopped_at: 'rebase',
+					outcome: 'sent back',
+					thread: 'TH-0042',
+					conflicts: ['docs/a.md', 'docs/b.md'],
+					reason
+				});
+				backend({ preview: held, resolve: answer, log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				// once sent back, the story reads as in-progress
+				backend({
+					preview: held,
+					resolve: answer,
+					resolveStatus: statuses(sentBack),
+					log,
+					item: { ...STORY, status: 'in-progress' }
+				});
+				offer()!.click();
+				await settle();
+				const end = document.querySelector('[data-testid="resolve-end"]')!;
+				expect(end.getAttribute('data-end')).toBe('sent-back');
+				expect(end.textContent).toContain(
+					'Sent back to in-progress: the rebase stopped on conflicts'
+				);
+				expect(shown('resolve-reason')).toBe(reason);
+				expect(
+					[...end.querySelectorAll('[data-testid="resolve-conflicts"] li')].map(
+						(li) => li.textContent
+					)
+				).toEqual(['docs/a.md', 'docs/b.md']);
+				const link = end.querySelector('a')!;
+				expect(link.textContent).toBe('TH-0042');
+				expect(link.getAttribute('href')).toBe('/threads?thread=TH-0042');
+				expect(document.body.textContent).toContain('S-0041 is in-progress, not in review');
+				expect(document.querySelector('[data-testid="accept-sent-back"]')).toBeNull();
+			});
+
+			it('says a job sent back after its close-out names the step it stopped at', async () => {
+				const failed = ended({
+					verdict: 'stopped',
+					stopped_at: 'go-test',
+					outcome: 'sent back',
+					thread: 'TH-0042',
+					reason: `rebase and resolve job ${JOB}: story/S-0041's close-out after its clean rebase onto main stopped at go-test with 1 finding; its output is in ${LOG}`
+				});
+				backend({ preview: held, resolve: answer, log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				backend({ preview: held, resolve: answer, resolveStatus: statuses(failed), log });
+				offer()!.click();
+				await settle();
+				const end = document.querySelector('[data-testid="resolve-end"]')!;
+				expect(end.textContent).toContain(
+					'Sent back to in-progress: the close-out stopped at go-test'
+				);
+				expect(shown('resolve-reason')).toContain(`its output is in ${LOG}`);
+				expect(end.querySelector('[data-testid="resolve-conflicts"]')).toBeNull();
+				expect(end.querySelector('a')?.textContent).toBe('TH-0042');
+			});
+
+			it('says a job flai serve’s restart interrupted sent nothing back', async () => {
+				const interrupted = ended({ verdict: 'interrupted', exit_code: -1 });
+				backend({ preview: held, resolve: answer, log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				backend({ preview: held, resolve: answer, resolveStatus: statuses(interrupted), log });
+				offer()!.click();
+				await settle();
+				const end = document.querySelector('[data-testid="resolve-end"]')!;
+				expect(end.getAttribute('data-end')).toBe('interrupted');
+				expect(end.textContent).toContain(
+					`Interrupted: flai serve restarted while job ${JOB} ran; nothing was sent back`
+				);
+				expect(end.querySelector('a')).toBeNull();
+				// the story is still in review, and Rebase and resolve is offered again
+				expect(offer()?.disabled).toBe(false);
+			});
+
+			it('passes over the story’s older job until the one it started is read', async () => {
+				const older = { ...ended({ verdict: 'passed' }), id: 'S-0041-20261115T080000Z' };
+				backend({ preview: held, resolve: answer, log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				backend({
+					preview: held,
+					resolve: answer,
+					resolveStatus: statuses(older, ended({ verdict: 'interrupted' })),
+					log
+				});
+				vi.useFakeTimers({
+					toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
+				});
+				offer()!.click();
+				await flush();
+				expect(shown('resolve-progress')).toBe('Waiting for flai serve to start it…');
+				expect(document.querySelector('[data-testid="resolve-end"]')).toBeNull();
+				await vi.advanceTimersByTimeAsync(2000);
+				await flush();
+				const end = document.querySelector('[data-testid="resolve-end"]')!;
+				expect(end.getAttribute('data-end')).toBe('interrupted');
+			});
+
+			it('follows a Rebase and resolve running as the page loads, and not a close-out', async () => {
+				const running = job({ step: 'rebase' });
+				backend({ preview: held, resolveStatus: statuses(running), log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				const box = document.querySelector('[data-testid="resolve-job"]')!;
+				expect(box.getAttribute('data-running')).toBe('true');
+				expect(box.textContent).toContain('Rebase and resolve');
+				expect(shown('resolve-progress')).toMatch(/^At rebase, for /);
+				expect(document.querySelector('[data-testid="resolve-answer"]')).toBeNull();
+				expect(offer()).toBeNull();
+				unmount(c);
+				document.body.innerHTML = '';
+				backend({ preview: held, resolveStatus: statuses(job({ kind: undefined })), log });
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				expect(document.querySelector('[data-testid="resolve-job"]')).toBeNull();
+				expect(offer()).not.toBeNull();
+			});
 		});
 	});
 

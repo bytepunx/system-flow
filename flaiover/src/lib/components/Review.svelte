@@ -9,6 +9,8 @@
 	import { resolve } from '$app/paths';
 	import {
 		criteriaOf,
+		jobElapsed,
+		jobView,
 		klusterView,
 		patchLines,
 		readNdjson,
@@ -18,9 +20,15 @@
 		type KlusterView,
 		type PatchKind,
 		type CloseoutProgress,
+		type JobEndKind,
+		type ResolveJob,
+		type ResolveStarted,
+		type ResolveStatus,
 		type VerifyStatus,
 		type VerifyView
 	} from '$lib/review';
+	import LogFeed, { type LogPart } from './LogFeed.svelte';
+	import type { LogRead } from '$lib/logs';
 	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import PageSidebar from '$lib/components/PageSidebar.svelte';
@@ -161,11 +169,22 @@
 	let sendingBack = $state(false);
 	let reason = $state('');
 
-	// Rebase and resolve (ADR-0302): flai's accept.resolve sends a story that cannot be accepted
-	// back to its agent, which rebases, takes each blocker's action, and moves it to review again.
-	// Its answer is a send back, shown as sentBack is; a refusal is flai's reason.
+	// Rebase and resolve (S-0804): flai's accept.resolve asks flai serve for a job that rebases the
+	// story's branch onto main and closes it out again, with no agent, and answers at once with the
+	// job; a refusal is flai's reason. An older flai's answer is a send back, shown as sentBack is.
 	let resolving = $state(false);
 	let resolveError = $state<string | null>(null);
+	// The job followed: resolveStarted is accept.resolve's answer, resolveJob what resolve.status
+	// last said of the job, read again every RESOLVE_EVERY until it ends; on load, a Rebase and
+	// resolve of the story running is followed as one the page started. now is the clock its time
+	// counts up on. resolveToken stops a loop from another story's load, or from a page gone.
+	let resolveStarted = $state<ResolveStarted | null>(null);
+	let resolveJob = $state<ResolveJob | null>(null);
+	let resolveFollowError = $state<string | null>(null);
+	let resolveOpen = $state(true);
+	let now = $state(Date.now());
+	let resolveToken = 0;
+	const RESOLVE_EVERY = 2000;
 
 	// Paths the branch undoes of main's change (S-0388, ADR-0155): a card each, from the preview or
 	// a refusal. Each is restored, and drops out when the preview runs again; or kept with a reason,
@@ -250,10 +269,29 @@
 		const forge = new Set(forgeBlockers.map((b) => b.message));
 		return otherBlockers(preview).filter((b) => !forge.has(b));
 	});
+	const resolveView = $derived(resolveJob ? jobView(resolveJob) : null);
+	// asked for and not yet read, or read and running
+	const resolveRunning = $derived(resolveJob ? resolveJob.running : !!resolveStarted);
+	const resolveLog = $derived(resolveJob?.log ?? resolveStarted?.log ?? '');
+	// where the job is and how long it has run, or how long it ran
+	const resolveProgress = $derived.by(() => {
+		if (!resolveJob || !resolveView) return 'Waiting for flai serve to start it…';
+		const took = jobElapsed(resolveJob, now);
+		if (resolveView.end) return `Ran for ${took}.`;
+		const at = resolveView.step ? `At ${resolveView.step}` : 'Running';
+		return `${at}${resolveView.tiers ? `, tiers ${resolveView.tiers}` : ''}, for ${took}.`;
+	});
+	const END_TONE: Record<JobEndKind, string> = {
+		stayed: 'text-good',
+		'sent-back': 'text-danger',
+		interrupted: 'text-warn',
+		'closed-out': ''
+	};
 	const canAccept = $derived(
 		writable &&
 			inReview &&
 			!running &&
+			!resolveRunning &&
 			!result &&
 			!!preview &&
 			!blockers.length &&
@@ -265,13 +303,13 @@
 	// Rebase and resolve is offered once, beside the first of what holds the acceptance: the
 	// blockers, then a refused acceptance's text, then the merge queue's refusal.
 	const resolveAt = $derived.by((): 'blockers' | 'failure' | 'queue' | null => {
-		if (!writable || !inReview || result || sentBack) return null;
+		if (!writable || !inReview || result || sentBack || resolveRunning) return null;
 		if (blockers.length) return 'blockers';
 		if (failure && !findings.length) return 'failure';
 		return queueRefusal ? 'queue' : null;
 	});
 	const resolveLine = $derived(
-		`Sends ${id} back to its agent, which rebases ${preview?.branch ?? `story/${id}`} onto main, takes the actions above, closes out again, and moves it to review.`
+		`Asks flai serve to rebase ${preview?.branch ?? `story/${id}`} onto main and close it out again, with no agent: ${id} stays in review when the rebase is clean and the close-out passes, and goes back to its agent only when the rebase stops on conflicts or a step fails.`
 	);
 	const enqueuedAs = $derived(queueState?.enqueued?.find((e) => e.story === id));
 	const queueOffered = $derived(
@@ -317,7 +355,10 @@
 	// The sidebar (S-0461): a scroll entry for each section the page shows, in its order, and under
 	// Changes one for each changed file. A file's id is its path made fit for an id, kept unique.
 	// a story sent back is in-progress again, and the section stays to say so (ADR-0248)
-	const acceptShown = $derived(inReview || !!result || !!sentBack);
+	// and a Rebase and resolve followed stays to say how it ended (S-0804)
+	const acceptShown = $derived(
+		inReview || !!result || !!sentBack || !!resolveStarted || !!resolveView
+	);
 	const issuesShown = $derived(acceptShown && (issues.length > 0 || !!issuesError));
 	const checksShown = $derived(inReview || !!checksRun?.started);
 	const verifyShown = $derived(!!verify || !!verifyError);
@@ -442,6 +483,10 @@
 		saved = [];
 		sentBack = null;
 		resolveError = null;
+		resolveStarted = null;
+		resolveJob = null;
+		resolveFollowError = null;
+		const token = ++resolveToken;
 		issues = [];
 		issuesError = null;
 		made = [];
@@ -483,7 +528,10 @@
 		}
 		void loadChecks(target);
 		void loadVerify(target);
-		if (item.type === 'story') void loadPullRequest(target);
+		if (item.type === 'story') {
+			void loadPullRequest(target);
+			void loadResolve(target, token);
+		}
 	}
 
 	async function loadDiff(target: string) {
@@ -635,6 +683,60 @@
 		}
 	}
 
+	// A Rebase and resolve of the story running as the page loads is followed; anything else, or a
+	// read that fails, shows nothing.
+	async function loadResolve(target: string, token: number) {
+		try {
+			const { job: running } = await get<ResolveStatus>(`/api/items/${target}/resolve`);
+			if (token !== resolveToken || !running?.running || running.kind !== 'resolve') return;
+			resolveJob = running;
+			now = Date.now();
+			void followResolve(target, token, running.id);
+		} catch {
+			// an older flai or none connected: the page has no job to follow
+		}
+	}
+
+	// resolve.status every RESOLVE_EVERY until the job of that ID ends, an older job read meanwhile
+	// passed over; a read that fails is shown and tried again. Once it ended, the story and its
+	// preview and verification are read again: a clean one stays in review with its blockers
+	// settled, and one sent back is in-progress.
+	async function followResolve(target: string, token: number, jobId: string) {
+		while (token === resolveToken) {
+			try {
+				const { job: read } = await get<ResolveStatus>(`/api/items/${target}/resolve`);
+				if (token !== resolveToken) return;
+				resolveFollowError = null;
+				if (read?.id === jobId) {
+					resolveJob = read;
+					now = Date.now();
+					if (!read.running) return resolveEnded(target);
+				}
+			} catch (e) {
+				if (token !== resolveToken) return;
+				resolveFollowError = e instanceof Error ? e.message : String(e);
+			}
+			await sleep(RESOLVE_EVERY);
+		}
+	}
+
+	async function resolveEnded(target: string) {
+		const fresh = await get<{ item: Item }>(`/api/items/${target}`).catch(() => null);
+		if (target !== id) return;
+		if (fresh) item = fresh.item;
+		if (item?.status === 'review') void loadPreview(target);
+		void loadVerify(target);
+	}
+
+	// The job's log, read as LogViewer reads one: GET /api/log, flai's log.read.
+	async function readResolveLog(offset: number): Promise<LogPart> {
+		const r = await api(`/api/log?path=${encodeURIComponent(resolveLog)}&offset=${offset}`);
+		const body = await r.json().catch(() => ({}));
+		if (!r.ok)
+			throw new Error(body.error || r.statusText || `the log could not be read (${r.status})`);
+		return body as LogRead;
+	}
+
 	async function loadPullRequest(target: string) {
 		try {
 			const data = await get<{ pull_request?: PullRequestStatus | null }>(
@@ -695,6 +797,17 @@
 	}
 	$effect(() => {
 		void load(id);
+	});
+	// a job followed is let go when the page goes
+	$effect(() => () => {
+		resolveToken++;
+	});
+	// a running job's time counts up each second
+	const ticking = $derived(!!resolveJob?.running);
+	$effect(() => {
+		if (!ticking) return;
+		const timer = setInterval(() => (now = Date.now()), 1000);
+		return () => clearInterval(timer);
 	});
 
 	async function refreshChecksStatus(target: string, token: number) {
@@ -878,8 +991,9 @@
 		if (result && !failure && toMake.length) await createStories(toMake);
 	}
 
-	// flai's accept.resolve (ADR-0302): the story goes back to its agent with what holds it, and the
-	// page shows the send back as an acceptance's is shown, with the story as it is now.
+	// flai's accept.resolve (S-0804): flai serve's job is followed to its end. An older flai's
+	// answer (ADR-0302) sent the story back to its agent with what holds it, shown as an
+	// acceptance's send back is shown, with the story as it is now.
 	async function resolveBlockers() {
 		resolving = true;
 		resolveError = null;
@@ -888,6 +1002,18 @@
 			const data = await r.json().catch(() => ({}));
 			if (!r.ok) {
 				resolveError = data.error ?? r.statusText;
+				return;
+			}
+			if (typeof data.job === 'string' && data.job) {
+				failure = null;
+				findings = [];
+				queueRefusal = null;
+				const token = ++resolveToken;
+				resolveStarted = data as ResolveStarted;
+				resolveJob = null;
+				resolveFollowError = null;
+				resolveOpen = true;
+				void followResolve(id, token, data.job);
 				return;
 			}
 			const back = sentBackOf(data, `${id} was sent back to in-progress for its agent to resolve`);
@@ -934,12 +1060,12 @@
 			class="rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
 			data-testid="resolve"
 			disabled={resolving || running}
-			onclick={resolveBlockers}>{resolving ? 'Sending back…' : 'Rebase and resolve'}</button
+			onclick={resolveBlockers}>{resolving ? 'Asking flai serve…' : 'Rebase and resolve'}</button
 		>
 		<p class="mt-1 text-xs">{resolveLine}</p>
 		{#if resolveError}
 			<p class="mt-1" data-testid="resolve-error">
-				{storyId} was not sent back. flai said: {resolveError}
+				Nothing started for {storyId}. flai said: {resolveError}
 			</p>
 		{/if}
 	</div>
@@ -1679,6 +1805,67 @@
 			{#each warnings as w (w)}
 				<p class="mt-2 rounded border border-warn bg-warn-soft p-2 text-warn">{w}</p>
 			{/each}
+			{#if resolveStarted || resolveJob}
+				<!-- A Rebase and resolve (S-0804): flai serve's job, followed to its end. -->
+				<div
+					class="mt-3 rounded border border-line bg-surface p-2"
+					data-testid="resolve-job"
+					data-running={resolveRunning}
+				>
+					<p class="font-medium">{resolveView?.label ?? 'Rebase and resolve'}</p>
+					{#if resolveStarted}
+						<p class="mt-1 text-xs text-muted" data-testid="resolve-answer">
+							{resolveStarted.reason}
+						</p>
+					{/if}
+					{#if resolveView?.end}
+						{@const end = resolveView.end}
+						<div role="status" data-testid="resolve-end" data-end={end.kind}>
+							<p class="mt-1 font-medium {END_TONE[end.kind]}">{end.headline}</p>
+							{#if end.reason}
+								<p class="mt-1" data-testid="resolve-reason">{end.reason}</p>
+							{/if}
+							{#if end.conflicts.length}
+								<p class="mt-1 text-muted">The rebase stopped on:</p>
+								<ul class="mt-1 ml-4 list-disc font-mono text-xs" data-testid="resolve-conflicts">
+									{#each end.conflicts as p (p)}<li>{p}</li>{/each}
+								</ul>
+							{/if}
+							{#if end.thread}
+								<p class="mt-1" data-testid="resolve-thread">
+									<!-- eslint-disable svelte/no-navigation-without-resolve -- the page is resolve()d; the rule does not follow the thread added to it -->
+									<a
+										class="font-mono underline"
+										href={resolve('/threads') + `?thread=${encodeURIComponent(end.thread)}`}
+										>{end.thread}</a
+									>
+									<!-- eslint-enable svelte/no-navigation-without-resolve -->
+									names it for its agent, which moves {item.id} to review again.
+								</p>
+							{/if}
+							<p class="mt-1 text-xs text-muted">{resolveProgress}</p>
+						</div>
+					{:else}
+						<p class="mt-1" data-testid="resolve-progress">{resolveProgress}</p>
+					{/if}
+					{#if resolveFollowError}
+						<p class="mt-1 text-xs text-danger" role="alert" data-testid="resolve-follow-error">
+							The job could not be read: {resolveFollowError}
+						</p>
+					{/if}
+					{#if resolveLog}
+						<div class="mt-2">
+							<LogFeed
+								step={resolveLog}
+								label="Output"
+								outcome={resolveRunning ? 'running' : (resolveJob?.verdict ?? '')}
+								read={readResolveLog}
+								bind:open={resolveOpen}
+							/>
+						</div>
+					{/if}
+				</div>
+			{/if}
 			{#if sentBack}
 				<!-- A rebase that stopped (ADR-0248): the story is its agent's again, and the thread names the paths. -->
 				<div
