@@ -3,14 +3,18 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -968,5 +972,83 @@ func TestGuardReadsAnOpenCodePluginsCall(t *testing.T) {
 		if got := running(); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("after %s: running %v, want %v", c.in, got, c.want)
 		}
+	}
+}
+
+// I-0358: the guard reads flai's command and subcommand from a line whose
+// flags come before the command as cobra's Find does on flai's own command
+// tree, with the flags that take no value that tree defines.
+func TestGuardReadsFlaisCommandAsCobraFindsIt(t *testing.T) {
+	t.Parallel()
+	root := newRootCmd(io.Discard, io.Discard)
+	nv := noValueFlags(root)
+	for _, line := range []string{
+		"--wait 5m kluster deploy S-0001",
+		"--by alex thread reply TH-0001",
+		"--reason x move S-0001 cancelled",
+		"--config c.json --json kluster deploy S-0001",
+		"-y kluster deploy S-0001",
+		"--wait=5m checks run S-0001",
+		"kluster --json deploy S-0001",
+		"-v --config=c.json thread list",
+		"--job j kluster teardown S-0001",
+	} {
+		words := strings.Fields(line)
+		found, _, err := root.Find(words)
+		if err != nil {
+			t.Fatalf("%s: cobra's Find: %v", line, err)
+		}
+		var path []string
+		for c := found; c != root; c = c.Parent() {
+			path = append([]string{c.Name()}, path...)
+		}
+		if len(path) == 0 {
+			t.Fatalf("%s: cobra's Find found no command below flai", line)
+		}
+		cmd, sub := guard.FlaiCommand(words, nv)
+		if cmd != path[0] {
+			t.Errorf("%s: command %q, cobra finds %q", line, cmd, path[0])
+		}
+		if len(path) > 1 && sub != path[1] {
+			t.Errorf("%s: subcommand %q, cobra finds %q", line, sub, path[1])
+		}
+	}
+}
+
+// I-0358: the guard flai guard builds holds the flags of flai's command tree
+// that take no value, its root's --json among them.
+func TestTheGuardFlaiGuardBuildsHoldsTheTreesNoValueFlags(t *testing.T) {
+	t.Parallel()
+	g := guardFor(newRootCmd(io.Discard, io.Discard))
+	if g.NoValue == nil || !slices.Contains(g.NoValue[""], "--json") {
+		t.Errorf("NoValue %v, want root's --json in it", g.NoValue)
+	}
+	if !slices.Contains(g.Commands, "kluster") {
+		t.Errorf("Commands %v, want kluster in it", g.Commands)
+	}
+}
+
+// noValueFlags takes each command's own and inherited flags whose NoOptDefVal
+// is set, with their shorthands and the help flag, and no flag that takes a
+// value.
+func TestNoValueFlagsWalksTheCommandTree(t *testing.T) {
+	t.Parallel()
+	root := &cobra.Command{Use: "flai"}
+	root.PersistentFlags().BoolP("yes", "y", false, "")
+	root.PersistentFlags().String("config", "", "")
+	child := &cobra.Command{Use: "kluster"}
+	child.PersistentFlags().Bool("all", false, "")
+	child.Flags().CountP("verbose", "v", "")
+	child.Flags().String("by", "", "")
+	grandchild := &cobra.Command{Use: "deploy", Run: func(*cobra.Command, []string) {}}
+	grandchild.Flags().Bool("wait", false, "")
+	child.AddCommand(grandchild)
+	root.AddCommand(child)
+	want := guard.NoValue{
+		"":        {"--help", "--yes", "-h", "-y"},
+		"kluster": {"--all", "--help", "--verbose", "--yes", "-h", "-v", "-y"},
+	}
+	if got := noValueFlags(root); !reflect.DeepEqual(got, want) {
+		t.Errorf("noValueFlags %v, want %v", got, want)
 	}
 }

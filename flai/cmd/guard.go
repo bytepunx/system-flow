@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
@@ -329,11 +330,7 @@ neither is set, a file edit does not run it.`,
 				a.logger().Warn("hook input unreadable", "component", "guard", "err", err.Error())
 				return nil
 			}
-			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe,
-				Agent: os.Getenv("FLAI_AGENT"), Session: os.Getenv("FLAI_SESSION"), Item: os.Getenv("FLAI_ITEM")}
-			for _, sub := range cmd.Root().Commands() {
-				g.Commands = append(g.Commands, sub.Name())
-			}
+			g := guardFor(cmd.Root())
 			h, err := reader.Read(data, g)
 			if err != nil {
 				a.logger().Warn("hook input is not a tool call", "component", "guard", "err", err.Error())
@@ -387,6 +384,52 @@ neither is set, a file edit does not run it.`,
 	}
 	c.Flags().StringVar(&harness, "harness", guard.ClaudeCode, "the harness whose hook runs the guard, which names the reader of its input: "+strings.Join(guard.Harnesses(), ", "))
 	return c
+}
+
+// guardFor is the guard flai guard holds a call to: the session's role,
+// story, agent, and item from the environment, and flai's commands and the
+// flags that take no value from its command tree under root.
+func guardFor(root *cobra.Command) guard.Guard {
+	g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe,
+		Agent: os.Getenv("FLAI_AGENT"), Session: os.Getenv("FLAI_SESSION"), Item: os.Getenv("FLAI_ITEM"), NoValue: noValueFlags(root)}
+	for _, sub := range root.Commands() {
+		g.Commands = append(g.Commands, sub.Name())
+	}
+	return g
+}
+
+// noValueFlags is the flags that take no value, those whose NoOptDefVal is
+// set, of root, keyed "", and of each of its commands, keyed by its name, as
+// cobra's Find reads them (I-0358): each command's own flags and the
+// persistent ones it inherits, as --name and -shorthand. --help and -h are in
+// every set, since cobra adds the help flag only to the command it runs. The
+// guard reads no deeper than a command's subcommand, so the commands below
+// those are not walked.
+func noValueFlags(root *cobra.Command) guard.NoValue {
+	nv := guard.NoValue{"": commandNoValue(root)}
+	for _, c := range root.Commands() {
+		nv[c.Name()] = commandNoValue(c)
+	}
+	return nv
+}
+
+// commandNoValue is the flags of c that take no value, its local and its
+// inherited ones, sorted, --help and -h among them.
+func commandNoValue(c *cobra.Command) []string {
+	names := []string{"--help", "-h"}
+	add := func(f *pflag.Flag) {
+		if f.NoOptDefVal == "" {
+			return
+		}
+		names = append(names, "--"+f.Name)
+		if f.Shorthand != "" {
+			names = append(names, "-"+f.Shorthand)
+		}
+	}
+	c.LocalFlags().VisitAll(add)
+	c.InheritedFlags().VisitAll(add)
+	slices.Sort(names)
+	return slices.Compact(names)
 }
 
 // guardProject is the project the hook runs in, from the working directory,
