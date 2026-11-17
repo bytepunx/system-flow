@@ -2,8 +2,11 @@
 // answers for the baseline workflow (flai/internal/workflow/baseline/board.md), as
 // TestBoardViewLanesAreTheWorkflowsColumns and TestBoardViewTransitionsAreTheWorkflows in
 // flai/internal/workitem give them, and for the workflow those tests also run: in-progress
-// renamed doing, and testing, an active lane with a WIP limit, added between it and review; and
-// for the baseline with that testing lane added after in-progress, which keeps its name (S-0758).
+// renamed doing, and testing, an active lane with a WIP limit, added between it and review; for
+// the baseline with that testing lane added after in-progress, which keeps its name (S-0758); and
+// for the baseline with its pullable queue, accepted, and cancelled lanes renamed queued, shipped,
+// and dropped, so that a view that compares a state's name with ready, done, or cancelled shows it
+// (S-0838, I-0399).
 import type { Flow, Lane, Move } from './lanes';
 
 const all = ['epic', 'story', 'task'];
@@ -117,5 +120,39 @@ export const addedStateFlow: Flow = {
 			operator: false
 		}),
 		move(['cancelled'], 'backlog', { effects: ['reopen'] })
+	]
+};
+
+/** The baseline workflow with ready renamed queued, done shipped, and cancelled dropped (S-0838). */
+export const renamedFlow: Flow = {
+	lanes: [
+		baselineLanes[0],
+		{ ...baselineLanes[1], name: 'queued', title: 'queued' },
+		...baselineLanes.slice(2, 4),
+		{ name: 'shipped', title: 'shipped', kind: 'accepted' },
+		{ name: 'dropped', title: 'dropped', kind: 'cancelled' }
+	],
+	transitions: [
+		move(['backlog'], 'queued', { effects: ['commit'] }),
+		move(['queued'], 'in-progress', { effects: ['pull'] }),
+		move(['in-progress'], 'review'),
+		move(['review'], 'shipped', {
+			types: ['epic', 'story'],
+			by: ['acceptance'],
+			effects: ['accept']
+		}),
+		move(['review'], 'shipped', { types: ['task'] }),
+		move(['in-progress'], 'shipped', { types: ['task'] }),
+		move(['review'], 'in-progress', { effects: ['send-back'], reason: true }),
+		move(['in-progress'], 'queued'),
+		move(['queued'], 'backlog'),
+		move(['backlog', 'queued', 'in-progress'], 'dropped', { effects: ['cancel'], reason: true }),
+		move(['review'], 'dropped', {
+			by: ['cascade'],
+			effects: ['cancel'],
+			reason: true,
+			operator: false
+		}),
+		move(['dropped'], 'backlog', { effects: ['reopen'] })
 	]
 };
