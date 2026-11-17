@@ -2,7 +2,7 @@
 id: D-0613
 title: A publish instance made by the host's flai 1.86.17 names bare flai in its steps, not scripts/flai.sh, and S-0774 and S-0776 ran them as written with the installed 1.86.17, which has every flag they use
 kind: decision
-sources: [S-0776, S-0774, S-0770]
+sources: [S-0776, S-0774, S-0770, S-0818]
 topics: [formulas, release, flai]
 paths: [design/workflows/formulas/publish.md, scripts/flai.sh]
 date: 2026-11-13
@@ -26,4 +26,12 @@ Both passed. T-3317's note: "exited 0 in the main checkout (flai 1.86.17): thres
 
 Running a step as written works while the installed flai has its flags. An `unknown flag` exit is the wrong binary's, not the step's: run the step again as `scripts/flai.sh`, as D-0559 says, rather than block the task. The bare `flai` in the tasks lasts until the host's flai is upgraded past S-0681 (`flai host upgrade`, the operator's).
 
-Sources: S-0776 (`wip/archive/agents/S-0776.md`, Decisions; T-3317, T-3318 Notes); S-0774 (`wip/archive/agents/S-0774.md`); S-0770 (`wip/archive/agents/S-0770.md`, Decisions).
+That has ended. S-0818, the publish instance of 2026-11-17, names `scripts/flai.sh` in its step tasks, the manifest's `flai.command`, as `design/system/strategic-agents.md` § Working an instance says: T-3493's `## Work` is `scripts/flai.sh release --evaluate --require-met --judged ""` and T-3494's `scripts/flai.sh release --pending --require-pending --json`. From S-0818's Decisions (`wip/archive/agents/S-0818.md`):
+
+```text
+Layers are the formula's: T-3492, then T-3493, then T-3494, each waiting on the one before; run in the main checkout as each step's Work names, by the story's agent itself, no sub-agents.
+```
+
+Every step exited 0 and T-3494 tagged `flai/v1.101.4`. So an instance made by a flai past S-0681 is run as its tasks say, and the bare-`flai` split above applies only to an instance made by an older host flai.
+
+Sources: S-0776 (`wip/archive/agents/S-0776.md`, Decisions; T-3317, T-3318 Notes); S-0774 (`wip/archive/agents/S-0774.md`); S-0770 (`wip/archive/agents/S-0770.md`, Decisions); S-0818 (`wip/archive/agents/S-0818.md`, Decisions; T-3493, T-3494 Work and Notes).

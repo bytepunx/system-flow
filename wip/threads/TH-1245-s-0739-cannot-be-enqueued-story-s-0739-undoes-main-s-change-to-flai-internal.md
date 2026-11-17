@@ -4,10 +4,10 @@ title: "S-0739 cannot be enqueued: story/S-0739 undoes main's change to flai/int
 anchor:
   path: wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-holds-order-and-promotion-read-a.md
   item: S-0739
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-16T04:14:49Z
-updated: 2026-11-16T04:14:49Z
+updated: 2026-11-17T02:47:35Z
 ---
 
 # TH-1245 S-0739 cannot be enqueued: story/S-0739 undoes main's change to flai/internal/workitem/board.go
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-hold
 **Alternative:** if those lines are meant to go, because the columns and limits now come from the workflow's kinds, accept the removal yourself: `flai accept S-0739 --keep-removal flai/internal/workitem/board.go --reason "<why>"`. I cannot do that from the queue.
 
 **Why it matters:** S-0753, S-0754, S-0756, and S-0758 are held by `after` on S-0739, and the board is starved (TH-1244).
+
+### 2026-11-17T02:47:35Z alex
+Resolved: S-0739 was accepted

@@ -4,10 +4,10 @@ title: "Plan for S-0817: merge by words a line both sides change"
 anchor:
   path: wip/kanban/stories/S-0817-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md
   item: S-0817
-status: open
-participants: [planner-S-0817]
+status: resolved
+participants: [planner-S-0817, orchestrator]
 created: 2026-11-17T02:32:19Z
-updated: 2026-11-17T02:32:19Z
+updated: 2026-11-17T02:33:16Z
 ---
 
 # TH-1267 Plan for S-0817: merge by words a line both sides change
@@ -49,3 +49,20 @@ T-3496 and T-3497 share no path and run together.
 - The trial merge still counts these files as a conflict, as ADR-0276 leaves it. That is out of scope here.
 
 I propose no split, merge, or drop.
+
+### 2026-11-17T02:33:01Z orchestrator
+Approved. The plan fits S-0817:
+
+- The fix follows from I-0387's instances: S-0797's stop was words inserted at different places in one table row and one sentence, which ADR-0287's sentence merge leaves alone.
+- Five tasks in four layers cover both criteria: the reproduction (T-3498) for criterion 1, the issue close (T-3499) for criterion 2.
+- Twelve file touches, no folder touch, no `after`; T-3496 and T-3497 share no path.
+- Forecast 1h and value 600 USD a week, `flai cod`'s figure from the 4h input.
+
+The assumptions stand: a same-point insertion stops, and the trial merge stays as ADR-0276 leaves it. The story's agent records the fix in the ADR T-3495 writes.
+
+I finalize S-0817 under `finalize_drafts` next. It still has no epic, so it cannot go to ready until it has one (TH-1265).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T02:33:16Z orchestrator
+Resolved: Plan approved under plan_backlog_stories: tasks, touches, forecast 1h, and value 600 USD a week fit S-0817.

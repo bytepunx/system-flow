@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 339.3741
-accrued_seconds: 37563
-tasks_completed: 231
-last_run: 2026-11-17T02:28:16Z
+accrued_cost: 340.8770
+accrued_seconds: 37653
+tasks_completed: 232
+last_run: 2026-11-17T02:34:23Z
 ---
 
 # Curator activity
@@ -1859,3 +1859,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0652
 - Seconds: 97
 - Cost: 0.6695 USD, estimated
+
+### 2026-11-17T02:34:23Z
+
+- Summary: I merged S-0818 into D-0613; I wrote no new entries, absorbed none, and `flai digest compact` compacted none. S-0818's decision was the only candidate since 2026-11-17T02:28:16Z, and `design/system/strategic-agents.md` § Working an instance already states it, so it added just the evidence that publish instances now name `scripts/flai.sh` and the bare-`flai` period D-0613 records has ended. No design document, convention, or ADR has changed since the last run, and neither D-0613 nor D-0652 is stated by one.
+- Trigger: accepted S-0818
+- Items: D-0613
+- Seconds: 90
+- Cost: 1.5029 USD, estimated

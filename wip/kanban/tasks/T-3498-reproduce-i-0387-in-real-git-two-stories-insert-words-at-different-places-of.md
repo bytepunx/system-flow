@@ -3,12 +3,15 @@ id: T-3498
 type: task
 nature: improvement
 title: "Reproduce I-0387 in real git: two stories insert words at different places of one table row and one sentence, and neither sync nor acceptance stops"
-status: backlog
+status: ready
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:55Z
-updated: 2026-11-17T02:31:55Z
-transitions: []
+updated: 2026-11-17T02:36:05Z
+transitions:
+  - to: ready
+    at: 2026-11-17T02:36:05Z
+    by: system-flow
 stream: S-0817
 tags: [flai, merge, test]
 touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]

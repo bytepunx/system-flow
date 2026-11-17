@@ -3,12 +3,18 @@ id: T-3496
 type: task
 nature: improvement
 title: The section merge merges by its words a line both sides change, and still stops on the same word or the same point
-status: backlog
+status: in-progress
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:40Z
-updated: 2026-11-17T02:31:40Z
-transitions: []
+updated: 2026-11-17T02:36:05Z
+transitions:
+  - to: ready
+    at: 2026-11-17T02:36:04Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T02:36:05Z
+    by: agent-S-0817
 stream: S-0817
 tags: [flai, merge]
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go]

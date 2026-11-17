@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:41:56Z
-updated: 2026-11-17T01:19:16Z
+updated: 2026-11-17T02:47:35Z
 transitions:
   - to: ready
     at: 2026-11-16T23:51:58Z
@@ -23,6 +23,7 @@ blocked:
     until: 2026-11-17T01:18:50Z
     reason: awaiting the operator on TH-1258
   - from: 2026-11-17T01:19:16Z
+    until: 2026-11-17T02:47:35Z
     reason: awaiting the operator on TH-1258
 tags: [flai, template]
 topics: [verify, workflow]

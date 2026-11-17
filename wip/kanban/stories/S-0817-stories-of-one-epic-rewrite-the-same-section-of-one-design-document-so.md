@@ -3,11 +3,17 @@ id: S-0817
 type: story
 nature: improvement
 title: Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-17T02:26:33Z
-updated: 2026-11-17T02:32:48Z
-transitions: []
+updated: 2026-11-17T02:33:33Z
+transitions:
+  - to: ready
+    at: 2026-11-17T02:33:25Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T02:33:33Z
+    by: agent-S-0817
 tags: []
 topics: [merge, sync, acceptance]
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0314-a-section-merge-merges-a-line-both-sides-change-by-its-words-keeping-both.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0387-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md, design/issues/summary.md]
@@ -17,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 137
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 300
+      cache_read: 2267004
+      cache_write: 218829
+      cost: 0.9454
   strategic:
     - kind: planner
       seconds: 283
@@ -31,6 +49,16 @@ usage:
           cache_read: 3454967
           cache_write: 172382
           cost: 2.4701
+    - kind: orchestrator
+      seconds: 47
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 16
+          output: 109
+          cache_read: 710199
+          cache_write: 100463
+          cost: 0.2494
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -47,7 +75,6 @@ usage:
           cache_read: 2398931
           cache_write: 47318
           cost: 0.1557
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4h
@@ -62,6 +89,9 @@ forecast:
   basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0241, S-0752, S-0753, S-0754, S-0756, S-0758, S-0806, S-0807, S-0808, S-0809, S-0810, S-0811, S-0812, S-0813, S-0814 and S-0815."
   by: flai
   at: 2026-11-17T02:32:48Z
+finalized:
+  by: orchestrator
+  at: 2026-11-17T02:33:17Z
 ---
 # S-0817 Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
 

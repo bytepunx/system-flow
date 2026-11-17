@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1414.4660
-accrued_seconds: 163878
-tasks_completed: 283
-last_run: 2026-11-16T23:53:11Z
+accrued_cost: 1416.9361
+accrued_seconds: 164161
+tasks_completed: 284
+last_run: 2026-11-17T02:32:23Z
 ---
 
 # Planner activity
@@ -2258,3 +2258,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0810, T-3475, T-3479, T-3482, T-3484, T-3487
 - Seconds: 5
 - Cost: 0.1355 USD, estimated
+
+### 2026-11-17T02:32:23Z
+
+- Summary: Planned S-0817, a merge by words for a line both sides change: set 12 file touches, topics, a 1h forecast and 600 USD/week cost of delay; created tasks T-3495, T-3496, T-3497, T-3498 and T-3499 in four layers (none existed to revisit); plan on thread TH-1267.
+- Trigger: orchestrator
+- Items: S-0817, T-3495, T-3496, T-3497, T-3498, T-3499
+- Seconds: 283
+- Cost: 2.4701 USD, estimated

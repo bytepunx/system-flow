@@ -3,12 +3,18 @@ id: T-3497
 type: task
 nature: improvement
 title: Say in the design and the user docs that the section merge settles a line both sides change in different words
-status: backlog
+status: in-progress
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:46Z
-updated: 2026-11-17T02:31:46Z
-transitions: []
+updated: 2026-11-17T02:36:05Z
+transitions:
+  - to: ready
+    at: 2026-11-17T02:36:04Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T02:36:05Z
+    by: agent-S-0817
 stream: S-0817
 tags: [docs, merge]
 touches: [design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md]

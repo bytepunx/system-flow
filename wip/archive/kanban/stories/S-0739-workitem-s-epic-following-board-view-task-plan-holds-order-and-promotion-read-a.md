@@ -3,11 +3,11 @@ id: S-0739
 type: story
 nature: feature
 title: workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:07Z
-updated: 2026-11-15T07:42:39Z
+updated: 2026-11-17T02:47:34Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:28Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-11-15T07:42:39Z
     by: agent-S-0739
+  - to: done
+    at: 2026-11-17T02:47:34Z
+    by: alex
 tags: [cli]
 topics: [cli, planning]
 touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go, flai/internal/workitem/flow.go, design/system/flai-cli.md, flai/internal/workitem/order_test.go, flai/internal/workitem/plancandidates_test.go, flai/internal/workitem/changes_test.go, flai/internal/workitem/share_test.go, flai/internal/workitem/policy_test.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/finalizable_test.go, design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]

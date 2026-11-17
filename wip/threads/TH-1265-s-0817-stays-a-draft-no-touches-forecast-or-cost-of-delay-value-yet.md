@@ -4,10 +4,10 @@ title: "S-0817 stays a draft: no touches, forecast, or cost of delay value yet"
 anchor:
   path: wip/kanban/stories/S-0817-stories-of-one-epic-rewrite-the-same-section-of-one-design-document-so.md
   item: S-0817
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-17T02:27:40Z
-updated: 2026-11-17T02:27:40Z
+updated: 2026-11-17T02:33:31Z
 ---
 
 # TH-1265 S-0817 stays a draft: no touches, forecast, or cost of delay value yet
@@ -27,3 +27,6 @@ On wip/kanban/stories/S-0817-stories-of-one-epic-rewrite-the-same-section-of-one
 - no cost of delay value
 
 It also has no epic, so it cannot meet the definition of ready until it has one. The planner's thread asks you about anything it cannot settle.
+
+### 2026-11-17T02:33:31Z orchestrator
+Resolved: S-0817's planner wrote its touches, forecast, and value; I finalized it and promoted it to ready.

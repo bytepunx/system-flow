@@ -3,10 +3,10 @@ id: TH-1266
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-17T02:31:46Z
-updated: 2026-11-17T02:32:20Z
+updated: 2026-11-17T02:33:17Z
 ---
 
 # TH-1266 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -64,3 +64,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0814 The review page and the board show the suites each step needs and ran, and follow a state's job in the activity stream: held by `after`; the roots of its chain are S-0805 A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke (in-progress) and S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name (review).
 - S-0815 In a project made from the template, review needs only the fast suites and an integration state between review and done deploys where a cluster is configured and runs the integration and smoke suites: a draft; finalize it. It waits on TH-1257 Plan for S-0815: five tasks in three layers.
 - S-0817 Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle: a draft; finalize it. It waits on TH-1265 S-0817 stays a draft: no touches, forecast, or cost of delay value yet and TH-1267 Plan for S-0817: merge by words a line both sides change.
+
+### 2026-11-17T02:33:17Z flai serve
+Resolved: S-0817 Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle can be promoted from the backlog, so the board is no longer starved.

@@ -3,15 +3,36 @@ id: T-3495
 type: task
 nature: improvement
 title: "ADR: the section merge merges by its words a line both sides change, refining ADR-0287"
-status: backlog
+status: done
 parent: S-0817
 owner: alex
 created: 2026-11-17T02:31:30Z
-updated: 2026-11-17T02:31:30Z
-transitions: []
+updated: 2026-11-17T02:35:47Z
+transitions:
+  - to: ready
+    at: 2026-11-17T02:35:05Z
+    by: agent-S-0817
+  - to: in-progress
+    at: 2026-11-17T02:35:11Z
+    by: agent-S-0817
+  - to: done
+    at: 2026-11-17T02:35:47Z
+    by: agent-S-0817
 stream: S-0817
 tags: [adr, merge]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 35
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 37
+      cache_read: 691864
+      cache_write: 3516
+      cost: 0.2645
 ---
 # T-3495 ADR: the section merge merges by its words a line both sides change, refining ADR-0287
 
