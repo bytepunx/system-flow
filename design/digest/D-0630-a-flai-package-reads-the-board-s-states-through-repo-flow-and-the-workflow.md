@@ -9,7 +9,7 @@ date: 2026-11-15
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0749, S-0750]
+cited: [S-0749, S-0750, S-0752]
 ---
 
 # D-0630 A flai package reads the board's states through repo.Flow() and the workflow package's lookups, Kind, OfKind, Find, WithEffect, and Permits, not through a workitem helper
@@ -23,7 +23,7 @@ So an E-0034 story that turns another package's state-name comparison into a kin
 S-0749 followed this entry for the guard, messages, the forecast, prime packs, the release evaluation, the digest, and statsread, and named the idiom that keeps every caller unchanged (`wip/archive/agents/S-0749.md`, § Decisions):
 
 > Each package follows the idiom S-0744 and S-0746 set: a function XIn(flow workflow.Workflow, ...) holds the logic and reads kinds, effects, and who may move from the workflow, and the old function calls it with workflow.Baseline() or repo.Flow(), so every existing caller and test is unchanged.
-
+  
 > Followed D-0630: each package reads states through repo.Flow() and the workflow's lookups (Kind, State, Initial, Permits, transitions' effects), with a baseline wrapper keeping every exported signature.
 
 So an E-0034 story moving a package onto kinds writes `XIn(flow workflow.Workflow, ...)` with the logic and keeps the old exported function as a wrapper that passes `workflow.Baseline()` or `repo.Flow()`, rather than changing each caller's signature.
