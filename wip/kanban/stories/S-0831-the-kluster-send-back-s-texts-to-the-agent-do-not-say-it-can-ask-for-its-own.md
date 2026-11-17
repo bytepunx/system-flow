@@ -6,7 +6,7 @@ title: The kluster send-back's texts to the agent do not say it can ask for its 
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T08:30:09Z
+updated: 2026-11-17T08:32:48Z
 transitions: []
 tags: [flai, serve, kluster]
 topics: [kluster]
@@ -16,6 +16,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 17
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 8
+          output: 13
+          cache_read: 694306
+          cache_write: 6963
+          cost: 0.0479
+        - model: claude-opus-5-5
+          input: 43
+          output: 2876
+          cache_read: 3001208
+          cache_write: 42427
+          cost: 0.9988
 draft: true
 cost_of_delay:
   inputs:
@@ -27,10 +48,10 @@ cost_of_delay:
   at: 2026-11-17T08:29:20Z
 forecast:
   duration: 17m
-  delivery: 2026-11-17T16:07:00Z
-  basis: "Its own forecast of 17m; 20th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829 and S-0830."
+  delivery: 2026-11-17T16:33:00Z
+  basis: "Its own forecast of 17m; 19th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829 and S-0830."
   by: flai
-  at: 2026-11-17T08:30:09Z
+  at: 2026-11-17T08:32:48Z
 ---
 # S-0831 The kluster send-back's texts to the agent do not say it can ask for its own deploy before review
 

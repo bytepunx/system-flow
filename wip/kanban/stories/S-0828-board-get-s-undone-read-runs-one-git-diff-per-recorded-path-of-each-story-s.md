@@ -6,7 +6,7 @@ title: board.get's undone.read runs one git diff per recorded path of each story
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:19Z
-updated: 2026-11-17T08:30:09Z
+updated: 2026-11-17T08:32:48Z
 transitions: []
 tags: [flai, git, performance]
 topics: [performance]
@@ -37,6 +37,16 @@ usage:
           cache_read: 10734875
           cache_write: 114626
           cost: 3.276
+    - kind: orchestrator
+      seconds: 63
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 16
+          output: 80
+          cache_read: 702641
+          cache_write: 126499
+          cost: 0.2572
 draft: true
 cost_of_delay:
   inputs:
@@ -48,10 +58,10 @@ cost_of_delay:
   at: 2026-11-17T08:28:36Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T16:09:00Z
-  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823 and S-0824."
+  delivery: 2026-11-17T16:31:00Z
+  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823 and S-0824."
   by: flai
-  at: 2026-11-17T08:30:09Z
+  at: 2026-11-17T08:32:48Z
 ---
 # S-0828 board.get's undone.read runs one git diff per recorded path of each story's undone record, one after another, on every call
 

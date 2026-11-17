@@ -6,7 +6,7 @@ title: flai's markdown lint reports MD038 on a code span holding escaped backtic
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T08:30:09Z
+updated: 2026-11-17T08:32:48Z
 transitions: []
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]
@@ -15,6 +15,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 2
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 2
+          output: 3
+          cache_read: 176625
+          cache_write: 3207
+          cost: 0.0123
+        - model: claude-opus-5-5
+          input: 10
+          output: 1682
+          cache_read: 711691
+          cache_write: 19703
+          cost: 0.3238
 draft: true
 cost_of_delay:
   inputs:
@@ -26,10 +47,10 @@ cost_of_delay:
   at: 2026-11-17T08:29:08Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T17:22:00Z
-  basis: "Its own forecast of 45m; 25th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0754, S-0827, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0831, S-0832, S-0833, S-0834 and S-0835."
+  delivery: 2026-11-17T17:55:00Z
+  basis: "Its own forecast of 45m; 24th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830, S-0831, S-0832, S-0833, S-0834 and S-0835."
   by: flai
-  at: 2026-11-17T08:30:09Z
+  at: 2026-11-17T08:32:48Z
 ---
 # S-0836 flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
 
