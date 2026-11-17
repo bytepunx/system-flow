@@ -633,7 +633,12 @@ func TestAFailedDeployOpensOneThreadSendsTheStoryBackAndAPassResolvesIt(t *testi
 	if len(ths) != 1 || !ths[0].Open() {
 		t.Fatalf("threads after a failed deploy = %d, want 1 open", len(ths))
 	}
-	for _, want := range []string{"deploy step", "exit code 3", log, klHeadA, ns, "sent " + story + " back to in-progress", "keeps its namespace"} {
+	for _, want := range []string{"deploy step", "exit code 3", log, klHeadA, ns, "sent " + story + " back to in-progress", "keeps its namespace",
+		// I-0357: the agent may deploy before review, and the review deploys
+		// again only what has not passed at the head
+		"its agent may ask flai serve to deploy it at its committed head, with the MCP tool kluster_deploy or flai kluster deploy " + story + " --job",
+		"flai serve deploys it again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head",
+		"resolves this thread once a deploy passes, whether the agent or the review asked for it"} {
 		if !strings.Contains(ths[0].Body, want) {
 			t.Errorf("the failure thread does not name %q:\n%s", want, ths[0].Body)
 		}
@@ -1289,7 +1294,10 @@ func TestFailingChecksAgainstTheNamespaceSendTheStoryBack(t *testing.T) {
 	if len(ths) != 1 || !ths[0].Open() {
 		t.Fatalf("checks failure threads = %d, want one open", len(ths))
 	}
-	for _, want := range []string{"ended failed", "golden", klHeadA, "sent " + story + " back to in-progress"} {
+	for _, want := range []string{"ended failed", "golden", klHeadA, "sent " + story + " back to in-progress",
+		// I-0357: the agent may deploy, and so check, before review
+		"its agent may ask flai serve to deploy it at its committed head, with the MCP tool kluster_deploy or flai kluster deploy " + story + " --job, which runs the checks once the deploy passes",
+		"resolves this thread once a checks run against it passes, whether the agent or the review asked for it"} {
 		if !strings.Contains(ths[0].Body, want) {
 			t.Errorf("the thread does not name %q:\n%s", want, ths[0].Body)
 		}

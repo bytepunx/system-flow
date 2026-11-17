@@ -1110,13 +1110,15 @@ func checksFailureText(j klusterJob, ns string, run ChecksRun, to, unsent string
 // heldText says what flai serve did with story after a failure in its
 // namespace: sent it back to to, in-progress in the baseline, keeping its
 // namespace, or, with unsent, why it did not; and when it resolves the
-// thread, once what passes says passes. An empty to is a send back the
-// workflow names no state for.
+// thread, once what passes says passes. A story sent back is told that its
+// agent may ask for its deploy before review, and that the review deploys it
+// again only when that has not passed at its head (ADR-0292 §1, §3). An
+// empty to is a send back the workflow names no state for.
 func heldText(story, to, unsent, passes string) string {
 	if unsent != "" {
 		return fmt.Sprintf("flai serve did not send %[1]s %[4]s: %[2]s. It deploys again at the story's next head in review, and resolves this thread once %[3]s.", story, unsent, passes, backTo(to))
 	}
-	return fmt.Sprintf("flai serve sent %[1]s %[3]s, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place, and resolves this thread once %[2]s. Cancelling or accepting %[1]s tears the namespace down.", story, passes, backTo(to))
+	return fmt.Sprintf("flai serve sent %[1]s %[3]s, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Before the story is back in review, its agent may ask flai serve to deploy it at its committed head, with the MCP tool kluster_deploy or flai kluster deploy %[1]s --job, which runs the checks once the deploy passes while the checks host action is on. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head. flai serve resolves this thread once %[2]s, whether the agent or the review asked for it. Cancelling or accepting %[1]s tears the namespace down.", story, passes, backTo(to))
 }
 
 // backTo says where a send back goes: back to to, or back when the workflow
