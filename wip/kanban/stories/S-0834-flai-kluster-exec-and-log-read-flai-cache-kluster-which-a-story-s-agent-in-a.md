@@ -6,7 +6,7 @@ title: flai kluster exec and log read .flai-cache/kluster, which a story's agent
 status: ready
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T11:48:16Z
+updated: 2026-11-17T11:48:47Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
@@ -35,15 +35,21 @@ usage:
           cache_write: 76790
           cost: 2.9372
     - kind: orchestrator
-      seconds: 91
+      seconds: 109
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 238
-          cache_read: 1510382
-          cache_write: 136334
-          cost: 0.5112
+          input: 33
+          output: 324
+          cache_read: 1744222
+          cache_write: 168825
+          cost: 0.5944
+        - model: claude-sonnet-5-5
+          input: 3
+          output: 21
+          cache_read: 24099
+          cache_write: 28023
+          cost: 0.042
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -54,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T08:31:46Z
 forecast:
   duration: 3h
-  delivery: 2026-11-17T17:35:00Z
-  basis: "Its own forecast of 3h; 8th in the pull order with an in-progress limit of 3, behind S-0806, S-0836, S-0811, S-0809, S-0812, S-0828, S-0808, S-0807 and S-0810."
+  delivery: 2026-11-17T17:47:00Z
+  basis: "Its own forecast of 3h; 7th in the pull order with an in-progress limit of 3, behind S-0806, S-0828, S-0836, S-0811, S-0809, S-0812, S-0808, S-0807 and S-0810."
   by: flai
-  at: 2026-11-17T11:48:16Z
+  at: 2026-11-17T11:48:47Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z
