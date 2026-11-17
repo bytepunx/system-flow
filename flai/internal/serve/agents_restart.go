@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/sendback"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -212,7 +213,9 @@ func queueSendBackThread(repo *workitem.Repo, story string) (string, bool) {
 // (ADR-0248), as startQueueSentBack does the queue's: one not blocked, with
 // the thread flai accept opened on it still open, whose last run ended
 // before that thread was opened, told of the thread and the paths it
-// stopped on, in its last run's session where it has one.
+// stopped on, in its last run's session where it has one. A send back by
+// hand (I-0397), whose thread flai move opens with the same prefix, starts
+// its agent the same way, told who sent it back rather than of a rebase.
 func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo, st AgentState) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
@@ -231,9 +234,15 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if cfg.refuseHarness(it.ID, agent) != nil {
 			continue
 		}
-		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
-			it.ID, strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
-		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
+		b := &harness.SentBack{Thread: th.ID}
+		if by, ok := sendback.ByHandMover(th.Title); ok {
+			b.ByHand = by // a send back by hand (I-0397): the thread holds why
+		} else {
+			b.Acceptance = true
+			b.What = fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
+				it.ID, strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
+		}
+		s := readyStory{ID: it.ID, Agent: agent, SentBack: b}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}

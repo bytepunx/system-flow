@@ -241,8 +241,8 @@ func RoleAgent(name, item string) string {
 
 // SentBack is a send back of a story from review to in-progress, which flai
 // makes on a failing required check or a requested change on its pull
-// request (ADR-0167), and on the other failures its fields name, as the
-// story's agent is told it.
+// request (ADR-0167), and on the other failures its fields name, or that
+// someone made by hand (ByHand), as the story's agent is told it.
 type SentBack struct {
 	Thread string // the thread flai serve opened on the story for it
 	What   string // what failed, as the move's reason names it
@@ -259,14 +259,22 @@ type SentBack struct {
 	// into its kluster namespace, or its checks run against it, failed
 	// (ADR-0254 §5a).
 	Kluster bool
+	// ByHand is who sent the story back by hand, moving it from review to
+	// in-progress themselves, when that is how it was sent back (I-0397): the
+	// thread flai opened for it holds why, and What is unused.
+	ByHand string
 }
 
 // then is what follows the agent's fix of a story sent back on thread: the
 // push of its pull request, from the merge queue its batching again, from an
-// acceptance its acceptance again, or from its kluster namespace the deploy
-// the agent may ask for before review (ADR-0292 §1, §3), and the review's
-// deploy again in place of one that has not passed at the head.
+// acceptance its acceptance again, by hand its thread's resolution, or from
+// its kluster namespace the deploy the agent may ask for before review
+// (ADR-0292 §1, §3), and the review's deploy again in place of one that has
+// not passed at the head.
 func (b *SentBack) then(story string) string {
+	if b.ByHand != "" {
+		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review", story, b.Thread)
+	}
 	if b.Kluster {
 		return fmt.Sprintf("before that move, you may ask flai serve to deploy %[1]s at its committed head with the flai MCP tool kluster_deploy (flai kluster deploy %[1]s --job on the host), which runs its checks once the deploy passes while the checks host action is on, and hold wait_for_events for %[1]s's kluster event, again each time it returns; a deploy and its checks that pass at the head resolve %[2]s. Back in review, at a new commit or the same one, flai serve deploys %[1]s again in place only when its deploy, and its checks while the checks host action is on, have not passed at its head, and resolves %[2]s once they pass. When the cause is outside the story, such as the cluster's services, say so on %[2]s rather than change the branch for it", story, b.Thread)
 	}
@@ -277,6 +285,13 @@ func (b *SentBack) then(story string) string {
 		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review at a new commit, and the merge queue batches it again once it is enqueued", story, b.Thread)
 	}
 	return fmt.Sprintf("flai serve pushes the fix, and resolves %[2]s once %[1]s is back in review at a new commit", story, b.Thread)
+}
+
+// byHand is what the agent of a story ByHand sent back does, in where: what
+// the thread asks, asking ByHand on it when it needs to, and the move to
+// review again.
+func (b *SentBack) byHand(story, where string) string {
+	return fmt.Sprintf("Do what it asks in %[1]s, and if you need to ask %[2]s what to do, ask on %[3]s with the flai MCP tool thread_reply. Then close out, and move %[4]s to review again; %[5]s.", where, b.ByHand, b.Thread, story, b.then(story))
 }
 
 // resumes says whether r goes on in a session an earlier run had: after an
@@ -623,6 +638,11 @@ If a change cannot be committed without the designer deciding something, ask wit
 
 %[4]s`, r.Name, r.Story, r.Answered, rules(r), answeredStep(r)), nil
 	}
+	if b := r.SentBack; b != nil && b.Resumed && b.ByHand != "" {
+		return fmt.Sprintf(`%[1]s sent %[2]s back from review to in-progress by hand; thread %[3]s holds why. Read it with the flai MCP tool thread_get (flai thread show %[3]s on the host); your inbox lists it, awaiting you. %[4]s
+
+%[5]s`, b.ByHand, r.Story, b.Thread, b.byHand(r.Story, r.Story+"'s worktree"), rules(r)), nil
+	}
 	if b := r.SentBack; b != nil && b.Resumed {
 		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; %[5]s.
 
@@ -639,6 +659,8 @@ If a change cannot be committed without the designer deciding something, ask wit
 		open = startStory(r.Story, "Begin") + fmt.Sprintf(" If story_start refuses %[1]s because the board holds it, start it as the operator asked with flai move %[1]s in-progress, which only warns of the hold, then ", r.Story) + takeUp(r.Story, "prime")
 	}
 	switch {
+	case r.SentBack != nil && r.SentBack.ByHand != "":
+		why = fmt.Sprintf("because %[1]s sent it back from review to in-progress by hand; thread %[2]s holds why. This host has no session of its last agent to go on in. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your first inbox lists it, awaiting you. %[3]s", r.SentBack.ByHand, r.SentBack.Thread, r.SentBack.byHand(r.Story, "the worktree"))
 	case r.SentBack != nil:
 		why = fmt.Sprintf("because flai sent it back from review to in-progress, on thread %[1]s: %[2]s. This host has no session of its last agent to go on in. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and read the thread with the flai MCP tool thread_get (flai thread show %[1]s on the host); your first inbox lists it, awaiting you. Fix the branch there, close out, and move %[3]s to review again; %[4]s.", r.SentBack.Thread, r.SentBack.What, r.Story, r.SentBack.then(r.Story))
 	case r.Begun != nil:

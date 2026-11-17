@@ -271,7 +271,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		if story.Resume != nil {
 			how = "in its session"
 		}
-		entry.Detail = fmt.Sprintf("started %s again for %s as %s %s, flai having sent it back from review on %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, how, run.SentBack, run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s %s, %s on %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, how, sentBackSaid(story.SentBack), run.SentBack, run.PID, run.Log)
 	}
 	if story.Commit != "" {
 		entry.Detail = fmt.Sprintf("started %s for %s as %s to commit what its worktree holds (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, run.PID, run.Log)
@@ -591,7 +591,7 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 		if story.Resume != nil {
 			how = "in its session"
 		}
-		return fmt.Sprintf("started again %s, flai having sent it back from review on %s", how, run.SentBack)
+		return fmt.Sprintf("started again %s, %s on %s", how, sentBackSaid(story.SentBack), run.SentBack)
 	case strings.HasPrefix(run.Answered, "MS-"):
 		return "started again in its session, for a message on " + run.Answered
 	case run.Answered != "":
@@ -972,4 +972,14 @@ func (l *launcher) await(cmd *exec.Cmd, out *os.File, pid int, end func(code int
 		default:
 		}
 	}()
+}
+
+// sentBackSaid is who sent a story back from review, as its journal entry and
+// its started agent event say it: flai, or whoever sent it back by hand
+// (I-0397).
+func sentBackSaid(b *harness.SentBack) string {
+	if b != nil && b.ByHand != "" {
+		return b.ByHand + " having sent it back from review by hand"
+	}
+	return "flai having sent it back from review"
 }

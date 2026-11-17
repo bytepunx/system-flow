@@ -683,6 +683,40 @@ func TestAnAgentAnAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
 	}
 }
 
+// I-0397: an agent whose story the operator sent back by hand is told, in
+// its last session and in a new one, who sent it back, that the thread holds
+// why, to ask them on it when it must, and that flai serve resolves the thread
+// once the story is back in review, with no words of an acceptance's, a
+// queue's, or a pull request's send back.
+func TestAnAgentSentBackByHandIsToldWhoSentItBack(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0012", ByHand: "alex"}
+	for _, resumed := range []bool{true, false} {
+		r.SentBack.Resumed = resumed
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := st.Argv[2]
+		for _, want := range []string{
+			"alex sent", "back from review to in-progress by hand; thread TH-0012 holds why",
+			"thread_get (flai thread show TH-0012 on the host)",
+			"ask on TH-0012 with the flai MCP tool thread_reply",
+			"move S-0104 to review again; flai serve resolves TH-0012 once S-0104 is back in review.",
+		} {
+			if !strings.Contains(p, want) {
+				t.Errorf("resumed %v: the prompt lacks %q:\n%s", resumed, want, p)
+			}
+		}
+		for _, not := range []string{"pushes the fix", "merge queue", "accepted again", "flai sent S-0104"} {
+			if strings.Contains(p, not) {
+				t.Errorf("resumed %v: the prompt says %q of a story sent back by hand:\n%s", resumed, not, p)
+			}
+		}
+	}
+}
+
 // I-0357, ADR-0292 §1, §3: an agent whose story its kluster namespace sent
 // back is told, in its last session and in a new one, that it may ask for its
 // own deploy before review and wait for the story's kluster event, that a

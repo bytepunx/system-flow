@@ -32,6 +32,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
+	"github.com/bytepunx/system-flow/flai/internal/sendback"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -3696,6 +3697,78 @@ func TestAStoryAnAcceptanceSentBackGetsItsAgentOnce(t *testing.T) {
 	}
 }
 
+// I-0397: a story the operator sent back from review to in-progress by hand,
+// with flai move or the dashboard, which opens the send back's thread by flai,
+// gets its agent started once, in its last session, told who sent it back and
+// the thread that holds why, with no words of an acceptance's rebase; its
+// journal entry names the operator. Back in review, flai serve resolves the
+// thread.
+func TestAStorySentBackByHandGetsItsAgentToldWhoSentItBack(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.hold()
+	id := lab.readyWith("Sent back by hand", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	lab.move(id, workitem.Review)
+	lab.release(id)
+	waitFor(t, "it ends in review", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+	lab.endedAgo(id, 3*time.Minute)
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+	st, _ := lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.InProgress, "alex", "the empty state is not drawn", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	th, err := sendback.Thread(lab.repo, id, sendback.ByHandTitle("alex", id, workitem.Review, workitem.InProgress),
+		sendback.ByHandText("alex", id, workitem.Review, workitem.InProgress, "the empty state is not drawn"), time.Now().Add(-2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs for the send back", func() bool { r := lab.run(id); return r.live() && r.SentBack == th.ID })
+	if again := lab.run(id); again.Agent != first.Agent || again.Session != first.Session || again.AutoRestarts != 0 {
+		t.Errorf("the same agent, in its session, spending no restart: %+v, first %+v", again, first)
+	}
+	out := filepath.Join(lab.outDir, id+".txt")
+	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
+	got, _ := os.ReadFile(out)
+	for _, want := range []string{
+		"alex sent " + id + " back from review to in-progress by hand; thread " + th.ID + " holds why",
+		"thread_get (flai thread show " + th.ID + " on the host)",
+		"ask on " + th.ID + " with the flai MCP tool thread_reply",
+		"flai serve resolves " + th.ID + " once " + id + " is back in review",
+		"--resume " + first.Session,
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+		}
+	}
+	for _, not := range []string{"the acceptance of", "rebase", "accepted again", "pushes the fix"} {
+		if strings.Contains(string(got), not) {
+			t.Errorf("the agent of a story sent back by hand was told %q:\n%s", not, got)
+		}
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "in its session, alex having sent it back from review by hand on "+th.ID) {
+		t.Errorf("the journal names who sent it back by hand: %+v", j)
+	}
+
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	st, _ = lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.Review, "builder-"+id, "", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	if resolved, err := threads.Get(lab.repo, th.ID); err != nil || resolved.Open() {
+		t.Errorf("the thread is resolved by flai serve once the story is back in review: %v %+v", err, resolved)
+	}
+}
+
 // ADR-0248: what an acceptance's send back does not start an agent for.
 func TestAStoryAnAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) {
 	ctx := context.Background()
@@ -4247,6 +4320,7 @@ func TestAStartedEventSaysWhyTheAgentWasStarted(t *testing.T) {
 		{"a message", readyStory{}, AgentRun{Answered: "MS-0003"}, "started again in its session, for a message on MS-0003"},
 		{"sent back, resumed", readyStory{Resume: &AgentRun{}}, AgentRun{SentBack: "TH-0009"}, "started again in its session, flai having sent it back from review on TH-0009"},
 		{"sent back, new session", readyStory{}, AgentRun{SentBack: "TH-0009"}, "started again in a new session, flai having sent it back from review on TH-0009"},
+		{"sent back by hand", readyStory{Resume: &AgentRun{}, SentBack: &harness.SentBack{ByHand: "alex"}}, AgentRun{SentBack: "TH-0009"}, "started again in its session, alex having sent it back from review by hand on TH-0009"},
 		{"to commit", readyStory{Started: true, Commit: "/w/S-0001"}, AgentRun{}, "the operator started it to commit what its worktree holds"},
 	} {
 		if got := startWhy(c.story, &c.run, 2); got != c.want {
