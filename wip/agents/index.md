@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T03:26:15Z
+updated: 2026-11-17T03:29:09Z
 ---
 
 # Active streams
@@ -11,13 +11,12 @@ updated: 2026-11-17T03:26:15Z
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
 | [S-0805](S-0805.md) | A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke | in-progress | agent-S-0805 | 2026-11-17T02:48:50Z |
 | [S-0817](S-0817.md) | Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle | review | agent-S-0817 | 2026-11-17T03:23:24Z |
-| [S-0820](S-0820.md) | Publish what is accepted and not yet released | in-progress | agent-S-0820 | 2026-11-17T03:26:14Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 284 | 1416.9361 USD | 164161 | 2026-11-17T02:32:23Z |
-| [orchestrator](orchestrator.md) | 3795 | 2231.8360 USD | 1572946 | 2026-11-17T03:09:29Z |
+| [orchestrator](orchestrator.md) | 3797 | 2232.5378 USD | 1573100 | 2026-11-17T03:26:35Z |
 | [analyzer](analyzer.md) | 3 | 31.8290 USD | 2136 | 2026-11-16T06:17:09Z |
 | [curator](curator.md) | 234 | 342.9747 USD | 37960 | 2026-11-17T02:52:58Z |
