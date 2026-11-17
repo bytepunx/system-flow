@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/sendback"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
@@ -814,7 +815,7 @@ func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by strin
 	if !errors.As(err, &stop) || !stop.RebaseInProgress {
 		return err
 	}
-	branch, who, back := storyBranch(it.ID), acceptanceBy(it.ID, by), sendBackTarget(repo.Flow(), it)
+	branch, who, back := storyBranch(it.ID), acceptanceBy(it.ID, by), sendback.Target(repo.Flow(), it)
 	stopped := fmt.Sprintf("the rebase of %s onto %s stopped", branch, stop.Base)
 	if stop.Found {
 		stopped = fmt.Sprintf("a rebase of %s was already in progress in %s", branch, stop.Worktree)
@@ -848,18 +849,6 @@ func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by strin
 	}
 }
 
-// sendBackTarget is the state w's transition with the send-back effect takes
-// it to out of its state, else w's first state of the active kind: on the
-// baseline, in-progress.
-func sendBackTarget(w workflow.Workflow, it *workitem.Item) string {
-	for _, t := range w.From(it.Type, it.Status) {
-		if t.HasEffect(workflow.EffectSendBack) {
-			return t.To
-		}
-	}
-	return workitem.FirstOfKind(w, workflow.KindActive)
-}
-
 // acceptanceBy names the acceptance of story by by, as the send back's words
 // do: "the acceptance of S-nnnn by alex", or without by when no one is named.
 func acceptanceBy(story, by string) string {
@@ -876,20 +865,11 @@ func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop 
 	return a.sendBackThread(repo, story, storygit.SentBackTitle(branch, stop.Base, stop.Conflicts), sentBackText(story, branch, who, stop))
 }
 
-// sendBackThread opens the send back's thread on story, by flai, titled
-// title and saying text, or adds text to the one still open from an earlier
-// send back, which flai serve starts story's agent on (ADR-0248).
+// sendBackThread opens the send back's thread on story, titled title and
+// saying text, at the acceptance's time, or adds text to the one still open
+// (sendback.Thread).
 func (a *app) sendBackThread(repo *workitem.Repo, story, title, text string) (*threads.Thread, error) {
-	all, err := threads.For(repo, story)
-	if err != nil {
-		return nil, err
-	}
-	for _, th := range all {
-		if th.Open() && th.Opener() == storygit.SentBackAuthor && strings.HasPrefix(th.Title, storygit.SentBackPrefix) {
-			return threads.Reply(repo, th.ID, storygit.SentBackAuthor, text, a.now())
-		}
-	}
-	return threads.New(repo, threads.NewOptions{Title: title, On: story, Author: storygit.SentBackAuthor, Text: text, Now: a.now()})
+	return sendback.Thread(repo, story, title, text, a.now())
 }
 
 // sentBackText is what the send back's thread tells story's agent: what

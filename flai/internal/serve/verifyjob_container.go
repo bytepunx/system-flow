@@ -128,7 +128,7 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 		return end(-1, fmt.Errorf("this flai's executable is not known, so the host's sync check cannot run: %w", err))
 	}
 	base := closeOutEnv(withoutGitEnv(os.Environ()), c.req.By)
-	hostEnv := append(slices.Clone(base), hostGitConfig(root)...)
+	hostEnv := containerHostEnv(root, c.req.By)
 	gitEnv := append(slices.Clone(hostEnv), storyGitDir(root, story, c.worktree)...)
 	// stoppedAtSync says whether a flai verify's output ends at the sync step:
 	// the branch lacks commits of main's.
@@ -159,7 +159,7 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 			name = fmt.Sprintf("%s-r%d", c.id, round)
 		}
 		cmd, err := harness.ContainerCommand(harness.CommandRun{Root: root, Story: story, Purpose: "closeout", ID: name, Image: image,
-			Env: []string{"FLAI_AGENT"}, Argv: c.verifyArgv()}, host)
+			Env: []string{"FLAI_AGENT", closeout.ProgressEnv}, Argv: c.verifyArgv()}, host)
 		if err != nil {
 			return end(-1, err)
 		}
@@ -279,6 +279,14 @@ func hostGitConfig(root string) []string {
 	return []string{"GIT_CONFIG_COUNT=2",
 		"GIT_CONFIG_KEY_0=core.hooksPath", "GIT_CONFIG_VALUE_0=" + filepath.Join(root, ".git", "hooks"),
 		"GIT_CONFIG_KEY_1=core.fsmonitor", "GIT_CONFIG_VALUE_1=false"}
+}
+
+// containerHostEnv is the environment of the flai a container story's job,
+// asked for by by, runs on the host, its flai verify --sync-only and its flai
+// stream sync: the job's, with no git variables of the host's own and with
+// hostGitConfig for the main checkout at root.
+func containerHostEnv(root, by string) []string {
+	return append(closeOutEnv(withoutGitEnv(os.Environ()), by), hostGitConfig(root)...)
 }
 
 // storyGitDir names story's git dir, its common dir, and its work tree from

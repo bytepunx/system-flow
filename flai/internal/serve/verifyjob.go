@@ -41,9 +41,11 @@ const (
 	verifyJobLimit = 2 * time.Hour
 	// closeOutScript is the project's close-out, in the story's worktree.
 	closeOutScript = "scripts/close-out.sh"
-	// The journal's action and method for a close-out job.
+	// The journal's action, and its method for a close-out job and for a
+	// rebase and resolve job.
 	closeOutAction = "close-out"
 	closeOutMethod = "verify.job"
+	resolveMethod  = "resolve.job"
 	// fromTheRecord begins the journal detail of a close-out answered from
 	// the verify record, which flai stats counts apart (metrics.md).
 	fromTheRecord = "from the record"
@@ -82,13 +84,14 @@ const (
 	closeOutAllEnv   = "CLOSE_OUT_ALL"
 )
 
-// closeOutEnv is env as a close-out job has it: without the host's address
-// and token, the variables that mark an agent's run or session, the forges'
-// default token variables, as an agent's, and the close-out script's own
-// fresh and all, which only the request sets, and with FLAI_AGENT naming the
-// agent that asked.
+// closeOutEnv is env as a close-out or resolve job has it: without the host's
+// address and token, the variables that mark an agent's run or session, the
+// forges' default token variables, as an agent's, and the close-out script's
+// own fresh and all, which only the request sets, and with FLAI_AGENT naming
+// the agent that asked and closeout.ProgressEnv set to 1, so that flai verify
+// writes its steps and tiers to the job's log as each starts and ends.
 func closeOutEnv(env []string, by string) []string {
-	drop := map[string]bool{"FLAI_AGENT": true, "FLAI_SESSION": true, host.URLEnv: true, host.TokenEnv: true, closeOutFreshEnv: true, closeOutAllEnv: true}
+	drop := map[string]bool{"FLAI_AGENT": true, "FLAI_SESSION": true, host.URLEnv: true, host.TokenEnv: true, closeOutFreshEnv: true, closeOutAllEnv: true, closeout.ProgressEnv: true}
 	for _, name := range runMarks {
 		drop[name] = true
 	}
@@ -99,7 +102,7 @@ func closeOutEnv(env []string, by string) []string {
 		name, _, _ := strings.Cut(kv, "=")
 		return drop[name]
 	})
-	return append(out, "FLAI_AGENT="+by)
+	return append(out, "FLAI_AGENT="+by, closeout.ProgressEnv+"=1")
 }
 
 // verifyPass takes the close-out requests of one served project every second
@@ -207,7 +210,9 @@ func (p *verifyPass) look(ctx context.Context) {
 }
 
 // answer answers the request at taken for story's close-out, starting its
-// job when no job of the story runs and the record holds no verdict.
+// job when no job of the story runs and the record holds no verdict, or for
+// its rebase and resolve, starting that job when the story is in review and
+// no job of it runs, never from the record (S-0804).
 func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story, taken string) closeout.Answer {
 	refused := func(why string) closeout.Answer {
 		p.o.Logger.Warn("close-out request refused", "component", "serve", "root", p.e.Root, "story", story, "reason", why)
@@ -223,6 +228,18 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 	}
 	if workitem.CanonicalID(req.Story) != story {
 		return refused(fmt.Sprintf("the request at %s names %s, not %s, so nothing runs: ask again with the story's ID zero padded", taken, req.Story, story))
+	}
+	switch req.Kind {
+	case "":
+	case closeout.KindResolve:
+		if why := resolveRefusal(repo, story); why != "" {
+			return refused(why)
+		}
+		if req.Message == "" {
+			req.Message = resolveMessage(story)
+		}
+	default:
+		return refused(fmt.Sprintf("the request at %s asks for a job of kind %q, which this flai serve does not run, so nothing runs: ask for a close-out or a rebase and resolve, or upgrade flai serve", taken, req.Kind))
 	}
 	worktree := repo.WorktreePath(story)
 	if info, err := os.Stat(worktree); err != nil || !info.IsDir() {
@@ -245,7 +262,8 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 			return refused(err.Error())
 		}
 	}
-	if !req.Fresh && p.recorded != nil {
+	// a resolve job always rebases first, so the record cannot answer it
+	if req.Kind == "" && !req.Fresh && p.recorded != nil {
 		rep, ok, err := p.recorded(repo, story, worktree, req.All)
 		switch {
 		case err != nil:
@@ -274,15 +292,21 @@ func (p *verifyPass) fromRecord(repo *workitem.Repo, req closeout.Request, rep v
 	return closeout.Answer{Story: req.Story, Recorded: true, Verdict: verdict, StoppedAt: stoppedAt, Commit: rep.Commit, RanAt: rep.RanAt}
 }
 
-// startJob starts req's close-out in worktree as a job, records and journals
-// its start, and answers its id. The close-out of a story whose agent runs in
-// a container, ca, runs its verify there and its commit and sync on the host
-// (ADR-0274); any other story's runs command's argv on the host.
+// jobBody is a job's run, its output to out, answering the close-out's exit
+// code; an error says a step could not run.
+type jobBody func(ctx context.Context, out io.Writer) (int, error)
+
+// startJob starts req's close-out, or its rebase and resolve, in worktree as
+// a job, records and journals its start, and answers its id. The close-out of
+// a story whose agent runs in a container, ca, runs its verify there and its
+// commit and sync on the host (ADR-0274); any other story's runs command's
+// argv on the host. A rebase and resolve runs this flai's flai stream sync on
+// the host before that close-out (resolveJob).
 func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req closeout.Request, ca *containerAgent, refused func(string) closeout.Answer) closeout.Answer {
 	story := req.Story
 	started := p.o.Now().UTC()
 	stamp := started.Format("20060102T150405Z")
-	var body func(context.Context, io.Writer) (int, error)
+	var body jobBody
 	command := ""
 	if ca != nil {
 		c := &containerCloseOut{p: p, agent: *ca, story: story, worktree: worktree, req: req, id: stamp}
@@ -297,19 +321,25 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 		}
 		command = strings.Join(append(slices.Clone(extra), argv...), " ")
 	}
-	job := closeout.Job{ID: story + "-" + stamp, Story: story, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
+	var settle func(*workitem.Repo, *closeout.Job, verify.Report, bool)
+	if req.Kind == closeout.KindResolve {
+		r := newResolveJob(p, story, worktree, req.By, ca != nil, body)
+		body, settle = r.run, r.settle
+		command = "flai stream sync " + story + ", then " + command
+	}
+	job := closeout.Job{ID: story + "-" + stamp, Story: story, Kind: req.Kind, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
 	if err := closeout.WriteJob(dir, job); err != nil {
-		return refused(fmt.Sprintf("flai serve could not start %s's close-out: %v", story, err))
+		return refused(fmt.Sprintf("flai serve could not start %s's %s: %v", story, jobName(req.Kind), err))
 	}
 	p.mu.Lock()
 	p.running[story] = job.ID
 	p.mu.Unlock()
-	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), By: req.By, Outcome: "started", Detail: story + " job " + job.ID})
-	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "by", req.By, "command", command)
+	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), Method: jobMethod(job.Kind), By: req.By, Outcome: "started", Detail: story + " job " + job.ID})
+	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "kind", job.Kind, "by", req.By, "command", command)
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		p.runJob(ctx, dir, worktree, job, body)
+		p.runJob(ctx, dir, worktree, job, body, settle)
 	}()
 	return closeout.Answer{Job: job.ID, Story: story, Started: true, Log: closeout.File(dir, story, closeout.LogSuffix)}
 }
@@ -351,9 +381,12 @@ func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, [
 
 // runJob writes the head job runs at in its state, runs its close-out, body,
 // in worktree for at most the pass's limit, its output in its log, then ends
-// it. When ctx ends first, the process group is stopped and the job left
-// running in its state, for the next flai serve to end interrupted.
-func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job closeout.Job, body func(context.Context, io.Writer) (int, error)) {
+// it: settle, when not nil, sets how a resolve job ended and sends its story
+// back when it must, from the project, the job with its verdict, and the
+// story's verify report, newest when the job's own run wrote it. When ctx
+// ends first, the process group is stopped and the job left running in its
+// state, for the next flai serve to end interrupted, and nothing is settled.
+func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job closeout.Job, body jobBody, settle func(*workitem.Repo, *closeout.Job, verify.Report, bool)) {
 	before := p.head(worktree)
 	// the head it runs at, so that a reader can tell a running job at a new
 	// head from the report of one before it (I-0384)
@@ -404,6 +437,9 @@ func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job close
 	if job.Verdict == closeout.VerdictPassed && newest && rep.Passed && job.Commit != "" && job.Commit != before && rep.Commit != job.Commit {
 		p.keep(job, rep)
 	}
+	if settle != nil {
+		settle(repo, &job, rep, newest)
+	}
 	if err := closeout.WriteJob(dir, job); err != nil {
 		p.o.Logger.Warn("close-out job's end not written", "component", "serve", "root", p.e.Root, "story", job.Story, "job_id", job.ID, "err", err.Error())
 	}
@@ -418,12 +454,19 @@ func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job close
 	case timedOut:
 		detail += fmt.Sprintf(" (stopped at the %s limit)", p.limit)
 	}
-	p.journal(hostapi.Entry{At: ended.Format(time.RFC3339), By: job.By, Outcome: closeOutOutcome(job.Verdict), Verdict: job.Verdict, DurationMS: job.DurationMS, Detail: detail})
+	if job.Outcome != "" {
+		detail += "; " + job.Outcome
+		if job.Thread != "" {
+			detail += " on " + job.Thread
+		}
+	}
+	p.journal(hostapi.Entry{At: ended.Format(time.RFC3339), Method: jobMethod(job.Kind), By: job.By, Outcome: closeOutOutcome(job.Verdict), Verdict: job.Verdict, DurationMS: job.DurationMS, Detail: detail})
 	if repo != nil {
 		p.announce(repo, job.Story, inbox.Verification{Job: job.ID, Commit: job.Commit, Verdict: job.Verdict, StoppedAt: job.StoppedAt, Duration: duration})
 	}
-	level, attrs := p.o.Logger.Info, []any{"component", "serve", "root", p.e.Root, "story", job.Story, "job_id", job.ID,
-		"verdict", job.Verdict, "stopped_at", job.StoppedAt, "exit_code", code, "duration_ms", job.DurationMS, "timed_out", timedOut}
+	level, attrs := p.o.Logger.Info, []any{"component", "serve", "root", p.e.Root, "story", job.Story, "job_id", job.ID, "kind", job.Kind,
+		"verdict", job.Verdict, "stopped_at", job.StoppedAt, "exit_code", code, "duration_ms", job.DurationMS, "timed_out", timedOut,
+		"outcome", job.Outcome, "thread", job.Thread}
 	if runErr != nil {
 		level, attrs = p.o.Logger.Warn, append(attrs, "err", runErr.Error())
 	}
@@ -485,7 +528,7 @@ func (p *verifyPass) sweep(dir string) bool {
 		if err := closeout.WriteJob(dir, j); err != nil {
 			p.o.Logger.Warn("close-out job's end not written", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "err", err.Error())
 		}
-		p.journal(hostapi.Entry{At: now.Format(time.RFC3339), By: j.By, Outcome: closeOutOutcome(closeout.VerdictInterrupted), Verdict: closeout.VerdictInterrupted,
+		p.journal(hostapi.Entry{At: now.Format(time.RFC3339), Method: jobMethod(j.Kind), By: j.By, Outcome: closeOutOutcome(closeout.VerdictInterrupted), Verdict: closeout.VerdictInterrupted,
 			Detail: fmt.Sprintf("%s job %s: %s, flai serve stopped while it ran", j.Story, j.ID, closeout.VerdictInterrupted)})
 		p.announce(repo, j.Story, inbox.Verification{Job: j.ID, Commit: j.Commit, Verdict: closeout.VerdictInterrupted})
 		stories = append(stories, j.Story)
@@ -504,7 +547,7 @@ func (p *verifyPass) head(worktree string) string {
 }
 
 // journal records a close-out entry in the host journal, stamped now when
-// it has no time.
+// it has no time, of a close-out job when it names no method.
 func (p *verifyPass) journal(e hostapi.Entry) {
 	if p.o.Host.Record == nil {
 		return
@@ -512,8 +555,29 @@ func (p *verifyPass) journal(e hostapi.Entry) {
 	if e.At == "" {
 		e.At = p.o.Now().UTC().Format(time.RFC3339)
 	}
-	e.Action, e.Method, e.Project, e.Root = closeOutAction, closeOutMethod, p.e.Key, p.e.Root
+	if e.Method == "" {
+		e.Method = closeOutMethod
+	}
+	e.Action, e.Project, e.Root = closeOutAction, p.e.Key, p.e.Root
 	p.o.Host.Record(e)
+}
+
+// jobMethod is the journal method of a job of kind: resolveMethod for a
+// rebase and resolve, which flai stats does not count among the close-outs
+// (metrics.md § Close-outs), closeOutMethod for a close-out.
+func jobMethod(kind string) string {
+	if kind == closeout.KindResolve {
+		return resolveMethod
+	}
+	return closeOutMethod
+}
+
+// jobName is what a job of kind is called in a refusal.
+func jobName(kind string) string {
+	if kind == closeout.KindResolve {
+		return "rebase and resolve"
+	}
+	return "close-out"
 }
 
 // announce appends the verified event of story's close-out to the project's

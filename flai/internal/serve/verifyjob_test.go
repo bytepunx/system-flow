@@ -462,11 +462,13 @@ func TestAFreshOrAllCloseOutAsksTheWorktreesScriptForThem(t *testing.T) {
 }
 
 // The job's environment never carries flai serve's own CLOSE_OUT_FRESH or
-// CLOSE_OUT_ALL: only the request sets them.
+// CLOSE_OUT_ALL: only the request sets them. It always sets
+// FLAI_VERIFY_PROGRESS to 1, whatever flai serve's own says, so that flai
+// verify writes its steps and tiers to the job's log (S-0804).
 func TestACloseOutJobDropsServesOwnFreshAndAll(t *testing.T) {
 	t.Parallel()
-	env := closeOutEnv([]string{"PATH=/bin", "CLOSE_OUT_FRESH=1", "CLOSE_OUT_ALL=1"}, "agent-S-0001")
-	if !slices.Equal(env, []string{"PATH=/bin", "FLAI_AGENT=agent-S-0001"}) {
+	env := closeOutEnv([]string{"PATH=/bin", "CLOSE_OUT_FRESH=1", "CLOSE_OUT_ALL=1", closeout.ProgressEnv + "=0"}, "agent-S-0001")
+	if !slices.Equal(env, []string{"PATH=/bin", "FLAI_AGENT=agent-S-0001", closeout.ProgressEnv + "=1"}) {
 		t.Errorf("the job's environment: %q", env)
 	}
 }
@@ -656,6 +658,7 @@ func TestAContainerStorysCloseOutRunsItsVerifyInItsContainerAndNothingFromTheWor
 		" -v " + filepath.Join(root, "wip") + ":" + filepath.Join(root, "wip") + ":ro ",
 		" -v " + filepath.Join(root, "system-flow.yaml") + ":" + filepath.Join(root, "system-flow.yaml") + ":ro ",
 		" -e FLAI_AGENT ",
+		" -e " + closeout.ProgressEnv + " ",
 		" --entrypoint " + harness.ImageFlai + " " + harness.DefaultImages[harness.ClaudeCode] + " verify " + lab.story + " --record-issues ",
 	} {
 		if !strings.Contains(whole, want) {
@@ -664,6 +667,9 @@ func TestAContainerStorysCloseOutRunsItsVerifyInItsContainerAndNothingFromTheWor
 	}
 	if !envHas(verify.env, "FLAI_AGENT=agent-"+lab.story) || !envHas(verify.env, "GIT_CONFIG_VALUE_0="+root) {
 		t.Errorf("the docker client's environment lacks the asker or safe.directory: %q", gitEnvSaid(verify.env))
+	}
+	if !envHas(verify.env, closeout.ProgressEnv+"=1") {
+		t.Errorf("the docker client's environment lacks %s=1, which the container's verify takes by name", closeout.ProgressEnv)
 	}
 	last := calls[len(calls)-1]
 	if strings.Join(last.argv, " ") != "git status --porcelain" {
