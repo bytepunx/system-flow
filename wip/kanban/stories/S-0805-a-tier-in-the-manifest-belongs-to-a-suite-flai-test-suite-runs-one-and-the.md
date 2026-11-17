@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:41:56Z
-updated: 2026-11-17T02:48:57Z
+updated: 2026-11-17T07:47:49Z
 transitions:
   - to: ready
     at: 2026-11-16T23:51:58Z
@@ -26,6 +26,7 @@ blocked:
     until: 2026-11-17T02:47:35Z
     reason: awaiting the operator on TH-1258
   - from: 2026-11-17T02:48:57Z
+    until: 2026-11-17T07:46:26Z
     reason: awaiting the operator on TH-1258
 tags: [flai, template]
 topics: [verify, workflow]
@@ -65,15 +66,15 @@ usage:
           cache_write: 128431
           cost: 2.7132
     - kind: orchestrator
-      seconds: 28
+      seconds: 36
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 57
-          cache_read: 413428
-          cache_write: 47500
-          cost: 0.1411
+          input: 12
+          output: 88
+          cache_read: 504624
+          cache_write: 73816
+          cost: 0.1775
 cost_of_delay:
   value: 275.4
   by: planner-S-0805
@@ -96,7 +97,7 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] ADR-0312 is accepted, or superseded by the ADR this story writes from the operator's changes.
+- [x] ADR-0312 is accepted, or superseded by the ADR this story writes from the operator's changes.
 - [x] A tier's `suite` is read from the manifest, kebab-case, defaulting to the tier's name, and `flai check` refuses one that is not kebab-case.
 - [x] `flai test --suite <name>` runs the tiers of a suite that the paths select, and with `--all` every tier of it but a `manual` one.
 - [x] The template's manifest labels its tiers `static`, `behavior`, `integration`, and `smoke`, and this repository's manifest labels its own without changing which tiers any command runs.

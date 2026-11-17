@@ -2,9 +2,9 @@
 id: D-0529
 title: "A task that adds or changes real-git tests, which skip under flai test's -short, runs them with scripts/integration.sh -run '<tests>' before it closes"
 kind: decision
-sources: [S-0609, S-0702]
+sources: [S-0609, S-0702, S-0817]
 topics: [testing, go, flai]
-paths: [scripts/integration.sh, system-flow.yaml, design/conventions/code-quality.md, flai/internal/mergequeue/batch_test.go]
+paths: [scripts/integration.sh, system-flow.yaml, design/conventions/code-quality.md, flai/internal/mergequeue/batch_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
 date: 2026-11-08
 status: active
 absorbed_by: ""
@@ -20,6 +20,8 @@ S-0609 ran them through the project's integration entry point with a filter: "Th
 
 S-0702 did the same for the merge queue's batch tests in `flai/internal/mergequeue`: "T-3009's sub-agent ran the mergequeue batch tests through scripts/integration.sh with a -run filter, since the test tool's -short run skips real-git tests; the close-out's integration tier runs them all" (wip/archive/agents/S-0702.md, Decisions).
 
+S-0817 did the same for its real-git reproductions of I-0387 in `flai/cmd/accept_conflict_test.go` and `flai/cmd/stream_sync_test.go`: "The real-git tests were run by name with `scripts/integration.sh -run ...`, because `flai test` runs the integration tier only for the whole checkout. This is the narrowest run that does not go through flai test" (wip/archive/agents/S-0817.md, Decisions). It also swapped main's file in and restored it with `git checkout` to show the reproductions fail without the fix.
+
 `scripts/integration.sh` passes its arguments to `go test`, with `-skip '^TestGateway'` and `./...`, so a `-run` filter runs only the named tests and never the paid gateway checks (D-0451). Since S-0722 it runs on one core without `-race` under `-timeout 10m`, and with `--race` first under `-race` on every core with `-timeout 20m` (D-0585). Use it rather than a hand `go test`.
 
-Sources: S-0609, S-0702.
+Sources: S-0609, S-0702, S-0817.

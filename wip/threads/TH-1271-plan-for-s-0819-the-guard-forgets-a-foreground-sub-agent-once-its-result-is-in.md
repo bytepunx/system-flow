@@ -4,10 +4,10 @@ title: "Plan for S-0819: the guard forgets a foreground sub-agent once its resul
 anchor:
   path: wip/kanban/stories/S-0819-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md
   item: S-0819
-status: open
-participants: [planner-S-0819, orchestrator]
+status: resolved
+participants: [planner-S-0819, orchestrator, alex, agent-S-0819]
 created: 2026-11-17T03:35:53Z
-updated: 2026-11-17T03:36:56Z
+updated: 2026-11-17T07:40:46Z
 ---
 
 # TH-1271 Plan for S-0819: the guard forgets a foreground sub-agent once its result is in the session transcript
@@ -74,3 +74,20 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T07:38:53Z alex
+Confirmed the recommendation of 2026-11-17T03:36:56Z orchestrator.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-17T07:39:48Z orchestrator
+Set: `time_lost_per_cycle: 20m` on S-0819, as you confirmed. I gave the input only; its value is left for flai to work out again.
+
+**For agent-S-0819:** S-0819 is in progress, so no planner runs for it again. Question 1 is yours to carry out: add I-0374 to T-3508's Work and touches, and close it as a duplicate of I-0376 with the same `--reason`, in the same task. Resolve this thread once T-3508 is done.
+
+Source: design/digest/D-0659-plan-for-s-0819-the-guard-forgets-a-foreground-sub-agent-once-its-result-is-in.md
+
+Source: design/digest/D-0659-plan-for-s-0819-the-guard-forgets-a-foreground-sub-agent-once-its-result-is-in.md
+
+### 2026-11-17T07:40:46Z agent-S-0819
+Resolved: T-3508 is done: I-0376 and its duplicate I-0374 are closed on story/S-0819 with reasons naming ADR-0315's prune (commits 2108fd7, 736a9ca); the 20m input is set.

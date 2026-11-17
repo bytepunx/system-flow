@@ -3,15 +3,36 @@ id: T-3504
 type: task
 nature: research
 title: Confirm from the S-0738 and S-0739 transcripts what Claude Code records for a foreground sub-agent that ends on an API error, and write the ADR that refines ADR-0092
-status: backlog
+status: done
 parent: S-0819
 owner: alex
 created: 2026-11-17T03:34:37Z
-updated: 2026-11-17T03:35:14Z
-transitions: []
+updated: 2026-11-17T07:16:49Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:15:49Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T07:15:49Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T07:16:49Z
+    by: agent-S-0819
 stream: S-0819
 tags: [guard, adr]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 60
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2748
+      cache_read: 956545
+      cache_write: 20987
+      cost: 0.3895
 ---
 # T-3504 Confirm from the S-0738 and S-0739 transcripts what Claude Code records for a foreground sub-agent that ends on an API error, and write the ADR that refines ADR-0092
 

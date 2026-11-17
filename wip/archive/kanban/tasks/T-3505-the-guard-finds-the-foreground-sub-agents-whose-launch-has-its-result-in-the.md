@@ -3,16 +3,37 @@ id: T-3505
 type: task
 nature: remediation
 title: The guard finds the foreground sub-agents whose launch has its result in the session transcript and drops them from the session's record
-status: backlog
+status: done
 parent: S-0819
 owner: alex
 created: 2026-11-17T03:34:46Z
-updated: 2026-11-17T03:34:46Z
-transitions: []
+updated: 2026-11-17T07:29:12Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:17:18Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T07:17:18Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T07:29:12Z
+    by: agent-S-0819
 stream: S-0819
 tags: [guard, go]
-touches: [flai/internal/guard/transcript.go, flai/internal/guard/transcript_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go]
+touches: [flai/internal/guard/transcript.go, flai/internal/guard/transcript_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/call.go]
 after: [T-3504]
+usage:
+  source: log
+  seconds: 714
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 3811
+      cache_read: 1326633
+      cache_write: 29107
+      cost: 0.5402
 ---
 # T-3505 The guard finds the foreground sub-agents whose launch has its result in the session transcript and drops them from the session's record
 

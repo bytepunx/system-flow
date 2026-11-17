@@ -3,11 +3,11 @@ id: T-3236
 type: task
 nature: feature
 title: Write and accept the metrics ADR that defines lead, cycle, queue, and review time and time in state as readings of the workflow's timers
-status: in-progress
+status: done
 parent: S-0750
 owner: alex
 created: 2026-11-12T16:08:33Z
-updated: 2026-11-15T20:32:05Z
+updated: 2026-11-17T07:46:39Z
 transitions:
   - to: ready
     at: 2026-11-15T20:32:05Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-15T20:32:05Z
     by: agent-S-0750
+  - to: done
+    at: 2026-11-17T07:46:39Z
+    by: agent-S-0750
 stream: S-0750
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md]
 usage:
   source: log
   seconds: 3560

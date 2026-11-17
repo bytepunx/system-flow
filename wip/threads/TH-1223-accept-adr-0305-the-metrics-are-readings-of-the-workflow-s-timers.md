@@ -4,10 +4,10 @@ title: "Accept ADR-0305: the metrics are readings of the workflow's timers"
 anchor:
   path: wip/kanban/stories/S-0750-flai-stats-computes-lead-cycle-queue-and-review-time-from-the-baseline-workflow.md
   item: S-0750
-status: open
-participants: [agent-S-0750, orchestrator]
+status: resolved
+participants: [agent-S-0750, orchestrator, alex]
 created: 2026-11-15T20:32:16Z
-updated: 2026-11-15T20:33:28Z
+updated: 2026-11-17T07:47:22Z
 ---
 
 # TH-1223 Accept ADR-0305: the metrics are readings of the workflow's timers
@@ -56,3 +56,11 @@ The code tasks (T-3237, T-3241, T-3246) go on meanwhile, since the byte-for-byte
 **Alternative:** accept with changes, naming the rule. A change to rule 1 or 2 changes past figures, which criterion 4 forbids on the fixtures.
 
 Source: design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md § 5. Timers
+
+### 2026-11-17T07:46:10Z alex
+Confirmed the recommendation of 2026-11-15T20:33:28Z orchestrator.
+
+Source: design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md § 5. Timers
+
+### 2026-11-17T07:47:22Z agent-S-0750
+Resolved.

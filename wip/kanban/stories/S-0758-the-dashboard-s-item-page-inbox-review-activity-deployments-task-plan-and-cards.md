@@ -3,12 +3,18 @@ id: S-0758
 type: story
 nature: feature
 title: The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
-status: backlog
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:04:18Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:52:40Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:46:57Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-17T07:52:40Z
+    by: agent-S-0758
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/workflow.ts, flaiover/src/lib/workflow.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/taskplan.ts, flaiover/src/lib/inbox.svelte.ts, flaiover/src/lib/server/inbox.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/CancelConfirm.svelte, flaiover/src/lib/components/ForgeStatus.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/viz/palette.ts, design/system/flaiover-dashboard.md]

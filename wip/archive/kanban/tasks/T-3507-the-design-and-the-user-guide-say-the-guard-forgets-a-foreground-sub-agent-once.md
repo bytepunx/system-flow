@@ -3,16 +3,37 @@ id: T-3507
 type: task
 nature: remediation
 title: The design and the user guide say the guard forgets a foreground sub-agent once its result is in the session transcript
-status: backlog
+status: done
 parent: S-0819
 owner: alex
 created: 2026-11-17T03:35:00Z
-updated: 2026-11-17T03:35:00Z
-transitions: []
+updated: 2026-11-17T07:29:25Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:17:18Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-17T07:17:19Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T07:29:25Z
+    by: agent-S-0819
 stream: S-0819
 tags: [guard, docs]
 touches: [design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-3504]
+usage:
+  source: log
+  seconds: 726
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 6731
+      cache_read: 2343318
+      cache_write: 51414
+      cost: 0.9542
 ---
 # T-3507 The design and the user guide say the guard forgets a foreground sub-agent once its result is in the session transcript
 

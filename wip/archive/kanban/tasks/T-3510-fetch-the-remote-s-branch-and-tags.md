@@ -3,12 +3,15 @@ id: T-3510
 type: task
 nature: improvement
 title: Fetch the remote's branch and tags
-status: backlog
+status: cancelled
 parent: S-0821
 owner: alex
 created: 2026-11-17T04:29:08Z
-updated: 2026-11-17T04:29:08Z
-transitions: []
+updated: 2026-11-17T07:46:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-17T07:46:43Z
+    by: alex
 stream: S-0821
 tags: []
 ---
@@ -23,3 +26,4 @@ Run `scripts/fetch.sh` from the project's main checkout, `/home/alex/git/bytepun
 `scripts/fetch.sh` exits 0 in the main checkout.
 
 ## Notes
+- 2026-11-17T07:46:43Z: moved to cancelled: S-0821 cancelled: not needed

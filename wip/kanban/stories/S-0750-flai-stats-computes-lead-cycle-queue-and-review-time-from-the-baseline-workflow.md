@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-15T21:54:33Z
+updated: 2026-11-17T07:47:12Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:20Z
@@ -20,6 +20,7 @@ blocked:
     until: 2026-11-15T21:53:40Z
     reason: awaiting the operator on TH-1223
   - from: 2026-11-15T21:54:33Z
+    until: 2026-11-17T07:46:11Z
     reason: awaiting the operator on TH-1223
 tags: [cli]
 topics: [cli, analysis]
@@ -47,15 +48,15 @@ usage:
       cost: 16.7132
   strategic:
     - kind: orchestrator
-      seconds: 78
+      seconds: 86
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 155
-          cache_read: 922262
-          cache_write: 111136
-          cost: 0.3089
+          input: 30
+          output: 187
+          cache_read: 1013459
+          cache_write: 137453
+          cost: 0.3453
 cost_of_delay:
   value: 106.89
   by: system-flow
@@ -78,7 +79,7 @@ Time tracking reads the workflow. The metrics definitions are the contract betwe
 
 ## Acceptance criteria
 
-- [ ] An accepted ADR changes `metrics.md`'s definitions of lead, cycle, queue, and review time, and time in state, to readings of the workflow's timers, and says how a timer reads an item's transitions: its start and end points, or the sum of the time in the states it names, and how a reopened or cancelled item counts
+- [x] An accepted ADR changes `metrics.md`'s definitions of lead, cycle, queue, and review time, and time in state, to readings of the workflow's timers, and says how a timer reads an item's transitions: its start and end points, or the sum of the time in the states it names, and how a reopened or cancelled item counts
 - [x] `flai/internal/workflow` evaluates a timer over an item's transitions, and the baseline workflow names lead, cycle, queue, and review time as the ADR gives them
 - [x] `flai/internal/metrics` computes each per item value and aggregate from the baseline's timers, and its other figures, claims, waiting, coordination, cost of delay, and close-outs included, read a state's kind instead of its name
 - [x] `flai stats --json` gives the same bytes as before on `flai/internal/metrics/testdata/good` and on `testdata/windows.golden.json`, which this story does not change, and flaiover's tests on those fixtures pass unchanged

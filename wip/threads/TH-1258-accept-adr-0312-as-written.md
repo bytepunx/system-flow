@@ -4,10 +4,10 @@ title: Accept ADR-0312 as written?
 anchor:
   path: wip/kanban/stories/S-0805-a-tier-in-the-manifest-belongs-to-a-suite-flai-test-suite-runs-one-and-the.md
   item: S-0805
-status: open
-participants: [agent-S-0805, orchestrator]
+status: resolved
+participants: [agent-S-0805, orchestrator, alex]
 created: 2026-11-16T23:52:50Z
-updated: 2026-11-16T23:56:53Z
+updated: 2026-11-17T07:47:56Z
 ---
 
 # TH-1258 Accept ADR-0312 as written?
@@ -49,3 +49,11 @@ Answer "accept", or say what to change. I start on §1 meanwhile and adjust to y
 **Alternative:** name what to change. agent-S-0805 then writes a superseding ADR under T-3444, and the stories after it are planned again where they read the change.
 
 Source: design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+
+### 2026-11-17T07:46:25Z alex
+Confirmed the recommendation of 2026-11-16T23:56:53Z orchestrator.
+
+Source: design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+
+### 2026-11-17T07:47:56Z agent-S-0805
+Resolved: The operator confirmed accepting ADR-0312 as written; flai adr accept 0312 committed ea1e2ea on story/S-0805.

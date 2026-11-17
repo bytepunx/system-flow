@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2235.6283
-accrued_seconds: 1573670
-tasks_completed: 3821
-last_run: 2026-11-17T04:48:03Z
+accrued_cost: 2236.8115
+accrued_seconds: 1573930
+tasks_completed: 3831
+last_run: 2026-11-17T07:47:29Z
 ---
 
 # Orchestrator activity
@@ -26782,6 +26782,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1469 USD, estimated
+
+### 2026-11-17T07:13:57Z
+
+- Summary: Accepted S-0817 at c5bb5c4 under accept_reviews: close-out passed at the branch head, verifier passed both criteria, dry run had no blockers; merged and archived (cost of delay 600 USD/week).
+- Items: S-0817
+- Seconds: 63
+- Cost: 0.2358 USD, estimated
+
+### 2026-11-17T07:14:40Z
+
+- Summary: release_evaluate met under threshold after S-0817 (3 pending: S-0742, S-0753, S-0817; count 3 >= 1; value 817.34 USD/week). Started no new publish instance: S-0821, the publish formula's instance, is already ready and publishes all pending work once in-progress has room (3 of 3).
+- Items: S-0821, S-0817
+- Seconds: 43
+- Cost: 0.0704 USD, estimated
+
+### 2026-11-17T07:15:01Z
+
+- Summary: I accepted S-0817. flai merged its branch at c5bb5c4 and archived the story. I-0387 is closed, and ADR-0314 is in.
+- Items: none
+- Seconds: 21
+- Cost: 0.1385 USD, estimated
+
+### 2026-11-17T07:15:32Z
+
+- Summary: release-due S-0817: release_evaluate is met under threshold (count 3 of threshold 1; value 817.34 USD/week of 1000; pending S-0742, S-0753, S-0817). Started no new publish formula: its instance S-0821, made at 04:29Z, is still open in ready and publishes everything accepted and unreleased when it runs, S-0817 included. A second instance would duplicate it. S-0821 waits for room in in-progress (3 of 3: S-0750 blocked, S-0805 blocked, S-0819).
+- Items: S-0817, S-0821
+- Seconds: 14
+- Cost: 0.0837 USD, estimated
+
+### 2026-11-17T07:15:55Z
+
+- Summary: I didn't start a new publish run. The release is due, but S-0821, the publish run made at 04:29Z, is still in ready. It hasn't started, and when it runs it will publish S-0817 with the rest. A second run would only duplicate it.
+- Items: none
+- Seconds: 23
+- Cost: 0.1491 USD, estimated
+
+### 2026-11-17T07:39:48Z
+
+- Summary: Answered TH-1271, citing design/digest/D-0659-plan-for-s-0819-the-guard-forgets-a-foreground-sub-agent-once-its-result-is-in.md
+- Items: S-0819
+- Seconds: 19
+- Cost: 0.0717 USD, estimated
+
+### 2026-11-17T07:40:03Z
+
+- Summary: Set time_lost_per_cycle 20m on S-0819 under set_cost_of_delay, as the operator confirmed on TH-1271 (D-0659); asked agent-S-0819 there to close I-0374 as a duplicate in T-3508, since no planner runs for an in-progress story.
+- Items: S-0819, TH-1271
+- Seconds: 15
+- Cost: 0.0241 USD, estimated
+
+### 2026-11-17T07:40:25Z
+
+- Summary: I've set S-0819's lost time per cycle to 20m, as you confirmed on TH-1271. That was the only reason for this run, so it's finished.
+- Items: none
+- Seconds: 22
+- Cost: 0.2035 USD, estimated
+
+### 2026-11-17T07:47:05Z
+
+- Summary: TH-1223 and TH-1258: alex confirmed my recommendations to accept ADR-0305 (S-0750) and ADR-0312 (S-0805) as written; nothing owed by me. agent-S-0750 and agent-S-0805 restarted on the answers and act on them (S-0750's T-3236 already done). Threads left to their openers; I resolve neither, since I did not open them.
+- Items: S-0750, S-0805
+- Seconds: 16
+- Cost: 0.0727 USD, estimated
+
+### 2026-11-17T07:47:29Z
+
+- Summary: I took no action on TH-1223 or TH-1258. alex confirmed my recommendation on both threads, so nothing was left for me to answer. Each story's agent restarted on the answer and is doing the follow-up.
+- Items: none
+- Seconds: 24
+- Cost: 0.1337 USD, estimated
 
 ## Refusals
 

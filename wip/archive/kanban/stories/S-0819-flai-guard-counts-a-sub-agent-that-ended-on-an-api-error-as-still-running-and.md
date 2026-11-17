@@ -3,10 +3,10 @@ id: S-0819
 type: story
 nature: remediation
 title: flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T02:47:36Z
-updated: 2026-11-17T07:12:21Z
+updated: 2026-11-17T07:53:28Z
 transitions:
   - to: ready
     at: 2026-11-17T03:37:47Z
@@ -14,18 +14,34 @@ transitions:
   - to: in-progress
     at: 2026-11-17T07:12:21Z
     by: agent-S-0819
+  - to: review
+    at: 2026-11-17T07:52:27Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T07:53:28Z
+    by: alex
 tags: [flai, guard]
 topics: [guard, delegation]
-touches: [flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/transcript.go, flai/internal/guard/transcript_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/adrs, design/adrs/README.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]
+touches: [flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/transcript.go, flai/internal/guard/transcript_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/adrs, design/adrs/README.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md, flai/internal/guard/call.go, design/issues/I-0374-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2423
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      work: 81
+  models:
+    - model: claude-opus-5-5
+      input: 264
+      output: 66410
+      cache_read: 23120281
+      cache_write: 507271
+      cost: 9.4145
   strategic:
     - kind: planner
       seconds: 422
@@ -44,20 +60,20 @@ usage:
           cache_write: 159623
           cost: 2.5463
     - kind: orchestrator
-      seconds: 162
+      seconds: 196
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 48
-          output: 378
-          cache_read: 1804091
-          cache_write: 274775
-          cost: 0.6412
+          input: 58
+          output: 467
+          cache_read: 2061293
+          cache_write: 327298
+          cost: 0.737
 cost_of_delay:
   inputs:
-    time_lost_per_cycle: 10m
-    by: flai
-    at: 2026-11-17T02:47:36Z
+    time_lost_per_cycle: 20m
+    by: orchestrator
+    at: 2026-11-17T07:39:43Z
   value: 25
   by: planner-S-0819
   at: 2026-11-17T03:34:18Z
@@ -78,8 +94,8 @@ finalized:
 This story remediates [I-0376](../../../design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md), "flai guard counts a sub-agent that ended on an API error as still running and refuses wait_for_events for the close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0376 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0376 is closed with `flai issue close I-0376 --reason` saying what fixed it
+- [x] The cause I-0376 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0376 is closed with `flai issue close I-0376 --reason` saying what fixed it
 
 ## Tasks
 - T-3504 Confirm from the S-0738 and S-0739 transcripts what Claude Code records for a foreground sub-agent that ends on an API error, and write the ADR that refines ADR-0092

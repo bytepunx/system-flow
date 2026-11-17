@@ -3,17 +3,20 @@ id: T-3444
 type: task
 nature: feature
 title: ADR-0312 is accepted, or superseded by an ADR recording the operator's changes
-status: in-progress
+status: done
 parent: S-0805
 owner: alex
 created: 2026-11-16T23:48:23Z
-updated: 2026-11-16T23:53:09Z
+updated: 2026-11-17T07:47:18Z
 transitions:
   - to: ready
     at: 2026-11-16T23:53:09Z
     by: agent-S-0805
   - to: in-progress
     at: 2026-11-16T23:53:09Z
+    by: agent-S-0805
+  - to: done
+    at: 2026-11-17T07:47:18Z
     by: agent-S-0805
 stream: S-0805
 tags: [flai]

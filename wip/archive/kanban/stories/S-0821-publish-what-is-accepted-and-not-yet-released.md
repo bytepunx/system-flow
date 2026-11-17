@@ -3,14 +3,17 @@ id: S-0821
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: cancelled
 owner: alex
 created: 2026-11-17T04:29:08Z
-updated: 2026-11-17T04:29:10Z
+updated: 2026-11-17T07:46:43Z
 transitions:
   - to: ready
     at: 2026-11-17T04:29:10Z
     by: system-flow
+  - to: cancelled
+    at: 2026-11-17T07:46:43Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0821-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 35
+      seconds: 64
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 78
-          cache_read: 407457
-          cache_write: 46271
-          cost: 0.1402
+          input: 16
+          output: 98
+          cache_read: 624075
+          cache_write: 78791
+          cost: 0.2173
 formula: publish
 ---
 # S-0821 Publish what is accepted and not yet released
@@ -55,3 +58,4 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+- 2026-11-17T07:46:43Z: moved to cancelled: not needed
