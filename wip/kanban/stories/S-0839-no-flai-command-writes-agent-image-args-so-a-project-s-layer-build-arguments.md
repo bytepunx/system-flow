@@ -6,7 +6,7 @@ title: No flai command writes agent.image.args, so a project's layer build argum
 status: backlog
 owner: alex
 created: 2026-11-17T08:32:50Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:55:13Z
 transitions: []
 tags: [flai, template]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, design/system/project-manifest.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md, design/issues/summary.md]
@@ -56,10 +56,10 @@ cost_of_delay:
   at: 2026-11-17T12:29:23Z
 forecast:
   duration: 1h
-  delivery: 2026-11-17T21:48:00Z
-  basis: "Its own forecast of 1h; 19th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0811, S-0838, S-0829, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835 and S-0837."
+  delivery: 2026-11-17T21:42:00Z
+  basis: "Its own forecast of 1h; 18th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0841, S-0811, S-0829, S-0840, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835 and S-0837."
   by: flai
-  at: 2026-11-17T12:35:58Z
+  at: 2026-11-17T12:55:13Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z

@@ -6,7 +6,7 @@ title: A sub-agent's flai kluster status falls through to the guard's generic re
 status: ready
 owner: alex
 created: 2026-11-17T08:17:21Z
-updated: 2026-11-17T12:35:58Z
+updated: 2026-11-17T12:55:13Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 1735506
           cost: 9.596
     - kind: orchestrator
-      seconds: 209
+      seconds: 215
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 123
-          cache_read: 1096864
-          cache_write: 112109
-          cost: 0.3783
+          input: 24
+          output: 135
+          cache_read: 1234301
+          cache_write: 113345
+          cost: 0.4217
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:28Z
 forecast:
   duration: 40m
-  delivery: 2026-11-17T14:04:00Z
-  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0811 and S-0838."
+  delivery: 2026-11-17T13:58:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0841 and S-0811."
   by: flai
-  at: 2026-11-17T12:35:58Z
+  at: 2026-11-17T12:55:13Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:32Z
