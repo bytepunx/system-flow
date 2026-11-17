@@ -2,12 +2,12 @@
 id: I-0387
 title: Stories of one epic rewrite the same section of one design document, so acceptances send back on same-line conflicts the section merge cannot settle
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 18m
 first_reported: 2026-11-16T06:16:15Z
 last_reported: 2026-11-17T02:03:50Z
-updated: 2026-11-17T02:26:33Z
+updated: 2026-11-17T03:13:27Z
 usage:
   strategic:
     - kind: analyzer
@@ -53,3 +53,4 @@ coordination.weeks[] W46 conflicts.met_accept 12 (W44 4, W45 4), met_sync 22. .f
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
 
 Story S-0817 remediates this issue, created from it at 2026-11-17T02:26:33Z.
+Closed 2026-11-17T03:13:27Z: S-0817 (ADR-0314): the section merge now merges by their words the lines both sides change that its sentence merge leaves, and table rows, so two stories that insert or change words at different places of one table row or one sentence no longer stop at sync or acceptance. Reproduced in real git at sync and acceptance in flai/cmd (SyncMergesByWordsATableRowAndASentenceMainInsertedOtherWordsInto, AcceptLandsAStoryThatInsertedOtherWordsIntoATableRowAndASentenceMainChanged). Both changing the same word, or inserting at the same point, still stops.
