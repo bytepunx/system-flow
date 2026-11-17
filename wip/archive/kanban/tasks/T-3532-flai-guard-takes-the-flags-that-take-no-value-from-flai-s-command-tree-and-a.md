@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 793
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 275
-      cache_read: 1590745
-      cache_write: 69887
-      cost: 0.634
+      input: 23
+      output: 8325
+      cache_read: 1624565
+      cache_write: 54397
+      cost: 0.8372
 ---
 # T-3532 flai guard takes the flags that take no value from flai's command tree, and a test holds its reading of the command to cobra's Find
 

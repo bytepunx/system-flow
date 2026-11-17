@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-sub
 after: [T-3532]
 usage:
   source: log
-  seconds: 26
+  seconds: 30
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 61
-      cache_read: 1004006
-      cache_write: 2485
-      cost: 0.3842
+      input: 14
+      output: 5045
+      cache_read: 984610
+      cache_write: 32969
+      cost: 0.5074
 ---
 # T-3537 flai-cli.md says how flai guard reads flai's command before its flags, and I-0358 is closed
 

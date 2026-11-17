@@ -3,10 +3,10 @@ id: S-0832
 type: story
 nature: remediation
 title: flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:26Z
-updated: 2026-11-17T10:38:30Z
+updated: 2026-11-17T11:17:03Z
 transitions:
   - to: ready
     at: 2026-11-17T10:04:07Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T10:19:25Z
     by: agent-S-0832
+  - to: review
+    at: 2026-11-17T11:15:12Z
+    by: agent-S-0832
+  - to: done
+    at: 2026-11-17T11:17:03Z
+    by: orchestrator
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md]
 agent:
@@ -23,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2115
-  estimated: true
-  priced_by: estimate
+  seconds: 3364
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 1
-      work: 22
+      ceremony: 3
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 178
-      output: 1060
-      cache_read: 8495257
-      cache_write: 558266
-      cost: 3.4562
+      input: 248
+      output: 89828
+      cache_read: 17529710
+      cache_write: 586967
+      cost: 9.0341
   strategic:
     - kind: planner
       seconds: 5
@@ -55,15 +60,15 @@ usage:
           cache_write: 9979
           cost: 0.2437
     - kind: orchestrator
-      seconds: 21
+      seconds: 43
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 63
-          cache_read: 242900
-          cache_write: 44342
-          cost: 0.0894
+          input: 17
+          output: 147
+          cache_read: 660596
+          cache_write: 130917
+          cost: 0.2468
         - model: claude-sonnet-5-5
           input: 2
           output: 268
@@ -95,8 +100,8 @@ finalized:
 This story remediates [I-0358](../../../design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md), "flai guard reads a subcommand's value flag before flai's command as the command, so a rule can miss the command flai runs". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0358 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0358 is closed with `flai issue close I-0358 --reason` saying what fixed it
+- [x] The cause I-0358 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0358 is closed with `flai issue close I-0358 --reason` saying what fixed it
 
 ## Tasks
 - T-3530 flai guard reads the command and subcommand after flai as cobra finds them, so a value flag before the command takes its value with it
@@ -134,3 +139,12 @@ No `after`: the story reads nothing another open story writes.
 Forecast: `flai forecast` gave 28m from 14 units of size (2 criteria, 12 touches); set to 40m because the fix is proposed first and T-3532's test walks flai's whole command tree, work the size does not count. Delivery moves by the same 12m, to 2026-11-17T16:29:00Z.
 
 Cost of delay: 25 USD a week, as `flai cod` works it out from the operator's input of 10m lost per 168h cycle at 150 USD an hour. It stands: the one instance cost 10m and no other is recorded.
+
+### Accepted by the orchestrator
+
+- Verified: de9dfa5e72381bbf5051848a2e73678541ab1095
+- At: 2026-11-17T11:17:03Z
+
+Verdict: meets all criteria
+- 1: flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_rules.go, flai/internal/guard/authors.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go
+- 2: design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md, design/issues/summary.md

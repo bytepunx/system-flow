@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1110
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 500
-      cache_read: 4435728
-      cache_write: 279360
-      cost: 1.8
+      input: 65
+      output: 23637
+      cache_read: 4612644
+      cache_write: 154450
+      cost: 2.3772
 ---
 # T-3530 flai guard reads the command and subcommand after flai as cobra finds them, so a value flag before the command takes its value with it
 

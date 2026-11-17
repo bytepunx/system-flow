@@ -3,12 +3,18 @@ id: T-3529
 type: task
 nature: remediation
 title: mdlint parses the code spans of D-0592's line 17 as markdownlint-cli2 does and reports no MD038 there, with a fixture that reproduces it
-status: backlog
+status: in-progress
 parent: S-0836
 owner: alex
 created: 2026-11-17T08:29:26Z
-updated: 2026-11-17T08:29:26Z
-transitions: []
+updated: 2026-11-17T11:17:03Z
+transitions:
+  - to: ready
+    at: 2026-11-17T11:17:03Z
+    by: agent-S-0836
+  - to: in-progress
+    at: 2026-11-17T11:17:03Z
+    by: agent-S-0836
 stream: S-0836
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]

@@ -3,14 +3,17 @@ id: S-0836
 type: story
 nature: remediation
 title: flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:31Z
-updated: 2026-11-17T11:04:27Z
+updated: 2026-11-17T11:15:21Z
 transitions:
   - to: ready
     at: 2026-11-17T10:05:44Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T11:15:21Z
+    by: agent-S-0836
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/code-spans.md, flai/internal/mdlint/testdata/cases/expected.txt]
 agent:

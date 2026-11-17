@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 360.1603
-accrued_seconds: 39828
-tasks_completed: 250
-last_run: 2026-11-17T10:21:44Z
+accrued_cost: 362.1126
+accrued_seconds: 39965
+tasks_completed: 251
+last_run: 2026-11-17T11:06:55Z
 ---
 
 # Curator activity
@@ -2011,3 +2011,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 67
 - Cost: 0.7343 USD, estimated
+
+### 2026-11-17T11:06:55Z
+
+- Summary: I wrote D-0664 and D-0665; I merged and absorbed nothing, and `flai digest compact` compacted no entries.
+- Trigger: accepted S-0823
+- Items: D-0664, D-0665
+- Seconds: 137
+- Cost: 1.9523 USD, estimated
