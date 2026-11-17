@@ -6,7 +6,7 @@ title: flai kluster exec and log read .flai-cache/kluster, which a story's agent
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T08:36:57Z
+updated: 2026-11-17T09:16:30Z
 transitions: []
 tags: [flai, kluster, container]
 topics: [kluster, harness]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T08:31:46Z
 forecast:
   duration: 3h
-  delivery: 2026-11-17T20:35:00Z
-  basis: "Its own forecast of 3h; 22nd in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830 and S-0832."
+  delivery: 2026-11-17T20:33:00Z
+  basis: "Its own forecast of 3h; 20th in the pull order with an in-progress limit of 3, behind S-0806, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828, S-0829, S-0830 and S-0832."
   by: flai
-  at: 2026-11-17T08:34:32Z
+  at: 2026-11-17T09:16:30Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z

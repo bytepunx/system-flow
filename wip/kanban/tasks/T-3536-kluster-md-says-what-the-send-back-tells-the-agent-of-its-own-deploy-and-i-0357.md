@@ -3,16 +3,37 @@ id: T-3536
 type: task
 nature: improvement
 title: kluster.md says what the send-back tells the agent of its own deploy, and I-0357 is closed
-status: backlog
+status: done
 parent: S-0831
 owner: alex
 created: 2026-11-17T08:29:56Z
-updated: 2026-11-17T08:29:56Z
-transitions: []
+updated: 2026-11-17T09:15:21Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:14:43Z
+    by: agent-S-0831
+  - to: in-progress
+    at: 2026-11-17T09:14:43Z
+    by: agent-S-0831
+  - to: done
+    at: 2026-11-17T09:15:21Z
+    by: agent-S-0831
 stream: S-0831
 tags: [design, kluster, issues]
 touches: [design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md]
 after: [T-3533, T-3534]
+usage:
+  source: log
+  seconds: 35
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 59
+      cache_read: 1548655
+      cache_write: 6856
+      cost: 0.5933
 ---
 # T-3536 kluster.md says what the send-back tells the agent of its own deploy, and I-0357 is closed
 

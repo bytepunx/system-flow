@@ -3,14 +3,17 @@ id: S-0833
 type: story
 nature: remediation
 title: flai release --pending fails when another process holds the main checkout's git index lock, and the publish formula's step then stops on exit 1
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:27Z
-updated: 2026-11-17T09:04:31Z
+updated: 2026-11-17T09:15:12Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:27Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T09:15:12Z
+    by: agent-S-0833
 tags: [flai, release, git]
 topics: [release]
 touches: [flai/cmd/release.go, flai/cmd/release_lock_test.go, docs/users/flai.md, design/issues/I-0359-flai-release-pending-fails-when-another-process-holds-the-main-checkout-s-git.md, design/issues/summary.md]

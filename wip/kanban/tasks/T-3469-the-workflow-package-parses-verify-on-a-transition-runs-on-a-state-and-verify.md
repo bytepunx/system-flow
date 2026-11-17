@@ -32,7 +32,7 @@ usage:
       output: 162
       cache_read: 1986224
       cache_write: 204632
-      cost: 0.8355
+      cost: 0.8357
 ---
 # T-3469 The workflow package parses verify on a transition, runs on a state, and verify_at, and lists the suites a file names
 

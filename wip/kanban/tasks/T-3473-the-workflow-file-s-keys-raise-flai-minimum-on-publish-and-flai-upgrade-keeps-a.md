@@ -24,7 +24,7 @@ touches: [flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem
 after: [T-3469]
 usage:
   source: log
-  seconds: 933
+  seconds: 934
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 353
       cache_read: 2259131
       cache_write: 171457
-      cost: 0.927
+      cost: 0.9272
 ---
 # T-3473 The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
 

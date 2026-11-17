@@ -3,11 +3,11 @@ id: T-3474
 type: task
 nature: feature
 title: flai check reports a suite the workflow file names that no tier has, and a non-manual tier's suite nothing names
-status: in-progress
+status: done
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:47Z
-updated: 2026-11-17T08:48:40Z
+updated: 2026-11-17T09:07:15Z
 transitions:
   - to: ready
     at: 2026-11-17T08:48:39Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:48:40Z
     by: agent-S-0806
+  - to: done
+    at: 2026-11-17T09:07:15Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai]
 touches: [flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go]
 after: [T-3469, T-3471]
+usage:
+  source: log
+  seconds: 1115
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 358
+      cache_read: 2715957
+      cache_write: 224551
+      cost: 1.1217
 ---
 # T-3474 flai check reports a suite the workflow file names that no tier has, and a non-manual tier's suite nothing names
 

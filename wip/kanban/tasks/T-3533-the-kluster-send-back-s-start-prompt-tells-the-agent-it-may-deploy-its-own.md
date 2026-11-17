@@ -3,15 +3,36 @@ id: T-3533
 type: task
 nature: improvement
 title: The kluster send-back's start prompt tells the agent it may deploy its own story before review
-status: backlog
+status: done
 parent: S-0831
 owner: alex
 created: 2026-11-17T08:29:42Z
-updated: 2026-11-17T08:29:42Z
-transitions: []
+updated: 2026-11-17T09:14:18Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:07:03Z
+    by: agent-S-0831
+  - to: in-progress
+    at: 2026-11-17T09:07:03Z
+    by: agent-S-0831
+  - to: done
+    at: 2026-11-17T09:14:18Z
+    by: agent-S-0831
 stream: S-0831
 tags: [flai, harness, kluster]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 435
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 13
+      cache_read: 575419
+      cache_write: 1599
+      cost: 0.2201
 ---
 # T-3533 The kluster send-back's start prompt tells the agent it may deploy its own story before review
 

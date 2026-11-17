@@ -24,16 +24,16 @@ touches: [flai/internal/workflow/baseline/board.md, template/root/design/workflo
 after: [T-3469]
 usage:
   source: log
-  seconds: 934
+  seconds: 958
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 175
-      cache_read: 1151904
-      cache_write: 164047
-      cost: 0.5019
+      input: 49
+      output: 235
+      cache_read: 2395198
+      cache_write: 181925
+      cost: 0.983
 ---
 # T-3471 The baseline and the template's board give verify, runs, and verify_at as today's behaviour, and stay equal
 

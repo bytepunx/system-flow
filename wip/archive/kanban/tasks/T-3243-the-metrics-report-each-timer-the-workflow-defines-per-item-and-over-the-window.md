@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 6691
-      cache_read: 1709127
-      cache_write: 59257
-      cost: 0.8651
+      input: 18
+      output: 3819
+      cache_read: 1724913
+      cache_write: 32325
+      cost: 0.636
 ---
 # T-3243 The metrics report each timer the workflow defines, per item and over the window, past items included
 

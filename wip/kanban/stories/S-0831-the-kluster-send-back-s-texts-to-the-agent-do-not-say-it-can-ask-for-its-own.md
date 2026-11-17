@@ -6,7 +6,7 @@ title: The kluster send-back's texts to the agent do not say it can ask for its 
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T09:02:53Z
+updated: 2026-11-17T09:15:15Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:20Z
@@ -16,16 +16,27 @@ transitions:
     by: agent-S-0831
 tags: [flai, serve, kluster]
 topics: [kluster]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 766
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 369
+      cache_read: 7035156
+      cache_write: 298426
+      cost: 2.7972
   strategic:
     - kind: planner
       seconds: 17

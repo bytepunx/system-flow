@@ -6,7 +6,7 @@ title: The dashboard's kluster setup form does not show kluster.agent_namespaces
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:22Z
-updated: 2026-11-17T08:34:32Z
+updated: 2026-11-17T09:16:30Z
 transitions: []
 tags: [flaiover, kluster]
 topics: [kluster]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-17T08:28:38Z
 forecast:
   duration: 25m
-  delivery: 2026-11-17T16:53:00Z
-  basis: "Its own forecast of 25m; 20th in the pull order with an in-progress limit of 3, behind S-0752, S-0806, S-0827, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828 and S-0829."
+  delivery: 2026-11-17T16:51:00Z
+  basis: "Its own forecast of 25m; 18th in the pull order with an in-progress limit of 3, behind S-0806, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0823, S-0824, S-0828 and S-0829."
   by: flai
-  at: 2026-11-17T08:34:32Z
+  at: 2026-11-17T09:16:30Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:33:52Z

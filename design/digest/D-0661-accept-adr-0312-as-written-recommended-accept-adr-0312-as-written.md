@@ -9,7 +9,7 @@ date: 2026-11-17
 status: absorbed
 absorbed_by: "design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md#decision"
 asked_again: []
-cited: []
+cited: [S-0806]
 ---
 
 # D-0661 Accept ADR-0312 as written: Recommended: accept ADR-0312 as written

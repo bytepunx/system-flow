@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 12145
-      cache_read: 3102298
-      cache_write: 107560
-      cost: 1.5703
+      input: 33
+      output: 6932
+      cache_read: 3130950
+      cache_write: 58674
+      cost: 1.1543
 ---
 # T-3248 metrics.md and the user guide say how a timer is defined and where flai stats reports it
 

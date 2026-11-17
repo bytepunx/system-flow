@@ -3,16 +3,37 @@ id: T-3477
 type: task
 nature: feature
 title: The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
-status: backlog
+status: done
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:55Z
-updated: 2026-11-16T23:50:55Z
-transitions: []
+updated: 2026-11-17T09:13:06Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:07:24Z
+    by: agent-S-0806
+  - to: in-progress
+    at: 2026-11-17T09:07:24Z
+    by: agent-S-0806
+  - to: done
+    at: 2026-11-17T09:13:06Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai, docs]
 touches: [design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, design/system/flai-cli.md, design/system/work-hierarchy.md]
 after: [T-3471, T-3473, T-3474]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 457
+      cache_read: 3870900
+      cache_write: 94372
+      cost: 1.5126
 ---
 # T-3477 The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
 

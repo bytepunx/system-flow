@@ -2,7 +2,7 @@
 id: D-0554
 title: A story's agent works a task itself, not through a task sub-agent, when the task is a few lines in a file it has already read, since a hand-off would cost more reading than the edit
 kind: decision
-sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819]
+sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819, S-0827]
 topics: [delegation, code, testing]
 paths: [design/conventions/delegation.md]
 date: 2026-11-10
@@ -54,4 +54,10 @@ S-0819, which made flai guard forget a foreground sub-agent once its result is i
 T-3506 was worked here rather than by a sub-agent: it is about 40 lines on code already reviewed.
 ```
 
-Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819 (`wip/archive/agents/<story>.md`, Decisions).
+S-0827, a remediation of I-0327 in three one-line tasks, worked all three itself, from its Decisions (`wip/archive/agents/S-0827.md`):
+
+```text
+Each was a one-line change, so I worked them myself rather than through task sub-agents, which would have been slower (delegation.md).
+```
+
+Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703, S-0779, S-0730, S-0795, S-0819, S-0827 (`wip/archive/agents/<story>.md`, Decisions).

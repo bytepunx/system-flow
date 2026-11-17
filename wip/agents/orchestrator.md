@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2243.5852
-accrued_seconds: 1575409
-tasks_completed: 3887
-last_run: 2026-11-17T09:04:36Z
+accrued_cost: 2244.4261
+accrued_seconds: 1575557
+tasks_completed: 3894
+last_run: 2026-11-17T09:15:06Z
 ---
 
 # Orchestrator activity
@@ -27244,6 +27244,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0827
 - Seconds: 91
 - Cost: 0.2365 USD, estimated
+
+### 2026-11-17T09:05:03Z
+
+- Summary: Published flai 1.104.0 -> 1.104.1 (tag flai/v1.104.1, pushed) bundling S-0827 under threshold policy: count 1 at threshold 1, value 22.5 USD/week
+- Items: S-0827
+- Seconds: 27
+- Cost: 0.0611 USD, estimated
+
+### 2026-11-17T09:05:22Z
+
+- Summary: I accepted S-0827 and released it as flai 1.104.1. That finishes the review reason, so this run ends here.
+- Items: none
+- Seconds: 19
+- Cost: 0.1785 USD, estimated
+
+### 2026-11-17T09:05:51Z
+
+- Summary: Release-due S-0827: no publish. S-0827 is already released in flai 1.104.1 (commit 6604fddc8); release_evaluate under threshold is not met: 0 pending, value 0 USD of 1000, count 0 of 1.
+- Items: S-0827
+- Seconds: 12
+- Cost: 0.0746 USD, estimated
+
+### 2026-11-17T09:06:08Z
+
+- Summary: I published nothing, because S-0827's change is already out in flai 1.104.1 (commit `6604fddc8`).
+- Items: none
+- Seconds: 17
+- Cost: 0.1872 USD, estimated
+
+### 2026-11-17T09:14:34Z
+
+- Summary: Recommended an answer on TH-1289, citing design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+- Items: S-0806
+- Seconds: 41
+- Cost: 0.1278 USD, estimated
+
+### 2026-11-17T09:14:48Z
+
+- Summary: Recommended on TH-1289 (answer_threads autonomous, escalated as a decision not yet recorded): limit workflow.suite-unnamed to workflow files that use ADR-0312's keys, and read a file with none of them as giving the baseline's keys, so ADR-0312 §8 holds for board.md files flai upgrade wrote. Source: ADR-0312 § Decision
+- Items: S-0806
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-17T09:15:06Z
+
+- Summary: I posted a recommendation on TH-1289 rather than an answer. It narrows ADR-0312 §9, and no recorded decision covers that. The thread now waits for you, and your decision is the next step.
+- Items: none
+- Seconds: 18
+- Cost: 0.2117 USD, estimated
 
 ## Refusals
 

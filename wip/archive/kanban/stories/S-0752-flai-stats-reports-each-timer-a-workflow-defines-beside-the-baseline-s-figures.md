@@ -3,11 +3,11 @@ id: S-0752
 type: story
 nature: feature
 title: flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-17T08:47:46Z
+updated: 2026-11-17T09:16:29Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:51Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:20:32Z
     by: agent-S-0752
+  - to: review
+    at: 2026-11-17T09:15:02Z
+    by: agent-S-0752
+  - to: done
+    at: 2026-11-17T09:16:29Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, analysis]
 touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md, design/adrs/README.md, flai/internal/statsread/statsread.go, design/issues/I-0400-testpublishformulaunderjudgement-in-flai-cmd-reads-design-workflows-formulas.md, design/issues/summary.md, docs/operators/runbooks/change-the-board.md]
@@ -26,18 +32,18 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2323
+  seconds: 3214
   priced_by: harness
   turns:
     - day: 2026-11-17
-      work: 51
+      work: 97
   models:
     - model: claude-opus-5-5
-      input: 266
-      output: 69727
-      cache_read: 17811445
-      cache_write: 617542
-      cost: 9.0157
+      input: 366
+      output: 76448
+      cache_read: 34526870
+      cache_write: 647037
+      cost: 12.7296
   strategic:
     - kind: orchestrator
       seconds: 62
@@ -100,3 +106,17 @@ An operator adds a timer to the workflow, such as the time from the first move t
 - Tasks: T-3243 (the section) first; then T-3247 (the command and `stats.get`) and T-3248 (the documents) together.
 - Forecast 33m, as `flai forecast` gives it for size 18. The evaluation is S-0750's; this story reports it.
 - Cost of delay: 58.79 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 33m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: 7a8df8c2292cb28c6b2ed3dbdd67f8e22a9b9fc4
+- At: 2026-11-17T09:16:29Z
+
+Verdict: pass. All seven criteria are met at 7a8df8c; the close-out passed every step there.
+- 1: flai/internal/metrics/timers.go, flai/internal/metrics/metrics.go, design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md
+- 2: flai/cmd/stats.go, flai/cmd/stats_test.go
+- 3: flai/internal/metrics/timers.go, design/system/metrics.md, docs/users/flai.md
+- 4: flai/internal/statsread/statsread.go, flai/internal/hostapi/reads_test.go
+- 5: flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go
+- 6: flai/internal/metrics/timers_test.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads_test.go
+- 7: design/system/metrics.md, docs/users/flai.md, docs/operators/runbooks/change-the-board.md

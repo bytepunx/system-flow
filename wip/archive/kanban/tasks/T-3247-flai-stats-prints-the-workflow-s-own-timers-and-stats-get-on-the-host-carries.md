@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 13599
-      cache_read: 3473758
-      cache_write: 120439
-      cost: 1.7583
+      input: 37
+      output: 7762
+      cache_read: 3505841
+      cache_write: 65700
+      cost: 1.2926
 ---
 # T-3247 flai stats prints the workflow's own timers, and stats.get on the host carries them
 

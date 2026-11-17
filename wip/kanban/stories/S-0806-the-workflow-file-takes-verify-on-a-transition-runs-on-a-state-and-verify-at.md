@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T08:48:31Z
+updated: 2026-11-17T09:07:23Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -26,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1925
+  seconds: 3430
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-17
       ceremony: 1
-      work: 22
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 184
-      output: 917
-      cache_read: 8011442
-      cache_write: 796262
-      cost: 3.359
+      input: 350
+      output: 1808
+      cache_read: 16495227
+      cache_write: 1153035
+      cost: 6.732
   strategic:
     - kind: planner
       seconds: 55
@@ -52,15 +52,15 @@ usage:
           cache_write: 106543
           cost: 1.9709
     - kind: orchestrator
-      seconds: 37
+      seconds: 78
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 55
-          cache_read: 430875
-          cache_write: 5196
-          cost: 0.1344
+          input: 19
+          output: 145
+          cache_read: 783820
+          cache_write: 63215
+          cost: 0.2622
 cost_of_delay:
   value: 110.09
   by: planner-S-0806
@@ -85,7 +85,7 @@ finalized:
 
 - [x] The workflow package parses `verify:` on a transition (suites or `all`, with a severity), `runs:` on a state (`suites:` and `kluster:` of `deploy` and `checks`), and top-level `verify_at:` with `batch`, `publish`, and `ci`, and still refuses any other key.
 - [x] The baseline and the template's file give `verify: all` at `warn` on the move to review, `verify: all` on the acceptance, `batch: all`, `ci: all`, no `publish`, and `runs: {kluster: [deploy, checks]}` on `review`, and the two files stay equal.
-- [ ] `flai check` reports a suite the file names that no tier has as an error, and a suite of a tier that is not `manual` which no transition, state, or point names as a warning.
+- [x] `flai check` reports a suite the file names that no tier has as an error, and a suite of a tier that is not `manual` which no transition, state, or point names as a warning.
 - [x] A flai from before this story refuses a file that uses the keys with words that name the flai that reads them, and `flai upgrade` does not write the keys into a project's own file.
 - [ ] The workflow design and the reference describe the keys.
 

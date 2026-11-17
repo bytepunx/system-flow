@@ -3,15 +3,36 @@ id: T-3534
 type: task
 nature: improvement
 title: The kluster failure thread of a story sent back tells its agent it may deploy the story before review
-status: backlog
+status: done
 parent: S-0831
 owner: alex
 created: 2026-11-17T08:29:48Z
-updated: 2026-11-17T08:29:48Z
-transitions: []
+updated: 2026-11-17T09:14:28Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:07:03Z
+    by: agent-S-0831
+  - to: in-progress
+    at: 2026-11-17T09:07:03Z
+    by: agent-S-0831
+  - to: done
+    at: 2026-11-17T09:14:28Z
+    by: agent-S-0831
 stream: S-0831
 tags: [flai, serve, kluster]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go]
+usage:
+  source: log
+  seconds: 445
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 13
+      cache_read: 575419
+      cache_write: 1599
+      cost: 0.2201
 ---
 # T-3534 The kluster failure thread of a story sent back tells its agent it may deploy the story before review
 

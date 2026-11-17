@@ -3,12 +3,18 @@ id: T-3535
 type: task
 nature: remediation
 title: The publish commit of flai release --pending waits out a held index lock, with a test that holds it
-status: backlog
+status: in-progress
 parent: S-0833
 owner: alex
 created: 2026-11-17T08:29:55Z
-updated: 2026-11-17T08:29:55Z
-transitions: []
+updated: 2026-11-17T09:16:08Z
+transitions:
+  - to: ready
+    at: 2026-11-17T09:16:08Z
+    by: agent-S-0833
+  - to: in-progress
+    at: 2026-11-17T09:16:08Z
+    by: agent-S-0833
 stream: S-0833
 tags: [flai, release, git]
 touches: [flai/cmd/release.go, flai/cmd/release_lock_test.go]
