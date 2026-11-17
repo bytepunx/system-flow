@@ -71,72 +71,86 @@ tests:
     dir: flai
     paths: ["flai/**/*.go"]
     format: gofmt-list
+    suite: static
   - name: vet
     command: [go, vet, "{importers}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: plain
+    suite: static
   - name: golangci-lint
     command: ["../scripts/with-env.sh", golangci-lint, run, "--allow-parallel-runners", "--show-stats=false", "--output.json.path", stdout, "{packages}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: golangci-json
+    suite: static
   - name: go-test
     command: [env, "GOMAXPROCS=1", go, test, "-json", "-p", "1", "-short", "-count=1", "-timeout", "10m", "-skip", "^TestGateway", "{importers}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
+    suite: behavior
   - name: settings-index
     command: [go, test, "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^(TestSettingsIndex|TestReferenceIsCurrent$|TestFlagIndexIsCurrent$)", "./cmd"]
     dir: flai
     paths: ["docs/operators/settings.md", "docs/users/flai-reference.md"]
     format: go-test-json
+    suite: behavior
   - name: flaiover-lint
     command: ["../scripts/flaiover-lint.sh", "{files}"]
     dir: flaiover
     paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**"]
     format: plain
+    suite: static
   - name: vitest
     command: ["../scripts/flaiover-unit.sh", related, "--run", "--reporter=json", "{files}"]
     dir: flaiover
     paths: ["flaiover/src/**", "flaiover/*.ts", "flaiover/*.js"]
     format: vitest-json
+    suite: behavior
     all_command: ["../scripts/flaiover-unit.sh", run, "--reporter=json"]
   - name: flaiover-flai
     command: ["../scripts/flaiover-unit.sh", related, "--run", "--reporter=json", "src/lib/server/testing.ts"]
     dir: flaiover
     paths: ["flai/internal/hostapi/**/*.go", "flai/cmd/hostapi.go"]
     format: vitest-json
+    suite: behavior
   - name: design-routes
     command: ["../scripts/flaiover-unit.sh", run, "--reporter=json", "src/lib/server/design-routes.test.ts"]
     dir: flaiover
     paths: ["design/system/flaiover-dashboard.md", "flaiover/src/routes/**"]
     format: vitest-json
+    suite: behavior
   - name: svelte-check
     command: ["../scripts/flaiover-check.sh"]
     dir: flaiover
     paths: ["flaiover/src/**/*.ts", "flaiover/src/**/*.js", "flaiover/src/**/*.svelte", "flaiover/*.ts", "flaiover/*.js", "flaiover/tsconfig.json", "flaiover/package.json", "flaiover/pnpm-workspace.yaml", "scripts/flaiover-check.sh"]
     format: plain
+    suite: static
   - name: shellcheck
     command: [scripts/shellcheck.sh, "{files}"]
     paths: ["scripts/**/*.sh"]
     format: plain
+    suite: static
     all_command: [scripts/shellcheck.sh]
   - name: markdown
     command: [scripts/lint-md.sh, "{files}"]
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
     format: plain
+    suite: static
     all_command: [scripts/lint-md.sh]
     fix_command: [scripts/lint-md.sh, "--fix", "{files}"]
   - name: template
     command: [scripts/template-test.sh]
     paths: ["template/**", "scripts/template-test.sh"]
     format: plain
+    suite: behavior
     all_only: true
   - name: flaiover
     command: [scripts/flaiover-test.sh]
     paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**", "scripts/flaiover-*.sh", "scripts/env.sh"]
     format: plain
+    suite: behavior
     all_only: true
     covers: [flaiover-lint, vitest, flaiover-flai, design-routes, svelte-check]
     parallel: true
@@ -145,6 +159,7 @@ tests:
     dir: flai
     paths: ["flai/**", "template/**", "scripts/integration.sh"]
     format: go-test-json
+    suite: integration
     all_only: true
     covers: [go-test, settings-index]
     queue: true
@@ -154,6 +169,7 @@ tests:
     command: [scripts/smoke.sh]
     paths: ["flai/**", "template/**", "scripts/**/*.sh"]
     format: plain
+    suite: smoke
     all_only: true
     queue: true
     when: ["flai/**", "template/**"]
@@ -162,6 +178,7 @@ tests:
     command: [scripts/gateway-smoke.sh]
     paths: ["scripts/gateway-smoke.sh"]
     format: plain
+    suite: smoke
     all_only: true
     manual: true
   - name: race
@@ -169,6 +186,7 @@ tests:
     dir: flai
     paths: ["scripts/integration.sh"]
     format: go-test-json
+    suite: integration
     all_only: true
     manual: true
 orchestration:

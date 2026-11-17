@@ -20,23 +20,27 @@ dashboard:
   tag: latest
   port: 4242
   bind: 0.0.0.0 # 127.0.0.1 to keep the dashboard on this host only
-tests: # the test tiers, cheapest first, that flai test runs for the paths each selects; all_only runs only under --all
+tests: # the test tiers, cheapest first, that flai test runs for the paths each selects; all_only runs only under --all; suite names the suite a tier belongs to, a kebab-case label several tiers may share, which flai test --suite <name> runs; unset, a tier is the suite of its own name
   - name: markdown # lint-md.sh lints every markdown file; give it "{files}" once it takes the paths, and add fix_command: [scripts/lint-md.sh, --fix, "{files}"] so flai fixes them before it commits
     command: [scripts/lint-md.sh]
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!.flai-cache/**"]
     format: plain
+    suite: static
   - name: test
     command: [scripts/test.sh]
     paths: ["**"]
     format: plain
+    suite: behavior
   - name: integration # when scripts/integration.sh runs the behaviour tests too, add covers: [test], so flai verify runs them once
     command: [scripts/integration.sh]
     format: plain
+    suite: integration
     all_only: true
     # parallel: true # start beside the other parallel tiers before it once the unmarked tiers before it pass; mark only tiers that write nothing another reads (ADR-0266)
   - name: smoke
     command: [scripts/smoke.sh]
     format: plain
+    suite: smoke
     all_only: true
 agent: # the agent every new story gets a copy of; flai agent set writes it
   harness: claude-code
