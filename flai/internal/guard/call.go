@@ -36,6 +36,9 @@ const (
 type Call struct {
 	// Session is the harness session's ID.
 	Session string
+	// Transcript is the harness session's transcript, as its hook input
+	// names it; empty when the harness names none.
+	Transcript string
 	// Subagent says a sub-agent makes the call, and Agent names its
 	// definition, for refusals and the read-only lookup.
 	Subagent bool

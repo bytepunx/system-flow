@@ -34,11 +34,11 @@ type record struct {
 // sessionName is what a session ID must be to name a record file.
 var sessionName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// recordLockWait is how long RecordChange waits for another flai guard to
-// finish with a session's record. A record is held for a read and a write of
-// a few lines, so it is far longer than any holder needs. The lock is the
-// operating system's, freed when its holder dies, and never broken for its
-// age (I-0140).
+// recordLockWait is how long RecordChange and Forget wait for another flai
+// guard to finish with a session's record. A record is held for a read and a
+// write of a few lines, so it is far longer than any holder needs. The lock
+// is the operating system's, freed when its holder dies, and never broken
+// for its age (I-0140).
 const recordLockWait = 10 * time.Second
 
 // SubAgentChange is a sub-agent starting, or stopping, in a session, as a
@@ -62,26 +62,54 @@ func RecordChange(dir string, ch SubAgentChange, at time.Time) error {
 	if !sessionName.MatchString(ch.Session) || ch.ID == "" {
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("record of session %s: %w", ch.Session, err)
+	return changeRecord(dir, ch.Session, func(r *record) bool {
+		r.Running = slices.DeleteFunc(r.Running, func(s SubAgent) bool { return s.ID == ch.ID })
+		if !ch.Stopped {
+			r.Running = append(r.Running, SubAgent{ID: ch.ID, Type: ch.Type, Started: at.UTC().Truncate(time.Second)})
+		}
+		return true
+	})
+}
+
+// Forget drops ids from the record in dir of session's running sub-agents,
+// under the lock RecordChange takes, for the sub-agents that ended with no
+// stop reported (ADR-0315). A record left with none is removed, and one that
+// lists none of ids is left as it is. A session ID that is not a safe file
+// name, or no ids, is ignored.
+func Forget(dir, session string, ids []string) error {
+	if !sessionName.MatchString(session) || len(ids) == 0 {
+		return nil
 	}
-	path := filepath.Join(dir, ch.Session+".json")
+	return changeRecord(dir, session, func(r *record) bool {
+		n := len(r.Running)
+		r.Running = slices.DeleteFunc(r.Running, func(s SubAgent) bool { return slices.Contains(ids, s.ID) })
+		return len(r.Running) != n
+	})
+}
+
+// changeRecord applies change to session's record in dir under its lock,
+// and writes the record back in one step when change says it changed it,
+// removing it when no sub-agent is left; its lock file stays.
+func changeRecord(dir, session string, change func(*record) bool) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("record of session %s: %w", session, err)
+	}
+	path := filepath.Join(dir, session+".json")
 	unlock, err := filelock.Lock(path+".lock", recordLockWait)
 	if err != nil {
-		return fmt.Errorf("record of session %s: %w", ch.Session, err)
+		return fmt.Errorf("record of session %s: %w", session, err)
 	}
 	defer unlock()
 	r, err := readRecord(path)
 	if err != nil {
 		return err
 	}
-	r.Running = slices.DeleteFunc(r.Running, func(s SubAgent) bool { return s.ID == ch.ID })
-	if !ch.Stopped {
-		r.Running = append(r.Running, SubAgent{ID: ch.ID, Type: ch.Type, Started: at.UTC().Truncate(time.Second)})
+	if !change(&r) {
+		return nil
 	}
 	if len(r.Running) == 0 {
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("record of session %s: %w", ch.Session, err)
+			return fmt.Errorf("record of session %s: %w", session, err)
 		}
 		return nil
 	}
@@ -90,7 +118,7 @@ func RecordChange(dir string, ch SubAgentChange, at time.Time) error {
 		return err
 	}
 	if err := atomicfile.WriteFile(path, append(data, '\n'), 0o644); err != nil {
-		return fmt.Errorf("record of session %s: %w", ch.Session, err)
+		return fmt.Errorf("record of session %s: %w", session, err)
 	}
 	return nil
 }

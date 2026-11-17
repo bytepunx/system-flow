@@ -219,6 +219,103 @@ func TestRecordWaitsForAHeldLockWhateverItsAge(t *testing.T) {
 	}
 }
 
+// S-0819 (I-0376): Forget drops the sub-agents it names from their
+// session's record, removes the record when none is left, and ignores an
+// unsafe session and no IDs.
+func TestForgetDropsEndedSubAgentsFromTheRecord(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), RecordDir)
+	at := time.Date(2026, 11, 15, 9, 0, 0, 0, time.UTC)
+	for _, id := range []string{"ac8d9be303813c862", "a2"} {
+		if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: id, Type: "general-purpose"}, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		session string
+		ids     []string
+	}{{"../s1", []string{"a2"}}, {"s1", nil}} {
+		if err := Forget(dir, c.session, c.ids); err != nil {
+			t.Errorf("%+v: %v", c, err)
+		}
+	}
+	if err := Forget(dir, "s1", []string{"ac8d9be303813c862", "a9"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Running(dir, "s1"); err != nil || !slices.Equal(got, []SubAgent{{ID: "a2", Type: "general-purpose", Started: at}}) {
+		t.Errorf("after one forgotten: %+v, %v", got, err)
+	}
+	if err := Forget(dir, "s1", []string{"a2"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Running(dir, "s1"); err != nil || got != nil {
+		t.Errorf("after the last forgotten: %+v, %v", got, err)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 || entries[0].Name() != "s1.json.lock" {
+		t.Errorf("left in %s: %v, want only the lock file", dir, entries)
+	}
+}
+
+// S-0819: a record that lists none of the IDs Forget names is left as it is.
+func TestForgetLeavesARecordWithoutTheIDsUntouched(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), RecordDir)
+	if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: "a1", Type: "verifier"}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "s1.json")
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Forget(dir, "s1", []string{"a8", "a9"}); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) || !info.ModTime().Equal(old) {
+		t.Errorf("record rewritten: %s at %s, was %s at %s", after, info.ModTime(), before, old)
+	}
+}
+
+// S-0819: Forget waits for a lock another flai guard holds on the record,
+// as RecordChange does.
+func TestForgetWaitsForAHeldLock(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), RecordDir)
+	if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: "a1", Type: "verifier"}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	unlock, err := filelock.Lock(filepath.Join(dir, "s1.json.lock"), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- Forget(dir, "s1", []string{"a1"}) }()
+	select {
+	case err := <-done:
+		t.Fatalf("forgot while another guard held the lock: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+	if got, _ := Running(dir, "s1"); len(got) != 1 {
+		t.Errorf("running %+v while the lock was held", got)
+	}
+	unlock()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := Running(dir, "s1"); got != nil {
+		t.Errorf("running %+v", got)
+	}
+}
+
 // storyGuard is a story's agent's guard for S-0001, with running sub-agents
 // and an answer for whether a thread on the story is open.
 func storyGuard(running []SubAgent, runErr error, open bool, openErr error) Guard {

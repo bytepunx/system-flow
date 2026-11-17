@@ -52,6 +52,9 @@ type Event struct {
 	// agent type of its own, so the ID is what marks a sub-agent.
 	AgentID   string `json:"agent_id"`
 	AgentType string `json:"agent_type"`
+	// TranscriptPath is the session's transcript, which every hook's input
+	// names (ADR-0315).
+	TranscriptPath string `json:"transcript_path"`
 }
 
 // Input is the part of a tool call's input the guard reads: Bash's command;
@@ -119,7 +122,7 @@ func (g Guard) Decide(e Event) Refusal {
 // with its content, and a tool of MCPPrefix is a flai tool; a call with an
 // agent ID is a sub-agent's.
 func (g Guard) call(e Event) Call {
-	c := Call{Session: e.SessionID, Subagent: e.AgentID != "", Agent: e.AgentType, Role: g.Role, Story: g.Story, Name: e.ToolName}
+	c := Call{Session: e.SessionID, Transcript: e.TranscriptPath, Subagent: e.AgentID != "", Agent: e.AgentType, Role: g.Role, Story: g.Story, Name: e.ToolName}
 	tool, flai := strings.CutPrefix(e.ToolName, MCPPrefix)
 	switch {
 	case e.ToolName == "Bash":

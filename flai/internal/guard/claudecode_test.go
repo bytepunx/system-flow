@@ -57,6 +57,20 @@ func TestClaudeCodesReaderMapsAToolCallOntoACall(t *testing.T) {
 	}
 }
 
+// S-0819: Claude Code's reader puts the transcript a PreToolUse's input
+// names on the Call, for the guard to read the session's ended sub-agents
+// from (ADR-0315).
+func TestClaudeCodesReaderPutsTheTranscriptOnTheCall(t *testing.T) {
+	input := `{"session_id":"s1","transcript_path":"/home/u/.claude/projects/p/s1.jsonl","hook_event_name":"PreToolUse","tool_name":"mcp__flai__wait_for_events","tool_input":{}}`
+	h, err := claudeCodeReader(t).Read([]byte(input), g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.Call.Transcript != "/home/u/.claude/projects/p/s1.jsonl" {
+		t.Errorf("transcript %q", h.Call.Transcript)
+	}
+}
+
 // S-0353: Claude Code's reader maps a SubagentStart and a SubagentStop onto
 // a change to the record of running sub-agents, with the session and the
 // sub-agent's ID and type.
