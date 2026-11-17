@@ -355,6 +355,109 @@ func TestSelectTierChoosesOneTierByItsName(t *testing.T) {
 	}
 }
 
+// suiteTiers are tiers in suites: two static ones, a behavior one that an
+// all_only integration one covers, a second all_only integration one, a
+// manual integration one, and one that gives no suite and so is the suite
+// of its name, docs.
+var suiteTiers = []Tier{
+	{Name: "gofmt", Suite: "static", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"gofmt", "-l", "{files}"}},
+	{Name: "go-vet", Suite: "static", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "vet", "{packages}"}},
+	{Name: "go-test", Suite: "behavior", Dir: "flai", Paths: []string{"flai"}, Command: []string{"go", "test", "-short", "{packages}"}},
+	{Name: "integration", Suite: "integration", AllOnly: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "{packages}"}, Covers: []string{"go-test"}},
+	{Name: "smoke", Suite: "integration", AllOnly: true, Command: []string{"smoke.sh"}},
+	{Name: "race", Suite: "integration", Manual: true, Dir: "flai", Command: []string{"go", "test", "-race", "{packages}"}},
+	{Name: "docs", Paths: []string{"**/*.md"}, Command: []string{"mdcheck", "{files}"}},
+}
+
+// ADR-0312: a run for one suite, trimmed, selects only the tiers of it: with
+// paths those of it the paths select, all_only ones left out as for any
+// paths; with all every one of it, all_only ones too, but a manual one; a
+// tier with no suite is the suite of its name; and no suite is every suite.
+func TestSelectSuiteRunsOnlyTheTiersOfTheSuite(t *testing.T) {
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}, "flai/README.md": {}}
+	paths := []string{"flai/main.go", "flai/README.md"}
+	for _, tc := range []struct {
+		name  string
+		paths []string
+		all   bool
+		suite string
+		want  []string
+	}{
+		{name: "static for paths", paths: paths, suite: "static", want: []string{"gofmt: gofmt -l main.go", "go-vet: go vet ."}},
+		{name: "the suite trimmed", paths: paths, suite: " static ", want: []string{"gofmt: gofmt -l main.go", "go-vet: go vet ."}},
+		{name: "integration with all, but the manual tier", all: true, suite: "integration", want: []string{"integration: go test ./...", "smoke: smoke.sh"}},
+		{name: "integration for paths, whose tiers are all_only", paths: paths, suite: "integration"},
+		{name: "a tier with no suite is the suite of its name", paths: paths, suite: "docs", want: []string{"docs: mdcheck flai/README.md"}},
+		{name: "no suite is every suite", paths: paths, want: []string{"gofmt: gofmt -l main.go", "go-vet: go vet .", "go-test: go test -short .", "docs: mdcheck flai/README.md"}},
+	} {
+		var got []string
+		for _, s := range SelectSuite(fsys, suiteTiers, tc.paths, tc.all, tc.suite) {
+			got = append(got, s.Tier.Name+": "+strings.Join(s.Argv, " "))
+		}
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// ADR-0312: covering skips a tier only when the covering tier runs, so a
+// tier of one suite that a tier of another covers runs in a run for its own
+// suite, and is covered in a run for every suite; a chain of covers still
+// passes through a tier of another suite to one of the suite that runs.
+func TestSelectSuiteCoversATierOnlyByATierThatRuns(t *testing.T) {
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	for _, tc := range []struct {
+		name  string
+		suite string
+		want  []string
+	}{
+		{"every suite", "", []string{"gofmt", "go-vet", "go-test covered by integration", "integration", "smoke", "docs"}},
+		{"the covered tier's suite", "behavior", []string{"go-test"}},
+		{"the covering tier's suite", "integration", []string{"integration", "smoke"}},
+	} {
+		if got := coverage(SelectSuite(fsys, suiteTiers, nil, true, tc.suite)); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+
+	chain := []Tier{
+		{Name: "a", Suite: "x", Paths: []string{"**"}, Command: []string{"a"}, Covers: []string{"b"}},
+		{Name: "b", Suite: "y", Paths: []string{"**"}, Command: []string{"b"}, Covers: []string{"c"}},
+		{Name: "c", Suite: "x", Paths: []string{"**"}, Command: []string{"c"}},
+	}
+	for suite, want := range map[string][]string{"x": {"a", "c covered by a"}, "y": {"b"}} {
+		if got := coverage(SelectSuite(fstest.MapFS{}, chain, []string{"z"}, false, suite)); !reflect.DeepEqual(got, want) {
+			t.Errorf("a chain for suite %s: selected %q, want %q", suite, got, want)
+		}
+	}
+}
+
+// ADR-0312: the suites are each tier's, or its name, once each in list
+// order; a suite no tier is in is refused naming those there are and what
+// to do, and no suite, a suite by a tier's name, and a manual tier's suite
+// are not refused; Test refuses the suite before it reads any path.
+func TestCheckSuiteRefusesASuiteNoTierIsIn(t *testing.T) {
+	if got, want := Suites(suiteTiers), []string{"static", "behavior", "integration", "docs"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("suites %q, want %q", got, want)
+	}
+	for _, suite := range []string{"", " ", "static", " docs ", "integration"} {
+		if err := CheckSuite(suiteTiers, suite); err != nil {
+			t.Errorf("suite %q refused: %v", suite, err)
+		}
+	}
+	err := CheckSuite(suiteTiers, " slow ")
+	if err == nil || !strings.Contains(err.Error(), "run the tiers of the suite slow: no tier of the manifest's tests is in it") ||
+		!strings.Contains(err.Error(), "name one of the suites there are, static, behavior, integration, docs, or give a tier suite: slow in system-flow.yaml") {
+		t.Errorf("an unknown suite: %v", err)
+	}
+	if err := CheckSuite(nil, "slow"); err == nil || !strings.Contains(err.Error(), "the manifest's tests declare no tier; give a tier suite: slow") {
+		t.Errorf("a suite with no tiers: %v", err)
+	}
+	if _, err := Test(t.Context(), Options{Root: t.TempDir(), Tiers: suiteTiers, Args: []string{"not/there"}, Suite: "slow"}); err == nil || !strings.Contains(err.Error(), "suite slow") {
+		t.Errorf("Test with an unknown suite: %v, want the suite refused", err)
+	}
+}
+
 // ADR-0233: SelectStoryLeavingQueue runs a queue tier whose when matches an
 // entry of the story's claim, or else a changed path, naming the first
 // pattern and the claim entry, then path, it matches; it leaves to the queue

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -21,6 +22,7 @@ func FromManifest(tiers []manifest.TestTier) []Tier {
 			Dir:        t.Dir,
 			Paths:      slices.Clone(t.Paths),
 			Format:     t.FormatOrDefault(),
+			Suite:      strings.TrimSpace(t.Suite),
 			AllOnly:    t.AllOnly,
 			AllCommand: slices.Clone(t.AllCommand),
 			FixCommand: slices.Clone(t.FixCommand),

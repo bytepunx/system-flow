@@ -20,7 +20,7 @@ import (
 )
 
 // testManifest is the fixture's manifest with tiers that need only sh: ok
-// passes for ok/**, bad fails for bad/** with a line naming the failure, and
+// passes for ok/**, in the suite quick, bad fails for bad/** with a line naming the failure, and
 // slow, for slow/**, writes its process ID to slow/pid and sleeps until it is
 // stopped.
 const testManifest = `version: 1
@@ -34,6 +34,7 @@ tests:
   - name: ok
     command: [sh, -c, "exit 0"]
     paths: ["ok/**"]
+    suite: quick
   - name: bad
     command: [sh, -c, "echo 'bad/b.txt:3: it broke'; exit 1"]
     paths: ["bad/**"]
@@ -144,7 +145,7 @@ func TestTestAnswersPassOrTheFirstFindings(t *testing.T) {
 	for _, tool := range res.Tools {
 		if tool.Name == "test" {
 			listed = true
-			for _, want := range []string{"cheapest first", "findings", "worktree", "go test, vitest, golangci-lint, or gofmt by hand", "flai test"} {
+			for _, want := range []string{"cheapest first", "findings", "worktree", "go test, vitest, golangci-lint, or gofmt by hand", "flai test", "suite runs only the tiers of that suite"} {
 				if !strings.Contains(tool.Description, want) {
 					t.Errorf("the description does not say %q: %s", want, tool.Description)
 				}
@@ -170,6 +171,27 @@ func TestTestAnswersPassOrTheFirstFindings(t *testing.T) {
 	}
 	if a := answer(t, out); !a.passed || a.paths != "ok/a.txt" || a.states != "ok=passed" || a.found != "" {
 		t.Errorf("passing paths, one given absolute: %+v", a)
+	}
+}
+
+// ADR-0312: suite runs only the tiers of the suite that the paths select, a
+// tier with no suite being the suite of its name, and a suite no tier is in
+// is refused naming the suites there are.
+func TestTestRunsOnlyTheTiersOfTheSuite(t *testing.T) {
+	t.Parallel()
+	f, _ := testFixture(t)
+	for suite, want := range map[string]string{"quick": "ok=passed", "bad": "bad=failed"} {
+		out, failed := f.call(t, "test", map[string]any{"paths": []string{"bad/b.txt", "ok"}, "suite": suite})
+		if failed != "" {
+			t.Fatal(failed)
+		}
+		if a := answer(t, out); a.states != want || a.passed != (suite == "quick") {
+			t.Errorf("suite %s: %+v, want %s", suite, a, want)
+		}
+	}
+	_, failed := f.call(t, "test", map[string]any{"paths": []string{"ok"}, "suite": "slowest"})
+	if !strings.Contains(failed, "run the tiers of the suite slowest") || !strings.Contains(failed, "name one of the suites there are, quick, bad, slow") {
+		t.Errorf("an unknown suite: %q, want it refused naming quick, bad, slow", failed)
 	}
 }
 

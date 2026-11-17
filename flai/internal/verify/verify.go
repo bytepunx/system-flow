@@ -50,6 +50,11 @@ type Tier struct {
 	// Format says how to read the command's output when it fails: one of
 	// the Format constants, "" for plain.
 	Format string `json:"format,omitempty"`
+	// Suite is the suite the tier gives, which a run for one suite selects
+	// it by; "" is the suite of its own name, which SuiteOrName gives
+	// (ADR-0312). The default is not written here, so that the fingerprint
+	// of a project's tiers that give no suite stays what it was.
+	Suite string `json:"suite,omitempty"`
 	// AllOnly keeps the tier out of every run but one of all the tiers.
 	AllOnly bool `json:"all_only,omitempty"`
 	// AllCommand is the argv run when every tier runs; without it Command
@@ -178,6 +183,9 @@ type Options struct {
 	Args []string
 	// All runs every tier for the whole checkout, whatever Args says.
 	All bool
+	// Suite, when not "", runs only the tiers of that suite: those the paths
+	// select, or with All every one of it but a Manual one (ADR-0312).
+	Suite string
 	// Base is the main branch the checkout's changes are counted against.
 	Base string
 	// Git runs git for the changed paths; nil is execx.System.
@@ -187,9 +195,13 @@ type Options struct {
 
 // Test answers whether the checkout passes the tiers its paths select: the
 // paths Args names, or, without them, the files the checkout changed against
-// Base; with All, every tier. It returns an error when the paths cannot be
-// read, or, with the result so far, when ctx ends during the run.
+// Base; with All, every tier; with Suite, only those of the suite. It returns
+// an error when no tier is in Suite, when the paths cannot be read, or, with
+// the result so far, when ctx ends during the run.
 func Test(ctx context.Context, opts Options) (Result, error) {
+	if err := CheckSuite(opts.Tiers, opts.Suite); err != nil {
+		return Result{}, err
+	}
 	if opts.FS == nil {
 		opts.FS = os.DirFS(opts.Root)
 	}
@@ -208,7 +220,7 @@ func Test(ctx context.Context, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	res, err := Run(ctx, opts.Root, Select(opts.FS, opts.Tiers, paths, opts.All), opts.RunOptions)
+	res, err := Run(ctx, opts.Root, SelectSuite(opts.FS, opts.Tiers, paths, opts.All, opts.Suite), opts.RunOptions)
 	res.Paths = paths
 	return res, err
 }

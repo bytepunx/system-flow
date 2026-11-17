@@ -26,9 +26,10 @@ const exitTestUnusable = 2
 // and answers pass or the first findings (S-0273).
 func newTestCmd(a *app) *cobra.Command {
 	var all bool
+	var suite string
 	var maxFindings int
 	c := &cobra.Command{
-		Use:   "test [path|package]... | test <tier>",
+		Use:   "test [--suite <suite>] [path|package]... | test <tier>",
 		Short: "Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings",
 		Long: `Run the project's test and lint tiers, the tests list in system-flow.yaml, for
 the files and folders given, in the checkout of the working directory: a
@@ -42,7 +43,14 @@ checkout, as --all runs it, with its all_command when it has one: all_only,
 manual, or neither, and even where a file or folder has the same name. A
 manual tier runs only so: no path selects it, and neither --all, flai
 verify, nor the merge queue's batch runs it (S-0548). A tier's name with
-paths, with another name, or with --all is refused.
+paths, with another name, with --all, or with --suite is refused.
+
+--suite <suite> runs only the tiers of that suite, a tier's suite key or,
+without one, its name: those of it that the paths select, or with --all
+every one of it but a manual one, which still runs only by name. A tier of
+the suite that a tier of another suite covers runs, since the covering tier
+does not. A suite no tier is in is refused, naming the suites there are
+(ADR-0312).
 
 The tiers whose paths select a file run in the manifest's order, cheapest
 first, and the run stops at the first that fails. The answer is pass, or the
@@ -56,15 +64,17 @@ writes is not refused as the orchestrator (S-0311).
 
 The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could
 not answer: an argument outside the checkout, one that is neither a tier nor
-a file or folder, a tier's name given with others, tiers the manifest does
-not declare validly, or a run stopped before it finished. With --json the answer
-is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with
+a file or folder, a tier's name given with others, a suite no tier is in,
+tiers the manifest does not declare validly, or a run stopped before it
+finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with
 its state, command, duration, and findings, and a skipped tier with
 covered_by.`,
 		Example: `  flai test flai/internal/manifest
   flai test flaiover/src/lib/board.ts --json
   flai test                # what this checkout changed against the main branch
   flai test --all --max 10
+  flai test --suite static flai/internal/verify
+  flai test --suite integration --all
   flai test gateway        # the tier named gateway, alone, for the whole checkout`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if maxFindings < 1 {
@@ -82,11 +92,14 @@ covered_by.`,
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
-			named, err := namedTier(tiers, args, all)
+			named, err := namedTier(tiers, args, all, suite)
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
-			opts := verify.Options{Root: root, Tiers: tiers, All: all, Git: a.runner, RunOptions: verify.RunOptions{Max: maxFindings}}
+			if err := verify.CheckSuite(tiers, suite); err != nil {
+				return &exitError{code: exitTestUnusable, msg: err.Error()}
+			}
+			opts := verify.Options{Root: root, Tiers: tiers, All: all, Suite: suite, Git: a.runner, RunOptions: verify.RunOptions{Max: maxFindings}}
 			if named == nil {
 				if opts.Args, err = checkoutArgs(root, cwd, args); err != nil {
 					var missing missingArgError
@@ -134,6 +147,7 @@ covered_by.`,
 		return &exitError{code: exitTestUnusable, msg: err.Error()}
 	})
 	c.Flags().BoolVar(&all, "all", false, "run every tier for the whole checkout, all_only ones too and manual ones not, whatever the paths")
+	c.Flags().StringVar(&suite, "suite", "", "run only the tiers of this suite, by a tier's suite or else its name: those the paths select, or with --all every one but the manual ones")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
 	return c
 }
@@ -168,8 +182,9 @@ func (a *app) checkoutBase(root string) (string, error) {
 // namedTier is the tier the arguments name, selected alone for the whole
 // checkout, when the one argument is a tier's name, trimmed, even where a
 // path has the same name; nil when no argument names a tier (S-0548). It
-// refuses a tier's name given with --all, with another name, or with paths.
-func namedTier(tiers []verify.Tier, args []string, all bool) (*verify.Selected, error) {
+// refuses a tier's name given with --all, with --suite, with another name,
+// or with paths.
+func namedTier(tiers []verify.Tier, args []string, all bool, suite string) (*verify.Selected, error) {
 	var names []string
 	var first verify.Selected
 	for _, arg := range args {
@@ -185,6 +200,8 @@ func namedTier(tiers []verify.Tier, args []string, all bool) (*verify.Selected, 
 		return nil, nil
 	case all:
 		return nil, fmt.Errorf("%s names a tier, and --all runs every tier but the manual ones; give the tier alone or --all, not both", names[0])
+	case strings.TrimSpace(suite) != "":
+		return nil, fmt.Errorf("%s names a tier, which runs alone whatever its suite, and --suite %s runs the tiers of a suite; give the tier alone, or --suite with paths or --all, not both", names[0], strings.TrimSpace(suite))
 	case len(names) > 1:
 		return nil, fmt.Errorf("%s each name a tier, and flai test runs one tier by name; give one of them alone", strings.Join(names, ", "))
 	case len(args) > 1:

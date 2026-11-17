@@ -323,12 +323,19 @@ tests:
 // namedTiersManifest, holding docs/x.md.
 func namedTiersFixture(t *testing.T) string {
 	t.Helper()
+	return shTiersFixture(t, namedTiersManifest)
+}
+
+// shTiersFixture is a project, outside git, whose manifest is manifest, a
+// manifest whose tiers need only sh, holding docs/x.md and web/y.ts.
+func shTiersFixture(t *testing.T, manifest string) string {
+	t.Helper()
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip("sh not installed")
 	}
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
-	for name, body := range map[string]string{"system-flow.yaml": namedTiersManifest, "docs/x.md": "x\n"} {
+	for name, body := range map[string]string{"system-flow.yaml": manifest, "docs/x.md": "x\n", "web/y.ts": "y\n"} {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)
@@ -423,5 +430,94 @@ func TestFlaiTestRefusesATierNameItCannotRunAlone(t *testing.T) {
 	_, errOut, code := runIn(t, root, "test", "docs/x.md", "nope")
 	if code != exitTestUnusable || !strings.Contains(errOut, "nope is not a file or folder") {
 		t.Errorf("a missing path among paths: exit %d\nerr %q", code, errOut)
+	}
+}
+
+// suiteTiersManifest is tempProject's manifest with tiers in suites: two
+// static tiers, one for docs and one for web; a behavior tier for docs that
+// an all_only integration tier covers; a second all_only integration tier;
+// and a manual integration tier.
+const suiteTiersManifest = `version: 1
+name: t
+key: t
+layout:
+  design: design
+  docs: docs
+  wip: wip
+tests:
+  - name: fmt
+    suite: static
+    command: [sh, -c, 'exit 0', fmt, "{files}"]
+    paths: ["docs/**"]
+  - name: lint
+    suite: static
+    command: [sh, -c, 'exit 0', lint, "{files}"]
+    paths: ["web/**"]
+  - name: unit
+    suite: behavior
+    command: [sh, -c, 'exit 0', unit, "{files}"]
+    paths: ["docs/**"]
+  - name: integration
+    suite: integration
+    command: [sh, -c, 'exit 0', integration]
+    all_only: true
+    covers: [unit]
+  - name: e2e
+    suite: integration
+    command: [sh, -c, 'exit 0', e2e]
+    all_only: true
+  - name: race
+    suite: integration
+    command: [sh, -c, 'exit 0', race]
+    manual: true
+`
+
+// ADR-0312: --suite runs only the tiers of the suite: for paths, those of it
+// the paths select, and with --all every one of it but the manual one; a
+// tier that a tier of another suite covers runs in a run for its own suite.
+func TestFlaiTestSuiteRunsOnlyTheTiersOfTheSuite(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--suite", "static", "docs/x.md", "web/y.ts"}, "fmt=passed,lint=passed"},
+		{[]string{"--suite", "static", "web/y.ts"}, "lint=passed"},
+		{[]string{"--suite", "integration", "--all"}, "integration=passed,e2e=passed"},
+		{[]string{"--suite", "behavior", "--all"}, "unit=passed"},
+		{[]string{"--all"}, "fmt=passed,lint=passed,unit=skipped,integration=passed,e2e=passed"},
+	} {
+		res := testResult(t, root, 0, c.args...)
+		var got []string
+		for _, tr := range res.Tiers {
+			got = append(got, tr.Name+"="+string(tr.State))
+		}
+		if strings.Join(got, ",") != c.want || !res.Passed {
+			t.Errorf("flai test %v ran %s, want %s: %+v", c.args, strings.Join(got, ","), c.want, res)
+		}
+	}
+}
+
+// ADR-0312: a suite no tier is in is refused naming the suites there are,
+// and --suite beside a tier's name is refused, each with exit 2 before any
+// tier runs.
+func TestFlaiTestRefusesASuiteItCannotRun(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	for _, c := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"a suite no tier is in", []string{"--suite", "slow", "docs/x.md"}, "run the tiers of the suite slow: no tier of the manifest's tests is in it, by its suite or, with none, its name; name one of the suites there are, static, behavior, integration, or give a tier suite: slow in system-flow.yaml"},
+		{"a suite with a tier's name", []string{"--suite", "static", "fmt"}, "fmt names a tier, which runs alone whatever its suite, and --suite static runs the tiers of a suite; give the tier alone, or --suite with paths or --all, not both"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, errOut, code := runIn(t, root, append([]string{"test"}, c.args...)...)
+			if code != exitTestUnusable || out != "" || !strings.Contains(errOut, c.want) {
+				t.Errorf("exit %d, want %d\nout %q\nerr %q, want it to say %q", code, exitTestUnusable, out, errOut, c.want)
+			}
+		})
 	}
 }

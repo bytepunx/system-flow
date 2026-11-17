@@ -18,7 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const testDescription = "Run the project's test and lint tiers (S-0273): the tiers the manifest's tests declare, those the paths select, cheapest first, stopping at the first that fails. paths are files, folders, or Go package directories relative to the repository root (a folder stands for every file below it); with none, the paths are what the checkout changed against the main branch, its commits and what it has not committed; all runs every tier for the whole checkout, whatever paths says. It runs in story's worktree, as its branch has the manifest and the files, or, with no story, in the project's main checkout; a story with no worktree is refused. Answers passed, the paths the tiers were selected for, and each tier with its state (passed, failed, not-reached, or skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place), its exit code, and its duration; the tier that failed carries its command as it ran, and its first failures as findings, each a name, a path, a line, and a message, never the whole log, at most max across the run (5 by default; omitted counts the rest). Every other tier gives args, the number of arguments its command ran with, in place of the command, which lists every file the tier was given. The whole answer fits 40,000 bytes of JSON: when it would not, paths is cut to its first entries, and then the failed tier's command, with paths_omitted and command_omitted counting what was left out (ADR-0288). A failing tier is an answer, not an error; a manifest whose tests are not valid, or a path not in the checkout, is refused naming what to fix. Call it between tasks instead of running go test, vitest, golangci-lint, or gofmt by hand and reading their logs. flai test on the command line answers the same, and flai test --json prints this result with every tier's whole command and every path."
+const testDescription = "Run the project's test and lint tiers (S-0273): the tiers the manifest's tests declare, those the paths select, cheapest first, stopping at the first that fails. paths are files, folders, or Go package directories relative to the repository root (a folder stands for every file below it); with none, the paths are what the checkout changed against the main branch, its commits and what it has not committed; all runs every tier for the whole checkout, whatever paths says, but a manual tier, which runs only by name with flai test <tier>. suite runs only the tiers of that suite, a tier's suite or, without one, its name (ADR-0312): those of it the paths select, or with all every one of it but a manual one; a tier of the suite that a tier of another suite covers runs, and a suite no tier is in is refused naming the suites there are. It runs in story's worktree, as its branch has the manifest and the files, or, with no story, in the project's main checkout; a story with no worktree is refused. Answers passed, the paths the tiers were selected for, and each tier with its state (passed, failed, not-reached, or skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place), its exit code, and its duration; the tier that failed carries its command as it ran, and its first failures as findings, each a name, a path, a line, and a message, never the whole log, at most max across the run (5 by default; omitted counts the rest). Every other tier gives args, the number of arguments its command ran with, in place of the command, which lists every file the tier was given. The whole answer fits 40,000 bytes of JSON: when it would not, paths is cut to its first entries, and then the failed tier's command, with paths_omitted and command_omitted counting what was left out (ADR-0288). A failing tier is an answer, not an error; a manifest whose tests are not valid, or a path not in the checkout, is refused naming what to fix. Call it between tasks instead of running go test, vitest, golangci-lint, or gofmt by hand and reading their logs. flai test on the command line answers the same, and flai test --json prints this result with every tier's whole command and every path."
 
 // TestOut is the MCP tool test's answer: flai test --json's result with the
 // cuts that keep it within ctxpack.PartLimit bytes of JSON (ADR-0288).
@@ -116,6 +116,7 @@ type TestIn struct {
 	Story   string   `json:"story,omitempty" jsonschema:"the story whose worktree the tiers run in (a task's ID runs in the task's own worktree, when it has one under .flai-cache/worktrees); with none, the project's main checkout"`
 	Paths   []string `json:"paths,omitempty" jsonschema:"files, folders, or Go package directories relative to the repository root; with none, what the checkout changed against the main branch, uncommitted included"`
 	All     bool     `json:"all,omitempty" jsonschema:"run every tier for the whole checkout, whatever paths says"`
+	Suite   string   `json:"suite,omitempty" jsonschema:"run only the tiers of this suite, by a tier's suite or else its name: those the paths select, or with all every one of it but a manual one; with none, every suite"`
 	Max     int      `json:"max,omitempty" jsonschema:"the most findings to answer across the run; 5 when left out"`
 }
 
@@ -140,6 +141,9 @@ func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*
 	if err != nil {
 		return nil, TestOut{}, err
 	}
+	if err := verify.CheckSuite(tiers, in.Suite); err != nil {
+		return nil, TestOut{}, err
+	}
 	var base string
 	if len(in.Paths) == 0 && !in.All {
 		base, err = storygit.MainBranch(git, projectRoot(s.repo))
@@ -151,7 +155,7 @@ func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*
 	for _, p := range in.Paths {
 		args = append(args, inCheckout(root, p))
 	}
-	res, err := verify.Test(ctx, verify.Options{Root: root, Tiers: tiers, Args: args, All: in.All, Base: base, Git: git, RunOptions: verify.RunOptions{Max: in.Max}})
+	res, err := verify.Test(ctx, verify.Options{Root: root, Tiers: tiers, Args: args, All: in.All, Suite: in.Suite, Base: base, Git: git, RunOptions: verify.RunOptions{Max: in.Max}})
 	if err != nil {
 		return nil, TestOut{}, err
 	}
