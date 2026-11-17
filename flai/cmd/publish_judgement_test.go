@@ -9,9 +9,10 @@ import (
 	"testing"
 )
 
-// publishFormulaFile is this repository's own publish formula, the file the
-// template ships and the orchestrator starts under publish (ADR-0240).
-const publishFormulaFile = "../../design/workflows/formulas/publish.md"
+// publishFormulaFile is the publish formula the template ships, which the
+// orchestrator starts under publish (ADR-0240). It is the template's copy:
+// this repository's own was removed ahead of S-0837 (I-0401).
+const publishFormulaFile = "../../template/root/design/workflows/formulas/publish.md"
 
 // stepCommand is the command line the Work of a formula step's task runs,
 // split into arguments by sh as the instance's agent's shell splits it, with
