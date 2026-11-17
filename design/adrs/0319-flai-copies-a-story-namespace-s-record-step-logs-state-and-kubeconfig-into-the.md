@@ -6,6 +6,7 @@ date: 2026-11-17
 supersedes: []
 superseded_by: []
 refines: [ADR-0253, ADR-0292]
+topics: [kluster, harness]
 ---
 
 # ADR-0319 flai copies a story namespace's record, step logs, state, and kubeconfig into the story's agent cache folder, which its container mounts, and flai kluster log, env, and exec read that copy where the main checkout's .flai-cache/kluster is absent, naming the API server as host.docker.internal off the host's network
