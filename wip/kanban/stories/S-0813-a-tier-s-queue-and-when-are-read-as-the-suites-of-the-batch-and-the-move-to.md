@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:09Z
-updated: 2026-11-17T09:16:30Z
+updated: 2026-11-17T09:46:19Z
 transitions: []
 tags: [flai, template]
 topics: [verify, workflow]
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-11-16T23:48:49Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T13:59:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0806, S-0831, S-0833, S-0754, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810 and S-0241."
+  delivery: 2026-11-17T14:24:00Z
+  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 3, behind S-0754, S-0806, S-0831, S-0811, S-0809, S-0756, S-0812, S-0808, S-0807, S-0810 and S-0241."
   by: flai
-  at: 2026-11-17T09:16:30Z
+  at: 2026-11-17T09:46:19Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:27Z
