@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-17T02:30:31Z
+updated: 2026-11-17T02:32:36Z
 ---
 
 # Active streams
@@ -12,7 +12,6 @@ updated: 2026-11-17T02:30:31Z
 | [S-0747](S-0747.md) | The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name | review | agent-S-0747 | 2026-11-15T02:43:17Z |
 | [S-0750](S-0750.md) | flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today | in-progress | agent-S-0750 | 2026-11-15T21:54:27Z |
 | [S-0805](S-0805.md) | A tier in the manifest belongs to a suite, flai test --suite runs one, and the template's tiers are labelled static, behavior, integration, and smoke | in-progress | agent-S-0805 | 2026-11-17T01:19:08Z |
-| [S-0818](S-0818.md) | Publish what is accepted and not yet released | in-progress | agent-S-0818 | 2026-11-17T02:30:27Z |
 
 ## Strategic agents
 

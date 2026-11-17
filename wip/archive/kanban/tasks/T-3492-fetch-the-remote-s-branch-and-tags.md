@@ -24,14 +24,14 @@ usage:
   source: log
   seconds: 26
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 108
-      cache_read: 812952
-      cache_write: 3793
-      cost: 0.3106
+      input: 11
+      output: 1343
+      cache_read: 789886
+      cache_write: 26859
+      cost: 0.3998
 ---
 # T-3492 Fetch the remote's branch and tags
 
