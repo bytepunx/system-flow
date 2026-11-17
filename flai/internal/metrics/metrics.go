@@ -176,6 +176,9 @@ type ItemMetrics struct {
 	// ExpectedCost is what it is expected to cost, from its forecast or
 	// estimate and the project's cost per agent hour (ADR-0083).
 	ExpectedCost *ExpectedCost `json:"expected_cost,omitempty"`
+	// Timers is the value in seconds of each of the workflow's own timers
+	// that takes its type and has a value for it (ADR-0317 §3).
+	Timers map[string]float64 `json:"timers,omitempty"`
 }
 
 // Distribution summarises a set of durations in seconds.
@@ -200,6 +203,9 @@ type Summary struct {
 	QueueTime        Distribution       `json:"queue_time"`
 	FlowEfficiency   float64            `json:"flow_efficiency"`
 	InStateShare     map[string]float64 `json:"time_in_state_share"`
+	// Timers is the distribution over the window of each of the workflow's
+	// own timers that takes the report's type (ADR-0317 §4).
+	Timers map[string]Distribution `json:"timers,omitempty"`
 }
 
 // WeekBucket is throughput for one ISO week.
@@ -287,6 +293,9 @@ type Report struct {
 	// CloseOuts is the close-outs flai serve ran as jobs, by verdict, with
 	// their durations, per week; nil without a serve journal (S-0546).
 	CloseOuts *CloseOuts `json:"closeouts,omitempty"`
+	// Timers are the workflow's own timers, those other than lead, cycle,
+	// queue, and review, in file order (ADR-0317 §2).
+	Timers []TimerDefinition `json:"timers,omitempty"`
 }
 
 // Compute derives every metric from the items.
@@ -316,6 +325,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep := &Report{
 		GeneratedAt: opt.Now.Format(workitem.TimeFormat), Type: opt.Type,
 		WindowDays: opt.Since.Hours() / 24, WindowStart: start.Format(workitem.TimeFormat),
+		Timers: timerDefinitions(flow),
 	}
 	// The sections run at once (S-0607). Each goroutine writes only its own
 	// field of rep, or a local the end copies in, and none changes what
@@ -477,8 +487,8 @@ func burnupsByParent(flow workflow.Workflow, items []*workitem.Item, tl timeline
 }
 
 // Derive computes the per-item values for one item, its lead, cycle, queue,
-// and review time and its time in state read from flow's timers over its
-// history (ADR-0305).
+// and review time, its time in state, and flow's own timers read from flow's
+// timers over its history (ADR-0305, ADR-0317).
 func Derive(flow workflow.Workflow, it *workitem.Item, now time.Time) ItemMetrics {
 	m := ItemMetrics{ID: it.ID, Type: it.Type, Nature: it.Nature, Title: it.Title, Status: it.Status, Parent: it.Parent, Created: it.Created}
 	h := history(it)
@@ -499,6 +509,7 @@ func Derive(flow workflow.Workflow, it *workitem.Item, now time.Time) ItemMetric
 	m.CycleTime = timed(flow, "cycle", h, now)
 	m.QueueTime = timed(flow, "queue", h, now)
 	m.WaitReview = timed(flow, "review", h, now)
+	m.Timers = itemTimers(flow, h, now)
 	for _, b := range it.Blocked {
 		from, _ := time.Parse(workitem.TimeFormat, b.From)
 		until := now
@@ -608,6 +619,7 @@ func summarise(group string, items []*workitem.Item, per map[string]ItemMetrics,
 			s.InStateShare[st] = v / leadTotal
 		}
 	}
+	s.Timers = timerDistributions(flow, opt.Type, items, per, inWindow)
 	return s
 }
 
