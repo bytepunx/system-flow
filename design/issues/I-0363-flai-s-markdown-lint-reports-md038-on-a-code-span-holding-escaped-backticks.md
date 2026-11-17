@@ -2,12 +2,12 @@
 id: I-0363
 title: flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-13T16:00:01Z
 last_reported: 2026-11-13T16:00:01Z
-updated: 2026-11-17T08:17:31Z
+updated: 2026-11-17T11:42:33Z
 ---
 
 # I-0363 flai's markdown lint reports MD038 on a code span holding escaped backticks that markdownlint passes, so TestRepositoryLintsClean fails on a curator's digest entry
@@ -24,3 +24,4 @@ S-0751's manual race tier (`flai test race`, 2026-11-13) failed at one test, `Te
 ## Remediation
 
 Story S-0836 remediates this issue, created from it at 2026-11-17T08:17:31Z.
+Closed 2026-11-17T11:42:33Z: S-0836. The issue's account was wrong: mdlint gave no false positive. markdownlint-cli2 0.20.0 reports the same MD038 on D-0592's line 17 as the curator wrote it, since both tools close a code span at the backtick after a backslash, as CommonMark says; main's wording, hand-edited since, passes both. The fixture flai/internal/mdlint/testdata/cases/code-spans.md now holds both wordings (T-3529). The cause was that flai digest new and edit never linted an entry's markdown, so one markdownlint rejects reached main: they now refuse it with markdown.MDnnn (T-3558, ADR-0318).
