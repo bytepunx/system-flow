@@ -3,15 +3,36 @@ id: T-3243
 type: task
 nature: feature
 title: The metrics report each timer the workflow defines, per item and over the window, past items included
-status: backlog
+status: done
 parent: S-0752
 owner: alex
 created: 2026-11-12T16:09:04Z
-updated: 2026-11-12T16:09:04Z
-transitions: []
+updated: 2026-11-17T08:32:11Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:22:57Z
+    by: agent-S-0752
+  - to: in-progress
+    at: 2026-11-17T08:22:57Z
+    by: agent-S-0752
+  - to: done
+    at: 2026-11-17T08:32:11Z
+    by: agent-S-0752
 stream: S-0752
 tags: [cli]
-touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/internal/metrics/window.go]
+touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go]
+usage:
+  source: log
+  seconds: 552
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 223
+      cache_read: 1661427
+      cache_write: 83674
+      cost: 0.6654
 ---
 # T-3243 The metrics report each timer the workflow defines, per item and over the window, past items included
 

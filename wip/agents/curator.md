@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 351.3529
-accrued_seconds: 39191
-tasks_completed: 242
-last_run: 2026-11-17T08:20:47Z
+accrued_cost: 351.9014
+accrued_seconds: 39228
+tasks_completed: 243
+last_run: 2026-11-17T08:23:07Z
 ---
 
 # Curator activity
@@ -1947,3 +1947,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 40
 - Cost: 0.3882 USD, estimated
+
+### 2026-11-17T08:23:07Z
+
+- Summary: I found nothing to take in: I wrote no entries, merged none, and absorbed none, and `flai digest compact` compacted none. The one harvested candidate, from S-0826's publish formula run, was progress. The only design change since 08:20:47Z, ADR-0316 (proposed), states no active entry's fact.
+- Trigger: accepted S-0826
+- Items: D-0630
+- Seconds: 37
+- Cost: 0.5485 USD, estimated

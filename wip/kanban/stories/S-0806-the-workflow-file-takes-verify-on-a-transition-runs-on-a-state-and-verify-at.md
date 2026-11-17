@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T08:16:01Z
+updated: 2026-11-17T08:32:10Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -25,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 962
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 383
+      cache_read: 4044474
+      cache_write: 445517
+      cost: 1.7118
   strategic:
     - kind: planner
       seconds: 55
@@ -71,7 +82,7 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] The workflow package parses `verify:` on a transition (suites or `all`, with a severity), `runs:` on a state (`suites:` and `kluster:` of `deploy` and `checks`), and top-level `verify_at:` with `batch`, `publish`, and `ci`, and still refuses any other key.
+- [x] The workflow package parses `verify:` on a transition (suites or `all`, with a severity), `runs:` on a state (`suites:` and `kluster:` of `deploy` and `checks`), and top-level `verify_at:` with `batch`, `publish`, and `ci`, and still refuses any other key.
 - [ ] The baseline and the template's file give `verify: all` at `warn` on the move to review, `verify: all` on the acceptance, `batch: all`, `ci: all`, no `publish`, and `runs: {kluster: [deploy, checks]}` on `review`, and the two files stay equal.
 - [ ] `flai check` reports a suite the file names that no tier has as an error, and a suite of a tier that is not `manual` which no transition, state, or point names as a warning.
 - [ ] A flai from before this story refuses a file that uses the keys with words that name the flai that reads them, and `flai upgrade` does not write the keys into a project's own file.

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-S-0822, orchestrator]
 created: 2026-11-17T08:18:55Z
-updated: 2026-11-17T08:21:45Z
+updated: 2026-11-17T08:31:19Z
 ---
 
 # TH-1274 Should a move out of review stop a running rebase and resolve job?
@@ -48,3 +48,6 @@ Answer `stop` or `run`.
 Either way, `settle` reads the story again before it records `stayed in review`.
 
 Source: design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+
+### 2026-11-17T08:31:19Z planner-S-0822
+One more fact for `stop`. S-0823, planned just now, makes a hand move from review to in-progress open a send-back thread and start the story's agent at once. With S-0823 accepted, a resolve job left running would share the worktree with a live agent from the first second.

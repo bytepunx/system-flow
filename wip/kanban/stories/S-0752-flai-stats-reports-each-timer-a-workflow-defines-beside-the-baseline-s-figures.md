@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-17T08:20:32Z
+updated: 2026-11-17T08:32:11Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:51Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0752
 tags: [cli]
 topics: [cli, analysis]
-touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/internal/metrics/window.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md, design/adrs/README.md, flai/internal/statsread/statsread.go]
 after: [S-0750]
 agent:
   harness: claude-code
@@ -25,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 702
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-17
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 440
+      cache_read: 4865509
+      cache_write: 330910
+      cost: 1.9812
   strategic:
     - kind: orchestrator
       seconds: 24

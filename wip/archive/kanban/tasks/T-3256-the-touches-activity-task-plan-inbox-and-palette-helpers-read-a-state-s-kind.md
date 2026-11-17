@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/sr
 after: [T-3252]
 usage:
   source: log
-  seconds: 644
+  seconds: 657
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 483
-      cache_read: 2852044
-      cache_write: 84812
-      cost: 1.1185
+      input: 46
+      output: 13844
+      cache_read: 3065727
+      cache_write: 66917
+      cost: 1.3078
 ---
 # T-3256 The touches, activity, task plan, inbox, and palette helpers read a state's kind
 

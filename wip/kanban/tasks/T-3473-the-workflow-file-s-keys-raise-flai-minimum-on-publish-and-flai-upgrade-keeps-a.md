@@ -3,12 +3,18 @@ id: T-3473
 type: task
 nature: feature
 title: The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
-status: backlog
+status: in-progress
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:39Z
-updated: 2026-11-16T23:50:39Z
-transitions: []
+updated: 2026-11-17T08:32:23Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:32:22Z
+    by: agent-S-0806
+  - to: in-progress
+    at: 2026-11-17T08:32:23Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai]
 touches: [flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go]

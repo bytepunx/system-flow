@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2239.3775
-accrued_seconds: 1574523
-tasks_completed: 3851
-last_run: 2026-11-17T08:22:00Z
+accrued_cost: 2241.1221
+accrued_seconds: 1574848
+tasks_completed: 3864
+last_run: 2026-11-17T08:32:32Z
 ---
 
 # Orchestrator activity
@@ -26993,6 +26993,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 15
 - Cost: 0.0353 USD, estimated
 
+### 2026-11-17T08:22:27Z
+
+- Summary: Accepted S-0826 (publish formula instance) at d399d4365fb3 under accept_reviews: close-out passed at head, T-3517/T-3518/T-3519 done, flai/v1.104.0 and template 1.1.45 published
+- Items: S-0826
+- Seconds: 27
+- Cost: 0.0357 USD, estimated
+
+### 2026-11-17T08:22:43Z
+
+- Summary: Did not publish after accepting S-0826: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD; nothing accepted and unreleased)
+- Items: S-0826
+- Seconds: 16
+- Cost: 0.0722 USD, estimated
+
+### 2026-11-17T08:22:56Z
+
+- Summary: Left draft S-0822 unfinalized under finalize_drafts: flai promote --drafts lists it incomplete (no touches, no forecast duration or delivery, no cost of delay value); opened TH-1275 saying so
+- Items: S-0822, TH-1275
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:23:16Z
+
+- Summary: I acted on all three reasons, and the run is ending.
+- Items: none
+- Seconds: 20
+- Cost: 0.1990 USD, estimated
+
+### 2026-11-17T08:23:51Z
+
+- Summary: Left S-0822 a draft: flai promote --drafts lists it incomplete (no forecast duration or delivery; touches and value 75 now set by planner-S-0822). The plan waits on TH-1274 (stop or run), which holds my recommendation for the operator; TH-1275 already says what is missing, so no new thread.
+- Items: S-0822
+- Seconds: 13
+- Cost: 0.0803 USD, estimated
+
+### 2026-11-17T08:24:14Z
+
+- Summary: I left S-0822 as a draft because it can't be finalized yet.
+- Items: none
+- Seconds: 23
+- Cost: 0.2957 USD, estimated
+
+### 2026-11-17T08:29:41Z
+
+- Summary: Answered TH-1276, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0827
+- Seconds: 57
+- Cost: 0.4143 USD, estimated
+
+### 2026-11-17T08:30:08Z
+
+- Summary: Approved planner-S-0827's plan on TH-1276 and resolved it (plan_backlog_stories). Finalized S-0827: flai promote --drafts listed it complete (30m forecast, 22.50 USD/week), consistent with 2 tasks over 2 criteria and 3 file touches (finalize_drafts). Promoted it to ready as the only candidate, rank 1, 0.5h (promote_to_ready). Applied flai order --by throughput, which put S-0827 2nd at 30m (order_ready).
+- Items: S-0827, T-3523, T-3524
+- Seconds: 27
+- Cost: 0.2047 USD, estimated
+
+### 2026-11-17T08:30:21Z
+
+- Summary: Left S-0828 and S-0830 as drafts, though flai promote --drafts lists them complete: their planners are still running, with no planner log entry or plan thread yet, and their tasks do not cover all their touches yet. Left S-0831 and S-0836 as drafts with no thread: they lack a forecast and a cost of delay value, and their planners (pids 1351808, 1346538) are writing those now. The planners' next edits will start me again.
+- Items: S-0828, S-0830, S-0831, S-0836
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:30:48Z
+
+- Summary: I finished one of the five drafts. S-0827 is finalized, promoted to ready, and its agent has already started it. The other four drafts are still drafts: their planners had not finished when this run checked them, and each has since opened a plan thread for me to settle.
+- Items: none
+- Seconds: 27
+- Cost: 0.1855 USD, estimated
+
+### 2026-11-17T08:32:06Z
+
+- Summary: Answered TH-1278, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0828
+- Seconds: 63
+- Cost: 0.2572 USD, estimated
+
+### 2026-11-17T08:32:19Z
+
+- Summary: Answered TH-1279, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0836
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:32:32Z
+
+- Summary: Answered TH-1280, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0830
+- Seconds: 13
+- Cost: 0.0000 USD
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -27731,6 +27822,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-11-17T03:35:28Z
+
+- Call: `flai serve agents --json`
+- Needs: none
+
+### 2026-11-17T08:29:07Z
 
 - Call: `flai serve agents --json`
 - Needs: none

@@ -24,16 +24,16 @@ touches: ["flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops
 after: [T-3252]
 usage:
   source: log
-  seconds: 644
+  seconds: 645
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 457
-      cache_read: 4678806
-      cache_write: 137440
-      cost: 1.8342
+      input: 72
+      output: 21572
+      cache_read: 4777014
+      cache_write: 104270
+      cost: 2.0378
 ---
 # T-3255 The item page and the Deployments page read a state's kind and offer only the moves the operator may make
 

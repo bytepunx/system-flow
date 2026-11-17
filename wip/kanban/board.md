@@ -8,9 +8,13 @@ wip_limits:
   review: 6
 order:
   - S-0754
+  - S-0811
+  - S-0809
   - S-0756
+  - S-0812
   - S-0808
   - S-0807
+  - S-0810
 ---
 
 # Board

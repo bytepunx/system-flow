@@ -3,11 +3,11 @@ id: S-0758
 type: story
 nature: feature
 title: The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:04:18Z
-updated: 2026-11-17T08:12:42Z
+updated: 2026-11-17T08:32:48Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:57Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-17T07:52:40Z
     by: agent-S-0758
+  - to: review
+    at: 2026-11-17T08:29:04Z
+    by: system-flow
+  - to: done
+    at: 2026-11-17T08:32:48Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/workflow.ts, flaiover/src/lib/workflow.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/taskplan.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/CancelConfirm.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/viz/palette.ts, design/system/flaiover-dashboard.md, flaiover/src/lib/lanes.fixture.ts, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/CancelConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte.test.ts]
+touches: [flaiover/src/lib/workflow.ts, flaiover/src/lib/workflow.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/touches.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/taskplan.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/CancelConfirm.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/viz/palette.ts, design/system/flaiover-dashboard.md, flaiover/src/lib/lanes.fixture.ts, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/CancelConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte.test.ts, design/components/flaiover/src/lib/components/ActivityView.examples.json, design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/lib/cardmenu.test.ts, flaiover/src/lib/cardmenu.ts, flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/lib/components/CardMenu.svelte, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, "flaiover/src/routes/docs/[...path]/+page.svelte", design/issues/I-0399-flaiover-still-compares-state-names-in-the-epic-filters-and-the-move-route-so.md, design/issues/summary.md]
 after: [S-0753]
 agent:
   harness: claude-code
@@ -26,20 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1177
-  estimated: true
-  priced_by: estimate
+  seconds: 2203
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      ceremony: 5
-      work: 24
+      ceremony: 7
+      hand_edits: 1
+      work: 66
   models:
     - model: claude-opus-5-5
-      input: 368
-      output: 1927
-      cache_read: 17366155
-      cache_write: 655366
-      cost: 6.8632
+      input: 594
+      output: 179147
+      cache_read: 39672073
+      cache_write: 865940
+      cost: 16.9232
   strategic:
     - kind: orchestrator
       seconds: 22
@@ -73,12 +79,12 @@ Beyond the board and the charts, about fifteen of flaiover's views and helpers c
 
 ## Acceptance criteria
 
-- [ ] One module in `flaiover/src/lib` gives a state's kind, colour, and moves from the columns and transitions `board.get` answers, and every view below reads it
-- [ ] `routes/items/[id]/+page.svelte`, `routes/ops/deployments/+page.svelte`, `touches.ts`, `activity.ts`, `taskplan.ts`, `inbox.svelte.ts`, `server/inbox.ts`, `BoardCard.svelte`, `CancelConfirm.svelte`, `ForgeStatus.svelte`, `Review.svelte`, `InboxView.svelte`, `WaitTable.svelte`, `explorer/SourcePicker.svelte`, and `viz/palette.ts` compare no status with a state's name
-- [ ] The item page offers only the moves its transitions allow the operator, and asks for a reason where the transition needs one
-- [ ] Tests render the item page, a card, and the review page for a story in a state added between `in-progress` and `review`
-- [ ] With the baseline, every view looks and behaves as today and every existing flaiover test passes
-- [ ] `design/system/flaiover-dashboard.md` says these views read kinds from flai
+- [x] One module in `flaiover/src/lib` gives a state's kind, colour, and moves from the columns and transitions `board.get` answers, and every view below reads it
+- [x] `routes/items/[id]/+page.svelte`, `routes/ops/deployments/+page.svelte`, `touches.ts`, `activity.ts`, `taskplan.ts`, `inbox.svelte.ts`, `server/inbox.ts`, `BoardCard.svelte`, `CancelConfirm.svelte`, `ForgeStatus.svelte`, `Review.svelte`, `InboxView.svelte`, `WaitTable.svelte`, `explorer/SourcePicker.svelte`, and `viz/palette.ts` compare no status with a state's name
+- [x] The item page offers only the moves its transitions allow the operator, and asks for a reason where the transition needs one
+- [x] Tests render the item page, a card, and the review page for a story in a state added between `in-progress` and `review`
+- [x] With the baseline, every view looks and behaves as today and every existing flaiover test passes
+- [x] `design/system/flaiover-dashboard.md` says these views read kinds from flai
 
 ## Tasks
 

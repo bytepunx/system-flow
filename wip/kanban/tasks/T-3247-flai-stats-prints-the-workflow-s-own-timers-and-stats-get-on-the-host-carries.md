@@ -7,11 +7,11 @@ status: backlog
 parent: S-0752
 owner: alex
 created: 2026-11-12T16:09:24Z
-updated: 2026-11-12T16:09:24Z
+updated: 2026-11-17T08:22:46Z
 transitions: []
 stream: S-0752
 tags: [cli]
-touches: [flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go]
+touches: [flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/statsread/statsread.go]
 after: [T-3243]
 ---
 # T-3247 flai stats prints the workflow's own timers, and stats.get on the host carries them

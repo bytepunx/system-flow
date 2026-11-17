@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 275
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 192
-      cache_read: 1477494
-      cache_write: 61362
-      cost: 0.5861
+      input: 23
+      output: 6892
+      cache_read: 1526326
+      cache_write: 33316
+      cost: 0.6511
 ---
 # T-3252 One flaiover module gives a state's kind, colour, and moves from the columns and transitions board.get answers
 

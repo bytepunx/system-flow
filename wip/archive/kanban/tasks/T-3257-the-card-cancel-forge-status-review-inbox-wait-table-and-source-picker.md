@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/compone
 after: [T-3252]
 usage:
   source: log
-  seconds: 643
+  seconds: 662
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 521
-      cache_read: 4446531
-      cache_write: 118891
-      cost: 1.7387
+      input: 70
+      output: 21138
+      cache_read: 4681010
+      cache_write: 102174
+      cost: 1.9968
 ---
 # T-3257 The card, cancel, forge status, review, inbox, wait table, and source picker components read a state's kind, tested on a state of the workflow's own
 

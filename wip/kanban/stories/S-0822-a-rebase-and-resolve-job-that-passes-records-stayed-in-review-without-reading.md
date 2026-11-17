@@ -6,9 +6,10 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-17T08:21:08Z
+updated: 2026-11-17T08:23:00Z
 transitions: []
 tags: [flai, flaiover]
+touches: [flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0396-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,15 +21,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 130
+      seconds: 143
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 218
-          cache_read: 1503587
-          cache_write: 185428
-          cost: 0.523
+          input: 43
+          output: 278
+          cache_read: 1690718
+          cache_write: 257378
+          cost: 0.6033
         - model: claude-sonnet-5-5
           input: 20
           output: 1495
@@ -41,6 +42,9 @@ cost_of_delay:
     time_lost_per_cycle: 30m
     by: flai
     at: 2026-11-17T07:13:18Z
+  value: 75
+  by: planner-S-0822
+  at: 2026-11-17T08:23:00Z
 ---
 # S-0822 A rebase and resolve job that passes records stayed in review without reading the story, and a move out of review neither stops the job nor is noticed by it
 

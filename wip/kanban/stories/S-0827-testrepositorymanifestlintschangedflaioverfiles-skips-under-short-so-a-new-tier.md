@@ -3,14 +3,17 @@ id: S-0827
 type: story
 nature: improvement
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:17Z
-updated: 2026-11-17T08:30:09Z
+updated: 2026-11-17T08:30:34Z
 transitions:
   - to: ready
     at: 2026-11-17T08:30:02Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T08:30:34Z
+    by: agent-S-0827
 tags: [flai, tests]
 touches: [flai/internal/verify/select_test.go, design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md]
 agent:
@@ -40,15 +43,15 @@ usage:
           cache_write: 752613
           cost: 7.9731
     - kind: orchestrator
-      seconds: 57
+      seconds: 84
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 24
-          output: 116
-          cache_read: 1235210
-          cache_write: 101132
-          cost: 0.4143
+          input: 34
+          output: 266
+          cache_read: 1887741
+          cache_write: 108742
+          cost: 0.6189
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
