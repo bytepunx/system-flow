@@ -3,12 +3,15 @@ id: S-0808
 type: story
 nature: feature
 title: The acceptance's gates, the merge queue's eligibility, queue_tiers, and verify_behind_main, judge only the suites the accept transition's verify lists
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:53:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:47:04Z
+    by: alex
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/workitem/transition.go, flai/internal/workitem/transition_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_suites_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md]
@@ -55,10 +58,10 @@ cost_of_delay:
   at: 2026-11-16T23:47:49Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-17T14:34:00Z
-  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819, S-0241, S-0752, S-0754, S-0756, S-0758, S-0806 and S-0807."
+  delivery: 2026-11-17T13:30:00Z
+  basis: "Its own forecast of 1h15m; 6th in the pull order with an in-progress limit of 3, behind S-0750, S-0758, S-0805, S-0752, S-0754, S-0756, S-0806 and S-0807."
   by: flai
-  at: 2026-11-17T07:46:44Z
+  at: 2026-11-17T07:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:48:11Z

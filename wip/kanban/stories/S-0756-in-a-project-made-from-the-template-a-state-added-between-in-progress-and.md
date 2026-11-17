@@ -3,12 +3,15 @@ id: S-0756
 type: story
 nature: feature
 title: In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:53:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:46:55Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
 touches: [flai/cmd/workflow_e2e_test.go, flai/internal/workflow/testdata/e2e-board.md, flaiover/src/lib/server/workflow.test.ts, design/system/workflow.md, docs/operators/index.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-11-14T17:44:16Z
 forecast:
   duration: 45m
-  delivery: 2026-11-17T09:56:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819, S-0241, S-0752 and S-0754."
+  delivery: 2026-11-17T10:03:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0750, S-0758, S-0805, S-0752 and S-0754."
   by: flai
-  at: 2026-11-17T07:46:44Z
+  at: 2026-11-17T07:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:59Z

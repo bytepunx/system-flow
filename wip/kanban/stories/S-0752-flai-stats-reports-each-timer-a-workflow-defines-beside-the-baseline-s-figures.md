@@ -3,12 +3,15 @@ id: S-0752
 type: story
 nature: feature
 title: flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:53:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:46:51Z
+    by: alex
 tags: [cli]
 topics: [cli, analysis]
 touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/internal/metrics/window.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-11-14T17:44:12Z
 forecast:
   duration: 33m
-  delivery: 2026-11-17T08:27:00Z
-  basis: "Its own forecast of 33m; 2nd in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819 and S-0241."
+  delivery: 2026-11-17T08:33:00Z
+  basis: "Its own forecast of 33m; 1st in the pull order with an in-progress limit of 3, behind S-0750, S-0758 and S-0805."
   by: flai
-  at: 2026-11-17T07:46:44Z
+  at: 2026-11-17T07:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:57Z

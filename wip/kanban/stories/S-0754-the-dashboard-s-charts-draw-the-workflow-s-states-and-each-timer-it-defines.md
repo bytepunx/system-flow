@@ -3,12 +3,15 @@ id: S-0754
 type: story
 nature: feature
 title: The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:53:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:46:53Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard, analysis]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/server/stats.ts, flaiover/src/lib/server/stats.test.ts, flaiover/src/routes/charts/+page.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/metrics.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-11-14T17:44:14Z
 forecast:
   duration: 30m
-  delivery: 2026-11-17T09:03:00Z
-  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819, S-0241 and S-0752."
+  delivery: 2026-11-17T09:09:00Z
+  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 3, behind S-0750, S-0758, S-0805 and S-0752."
   by: flai
-  at: 2026-11-17T07:46:44Z
+  at: 2026-11-17T07:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:58Z

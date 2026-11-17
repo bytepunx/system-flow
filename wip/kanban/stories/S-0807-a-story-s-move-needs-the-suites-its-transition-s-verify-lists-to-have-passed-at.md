@@ -3,12 +3,15 @@ id: S-0807
 type: story
 nature: feature
 title: A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-17T07:46:44Z
-transitions: []
+updated: 2026-11-17T07:53:30Z
+transitions:
+  - to: ready
+    at: 2026-11-17T07:47:01Z
+    by: alex
 tags: [flai, template]
 topics: [verify, workflow, conventions]
 touches: [flai/internal/verifyrecord/record.go, flai/internal/verifyrecord/record_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/record.go, flai/internal/verify/record_test.go, flai/internal/verify/suites.go, flai/internal/verify/suites_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move_workflow_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/mcpserver/verify.go, scripts/close-out.sh, template/root/scripts/close-out.sh, flai/cmd/verify_baseline_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, template/CHANGELOG.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:49:09Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T13:04:00Z
-  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0750, S-0805, S-0819, S-0241, S-0752, S-0754, S-0756, S-0758 and S-0806."
+  delivery: 2026-11-17T12:00:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0750, S-0758, S-0805, S-0752, S-0754, S-0756 and S-0806."
   by: flai
-  at: 2026-11-17T07:46:44Z
+  at: 2026-11-17T07:53:30Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:26Z
