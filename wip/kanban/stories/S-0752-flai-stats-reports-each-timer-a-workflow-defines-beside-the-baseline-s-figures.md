@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-17T08:32:11Z
+updated: 2026-11-17T08:47:46Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:51Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0752
 tags: [cli]
 topics: [cli, analysis]
-touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md, design/adrs/README.md, flai/internal/statsread/statsread.go]
+touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/hostapi/reads_test.go, design/system/metrics.md, docs/users/flai.md, design/adrs/0317-flai-stats-reports-a-workflow-s-own-timers-under-timers-each-item-s-seconds-in.md, design/adrs/README.md, flai/internal/statsread/statsread.go, design/issues/I-0400-testpublishformulaunderjudgement-in-flai-cmd-reads-design-workflows-formulas.md, design/issues/summary.md, docs/operators/runbooks/change-the-board.md]
 after: [S-0750]
 agent:
   harness: claude-code
@@ -26,30 +26,29 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 702
-  estimated: true
-  priced_by: estimate
+  seconds: 2323
+  priced_by: harness
   turns:
     - day: 2026-11-17
-      work: 21
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 440
-      cache_read: 4865509
-      cache_write: 330910
-      cost: 1.9812
+      input: 266
+      output: 69727
+      cache_read: 17811445
+      cache_write: 617542
+      cost: 9.0157
   strategic:
     - kind: orchestrator
-      seconds: 24
+      seconds: 62
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 40
-          cache_read: 288657
-          cache_write: 46066
-          cost: 0.0988
+          input: 20
+          output: 106
+          cache_read: 635992
+          cache_write: 107675
+          cost: 0.2259
 cost_of_delay:
   value: 58.79
   by: system-flow
@@ -72,13 +71,13 @@ An operator adds a timer to the workflow, such as the time from the first move t
 
 ## Acceptance criteria
 
-- [ ] `flai stats --json` gives, under a section the timers' ADR names, each timer the workflow defines: per item its seconds, and over the window its count, mean, p50, and p85, as the baseline's durations are given
-- [ ] `flai stats` without `--json` prints the workflow's own timers after the baseline's
-- [ ] A timer added to the workflow reads the transitions items already carry, and reports the items completed before it was added
-- [ ] `stats.get` on the host carries the same section, so the dashboard reads the timers from flai
-- [ ] The baseline's own figures and their fixtures are unchanged
-- [ ] Tests give a timer from the first move to `review` to the acceptance, and a sum of the time in two states, on fixture items with known transitions
-- [ ] `design/system/metrics.md` and `docs/users/flai.md` say how a timer is defined and where `flai stats` reports it
+- [x] `flai stats --json` gives, under a section the timers' ADR names, each timer the workflow defines: per item its seconds, and over the window its count, mean, p50, and p85, as the baseline's durations are given
+- [x] `flai stats` without `--json` prints the workflow's own timers after the baseline's
+- [x] A timer added to the workflow reads the transitions items already carry, and reports the items completed before it was added
+- [x] `stats.get` on the host carries the same section, so the dashboard reads the timers from flai
+- [x] The baseline's own figures and their fixtures are unchanged
+- [x] Tests give a timer from the first move to `review` to the acceptance, and a sum of the time in two states, on fixture items with known transitions
+- [x] `design/system/metrics.md` and `docs/users/flai.md` say how a timer is defined and where `flai stats` reports it
 
 ## Tasks
 

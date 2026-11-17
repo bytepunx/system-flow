@@ -3,11 +3,11 @@ id: T-3471
 type: task
 nature: feature
 title: The baseline and the template's board give verify, runs, and verify_at as today's behaviour, and stay equal
-status: in-progress
+status: done
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:33Z
-updated: 2026-11-17T08:32:22Z
+updated: 2026-11-17T08:48:20Z
 transitions:
   - to: ready
     at: 2026-11-17T08:32:22Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:32:22Z
     by: agent-S-0806
+  - to: done
+    at: 2026-11-17T08:48:20Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai, template]
 touches: [flai/internal/workflow/baseline/board.md, template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go, template/CHANGELOG.md]
 after: [T-3469]
+usage:
+  source: log
+  seconds: 934
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 175
+      cache_read: 1151904
+      cache_write: 164047
+      cost: 0.5019
 ---
 # T-3471 The baseline and the template's board give verify, runs, and verify_at as today's behaviour, and stay equal
 

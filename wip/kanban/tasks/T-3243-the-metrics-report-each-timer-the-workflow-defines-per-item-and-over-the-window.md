@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/metrics/timers.go, flai/internal/metrics/timers_test.go, flai/internal/metrics/metrics.go]
 usage:
   source: log
-  seconds: 552
+  seconds: 554
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 223
-      cache_read: 1661427
-      cache_write: 83674
-      cost: 0.6654
+      input: 26
+      output: 6691
+      cache_read: 1709127
+      cache_write: 59257
+      cost: 0.8651
 ---
 # T-3243 The metrics report each timer the workflow defines, per item and over the window, past items included
 

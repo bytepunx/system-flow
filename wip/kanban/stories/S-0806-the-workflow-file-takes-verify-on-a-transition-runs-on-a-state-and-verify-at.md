@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T08:32:10Z
+updated: 2026-11-17T08:48:31Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0806
 tags: [flai, template]
 topics: [verify, workflow]
-touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md]
+touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go]
 after: [S-0805]
 agent:
   harness: claude-code
@@ -26,19 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 962
+  seconds: 1925
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-17
-      work: 18
+      ceremony: 1
+      work: 22
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 383
-      cache_read: 4044474
-      cache_write: 445517
-      cost: 1.7118
+      input: 184
+      output: 917
+      cache_read: 8011442
+      cache_write: 796262
+      cost: 3.359
   strategic:
     - kind: planner
       seconds: 55
@@ -83,9 +84,9 @@ finalized:
 ## Acceptance criteria
 
 - [x] The workflow package parses `verify:` on a transition (suites or `all`, with a severity), `runs:` on a state (`suites:` and `kluster:` of `deploy` and `checks`), and top-level `verify_at:` with `batch`, `publish`, and `ci`, and still refuses any other key.
-- [ ] The baseline and the template's file give `verify: all` at `warn` on the move to review, `verify: all` on the acceptance, `batch: all`, `ci: all`, no `publish`, and `runs: {kluster: [deploy, checks]}` on `review`, and the two files stay equal.
+- [x] The baseline and the template's file give `verify: all` at `warn` on the move to review, `verify: all` on the acceptance, `batch: all`, `ci: all`, no `publish`, and `runs: {kluster: [deploy, checks]}` on `review`, and the two files stay equal.
 - [ ] `flai check` reports a suite the file names that no tier has as an error, and a suite of a tier that is not `manual` which no transition, state, or point names as a warning.
-- [ ] A flai from before this story refuses a file that uses the keys with words that name the flai that reads them, and `flai upgrade` does not write the keys into a project's own file.
+- [x] A flai from before this story refuses a file that uses the keys with words that name the flai that reads them, and `flai upgrade` does not write the keys into a project's own file.
 - [ ] The workflow design and the reference describe the keys.
 
 ## Tasks

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2241.2299
-accrued_seconds: 1574938
-tasks_completed: 3869
-last_run: 2026-11-17T08:34:02Z
+accrued_cost: 2243.3487
+accrued_seconds: 1575318
+tasks_completed: 3886
+last_run: 2026-11-17T09:00:44Z
 ---
 
 # Orchestrator activity
@@ -27118,6 +27118,125 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0831, S-0833, S-0830, S-0823, S-0832, S-0836, S-0828, TH-1278, TH-1279, TH-1280, TH-1281, TH-1282, TH-1283, TH-1284
 - Seconds: 42
 - Cost: 0.1078 USD, estimated
+
+### 2026-11-17T08:34:42Z
+
+- Summary: Under promote_to_ready, moved S-0831 (candidate rank 1, 17m) and S-0833 (rank 2, 18m) to ready, filling it to its limit of 10. Under order_ready, applied flai order --by throughput. S-0758 was not mine to accept: the operator had already accepted it. Under publish, release_evaluate met the threshold policy (count 1 of 1, 78.38 USD a week), so release_publish released S-0758 as flaiover 0.62.0 to 0.63.0, tag flaiover/v0.63.0, and pushed.
+- Items: S-0831, S-0833, S-0758
+- Seconds: 40
+- Cost: 0.2907 USD, estimated
+
+### 2026-11-17T08:35:04Z
+
+- Summary: My reasons are done. The planners' work is approved, seven drafts are finalized, the ready column is full and ordered, and S-0758 is released as flaiover v0.63.0.
+- Items: none
+- Seconds: 22
+- Cost: 0.1797 USD, estimated
+
+### 2026-11-17T08:36:27Z
+
+- Summary: Answered TH-1286, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0834
+- Seconds: 71
+- Cost: 0.4072 USD, estimated
+
+### 2026-11-17T08:36:39Z
+
+- Summary: Answered TH-1285, citing design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § 3. When a namespace is made, deployed again, and torn down
+- Items: S-0835
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:37:02Z
+
+- Summary: Recommended an answer on TH-1287, citing design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md § Alternatives considered
+- Items: S-0824
+- Seconds: 23
+- Cost: 0.0481 USD, estimated
+
+### 2026-11-17T08:37:14Z
+
+- Summary: Recommended an answer on TH-1274, citing design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+- Items: S-0822
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:37:34Z
+
+- Summary: Approved planner-S-0834's plan on TH-1286 (5 tasks, 4 layers, 3h, 25 USD/week) and resolved it; finalized S-0834 under finalize_drafts (flai promote --drafts: complete). The inferred job-request defect stays out of S-0834's scope.
+- Items: S-0834
+- Seconds: 20
+- Cost: 0.1040 USD, estimated
+
+### 2026-11-17T08:37:46Z
+
+- Summary: Approved planner-S-0835's plan on TH-1285 (3 tasks, 3 layers, 50m, 12.50 USD/week, after S-0810; ADR-0292 §3 settles the at-the-head assumption) and resolved it; finalized S-0835 under finalize_drafts (flai promote --drafts: complete). It stays held by after on S-0810.
+- Items: S-0835
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:37:57Z
+
+- Summary: Recommended option 1 on TH-1287 (S-0824's plan): the resolve job's last check passes over a moved main while verify_behind_main raises no blocker. This is an unrecorded decision that refines ADR-0156 §3, so it is left to the operator. S-0824 is complete per flai promote --drafts but stays a draft until they answer.
+- Items: S-0824
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:38:08Z
+
+- Summary: Restated my stop recommendation on TH-1274 (S-0822), adding planner-S-0822's new fact that S-0823 starts the agent at once on a send back by hand. It is left to the operator because changing ADR-0313 §6 is an unrecorded decision.
+- Items: S-0822
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:38:20Z
+
+- Summary: Ran flai order --by throughput --apply on the reordered ready column (S-0831 17m first, S-0810 2h30m last). Promoted nothing because ready is full (10/10). S-0832 and S-0823 were finalized earlier; TH-1284 was already resolved. Did not publish: release_evaluate under threshold is not met (0 pending, count threshold 1).
+- Items: S-0832, S-0823, S-0831
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-17T08:38:41Z
+
+- Summary: I settled S-0834's and S-0835's plans and finalized both stories. Two decisions are left for you, on TH-1274 and TH-1287. Nothing was promoted and nothing was published.
+- Items: none
+- Seconds: 21
+- Cost: 0.2830 USD, estimated
+
+### 2026-11-17T08:39:18Z
+
+- Summary: Took no action on TH-1287 or S-0824's plan: my recommendation of the planner's first option on TH-1287 (08:37:02Z) is pending with the operator and is the thread's last entry, since passing over main's commits in a resolve job is a decision ADR-0156 §3 does not record; S-0824 stays a draft until it is answered, because T-3551 to T-3556 follow from the option.
+- Items: S-0824
+- Seconds: 15
+- Cost: 0.1154 USD, estimated
+
+### 2026-11-17T08:39:39Z
+
+- Summary: I took no action this run. Both reasons wait on one operator answer on TH-1287.
+- Items: none
+- Seconds: 21
+- Cost: 0.3533 USD, estimated
+
+### 2026-11-17T09:00:05Z
+
+- Summary: Answered TH-1288, citing design/digest/D-0462-s-0518-s-close-out-stops-at-integration-on-main-s-own-failure-i-0250-how-should.md
+- Items: S-0752
+- Seconds: 38
+- Cost: 0.1271 USD, estimated
+
+### 2026-11-17T09:00:27Z
+
+- Summary: Answered TH-1288 under answer_threads autonomous, citing D-0462 (the TH-0804 answer): S-0752 stays in progress until S-0827 fixes main's TestPublishFormulaUnderJudgement failure, then syncs, closes out again, and goes to review. Also suggested closing the duplicate issue, I-0400 or I-0401.
+- Items: S-0752, S-0827, TH-1288
+- Seconds: 22
+- Cost: 0.0000 USD
+
+### 2026-11-17T09:00:44Z
+
+- Summary: I answered TH-1288: S-0752 waits for S-0827 and does not go to review now.
+- Items: none
+- Seconds: 17
+- Cost: 0.2103 USD, estimated
 
 ## Refusals
 

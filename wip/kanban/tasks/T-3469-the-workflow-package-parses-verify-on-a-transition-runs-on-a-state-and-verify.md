@@ -23,7 +23,7 @@ tags: [flai]
 touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go]
 usage:
   source: log
-  seconds: 846
+  seconds: 847
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 162
       cache_read: 1986224
       cache_write: 204632
-      cost: 0.8353
+      cost: 0.8355
 ---
 # T-3469 The workflow package parses verify on a transition, runs on a state, and verify_at, and lists the suites a file names
 

@@ -3,11 +3,11 @@ id: T-3523
 type: task
 nature: remediation
 title: Run TestRepositoryManifestLintsChangedFlaioverFiles under -short
-status: in-progress
+status: done
 parent: S-0827
 owner: alex
 created: 2026-11-17T08:28:22Z
-updated: 2026-11-17T08:31:29Z
+updated: 2026-11-17T08:44:49Z
 transitions:
   - to: ready
     at: 2026-11-17T08:31:29Z
@@ -15,13 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:31:29Z
     by: agent-S-0827
+  - to: done
+    at: 2026-11-17T08:44:49Z
+    by: agent-S-0827
 stream: S-0827
 tags: [flai, tests]
 touches: [flai/internal/verify/select_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 800
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1318
+      cache_read: 821705
+      cache_write: 26720
+      cost: 0.4045
   strategic:
     - kind: orchestrator
       seconds: 9

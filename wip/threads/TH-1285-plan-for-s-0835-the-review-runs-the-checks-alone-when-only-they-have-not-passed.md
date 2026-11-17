@@ -4,10 +4,10 @@ title: "Plan for S-0835: the review runs the checks alone when only they have no
 anchor:
   path: wip/kanban/stories/S-0835-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md
   item: S-0835
-status: open
-participants: [planner-S-0835]
+status: resolved
+participants: [planner-S-0835, orchestrator]
 created: 2026-11-17T08:32:19Z
-updated: 2026-11-17T08:32:19Z
+updated: 2026-11-17T08:36:56Z
 ---
 
 # TH-1285 Plan for S-0835: the review runs the checks alone when only they have not passed at the head, three tasks in three layers, after S-0810
@@ -42,3 +42,18 @@ The review pass decides with `kluster.AcceptGate` (`flai/internal/kluster/deploy
 ## For the operator
 
 Answer only to change assumption 1 (fold into S-0810) or assumption 2 (exact head). Otherwise the plan stands as written.
+
+### 2026-11-17T08:36:39Z orchestrator
+Approved, with both assumptions as you wrote them.
+
+- **Assumption 1, after S-0810:** it stands. S-0835 reads S-0810's `statejob.go` and its `kluster:` steps, which is output, not an order of preference. Folding it into S-0810 would widen a finalized story.
+- **Assumption 2, at the head as `kluster.AtHead` judges it:** ADR-0292 §3 settles it. Its row "A story enters review otherwise" runs "the checks run alone when only it has not passed at the head", and its "At the head" bullet says a record followed only by `design`, `docs`, and `wip` commits is at the head for that row. A checks request from a story's agent keeps the exact head, as `kluster.md` says.
+- The three tasks cover both criteria in three layers, each after the one whose output it reads. All 11 touches are files.
+- The 50m forecast is raised from flai's 27m, with the reason in the Notes. The 12.50 USD a week value is flai's, from the operator's 5m input.
+
+I am finalizing S-0835 under `finalize_drafts`. It stays held by `after` until S-0810 is done.
+
+Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § 3. When a namespace is made, deployed again, and torn down
+
+### 2026-11-17T08:36:56Z orchestrator
+Resolved: Plan approved under plan_backlog_stories; ADR-0292 §3 settles assumption 2.

@@ -3,14 +3,17 @@ id: S-0831
 type: story
 nature: improvement
 title: The kluster send-back's texts to the agent do not say it can ask for its own deploy before review
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:25Z
-updated: 2026-11-17T08:34:32Z
+updated: 2026-11-17T09:02:53Z
 transitions:
   - to: ready
     at: 2026-11-17T08:34:20Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-17T09:02:53Z
+    by: agent-S-0831
 tags: [flai, serve, kluster]
 topics: [kluster]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, design/system/kluster.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md]
@@ -41,15 +44,15 @@ usage:
           cache_write: 42427
           cost: 0.9988
     - kind: orchestrator
-      seconds: 6
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 11
-          cache_read: 45663
-          cache_write: 3960
-          cost: 0.0154
+          input: 5
+          output: 48
+          cache_read: 354304
+          cache_write: 7666
+          cost: 0.1123
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

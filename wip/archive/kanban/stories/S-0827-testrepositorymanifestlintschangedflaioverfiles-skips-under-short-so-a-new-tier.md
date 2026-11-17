@@ -3,10 +3,10 @@ id: S-0827
 type: story
 nature: improvement
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:17Z
-updated: 2026-11-17T08:30:34Z
+updated: 2026-11-17T09:04:30Z
 transitions:
   - to: ready
     at: 2026-11-17T08:30:02Z
@@ -14,17 +14,34 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:30:34Z
     by: agent-S-0827
+  - to: review
+    at: 2026-11-17T09:02:27Z
+    by: agent-S-0827
+  - to: done
+    at: 2026-11-17T09:04:30Z
+    by: orchestrator
 tags: [flai, tests]
-touches: [flai/internal/verify/select_test.go, design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md]
+touches: [flai/internal/verify/select_test.go, design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md, design/issues/I-0401-main-s-go-test-tier-fails-testpublishformulaunderjudgement-since-the-publish.md, flai/cmd/publish_judgement_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1923
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 3
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 12346
+      cache_read: 7699054
+      cache_write: 250359
+      cost: 3.7899
   strategic:
     - kind: planner
       seconds: 107
@@ -77,12 +94,13 @@ finalized:
 This story remediates [I-0327](../../../design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md), "TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0327 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0327 is closed with `flai issue close I-0327 --reason` saying what fixed it
+- [x] The cause I-0327 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0327 is closed with `flai issue close I-0327 --reason` saying what fixed it
 
 ## Tasks
 - T-3523 Run TestRepositoryManifestLintsChangedFlaioverFiles under -short
 - T-3524 Close I-0327 with what fixed it
+- T-3557 TestPublishFormulaUnderJudgement reads the publish formula the template ships, which main's checkout no longer holds
 
 ## Notes
 
@@ -108,3 +126,12 @@ Figures:
 
 - Forecast 30m, up from flai's 4m. flai's figure is 48 s per unit of size times size 5, and it leaves out the close-out, whose integration and smoke tiers a change under `flai/` selects. S-0693 made the same change in 21m of agent work, with a 6m47s close-out. Delivery 2026-11-17T14:56Z is flai's queue-based 14:30Z moved by the 26m added. The story is 16th in the pull order.
 - Cost of delay value 22.50 USD a week, as `flai cod` gives it from the input of 9m per 168h cycle at 150 USD an hour. It stands: I-0327 has one instance.
+
+### Accepted by the orchestrator
+
+- Verified: dd24cb478b1b4b98142e16b659cdd6d9c506a3f5
+- At: 2026-11-17T09:04:30Z
+
+Verdict: pass
+- 1: flai/internal/verify/select_test.go, flai/cmd/publish_judgement_test.go
+- 2: design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md

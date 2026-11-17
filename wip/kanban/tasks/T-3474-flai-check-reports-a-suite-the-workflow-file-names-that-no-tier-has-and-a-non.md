@@ -3,12 +3,18 @@ id: T-3474
 type: task
 nature: feature
 title: flai check reports a suite the workflow file names that no tier has, and a non-manual tier's suite nothing names
-status: backlog
+status: in-progress
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:47Z
-updated: 2026-11-16T23:50:47Z
-transitions: []
+updated: 2026-11-17T08:48:40Z
+transitions:
+  - to: ready
+    at: 2026-11-17T08:48:39Z
+    by: agent-S-0806
+  - to: in-progress
+    at: 2026-11-17T08:48:40Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai]
 touches: [flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go]

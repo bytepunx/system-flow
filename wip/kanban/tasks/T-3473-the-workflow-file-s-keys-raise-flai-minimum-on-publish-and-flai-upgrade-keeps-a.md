@@ -3,11 +3,11 @@ id: T-3473
 type: task
 nature: feature
 title: The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
-status: in-progress
+status: done
 parent: S-0806
 owner: alex
 created: 2026-11-16T23:50:39Z
-updated: 2026-11-17T08:32:23Z
+updated: 2026-11-17T08:47:57Z
 transitions:
   - to: ready
     at: 2026-11-17T08:32:22Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:32:23Z
     by: agent-S-0806
+  - to: done
+    at: 2026-11-17T08:47:57Z
+    by: agent-S-0806
 stream: S-0806
 tags: [flai]
-touches: [flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go]
+touches: [flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go, flai/internal/workflow/suites.go, flai/internal/workflow/workflow.go]
 after: [T-3469]
+usage:
+  source: log
+  seconds: 933
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 353
+      cache_read: 2259131
+      cache_write: 171457
+      cost: 0.927
 ---
 # T-3473 The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
 
