@@ -206,7 +206,7 @@ func TestTheProjectsWorkflowFileIsChecked(t *testing.T) {
 		{"a file that does not parse", "no front matter\n", workflow.CodeFile, 1, "the file has no front matter"},
 		{"a field outside the allowed values", swap("{name: done, kind: accepted}", "{name: done, kind: finished}"), workflow.CodeFile, 10, `states[4].kind: state done's kind "finished" is not one of`},
 		{"a rule flai lacks", swap("rules: [criteria-present, not-draft, after-done]}", "rules: [criteria-present, signed-off]}"), workflow.CodeRule, 13, "names rule signed-off, which flai does not implement"},
-		{"a timer of no state", swap("sum: [review]}", "sum: [checking]}"), workflow.CodeTimer, 31, `timer review's sum names "checking", which is no state of the file`},
+		{"a timer of no state", swap("sum: [review]}", "sum: [checking]}"), workflow.CodeTimer, lineOf(t, base, "sum: [review]}"), `timer review's sum names "checking", which is no state of the file`},
 		{"no pull", swap("effects: [pull], ", ""), codeNoPull, 12, "no transition gives stories the pull effect"},
 		{"a dead end", strings.Replace(swap("  - {name: cancelled, kind: cancelled}\n", "  - {name: cancelled, kind: cancelled}\n  - {name: stuck, kind: waiting}\n"), "  - {from: ready, to: backlog}\n", "  - {from: ready, to: backlog}\n  - {from: review, to: stuck}\n", 1),
 			codeDeadEnd, 12, "state stuck leads by no chain of transitions"},
@@ -301,13 +301,28 @@ func edited(t *testing.T, text string, after ...[2]string) string {
 	return text
 }
 
+// lineStarting is the whole line of text, with its newline, that starts with
+// prefix, failing the test when none does: an edit can then follow the line
+// whatever the rest of it gives.
+func lineStarting(t *testing.T, text, prefix string) string {
+	t.Helper()
+	for line := range strings.Lines(text) {
+		if strings.HasPrefix(line, prefix) {
+			return line
+		}
+	}
+	t.Fatalf("the workflow file has no line starting %q", prefix)
+	return ""
+}
+
 // qaBoard is the baseline file with a state of the project's own, qa, a
 // waiting state between in-progress and review, which no rule finds fault
 // with.
 func qaBoard(t *testing.T) string {
 	t.Helper()
-	return edited(t, baselineText(t),
-		[2]string{"  - {name: review, kind: waiting, limit: true}\n", "  - {name: qa, kind: waiting}\n"},
+	base := baselineText(t)
+	return edited(t, base,
+		[2]string{lineStarting(t, base, "  - {name: review, "), "  - {name: qa, kind: waiting}\n"},
 		[2]string{"  - {from: ready, to: backlog}\n", "  - {from: in-progress, to: qa}\n  - {from: qa, to: review}\n"})
 }
 
@@ -419,6 +434,136 @@ func TestNoWorkflowFileGivesNoAdvisory(t *testing.T) {
 	for _, f := range res.Findings {
 		if strings.HasPrefix(f.Rule, "workflow.") || f.Path == boardRel {
 			t.Errorf("a project without %s: %+v", boardRel, f)
+		}
+	}
+}
+
+// suiteTiers are test tiers whose suites the workflow file's are held
+// against: static and behavior with a manual tier beside behavior's, soak
+// of a manual tier alone, and perf of a tier that is not manual beside one
+// that is.
+const suiteTiers = "tests:\n" +
+	"  - {name: lint, command: [scripts/lint.sh], paths: [\"**\"], suite: static}\n" +
+	"  - {name: unit, command: [scripts/unit.sh], paths: [\"**\"], suite: behavior}\n" +
+	"  - {name: e2e, command: [scripts/e2e.sh], paths: [\"**\"], suite: behavior, manual: true}\n" +
+	"  - {name: soak, command: [scripts/soak.sh], paths: [\"**\"], manual: true}\n" +
+	"  - {name: bench, command: [scripts/bench.sh], paths: [\"**\"], suite: perf}\n" +
+	"  - {name: bench-long, command: [scripts/bench.sh], paths: [\"**\"], suite: perf, manual: true}\n"
+
+// suitesBoard is the baseline file with each all it gives swapped: review
+// for the in-progress → review verify's suites, done for the review → done
+// verify, and at for verify_at's value.
+func suitesBoard(t *testing.T, review, done, at string) string {
+	t.Helper()
+	text := baselineText(t)
+	for _, s := range []struct{ old, repl string }{
+		{"    verify: {suites: all, severity: warn}\n", "    verify: {suites: " + review + ", severity: warn}\n"},
+		{"verify: all}\n", "verify: " + done + "}\n"},
+		{"verify_at: {batch: all, ci: all}\n", "verify_at: " + at + "\n"},
+	} {
+		if !strings.Contains(text, s.old) {
+			t.Fatalf("the baseline lacks %q", s.old)
+		}
+		text = strings.Replace(text, s.old, s.repl, 1)
+	}
+	return text
+}
+
+// suiteFindings are the workflow.suite and workflow.suite-unnamed findings of
+// a project whose manifest gives extra and whose workflow file is board, and
+// the project, opened as flai check opens it.
+func suiteFindings(t *testing.T, extra, board string) ([]Finding, *workitem.Repo) {
+	t.Helper()
+	repo := planningProject(t, extra)
+	if board != "" {
+		repo = writeBoard(t, repo, board)
+	}
+	return slices.DeleteFunc(workflowFindings(t, repo), func(f Finding) bool {
+		return f.Rule != codeSuite && f.Rule != codeSuiteUnnamed
+	}), repo
+}
+
+// S-0806 (ADR-0312 §9): a suite the workflow file names that no test tier
+// has is a workflow.suite error on the line it is named on, naming the
+// place, the suites the tiers have, and what to do; a suite of a tier that
+// is not manual which nothing names is one workflow.suite-unnamed warning,
+// naming only its tiers that are not manual; a suite of manual tiers alone
+// gets none. Neither refuses the file.
+func TestTheSuitesTheWorkflowFileNamesAreHeldAgainstTheTiers(t *testing.T) {
+	board := suitesBoard(t, "[static, behaviour]", "[static]", "{batch: [static], ci: [static]}")
+	got, repo := suiteFindings(t, suiteTiers, board)
+	if err := repo.FlowErr(); err != nil {
+		t.Fatalf("a file naming an unknown suite is refused: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("want the error on behaviour and warnings on behavior and perf: %+v", got)
+	}
+	f, ok := hasFinding(got, codeSuite, "transition in-progress → review's verify names suite behaviour, which no test tier has", "the suites of system-flow.yaml's test tiers are static, behavior, soak, perf", "add suite: behaviour to the tier", "give all for every suite")
+	if !ok {
+		t.Fatalf("no workflow.suite on behaviour in %+v", got)
+	}
+	if want := lineOf(t, board, "verify: {suites: [static, behaviour]"); f.Level != Error || f.Path != boardRel || f.Line != want {
+		t.Errorf("workflow.suite: level %s at %s:%d; want an error at %s:%d", f.Level, f.Path, f.Line, boardRel, want)
+	}
+	at := lineOf(t, board, "verify_at:")
+	for _, w := range []struct{ suite, of string }{{"behavior", "of tier unit,"}, {"perf", "of tier bench,"}} {
+		f, ok := hasFinding(got, codeSuiteUnnamed, "suite "+w.suite+", "+w.of, "so no step runs it", "give all for every suite", "manual: true")
+		if !ok {
+			t.Errorf("no workflow.suite-unnamed on %s naming only its tier that is not manual in %+v", w.suite, got)
+			continue
+		}
+		if f.Level != Warning || f.Path != boardRel || f.Line != at {
+			t.Errorf("workflow.suite-unnamed on %s: level %s at %s:%d; want a warning at %s:%d", w.suite, f.Level, f.Path, f.Line, boardRel, at)
+		}
+	}
+	// Two tiers of one suite, neither manual, are named in one warning.
+	twoUnit := strings.Replace(suiteTiers, "suite: behavior, manual: true}", "suite: behavior}", 1)
+	got, _ = suiteFindings(t, twoUnit, board)
+	if _, ok := hasFinding(got, codeSuiteUnnamed, "suite behavior, of tiers unit, e2e,"); !ok {
+		t.Errorf("no one warning on behavior naming unit and e2e: %+v", got)
+	}
+	// A run reports both, and the error stops flai check.
+	if res, err := Run(repo, now); err != nil {
+		t.Fatal(err)
+	} else if _, ok := hasFinding(res.Findings, codeSuite, "suite behaviour"); !ok {
+		t.Errorf("Run gives no workflow.suite: %+v", res.Findings)
+	}
+}
+
+// S-0806 (ADR-0312 §9): a file that names all anywhere runs every suite, so
+// no tier's suite is unnamed; all is never an unknown suite, and a suite no
+// tier has is still an error beside it.
+func TestAWorkflowFileNamingAllGivesNoUnnamedSuite(t *testing.T) {
+	board := suitesBoard(t, "[static, behaviour]", "all", "{batch: [static], ci: [static]}")
+	got, _ := suiteFindings(t, suiteTiers, board)
+	if len(got) != 1 || got[0].Rule != codeSuite || !strings.Contains(got[0].Message, "names suite behaviour") {
+		t.Errorf("want the workflow.suite on behaviour alone: %+v", got)
+	}
+	if got, _ := suiteFindings(t, suiteTiers, suitesBoard(t, "[static, behavior, perf]", "[static]", "{batch: all}")); len(got) != 0 {
+		t.Errorf("every suite named, and all at the batch: %+v", got)
+	}
+}
+
+// S-0806 (ADR-0312 §9): the baseline names only all, so it gives neither
+// finding, as the project's file or with no file; a manifest with no test
+// tiers makes every suite the file names unknown.
+func TestTheBaselineGivesNoSuiteFinding(t *testing.T) {
+	for _, board := range []string{"", baselineText(t)} {
+		if got, _ := suiteFindings(t, suiteTiers, board); len(got) != 0 {
+			t.Errorf("the baseline (as the project's file: %t): %+v", board != "", got)
+		}
+		if got, _ := suiteFindings(t, "", board); len(got) != 0 {
+			t.Errorf("the baseline with no test tiers (as the project's file: %t): %+v", board != "", got)
+		}
+	}
+	board := strings.Replace(suitesBoard(t, "[static]", "all", "{ci: [static]}"), "runs: {kluster:", "runs: {suites: [static], kluster:", 1)
+	got, _ := suiteFindings(t, "", board)
+	if len(got) != 3 {
+		t.Fatalf("want an error on static at each place that names it: %+v", got)
+	}
+	for _, at := range []string{"transition in-progress → review's verify", "state review's runs", "verify_at.ci"} {
+		if _, ok := hasFinding(got, codeSuite, at+" names suite static", "system-flow.yaml declares no test tiers"); !ok {
+			t.Errorf("no workflow.suite on %s's static saying the manifest has no tiers: %+v", at, got)
 		}
 	}
 }
