@@ -14,6 +14,9 @@ defaults:
 permissions:
   contents: read
 
+# This job keeps its own commands rather than flai test --at ci: the behavior
+# suite that holds the flaiover tier runs the Go tests and the template test
+# too, and no tier runs pnpm build (design/tech/ci.md).
 jobs:
   check:
     runs-on: ubuntu-latest

@@ -14,6 +14,9 @@ defaults:
 permissions:
   contents: read
 
+# These jobs keep their own commands rather than flai test --at ci: no suite
+# runs the race detector, the macOS leg, or the cross builds
+# (design/tech/ci.md).
 jobs:
   lint:
     runs-on: ubuntu-latest

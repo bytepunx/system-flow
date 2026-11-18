@@ -38,5 +38,10 @@ jobs:
           distribution: goreleaser
           version: v2.18.1
           install-only: true
+      # The smoke suite at ci is the smoke tier alone, scripts/smoke.sh, so flai
+      # test runs what the job ran before and answers pass or its first
+      # findings. --at needs no base branch, so the shallow checkout serves.
+      # The markdownlint step above stays: it is one tier of the static suite,
+      # whose other tiers need the Go linters and flaiover's dependencies.
       - name: Smoke tests
-        run: scripts/smoke.sh
+        run: flai test --at ci --suite smoke
