@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-17
+updated: 2026-11-18
 status: active
 ---
 
@@ -2778,7 +2778,7 @@ Run the project's kluster and deploy stories and main into it.
 
 A project names its local Kubernetes cluster in the kluster: block of its system-flow.yaml: the kluster config file, made for bytepunx/kluster with the k3d provider, and the commands that build, deploy into, and tear down a namespace of it (design/system/kluster.md, ADR-0254). flai runs the kluster command in the project's main checkout, with that config, so a story's worktree acts on main's cluster.
 
-flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it.
+flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config, and for a cluster that runs already writes its kubeconfig again; flai kluster down takes it down; flai kluster status reports it.
 
 flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs, which flai kluster log S-nnnn --step &lt;step&gt; prints, and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project. flai kluster exec S-nnnn -- &lt;command&gt; runs a command in the story's worktree with its namespace's variables and the namespace's own kubeconfig, while the namespace has a record, and flai kluster env S-nnnn prints those variables, as export lines or JSON.
 
@@ -3053,7 +3053,9 @@ Bring the project's cluster up with kluster up and keep its kubeconfig.
 flai kluster up
 ```
 
-Runs kluster --config &lt;config&gt; up in the project's main checkout, with kluster's output shown as it comes, then writes the cluster's kubeconfig to .flai-cache/kluster/kubeconfig with kluster kubeconfig. A bring-up installs the profile's shared services and takes minutes (11m31s for authstar).
+Reads kluster status first, in the project's main checkout. For a cluster it does not list, runs kluster --config &lt;config&gt; up there, with kluster's output shown as it comes. A bring-up installs the profile's shared services and takes minutes (11m31s for authstar). Then it writes the cluster's kubeconfig to .flai-cache/kluster/kubeconfig with kluster kubeconfig.
+
+For a cluster that runs already, kluster up would refuse it as one that exists, so flai runs no kluster up, says the cluster was up already, and writes its kubeconfig again. That is how a stale kubeconfig is refreshed, such as one that names an old API port after the cluster's k3d containers restarted (I-0367). A cluster that is listed but stopped is refused, and nothing runs. Start its k3d node containers with docker start and run this again, or run flai kluster down and then flai kluster up to make it anew.
 
 Examples:
 

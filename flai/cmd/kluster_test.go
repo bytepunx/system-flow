@@ -118,6 +118,37 @@ func TestKlusterUp(t *testing.T) {
 	}
 }
 
+// S-0840, I-0367: flai kluster up of a cluster that runs already runs no
+// kluster up, which refuses a cluster that exists, and writes its
+// kubeconfig again, saying so; a stopped cluster is refused, naming the
+// fixes.
+func TestKlusterUpOfAClusterThatExists(t *testing.T) {
+	root, log := klusterProject(t, "NAME              RUNNING  AGE\ndemo-integration  yes      3d2h\n")
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "up")
+	if code != 0 {
+		t.Fatalf("up of a running cluster: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(out, "the cluster demo-integration is up already") || !strings.Contains(out, "demo-integration is up; its kubeconfig is "+kluster.KubeconfigPath(root)) {
+		t.Errorf("up says the cluster was up already and where its kubeconfig was written: %s", out)
+	}
+	calls := readLog(t, log)
+	if strings.Contains(calls, "--provider k3d up") || !strings.Contains(calls, "--provider k3d status") || !strings.Contains(calls, "kubeconfig --name demo-integration --output "+kluster.KubeconfigPath(root)) {
+		t.Errorf("up of a running cluster runs status and kubeconfig, and no kluster up: %s", calls)
+	}
+	if _, err := os.Stat(kluster.KubeconfigPath(root)); err != nil {
+		t.Errorf("the kubeconfig is written again: %v", err)
+	}
+
+	stopped, log := klusterProject(t, "NAME              RUNNING  AGE\ndemo-integration  no       3d2h\n")
+	out, errOut, code = runKluster(t, stopped, false, "", "kluster", "up")
+	if code == 0 || !strings.Contains(errOut, "exists but is stopped") || !strings.Contains(errOut, "docker start") || !strings.Contains(errOut, "flai kluster down and then flai kluster up") {
+		t.Errorf("up of a stopped cluster is refused, naming the fixes: %d %s %s", code, out, errOut)
+	}
+	if calls := readLog(t, log); strings.Contains(calls, "kubeconfig") || strings.Contains(calls, "--provider k3d up") {
+		t.Errorf("up of a stopped cluster runs only status: %s", calls)
+	}
+}
+
 // S-0577: flai kluster down runs kluster down with --yes, so kluster does
 // not prompt; flai asks first unless --yes, and refuses on a non-terminal.
 func TestKlusterDown(t *testing.T) {

@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-17
+updated: 2026-11-18
 status: active
 ---
 
@@ -1968,6 +1968,7 @@ flai kluster down              # asks first; --yes takes it down without asking
 Each runs `kluster` in the project's main checkout, with the config the block names, so a story's worktree acts on main's cluster.
 
 - `up` shows kluster's output as it comes. Once the cluster is up, it writes the cluster's kubeconfig to `.flai-cache/kluster/kubeconfig` and prints it with the kube context, `k3d-<name>`. flai never merges it into `~/.kube/config`; point `KUBECONFIG` at it to use `kubectl`.
+- `up` reads `kluster status` first. For a cluster that runs already, it runs no `kluster up`, says the cluster was up already, and writes its kubeconfig again. Run it whenever the kept kubeconfig is stale, as when the cluster's k3d containers restarted and its API port moved, and kluster jobs fail with connection refused. A cluster that is stopped is refused: start its k3d node containers with `docker start` and run `up` again, or run `down` and then `up` to make it anew.
 - `down` deletes the cluster, every namespace in it, and the shared services' data. kluster's own prompt never appears: flai asks first on a terminal, and `--yes` answers. Without a terminal, such as in a script, it refuses unless you pass `--yes`.
 - `status` reads `kluster status` and exits 0 whether the cluster runs, is stopped, or was never created:
 
