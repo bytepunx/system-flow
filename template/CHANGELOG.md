@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.46 - 2026-11-18
+
+- S-0806 The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour (patch).
 - S-0806 The board's workflow file, `design/workflows/board.md`, gives today's behaviour as data: `verify: {suites: all, severity: warn}` on the move to review, `verify: all` on the acceptance, `runs: {kluster: [deploy, checks]}` on `review`, and `verify_at: {batch: all, ci: all}`, and its body says what they mean; nothing reads them to decide a run yet (patch, ADR-0312).
 
 ## 1.1.45 - 2026-11-17

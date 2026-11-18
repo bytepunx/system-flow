@@ -3,12 +3,18 @@ id: T-3572
 type: task
 nature: remediation
 title: Item.Closed and PlanArchive read the accepted and cancelled kinds of the workflow the repository runs
-status: backlog
+status: in-progress
 parent: S-0842
 owner: alex
 created: 2026-11-17T12:29:38Z
-updated: 2026-11-17T12:29:38Z
-transitions: []
+updated: 2026-11-18T07:32:41Z
+transitions:
+  - to: ready
+    at: 2026-11-18T07:32:41Z
+    by: agent-S-0842
+  - to: in-progress
+    at: 2026-11-18T07:32:41Z
+    by: agent-S-0842
 stream: S-0842
 tags: [flai, workflow]
 touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/store.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go]
