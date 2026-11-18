@@ -125,6 +125,23 @@ operator's to turn on, with flai serve enable push on the host. The
 operator's own shell, with neither set, is not held, and neither is
 --dry-run, which publishes nothing (S-0423).
 
+With the workflow file's top-level verify_at.publish set (ADR-0312 §6),
+--pending runs those suites, or every suite for all, at the checkout's head
+once the push host action and the remote's check let it publish and
+something is pending, before any version file, changelog, commit, or tag is
+written: every tier of each suite, all_only ones too and manual ones not, as
+flai test --suite <suite> --all runs them, in the order the file names the
+suites, stopping at the first tier that fails. Each tier's whole output is
+kept in .flai-cache/publish/<UTC time>/<tier>.log, and the answer names the
+folder. When a tier fails, or the suites cannot be run, nothing is applied,
+committed, tagged, or pushed, and the exit is 5, the last line naming the
+tier, its suite, and its log. With --json the answer's publish_suites gives
+the suites, the head, the log folder, and each tier's outcome with its
+suite, on failure as on success. --dry-run names the suites and the tiers
+they would run, in publish_suites with --json, and runs none. With nothing
+pending, or with no publish in the file, as on the baseline, no tier runs
+and the answer is as without it. flai push --pending does not run them.
+
 flai release --evaluate says whether system-flow.yaml's orchestration.release
 policy is met, why, and the figures it rests on (S-0217): the stories
 accepted and not yet released, their count, and their cost of delay per week
@@ -406,8 +423,10 @@ func (a *app) printEvaluation(ev release.Evaluation) error {
 	return w.Flush()
 }
 
-// computeApplyAndTagPending is the first half of flai release --pending
-// (S-0087) and, since S-0094, of flai push --pending too: everything
+// computeApplyAndTagPending is the first half of flai push --pending
+// (S-0094), as planPending then applyAndTagPending are of flai release
+// --pending (S-0087), which runs verify_at.publish's suites between them
+// (ADR-0312 §6): everything
 // release.Pending finds since each component's last tag, applied (version
 // files and one changelog entry, committed) and tagged on HEAD, before
 // anything is pushed. flai accept computes none of this (it only merges,
@@ -418,24 +437,44 @@ func (a *app) printEvaluation(ev release.Evaluation) error {
 // clone (S-0174) or commits on its branch this clone lacks (ADR-0067), or
 // cannot be asked whether it has: exit 3, as for a remote that moved.
 func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, []string, error) {
-	if err := a.remoteTagsInStep(root, repo); err != nil {
+	plans, err := a.planPending(root, repo)
+	if err != nil {
 		return nil, nil, err
+	}
+	tags, err := a.applyAndTagPending(root, plans)
+	if err != nil {
+		return nil, nil, err
+	}
+	return plans, tags, nil
+}
+
+// planPending is what release.Pending finds since each component's last
+// tag, once the remote is in step (remoteTagsInStep), each accepted item no
+// plan covers warned of; nothing is applied.
+func (a *app) planPending(root string, repo *workitem.Repo) ([]*release.PendingPlan, error) {
+	if err := a.remoteTagsInStep(root, repo); err != nil {
+		return nil, err
 	}
 	b, err := release.PendingBatch(a.runner, root, repo.Manifest, repo)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, u := range b.Unplanned {
 		a.logger().Warn("accepted item left out of the release", "component", "release", "item", u.ID, "detail", fmt.Sprintf("%s is left out of the release: %s", u.ID, u.Reason))
 	}
-	plans := b.Plans
+	return b.Plans, nil
+}
+
+// applyAndTagPending applies plans, version files and one changelog entry,
+// commits them, and tags each on HEAD, answering the tags made.
+func (a *app) applyAndTagPending(root string, plans []*release.PendingPlan) ([]string, error) {
 	for _, p := range plans {
 		if err := release.ApplyPending(p, root, a.now()); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		raise, err := release.RaiseMinimum(a.runner, root, p, buildinfo.Version)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		a.reportRaise(raise)
 	}
@@ -444,10 +483,10 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 			// Another git process (flai serve's replan, an agent's commit) may
 			// hold the index lock for a moment: wait it out (I-0359).
 			if _, err := storygit.RunPastIndexLock(a.runner, root, "add", "-A"); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			if _, err := storygit.RunPastIndexLock(a.runner, root, "commit", "-q", "-m", "chore: publish "+summarizePlans(plans)); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
@@ -455,13 +494,13 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 	for _, p := range plans {
 		tag, err := release.TagPending(a.runner, root, p)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if tag != "" {
 			tags = append(tags, tag)
 		}
 	}
-	return plans, tags, nil
+	return tags, nil
 }
 
 // reportRaise says what a publish did to flai.minimum (I-0107): raised to a
@@ -529,6 +568,9 @@ func (a *app) servedPublishHeld(root string) error {
 // resumable on partial failure. An agent flai serve started is held while
 // the push host action is off (S-0423), its dry run aside. With
 // requirePending, finding nothing pending exits exitNothingPending (S-0643).
+// With something pending, the suites the workflow file's verify_at.publish
+// names run first, and one that fails exits exitReleaseSuiteFailed with
+// nothing applied (ADR-0312 §6).
 func (a *app) publishPending(dryRun, requirePending bool) error {
 	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
 		return err
@@ -542,6 +584,12 @@ func (a *app) publishPending(dryRun, requirePending bool) error {
 		if err != nil {
 			return err
 		}
+		// verify_at.publish runs only when something can publish; named,
+		// never run, here
+		var suites *publishSuitesPreview
+		if len(pub.Plans) > 0 && !pub.Remote.Lagging() {
+			suites = a.previewPublishSuites(repo)
+		}
 		if a.jsonOut {
 			if requirePending && len(pub.Plans) == 0 && !pub.Remote.Lagging() {
 				return a.nothingPending(repo.Root, repo.Manifest, true, func(covered []release.LastRelease) any {
@@ -550,6 +598,12 @@ func (a *app) publishPending(dryRun, requirePending bool) error {
 						CoveredBy []release.LastRelease `json:"covered_by"`
 					}{pub, covered}
 				})
+			}
+			if suites != nil {
+				return a.printJSON(struct {
+					*preview.Publishing
+					PublishSuites *publishSuitesPreview `json:"publish_suites"`
+				}{pub, suites})
 			}
 			return a.printJSON(pub)
 		}
@@ -569,13 +623,31 @@ func (a *app) publishPending(dryRun, requirePending bool) error {
 		for _, p := range pub.Plans {
 			a.printPendingPlan(p)
 		}
+		a.printPublishSuitesPreview(suites)
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
 	}
 	if err := a.servedPublishHeld(repo.Root); err != nil {
 		return err
 	}
-	plans, tags, err := a.computeApplyAndTagPending(repo.Root, repo)
+	plans, err := a.planPending(repo.Root, repo)
+	if err != nil {
+		return err
+	}
+	var suites *publishSuitesRun
+	if len(plans) > 0 {
+		// verify_at.publish runs at the head being published, before any
+		// version file, changelog, commit, or tag is written (ADR-0312 §6)
+		if suites, err = a.runPublishSuites(repo); err != nil {
+			if a.jsonOut && suites != nil {
+				if perr := a.printJSON(map[string]any{"plans": plans, "tags": []string{}, "pushed": false, "publish_suites": suites}); perr != nil {
+					return perr
+				}
+			}
+			return err
+		}
+	}
+	tags, err := a.applyAndTagPending(repo.Root, plans)
 	if err != nil {
 		return err
 	}
@@ -584,6 +656,9 @@ func (a *app) publishPending(dryRun, requirePending bool) error {
 		u = pending.TagsOnly(a.runner, repo.Root, tags)
 	}
 	result := map[string]any{"plans": plans, "tags": tags, "pushed": false}
+	if suites != nil {
+		result["publish_suites"] = suites
+	}
 	if u == nil {
 		if len(plans) == 0 {
 			result["reason"] = "nothing pending"
