@@ -180,7 +180,7 @@ func TestKeepAtLetsALaterAskAtThatCommitAnswerFromTheRecord(t *testing.T) {
 	if !rep.FromRecord || !rep.Passed || rep.Commit != "4567def" || !rep.RanAt.Equal(ran.RanAt) || len(f.proc.ran) != 0 {
 		t.Errorf("the ask at the close-out's commit %+v ran %q; want the kept verdict, running nothing", rep, f.proc.ran)
 	}
-	for _, s := range rep.Suites {
+	for _, s := range rep.SuiteRuns {
 		if s.Commit != "4567def" || !s.Clean {
 			t.Errorf("suite %s kept at %s, clean %v; want it verified at exactly the close-out's commit", s.Name, s.Commit, s.Clean)
 		}
@@ -188,13 +188,13 @@ func TestKeepAtLetsALaterAskAtThatCommitAnswerFromTheRecord(t *testing.T) {
 	// a last report keeps an earlier run's suite at another commit, which
 	// the record at the close-out's commit leaves out
 	earlier := verifyrecord.Suite{Name: "docs", Passed: true, Commit: "0000aaa", RanAt: ran.RanAt.Add(-time.Hour), Tiers: []verifyrecord.Tier{{Name: "md", State: verifyrecord.Passed}}}
-	ran.Suites = append(ran.Suites, earlier)
+	ran.SuiteRuns = append(ran.SuiteRuns, earlier)
 	if err := KeepAt(f.opts.Project, "89abcde", ran); err != nil {
 		t.Fatal(err)
 	}
-	if kept, _, err := readRecord(f.opts.Project, "S-004", "89abcde"); err != nil || len(kept.Suites) != len(ran.Suites)-1 ||
-		slices.ContainsFunc(kept.Suites, func(s verifyrecord.Suite) bool { return s.Name == "docs" }) {
-		t.Errorf("the record at the close-out's commit holds %+v, %v; want the run's own suites alone", kept.Suites, err)
+	if kept, _, err := readRecord(f.opts.Project, "S-004", "89abcde"); err != nil || len(kept.SuiteRuns) != len(ran.SuiteRuns)-1 ||
+		slices.ContainsFunc(kept.SuiteRuns, func(s verifyrecord.Suite) bool { return s.Name == "docs" }) {
+		t.Errorf("the record at the close-out's commit holds %+v, %v; want the run's own suites alone", kept.SuiteRuns, err)
 	}
 	if err := KeepAt(f.opts.Project, "", ran); err == nil {
 		t.Error("KeepAt kept a verdict at no commit")
@@ -237,7 +237,7 @@ func TestTwoRunsOfDifferentSuitesAtOneCommitBothStayInTheRecord(t *testing.T) {
 	behavior := []Tier{{Name: "smoke", Suite: "behavior", AllOnly: true, Command: []string{"smoke.sh"}}}
 	f.opts.Tiers = static
 	first, err := Verify(context.Background(), f.opts)
-	if err != nil || !first.Passed || len(first.Suites) != 1 {
+	if err != nil || !first.Passed || len(first.SuiteRuns) != 1 {
 		t.Fatalf("first run %+v, %v", first, err)
 	}
 	f.opts.Tiers = behavior
@@ -255,18 +255,18 @@ func TestTwoRunsOfDifferentSuitesAtOneCommitBothStayInTheRecord(t *testing.T) {
 	}
 	last, _, err := LastReport(f.opts.Project, "S-004")
 	if err != nil || !last.PassedSuites("0123abc", []string{"static", "behavior"}) || last.PassedSuites("4567def", []string{"static"}) {
-		t.Errorf("the last report's suites %+v, %v; want both passed at 0123abc alone", last.Suites, err)
+		t.Errorf("the last report's suites %+v, %v; want both passed at 0123abc alone", last.SuiteRuns, err)
 	}
 	f.opts.Tiers = static
 	third := f.verifyAgain(t)
 	if !third.FromRecord || !third.Passed || len(f.proc.ran) != 0 {
 		t.Fatalf("third ask %+v ran %q; want static answered from the record", third, f.proc.ran)
 	}
-	if got := tierStates(third); !reflect.DeepEqual(got, []string{"go-test:passed"}) || len(third.Suites) != 1 || third.Suites[0].Name != "static" {
-		t.Errorf("the answer's tiers %v and suites %+v; want static's alone", got, third.Suites)
+	if got := tierStates(third); !reflect.DeepEqual(got, []string{"go-test:passed"}) || len(third.SuiteRuns) != 1 || third.SuiteRuns[0].Name != "static" {
+		t.Errorf("the answer's tiers %v and suites %+v; want static's alone", got, third.SuiteRuns)
 	}
 	if !third.PassedSuites("0123abc", []string{"static"}) || third.PassedSuites("0123abc", []string{"behavior"}) {
-		t.Errorf("the answer covers %+v; want static and not behavior", third.Suites)
+		t.Errorf("the answer covers %+v; want static and not behavior", third.SuiteRuns)
 	}
 }
 
@@ -296,7 +296,7 @@ func TestKeepAtKeepsTheSuitesAnEarlierVerdictAtTheCommitRecorded(t *testing.T) {
 	}
 	names := func(rep Report) []string {
 		var out []string
-		for _, s := range rep.Suites {
+		for _, s := range rep.SuiteRuns {
 			out = append(out, s.Name)
 		}
 		return out
@@ -309,23 +309,23 @@ func TestKeepAtKeepsTheSuitesAnEarlierVerdictAtTheCommitRecorded(t *testing.T) {
 		steps     []string
 	}{
 		{"behavior failed", Report{StoppedAt: "smoke", Steps: []Step{check, tier("smoke", Failed)},
-			Suites: []verifyrecord.Suite{suite("behavior", false, "smoke", verifyrecord.Failed)}},
+			SuiteRuns: []verifyrecord.Suite{suite("behavior", false, "smoke", verifyrecord.Failed)}},
 			false, "smoke", []string{"check:passed", "smoke:failed"}},
 		{"static passed beside it", Report{Passed: true, Steps: []Step{check, tier("go-test", Passed)},
-			Suites: []verifyrecord.Suite{suite("static", true, "go-test", verifyrecord.Passed)}},
+			SuiteRuns: []verifyrecord.Suite{suite("static", true, "go-test", verifyrecord.Passed)}},
 			false, "smoke", []string{"check:passed", "go-test:passed", "smoke:failed"}},
 		{"behavior passed again", Report{Passed: true, Steps: []Step{check, tier("smoke", Passed)},
-			Suites: []verifyrecord.Suite{suite("behavior", true, "smoke", verifyrecord.Passed)}},
+			SuiteRuns: []verifyrecord.Suite{suite("behavior", true, "smoke", verifyrecord.Passed)}},
 			true, "", []string{"check:passed", "smoke:passed", "go-test:passed"}},
 		{"behavior left to the queue", Report{Passed: true, Steps: []Step{check, tier("smoke", Queued)},
-			Suites: []verifyrecord.Suite{suite("behavior", true, "smoke", verifyrecord.Queued)}},
+			SuiteRuns: []verifyrecord.Suite{suite("behavior", true, "smoke", verifyrecord.Queued)}},
 			true, "", []string{"check:passed", "smoke:passed", "go-test:passed"}},
 	} {
 		rec := keep(step.rep)
 		if rec.Passed != step.passed || rec.StoppedAt != step.stoppedAt || !reflect.DeepEqual(states(rec), step.steps) {
 			t.Errorf("%s: passed %v at %q, steps %v; want %v at %q, %v", step.name, rec.Passed, rec.StoppedAt, states(rec), step.passed, step.stoppedAt, step.steps)
 		}
-		if got := names(rec); len(rec.Suites) > 1 && !reflect.DeepEqual(got, []string{"behavior", "static"}) {
+		if got := names(rec); len(rec.SuiteRuns) > 1 && !reflect.DeepEqual(got, []string{"behavior", "static"}) {
 			t.Errorf("%s: suites %v, want behavior then static", step.name, got)
 		}
 	}
@@ -362,8 +362,8 @@ func TestVerifyRunsInPlaceOfARecordFromBeforeSuites(t *testing.T) {
 	if err != nil || rep.FromRecord || !rep.Passed || len(f.proc.ran) != 3 {
 		t.Fatalf("report %+v ran %q, %v; want every tier run", rep, f.proc.ran, err)
 	}
-	if again, ok, err := Recorded(f.opts); err != nil || !ok || len(again.Suites) != 3 {
-		t.Errorf("the run is not kept with its suites: %+v, %v, %v", again.Suites, ok, err)
+	if again, ok, err := Recorded(f.opts); err != nil || !ok || len(again.SuiteRuns) != 3 {
+		t.Errorf("the run is not kept with its suites: %+v, %v, %v", again.SuiteRuns, ok, err)
 	}
 }
 

@@ -116,14 +116,14 @@ type Record struct {
 	Passed     bool      `json:"passed"`
 	Clean      bool      `json:"clean,omitempty"`
 	Steps      []Step    `json:"steps"`
-	Suites     []Suite   `json:"suites,omitempty"`
+	SuiteRuns  []Suite   `json:"suite_runs,omitempty"`
 }
 
 // SuitesOf is the record's suites: those it holds, or, for a report written
 // before suites were recorded, its tier steps grouped as Group groups them.
 func (r Record) SuitesOf(suiteOf func(tier string) string) []Suite {
-	if len(r.Suites) > 0 {
-		return r.Suites
+	if len(r.SuiteRuns) > 0 {
+		return r.SuiteRuns
 	}
 	return Group(r, suiteOf)
 }

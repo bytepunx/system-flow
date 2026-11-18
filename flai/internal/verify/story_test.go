@@ -1017,8 +1017,8 @@ func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {
 				t.Fatal(err)
 			}
 			last.Fingerprint = ""
-			for i := range last.Suites {
-				last.Suites[i].Fingerprint = ""
+			for i := range last.SuiteRuns {
+				last.SuiteRuns[i].Fingerprint = ""
 			}
 			if err := SaveReport(f.opts.Project, last); err != nil {
 				t.Fatal(err)
@@ -1029,7 +1029,7 @@ func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			last.Suites = nil
+			last.SuiteRuns = nil
 			data, err := json.Marshal(last)
 			if err != nil {
 				t.Fatal(err)
@@ -1570,12 +1570,12 @@ func labelled() []Tier {
 // one.
 func suiteNamed(t *testing.T, rep Report, name string) verifyrecord.Suite {
 	t.Helper()
-	for _, s := range rep.Suites {
+	for _, s := range rep.SuiteRuns {
 		if s.Name == name {
 			return s
 		}
 	}
-	t.Fatalf("the report records no suite %s: %+v", name, rep.Suites)
+	t.Fatalf("the report records no suite %s: %+v", name, rep.SuiteRuns)
 	return verifyrecord.Suite{}
 }
 
@@ -1597,8 +1597,8 @@ func TestVerifyReusesASuiteAcrossACleanRebaseUntilMainsNewPathsSelectItsTiers(t 
 			f := newRebaseFixture(t)
 			f.opts.Tiers = labelled()
 			first := f.verify(t)
-			if !first.Passed || len(first.Suites) != 2 {
-				t.Fatalf("first run %v, suites %+v", states(first), first.Suites)
+			if !first.Passed || len(first.SuiteRuns) != 2 {
+				t.Fatalf("first run %v, suites %+v", states(first), first.SuiteRuns)
 			}
 			for name, tiers := range map[string][]string{"static": {"unit"}, "behavior": {"integration", "smoke"}} {
 				s := suiteNamed(t, first, name)

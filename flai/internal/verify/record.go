@@ -26,7 +26,7 @@ func RecordPath(project *workitem.Repo, story, commit string) string {
 // Recorded answers the verdict the record holds for the story's worktree at
 // its head commit, when the worktree is clean and the main branch is at the
 // record's base commit or ahead of it only by commits the sync step passes
-// over (ADR-0135); ok is false, with no error, otherwise. Its Suites are the
+// over (ADR-0135); ok is false, with no error, otherwise. Its SuiteRuns are the
 // suites the verdict covers (ADR-0312 §7).
 func Recorded(o StoryOptions) (rep Report, ok bool, err error) {
 	v, err := newStoryRun(o)
@@ -48,13 +48,13 @@ func KeepAt(project *workitem.Repo, commit string, rep Report) error {
 		return fmt.Errorf("keep the verify verdict of %q at %q: name a project, a report's story, and a commit", rep.Story, commit)
 	}
 	var own []verifyrecord.Suite
-	for _, s := range rep.Suites {
+	for _, s := range rep.SuiteRuns {
 		if s.Commit == rep.Commit && s.RanAt.Equal(rep.RanAt) {
 			s.Commit, s.Clean = commit, true
 			own = append(own, s)
 		}
 	}
-	rep.Commit, rep.FromRecord, rep.Suites = commit, false, own
+	rep.Commit, rep.FromRecord, rep.SuiteRuns = commit, false, own
 	if before, ok, err := readRecord(project, rep.Story, commit); err == nil && ok {
 		rep = mergedRecord(before, rep)
 	}
@@ -80,8 +80,8 @@ func KeepAt(project *workitem.Repo, commit string, rep Report) error {
 // kept suite that did not pass stops it at the first kept step that failed,
 // else where before stopped.
 func mergedRecord(before, rep Report) Report {
-	suites, kept := verifyrecord.Merge(before.Suites, rep.Suites)
-	rep.Suites = suites
+	suites, kept := verifyrecord.Merge(before.SuiteRuns, rep.SuiteRuns)
+	rep.SuiteRuns = suites
 	keptTier, keptPassed := map[string]bool{}, true
 	for _, s := range suites {
 		if !slices.Contains(kept, s.Name) {
@@ -165,7 +165,7 @@ func (v *storyRun) recorded() (Report, bool, error) {
 	selected, queued, _ := v.selection()
 	listed := inListOrder(v.opts.Tiers, selected, queued)
 	need := suiteNames(listed)
-	if !v.covers(rec.Suites, need, listed) {
+	if !v.covers(rec.SuiteRuns, need, listed) {
 		return Report{}, false, nil
 	}
 	now := v.newReport(v.opts.Now())
@@ -218,7 +218,7 @@ func (v *storyRun) covers(suites []verifyrecord.Suite, need []string, listed []S
 func (r Report) ofSuites(names []string) Report {
 	tiers := map[string]bool{}
 	suites := make([]verifyrecord.Suite, 0, len(names))
-	for _, s := range r.Suites {
+	for _, s := range r.SuiteRuns {
 		if !slices.Contains(names, s.Name) {
 			continue
 		}
@@ -233,7 +233,7 @@ func (r Report) ofSuites(names []string) Report {
 			steps = append(steps, s)
 		}
 	}
-	r.Steps, r.Suites, r.Passed, r.StoppedAt = steps, suites, true, ""
+	r.Steps, r.SuiteRuns, r.Passed, r.StoppedAt = steps, suites, true, ""
 	return r
 }
 

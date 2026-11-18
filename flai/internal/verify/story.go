@@ -131,7 +131,7 @@ type Report struct {
 	// Fingerprint hashes what selects and runs the tiers: the project's
 	// tiers and the selected ones' commands, those run and those left to the
 	// merge queue alike, so that a run that leaves tiers to the queue and one
-	// that runs them have the same (ADR-0174, I-0203). Each of Suites has
+	// that runs them have the same (ADR-0174, I-0203). Each of SuiteRuns has
 	// the fingerprint of the project's tiers and its own selected ones: a
 	// later run with the same reuses the tiers of that suite this one passed
 	// when it is at the same Commit and BaseCommit (S-0341), or, rebased, has
@@ -149,12 +149,12 @@ type Report struct {
 	// which the tiers were selected for.
 	Paths []string `json:"paths,omitempty"`
 	Steps []Step   `json:"steps"`
-	// Suites are what the run recorded of each suite whose tiers it
+	// SuiteRuns are what the run recorded of each suite whose tiers it
 	// selected: its tiers, how each ended, and the head and base they passed
 	// at (ADR-0312 §7). The story's last report, and its verdict at a commit,
 	// keep too the suites an earlier run recorded that a later one did not
 	// run (SaveReport, KeepAt). None in a report stored before suites were.
-	Suites []verifyrecord.Suite `json:"suites,omitempty"`
+	SuiteRuns []verifyrecord.Suite `json:"suite_runs,omitempty"`
 	// Notes are the check's findings outside the story, which do not fail
 	// it (S-0249); flai verify --record-issues records them.
 	Notes []Note `json:"notes,omitempty"`
@@ -278,7 +278,7 @@ type Note struct {
 // differ, as after a clean rebase, they are reused only when the branch's own
 // change has the same patch id, and only up to the first tier that the paths
 // the main branch brought in select, which runs again with every tier after
-// it (ADR-0156). The report's Suites record what the run did of each suite.
+// it (ADR-0156). The report's SuiteRuns record what the run did of each suite.
 // It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not, and, when the worktree was clean as it began and
@@ -564,7 +564,7 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		rep.Steps = append(rep.Steps, step)
 		v.ended(step)
 	}
-	rep.Suites = v.suiteRecords(rep, listed)
+	rep.SuiteRuns = v.suiteRecords(rep, listed)
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr
 }
@@ -584,7 +584,7 @@ func (v *storyRun) suiteRecords(rep Report, listed []Selected) []verifyrecord.Su
 // record is what verifyrecord reads of the report, as it reads it stored.
 func (r Report) record() verifyrecord.Record {
 	rec := verifyrecord.Record{Story: r.Story, Commit: r.Commit, Base: r.Base, BaseCommit: r.BaseCommit, MergeBase: r.MergeBase,
-		Patch: r.Patch, RanAt: r.RanAt, Passed: r.Passed, Clean: r.Clean, Steps: make([]verifyrecord.Step, 0, len(r.Steps)), Suites: r.Suites}
+		Patch: r.Patch, RanAt: r.RanAt, Passed: r.Passed, Clean: r.Clean, Steps: make([]verifyrecord.Step, 0, len(r.Steps)), SuiteRuns: r.SuiteRuns}
 	for _, s := range r.Steps {
 		rec.Steps = append(rec.Steps, verifyrecord.Step{Name: s.Name, Tier: s.Tier, State: verifyrecord.State(s.State), CoveredBy: s.CoveredBy, ReusedFrom: s.ReusedFrom})
 	}
@@ -595,7 +595,7 @@ func (r Report) record() verifyrecord.Record {
 // entry at commit that passed: what a verdict answered from the record
 // covers (ADR-0312 §7). No names is true.
 func (r Report) PassedSuites(commit string, names []string) bool {
-	return verifyrecord.AllPassed(r.Suites, commit, names)
+	return verifyrecord.AllPassed(r.SuiteRuns, commit, names)
 }
 
 // suiteOf gives each of tiers' suite by its name, SuiteOrName; "" for a
@@ -1160,7 +1160,7 @@ func (v *storyRun) reusable(selected, listed []Selected) (steps []Step, sentBack
 		name := sel.Tier.SuiteOrName()
 		g, seen := gates[name]
 		if !seen {
-			g = v.gate(last.Suites, name, selected, listed)
+			g = v.gate(last.SuiteRuns, name, selected, listed)
 			gates[name] = g
 		}
 		if !g.ok {
@@ -1442,7 +1442,7 @@ func ReportPath(project *workitem.Repo, story string) string {
 
 // SaveReport stores rep as its story's last report, replacing the one
 // before it in one step, so that a reader sees one whole report or the
-// other. Its Suites keep those of the report before it that rep did not run,
+// other. Its SuiteRuns keep those of the report before it that rep did not run,
 // as verifyrecord.Merge merges them, so that the last report holds the last
 // run of each suite (ADR-0312 §7); a report before it that does not read
 // keeps none.
@@ -1450,7 +1450,7 @@ func SaveReport(project *workitem.Repo, rep Report) error {
 	// what LastReportAt reads against the head is not the run's to store
 	rep.Moved, rep.Running = false, nil
 	if before, ok, err := LastReport(project, rep.Story); err == nil && ok {
-		rep.Suites, _ = verifyrecord.Merge(before.Suites, rep.Suites)
+		rep.SuiteRuns, _ = verifyrecord.Merge(before.SuiteRuns, rep.SuiteRuns)
 	}
 	path := ReportPath(project, rep.Story)
 	data, err := json.MarshalIndent(rep, "", "  ")

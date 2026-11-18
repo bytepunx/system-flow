@@ -84,7 +84,7 @@ func TestSuitesOfReadsAReportFromBeforeSuites(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec, ok, err := Read(path)
-	if err != nil || !ok || rec.Commit != "c1" || len(rec.Steps) != 3 || rec.Suites != nil {
+	if err != nil || !ok || rec.Commit != "c1" || len(rec.Steps) != 3 || rec.SuiteRuns != nil {
 		t.Fatalf("read %+v, %v, %v", rec, ok, err)
 	}
 	got := rec.SuitesOf(nil)
@@ -95,8 +95,8 @@ func TestSuitesOfReadsAReportFromBeforeSuites(t *testing.T) {
 	if got := rec.SuitesOf(func(string) string { return "behavior" }); len(got) != 1 || !reflect.DeepEqual(got[0].TierNames(), []string{"unit", "smoke"}) {
 		t.Errorf("one suite %+v", got)
 	}
-	rec.Suites = []Suite{suite("static", "c1", true)}
-	if got := rec.SuitesOf(nil); !reflect.DeepEqual(got, rec.Suites) {
+	rec.SuiteRuns = []Suite{suite("static", "c1", true)}
+	if got := rec.SuitesOf(nil); !reflect.DeepEqual(got, rec.SuiteRuns) {
 		t.Errorf("held suites %+v", got)
 	}
 }
@@ -150,7 +150,7 @@ func TestAllPassed(t *testing.T) {
 // covered it in another suite.
 func TestAtHeadAnswersEachSuitesVerdictAtTheHead(t *testing.T) {
 	t.Parallel()
-	data := `{"story":"S-004","commit":"c1","base":"main","ran_at":"2026-11-18T09:00:00Z","passed":false,"steps":[],"suites":[
+	data := `{"story":"S-004","commit":"c1","base":"main","ran_at":"2026-11-18T09:00:00Z","passed":false,"steps":[],"suite_runs":[
 		{"name":"static","passed":true,"commit":"c1","clean":true,"ran_at":"2026-11-18T09:00:00Z","tiers":[{"name":"lint","state":"skipped","covered_by":"integration"},{"name":"unit","state":"reused"}]},
 		{"name":"behavior","passed":true,"commit":"c1","clean":true,"ran_at":"2026-11-18T09:00:00Z","tiers":[{"name":"integration","state":"passed"},{"name":"smoke","state":"queued"}]},
 		{"name":"docs","passed":false,"commit":"c1","clean":true,"ran_at":"2026-11-18T09:00:00Z","tiers":[{"name":"md","state":"failed"}]},
