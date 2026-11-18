@@ -1,6 +1,6 @@
 ---
 title: Publish what is accepted and not yet released
-updated: 2026-11-10
+updated: 2026-11-18
 status: active
 name: publish
 description: "Publish what is accepted and not yet released, by the project's release policy."
@@ -35,6 +35,7 @@ The orchestrator starts this formula under its `publish` permission, when the re
 - Record in the story's Notes the versions and tags step 3 printed.
 - Under the `judgement` policy, the orchestrator gives its reasoning as the input `judgement`, which step 2 passes to `flai release --evaluate --judged`: a reason meets the policy while something is accepted and not yet released ([ADR-0273](../../adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)). With no input, step 2 runs with an empty judgement and stops as it does under any policy not met. Under `threshold` and `theme` the input changes nothing.
 - Step 3 exits 2 when nothing is pending: another publish released what step 2 evaluated, after it ran. Its output's `covered_by` names that release for each component: the tag, or the template's version, its commit, who made it, and when. That exit stops the run cleanly, as step 2's does: run `flai formula stop` with step 3 and its output. Record in the story's Notes the release `covered_by` names, in place of the versions step 3 would have published. Then close the story out and move it to review, asking nothing.
+- Step 3 exits 5 when a suite the workflow file's `verify_at.publish` lists fails at the main branch's head, before anything is tagged or pushed ([ADR-0312](../../adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md)). Its last line of output names the suite, the tier, and the log that holds what ran. That exit is not in the step's `stop`, so it fails the step: block its task and ask the operator on a thread, naming the suite, the tier, and the log path. Run nothing after it.
 - Step 2 exits 2 when the policy is not met, with nothing to release yet. That exit stops the run cleanly ([ADR-0271](../../adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md)): run `flai formula stop` with the step and its output, as its task's Done when says, then close the story out and move it to review, asking nothing. The evaluation's reason is in step 2's task, and step 3's task is cancelled as skipped.
 - The `push` host action must be on. `flai release --pending` refuses an agent `flai serve` started while it is off: that is the gate on the remote.
 - Any other refusal fails its step down the failure path: a `conflict:` message (exit 3, the remote moved) or the `push` gate. Block the task with the output and ask the operator on a thread.
