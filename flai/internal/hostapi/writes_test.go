@@ -1004,6 +1004,86 @@ func TestPublisherPublishesAsPublishRunDoes(t *testing.T) {
 	}
 }
 
+// S-0811: a publish a tier of verify_at.publish's suites failed (exit 5,
+// ADR-0312 §6) answers the dashboard's publish.run and the orchestrator's
+// release_publish alike with Refused, carrying flai's message, which names
+// the suite, the tier, and the log, and the run's publish_suites as data; the
+// journal records it as refused, apart from a conflict (exit 3, failed) and
+// from a push the host action held (disabled).
+func TestAPublishAFailedSuiteRefusedSaysWhichAndIsJournalledApart(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionPush && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	at := time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)
+	const said = "publish refused: tier unit of suite flai failed at abc1234, which verify_at.publish in design/workflows/workflow.yaml runs before a release, so nothing was applied, committed, tagged, or pushed; its whole output is in /p/.flai-cache/publish/20261118T090000Z/unit.log: fix it on the main branch, then run flai release --pending again"
+	suiteFailed := Ran{Exit: 5,
+		Stdout: []byte(`{"plans":[],"tags":[],"pushed":false,"publish_suites":{"suites":["flai"],"head":"abc1234","log":"/p/.flai-cache/publish/20261118T090000Z","passed":false,"tiers":[{"suite":"flai","name":"unit","state":"failed"}]}}`),
+		Events: []map[string]any{{"level": "FATAL", "err": said}}}
+	conflict := Ran{Exit: 3, Events: []map[string]any{{"level": "FATAL", "err": "conflict: main and origin/main have diverged"}}}
+
+	refusedWithFlaisWords := func(who string, e *channel.Error) {
+		t.Helper()
+		if e == nil || e.Code != Refused || e.Message != said {
+			t.Fatalf("%s: a failed suite is Refused with flai's message, naming the suite, the tier, and the log: %+v", who, e)
+		}
+		data, _ := e.Data.(map[string]any)
+		suites, _ := data["publish_suites"].(map[string]any)
+		if suites["passed"] != false || suites["log"] != "/p/.flai-cache/publish/20261118T090000Z" || data["pushed"] != false {
+			t.Errorf("%s: the run's publish_suites is the refusal's data: %+v", who, e.Data)
+		}
+	}
+
+	// the dashboard's publish.run
+	dashboard := func(ran Ran) *channel.Error {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, func() time.Time { return at }, host)["publish.run"](context.Background(), p, json.RawMessage(good["publish.run"].params))
+		return e
+	}
+	if e := dashboard(Ran{}); e == nil || e.Code != Disabled {
+		t.Fatalf("publish.run with push off is Disabled: %+v", e)
+	}
+	on = true
+	refusedWithFlaisWords("publish.run", dashboard(suiteFailed))
+	if e := dashboard(conflict); e == nil || e.Code != Conflict {
+		t.Errorf("publish.run: exit 3 is still a conflict: %+v", e)
+	}
+
+	// the orchestrator's release_publish
+	on = false
+	pb := Publisher{Run: (&recorder{ran: suiteFailed}).run, Now: func() time.Time { return at }, Host: host}
+	if _, e := pb.Publish(context.Background(), p, "mcp.release_publish", "orchestrator (claude)", "threshold"); e == nil || e.Code != Disabled {
+		t.Fatalf("release_publish with push off is Disabled: %+v", e)
+	}
+	on = true
+	_, e := pb.Publish(context.Background(), p, "mcp.release_publish", "orchestrator (claude)", "threshold")
+	refusedWithFlaisWords("release_publish", e)
+	pb.Run = (&recorder{ran: conflict}).run
+	if _, e := pb.Publish(context.Background(), p, "mcp.release_publish", "orchestrator (claude)", "threshold"); e == nil || e.Code != Conflict {
+		t.Errorf("release_publish: exit 3 is still a conflict: %+v", e)
+	}
+
+	want := []struct{ method, outcome, detail string }{
+		{"publish.run", "disabled", ""},
+		{"publish.run", "refused", said},
+		{"publish.run", "failed", "main and origin/main have diverged"},
+		{"mcp.release_publish", "disabled", "threshold"},
+		{"mcp.release_publish", "refused", "threshold: " + said},
+		{"mcp.release_publish", "failed", "threshold: main and origin/main have diverged"},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Method != w.method || got.Outcome != w.outcome || got.Detail != w.detail || got.Action != ActionPush {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
 // Nothing a dashboard can ask for changes the host's settings unless the
 // operator turned on the settings action in a shell (ADR-0029, S-0105), and
 // nothing it can ask for turns that action on or off, or reads the journal

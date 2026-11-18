@@ -41,10 +41,13 @@ func notEnabled(action, which string) *channel.Error {
 // publishArgs is publish.run's command line, before --json: flai release
 // --pending, never forced. publishExits are its exit codes that carry a
 // payload: 3 is a remote with newer release tags (S-0174) or one that moved
-// (ADR-0067), a conflict.
+// (ADR-0067), a conflict; 5 is a tier of the suites verify_at.publish names
+// that failed or could not be run, with nothing applied, tagged, or pushed
+// (ADR-0312 §6), Refused with flai's message, which names the suite, the
+// tier, and the log, and its publish_suites as data.
 var (
 	publishArgs  = []string{"release", "--pending"}
-	publishExits = map[int]int{3: Conflict}
+	publishExits = map[int]int{3: Conflict, 5: Refused}
 )
 
 // Publisher publishes as publish.run does, for a caller that is not a
@@ -64,7 +67,8 @@ type Publisher struct {
 // Publish runs flai release --pending in p's folder on by's word, for the
 // reason why, and journals it under method. While the push host action is
 // off it runs nothing and refuses with Disabled; when flai refuses with exit
-// 3 the refusal is a Conflict with flai's message, as publish.run's is.
+// 3 the refusal is a Conflict, and with exit 5, a failed suite, Refused,
+// each with flai's message, as publish.run's are.
 func (pb Publisher) Publish(ctx context.Context, p channel.Project, method, by, why string) (Written, *channel.Error) {
 	run, now := pb.Run, pb.Now
 	if run == nil {
@@ -191,8 +195,14 @@ func (ac Accepter) Accept(ctx context.Context, p channel.Project, method, by, id
 }
 
 // describe says in a line what became of a host action, for the journal:
-// what flai release --pending pushed and published, or why not.
+// what flai release --pending pushed and published, or why not. A refusal of
+// flai's, such as a publish a failed suite stopped before anything was
+// applied, is "refused", apart from a conflict or any other failure, which is
+// "failed", and from a host action not enabled, which is "disabled".
 func describe(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil && err.Code == Refused {
+		return "refused", err.Message
+	}
 	if err != nil {
 		return "failed", err.Message
 	}

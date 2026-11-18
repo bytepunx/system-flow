@@ -343,7 +343,7 @@ type Entry struct {
 	Root      string `json:"root"`
 	By        string `json:"by"` // who the dashboard acts for: the manifest's owner
 	RequestID string `json:"request_id,omitempty"`
-	Outcome   string `json:"outcome"` // done, failed, or disabled
+	Outcome   string `json:"outcome"` // done, failed, refused, or disabled
 	Detail    string `json:"detail,omitempty"`
 	// DurationMS is how long a close-out job ran, and Verdict what it came
 	// to, set on its end entry (ADR-0229 §6).
