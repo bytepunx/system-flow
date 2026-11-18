@@ -465,3 +465,69 @@ func TestRunningAndStatusReadAResolveJobsProgressFromItsLog(t *testing.T) {
 		t.Errorf("the conflicts read back: %+v %v", j, err)
 	}
 }
+
+// ADR-0312 §4: a state job is written to and read from its own file, apart
+// from the close-out's, with its state, entry, and steps; its steps are
+// labelled as its log names them; Status and Running read it as the story's
+// last job, with its own log and its rebase as its step, only once it ran a
+// step and started after the close-out, and never one that skipped every
+// step.
+func TestAStateJobIsKeptApartAndStandsAsTheLastJobOnlyOnceItRanAStep(t *testing.T) {
+	t.Parallel()
+	cache := t.TempDir()
+	dir := Dir(cache)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	closeOut := Job{ID: "S-0001-20261116T030000Z", Story: "S-0001", By: "agent-S-0001", Started: minute(0)}
+	if err := WriteJob(dir, closeOut); err != nil {
+		t.Fatal(err)
+	}
+	skipped := Job{ID: "S-0001-20261116T030500Z", Story: "S-0001", Kind: KindState, By: "flai", Started: minute(5), Ended: minute(5), State: "review", Entry: minute(4),
+		StateSteps: []StateStep{{Kind: StateStepRebase, Name: StepRebase, Outcome: StepSkipped, Reason: "no step after it runs"}, {Kind: StateStepKluster, Name: "deploy", Outcome: StepSkipped}}}
+	if err := WriteJob(dir, skipped); err != nil {
+		t.Fatal(err)
+	}
+	if j, ok, err := ReadJob(cache, "S-0001"); err != nil || !ok || j.ID != closeOut.ID {
+		t.Fatalf("a state job wrote over the close-out's: %+v %v %v", j, ok, err)
+	}
+	s, ok, err := ReadStateJob(cache, "S-0001")
+	if err != nil || !ok || !reflect.DeepEqual(s, skipped) || s.RanAny() {
+		t.Fatalf("the state job read back: %+v %v %v", s, ok, err)
+	}
+	if st, ok, err := Status(cache, "S-0001"); err != nil || !ok || st.ID != closeOut.ID || st.Log != LogPath(cache, "S-0001") {
+		t.Errorf("a state job that skipped every step stands as the last job: %+v %v %v", st, ok, err)
+	}
+	ran := Job{ID: "S-0001-20261116T031000Z", Story: "S-0001", Kind: KindState, By: "flai", Started: minute(10), State: "integration", Entry: minute(9),
+		StateSteps: []StateStep{{Kind: StateStepRebase, Name: StepRebase, Started: minute(10)}, {Kind: StateStepSuite, Name: "smoke"}, {Kind: StateStepSuite, Name: "all"}, {Kind: StateStepKluster, Name: "checks"}}}
+	if err := WriteJob(dir, ran); err != nil {
+		t.Fatal(err)
+	}
+	var labels []string
+	for _, step := range ran.StateSteps {
+		labels = append(labels, step.Label())
+	}
+	if want := []string{"rebase", "suite smoke", "every suite", "kluster checks"}; !reflect.DeepEqual(labels, want) || !ran.RanAny() {
+		t.Errorf("the steps' labels %q, want %q", labels, want)
+	}
+	log := StartedLine(SourceState, "S-0001", LineStep, StepRebase, minute(10)) + "\n"
+	if err := os.WriteFile(File(dir, "S-0001", StateLogSuffix), []byte(log), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if p, ok, err := Running(cache, "S-0001"); err != nil || !ok || p.ID != ran.ID || p.Kind != KindState || p.Step != StepRebase {
+		t.Errorf("the running state job: %+v %v %v", p, ok, err)
+	}
+	st, ok, err := Status(cache, "S-0001")
+	if err != nil || !ok || st.ID != ran.ID || st.Log != JobLogPath(cache, ran) || st.Log != File(dir, "S-0001", StateLogSuffix) ||
+		len(st.Steps) != 1 || st.Steps[0].Source != SourceState || st.Steps[0].Name != StepRebase {
+		t.Errorf("the state job as the last job: %+v %v %v", st, ok, err)
+	}
+	later := closeOut
+	later.ID, later.Started = "S-0001-20261116T032000Z", minute(20)
+	if err := WriteJob(dir, later); err != nil {
+		t.Fatal(err)
+	}
+	if st, ok, err := Status(cache, "S-0001"); err != nil || !ok || st.ID != later.ID {
+		t.Errorf("a close-out after the state job is not the last job: %+v %v %v", st, ok, err)
+	}
+}

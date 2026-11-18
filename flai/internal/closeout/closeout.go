@@ -6,8 +6,10 @@
 // takes it by renaming it to S-nnnn.taken.json and answers in
 // S-nnnn.answer.json with the job's id, or the verdict the verify record
 // holds, as the merge pass takes a merge request. The job's state is
-// S-nnnn.job.json and its output S-nnnn.log. Both sides import this package,
-// so neither imports the other.
+// S-nnnn.job.json and its output S-nnnn.log; a state job's, which flai serve
+// starts itself when a story enters a state whose runs name something
+// (ADR-0312 §4), are S-nnnn.state.json and S-nnnn.state.log. Both sides
+// import this package, so neither imports the other.
 package closeout
 
 import (
@@ -26,14 +28,17 @@ import (
 )
 
 // The suffixes of a story's files in the jobs folder: its request, the
-// request once flai serve took it, flai serve's answer, the job's state, and
-// the job's output.
+// request once flai serve took it, flai serve's answer, the job's state, the
+// job's output, and a state job's state and output, kept apart from the
+// close-out's.
 const (
-	RequestSuffix = ".request.json"
-	TakenSuffix   = ".taken.json"
-	AnswerSuffix  = ".answer.json"
-	JobSuffix     = ".job.json"
-	LogSuffix     = ".log"
+	RequestSuffix  = ".request.json"
+	TakenSuffix    = ".taken.json"
+	AnswerSuffix   = ".answer.json"
+	JobSuffix      = ".job.json"
+	LogSuffix      = ".log"
+	StateSuffix    = ".state.json"
+	StateLogSuffix = ".state.log"
 )
 
 // The verdicts of a close-out (ADR-0229 §3).
@@ -54,14 +59,76 @@ const (
 // or a step of the close-out fails (S-0804). A close-out's kind is "".
 const KindResolve = "resolve"
 
-// The ends of a resolve job, as its Outcome says.
+// KindState is the kind of a state job, which flai serve starts once for
+// each entry of a story into a state whose runs name something (ADR-0312
+// §4): the story's branch rebased onto the main branch, then the state's
+// suites and cluster steps run, each a StateStep, the story sent back by the
+// state's send-back transition when one fails. Its state is S-nnnn.state.json
+// and its output S-nnnn.state.log, apart from the close-out's.
+const KindState = "state"
+
+// The ends of a resolve or state job, as its Outcome says.
 const (
 	// OutcomeStayed is a resolve job whose rebase was clean and whose
 	// close-out passed: the story stays in review.
 	OutcomeStayed = "stayed in review"
-	// OutcomeSentBack is one that sent the story back to in-progress.
+	// OutcomeSentBack is one that sent the story back to in-progress, or a
+	// state job that sent it back by its state's send-back transition.
 	OutcomeSentBack = "sent back"
+	// OutcomeStayedInState is a state job none of whose steps failed: the
+	// story stays in the state, for the transition out of it.
+	OutcomeStayedInState = "stayed in its state"
+	// OutcomeNotSentBack is a state job a step of which failed that moved
+	// nothing: the story left the state or entered it again meanwhile, the
+	// state has no send-back transition, or the move was refused; its Reason
+	// says which.
+	OutcomeNotSentBack = "not sent back"
 )
+
+// The kinds of a state job's steps, in the order they run: the rebase, each
+// suite, then the cluster's steps.
+const (
+	StateStepRebase  = "rebase"
+	StateStepSuite   = "suite"
+	StateStepKluster = "kluster"
+)
+
+// The outcomes of a state job's step.
+const (
+	StepPassed  = "passed"
+	StepFailed  = "failed"
+	StepSkipped = "skipped"
+)
+
+// StateStep is one step of a state job: the rebase, a suite, or a cluster
+// step, as it starts and ends.
+type StateStep struct {
+	// Kind is StateStepRebase, StateStepSuite, or StateStepKluster.
+	Kind string `json:"kind"`
+	// Name is the step's: StepRebase, the suite's name or all, or the
+	// cluster step's, deploy or checks.
+	Name string `json:"name"`
+	// Started is when it started; zero for one skipped.
+	Started time.Time `json:"started,omitzero"`
+	// Ended is when it ended, and Outcome how: StepPassed, StepFailed, or
+	// StepSkipped; zero and "" until then.
+	Ended   time.Time `json:"ended,omitzero"`
+	Outcome string    `json:"outcome,omitempty"`
+	// Reason says why it was skipped or failed, or what it ran.
+	Reason string `json:"reason,omitempty"`
+}
+
+// Label is the step as a job's log and threads name it: "rebase", "suite
+// <name>", "every suite", or "kluster <name>".
+func (s StateStep) Label() string {
+	switch {
+	case s.Kind == StateStepSuite && s.Name == "all":
+		return "every suite"
+	case s.Kind == StateStepSuite || s.Kind == StateStepKluster:
+		return s.Kind + " " + s.Name
+	}
+	return s.Name
+}
 
 // ErrServeNotTaking is a close-out request no flai serve took in time.
 var ErrServeNotTaking = errors.New("flai serve is not running for this project: run the close-out script, or flai verify where the project has none, yourself")
@@ -112,11 +179,12 @@ func (a Answer) Refused() bool { return a.Reason != "" }
 // running already, which the request did not start.
 func (a Answer) Running() bool { return a.Job != "" && !a.Started }
 
-// Job is the state of a story's close-out or resolve job, S-nnnn.job.json.
+// Job is the state of a story's close-out or resolve job, S-nnnn.job.json,
+// or of its state job, S-nnnn.state.json.
 type Job struct {
 	ID    string `json:"id"`
 	Story string `json:"story"`
-	// Kind is the job's kind: KindResolve, or "" for a close-out.
+	// Kind is the job's kind: KindResolve, KindState, or "" for a close-out.
 	Kind    string    `json:"kind,omitempty"`
 	By      string    `json:"by"`
 	Message string    `json:"message,omitempty"`
@@ -136,23 +204,40 @@ type Job struct {
 	StoppedAt  string    `json:"stopped_at,omitempty"`
 	Commit     string    `json:"commit,omitempty"`
 	DurationMS int64     `json:"duration_ms,omitempty"`
-	// Outcome is how a resolve job ended, OutcomeStayed or OutcomeSentBack;
-	// "" for a close-out, for a resolve job while it runs, and for one
-	// interrupted.
+	// Outcome is how a resolve job ended, OutcomeStayed or OutcomeSentBack,
+	// or a state job, OutcomeStayedInState, OutcomeSentBack, or
+	// OutcomeNotSentBack; "" for a close-out, for a job while it runs, and
+	// for one interrupted.
 	Outcome string `json:"outcome,omitempty"`
-	// Thread is the send-back thread a resolve job opened; "" when it sent
-	// nothing back.
+	// Thread is the send-back thread a resolve or state job opened; "" when
+	// it sent nothing back.
 	Thread string `json:"thread,omitempty"`
-	// Conflicts are the paths a resolve job's rebase stopped on, which it
-	// aborted.
+	// Conflicts are the paths a resolve or state job's rebase stopped on,
+	// which it aborted.
 	Conflicts []string `json:"conflicts,omitempty"`
-	// Reason says why a resolve job sent the story back, or what it did when
-	// the story stayed in review.
+	// Reason says why a resolve or state job sent the story back, or what it
+	// did when the story stayed.
 	Reason string `json:"reason,omitempty"`
+	// State is the state a state job ran for, and Entry when the story
+	// entered it, the transition's time, which keys the job: one per entry.
+	State string    `json:"state,omitempty"`
+	Entry time.Time `json:"entry,omitzero"`
+	// StateSteps are a state job's steps in the order they run, each as it
+	// stands.
+	StateSteps []StateStep `json:"state_steps,omitempty"`
 }
 
 // Running reports whether the job has not ended.
 func (j Job) Running() bool { return j.Ended.IsZero() }
+
+// RanAny reports whether a state job ran, or runs, a step rather than
+// skipping every one; true for a job of any other kind.
+func (j Job) RanAny() bool {
+	if j.Kind != KindState {
+		return true
+	}
+	return slices.ContainsFunc(j.StateSteps, func(s StateStep) bool { return s.Outcome != StepSkipped })
+}
 
 // The steps of a close-out as its log shows them, in the order they run,
 // named as the close-out's last line names the step it stopped at; after
@@ -183,10 +268,11 @@ const (
 const ProgressEnv = "FLAI_VERIFY_PROGRESS"
 
 // The sources of the progress lines a job's log holds: flai verify's, with
-// ProgressEnv set, and the resolve job's own.
+// ProgressEnv set, the resolve job's own, and the state job's own.
 const (
 	SourceVerify  = "verify"
 	SourceResolve = "resolve"
+	SourceState   = "state"
 )
 
 // The kinds of what a progress line says started or ended: a step, or a
@@ -217,7 +303,7 @@ type StepProgress struct {
 	Name string `json:"name"`
 	// Kind is LineStep or LineTier.
 	Kind string `json:"kind"`
-	// Source is who ran it: SourceVerify or SourceResolve.
+	// Source is who ran it: SourceVerify, SourceResolve, or SourceState.
 	Source string `json:"source"`
 	// Started is when it started; zero for a tier that ended without
 	// running, as one reused, skipped, or left to the merge queue.
@@ -236,7 +322,7 @@ type Progress struct {
 	// Head is the worktree's head when its run began; "" while the job has
 	// not written it yet and in a job written before S-0799.
 	Head string `json:"head,omitempty"`
-	// Kind is the job's kind: KindResolve, or "" for a close-out.
+	// Kind is the job's kind: KindResolve, KindState, or "" for a close-out.
 	Kind string `json:"kind,omitempty"`
 	// Step is the step the job is on: StepRebase while a resolve job's
 	// rebase runs, else the close-out's, one of StepVerify, StepCommit,
@@ -247,8 +333,8 @@ type Progress struct {
 	Tier string `json:"tier,omitempty"`
 }
 
-// Running is the progress of story's close-out or resolve job under the
-// project's cache dir and true while the job runs, or false with no error
+// Running is the progress of story's close-out, resolve, or state job under
+// the project's cache dir (lastJob) and true while the job runs, or false with no error
 // when the story has had no job or its job ended. The step and the tier are
 // read from the job's log (readLog); Status gives its steps too. The step is that of the
 // lines the close-out script, and flai serve's close-out of a container
@@ -259,7 +345,7 @@ type Progress struct {
 // and its close-out, and for the whole of a close-out that is flai serve's
 // own flai verify, run where the worktree has no close-out script.
 func Running(cacheDir, story string) (Progress, bool, error) {
-	j, ok, err := ReadJob(cacheDir, story)
+	j, ok, err := lastJob(cacheDir, story)
 	if err != nil || !ok || !j.Running() {
 		return Progress{}, false, err
 	}
@@ -287,11 +373,12 @@ type JobStatus struct {
 	Log string `json:"log"`
 }
 
-// Status is story's last close-out or resolve job under the project's cache
-// dir, running or ended, with its progress read from its log as Running
-// reads it, and true; or false with no error when the story has had no job.
+// Status is story's last close-out, resolve, or state job under the
+// project's cache dir (lastJob), running or ended, with its progress read
+// from its log as Running reads it, and true; or false with no error when
+// the story has had no job.
 func Status(cacheDir, story string) (JobStatus, bool, error) {
-	j, ok, err := ReadJob(cacheDir, story)
+	j, ok, err := lastJob(cacheDir, story)
 	if err != nil || !ok {
 		return JobStatus{}, false, err
 	}
@@ -299,17 +386,37 @@ func Status(cacheDir, story string) (JobStatus, bool, error) {
 	if err != nil {
 		return JobStatus{}, false, err
 	}
-	st := JobStatus{Job: j, Step: lp.step, Steps: lp.steps, Log: LogPath(cacheDir, j.Story)}
+	st := JobStatus{Job: j, Step: lp.step, Steps: lp.steps, Log: JobLogPath(cacheDir, j)}
 	if j.Running() {
 		st.Tier = lp.tier
 	}
 	return st, true, nil
 }
 
+// lastJob is story's last job under the project's cache dir and true: its
+// close-out or resolve job, or its state job when that started later and ran
+// a step (RanAny), so that a state job that skipped every step, as one on
+// the baseline's review of a project with no cluster does, never stands in
+// for the close-out; false with no error when it has had neither.
+func lastJob(cacheDir, story string) (Job, bool, error) {
+	j, ok, err := ReadJob(cacheDir, story)
+	if err != nil {
+		return Job{}, false, err
+	}
+	s, sok, err := ReadStateJob(cacheDir, story)
+	if err != nil {
+		return Job{}, false, err
+	}
+	if sok && s.RanAny() && (!ok || s.Started.After(j.Started)) {
+		return s, true, nil
+	}
+	return j, ok, nil
+}
+
 // readJobLog is what job j's log under the project's cache dir says of its
 // progress; nothing when the log is not there.
 func readJobLog(cacheDir string, j Job) (logProgress, error) {
-	path := LogPath(cacheDir, j.Story)
+	path := JobLogPath(cacheDir, j)
 	data, err := os.ReadFile(path)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -330,7 +437,8 @@ type logProgress struct {
 // line of story's, in order, a step or tier begun by its start, or by its
 // end when it has none open of its source, kind, and name; the tier running,
 // the last begun that has not ended; and the step, StepRebase while a
-// resolve job's rebase runs, else as the close-out's lines say (stepAfter).
+// resolve or state job's rebase runs, else as the close-out's lines say
+// (stepAfter).
 func readLog(log, story string) logProgress {
 	var p logProgress
 	rebasing := false
@@ -342,7 +450,7 @@ func readLog(log, story string) logProgress {
 			continue
 		}
 		p.add(m)
-		if m.Source == SourceResolve && m.Kind == LineStep && m.Name == StepRebase {
+		if (m.Source == SourceResolve || m.Source == SourceState) && m.Kind == LineStep && m.Name == StepRebase {
 			rebasing = m.Ended.IsZero()
 		}
 	}
@@ -381,7 +489,7 @@ func (p *logProgress) add(m StepProgress) {
 // ended, with Ended and Outcome set; false for any other line.
 func parseLine(line, story string) (StepProgress, bool) {
 	source, rest, ok := strings.Cut(line, ": ")
-	if !ok || (source != SourceVerify && source != SourceResolve) {
+	if !ok || (source != SourceVerify && source != SourceResolve && source != SourceState) {
 		return StepProgress{}, false
 	}
 	f := strings.SplitN(rest, " ", 5)
@@ -458,6 +566,15 @@ func File(dir, story, suffix string) string { return filepath.Join(dir, story+su
 // LogPath is where the output of story's close-out job is kept, under the
 // project's cache dir.
 func LogPath(cacheDir, story string) string { return File(Dir(cacheDir), story, LogSuffix) }
+
+// JobLogPath is where the output of job j is kept, under the project's cache
+// dir: LogPath, or a state job's S-nnnn.state.log.
+func JobLogPath(cacheDir string, j Job) string {
+	if j.Kind == KindState {
+		return File(Dir(cacheDir), j.Story, StateLogSuffix)
+	}
+	return LogPath(cacheDir, j.Story)
+}
 
 // Ask asks flai serve for req.Story's close-out and waits for its answer:
 // the job's id, or the verdict the verify record holds. A request flai serve
@@ -559,6 +676,12 @@ func ReadJob(cacheDir, story string) (Job, bool, error) {
 	return ReadJobAt(File(Dir(cacheDir), story, JobSuffix))
 }
 
+// ReadStateJob is story's last state job under the project's cache dir and
+// true, or false with no error when it has had none.
+func ReadStateJob(cacheDir, story string) (Job, bool, error) {
+	return ReadJobAt(File(Dir(cacheDir), story, StateSuffix))
+}
+
 // ReadJobAt is the close-out job whose state is at path and true, or false
 // with no error when there is none.
 func ReadJobAt(path string) (Job, bool, error) {
@@ -576,9 +699,14 @@ func ReadJobAt(path string) (Job, bool, error) {
 	return j, true, nil
 }
 
-// WriteJob writes j's state in dir, the jobs folder, in one step.
+// WriteJob writes j's state in dir, the jobs folder, in one step: to
+// S-nnnn.job.json, or a state job's to S-nnnn.state.json.
 func WriteJob(dir string, j Job) error {
-	path := File(dir, j.Story, JobSuffix)
+	suffix := JobSuffix
+	if j.Kind == KindState {
+		suffix = StateSuffix
+	}
+	path := File(dir, j.Story, suffix)
 	data, err := json.MarshalIndent(j, "", "  ")
 	if err != nil {
 		return fmt.Errorf("write the state of close-out job %s: %w", j.ID, err)

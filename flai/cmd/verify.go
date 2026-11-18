@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +48,7 @@ func newVerifyCmd(a *app) *cobra.Command {
 	var record, last, syncOnly, fresh, all, job bool
 	var maxFindings int
 	var message string
+	var suites []string
 	c := &cobra.Command{
 		Use:   "verify <story>",
 		Short: "Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result",
@@ -148,6 +150,18 @@ run does, and stores no report, so the stored one stays the last full run's.
 The close-out's last check runs it after its commit. It is refused with
 --last and with --record-issues.
 
+--suite <suite>, which may be given more than once, runs only the tiers of
+those suites, a tier's suite key or, with none, its name, that the branch's
+changes select, after the same steps before the tiers; a tier of a suite
+named that only a tier of another suite covers runs itself, and no tier is
+left to the merge queue. --suite all runs every suite, as no --suite does.
+A suite no tier is in is refused, naming the suites there are. The
+report names the suites, and is stored neither as the story's last result
+nor in the record, so that a run of some suites never stands for the
+close-out: --last still prints the last run of every suite. flai serve's job
+for a state whose runs name suites runs it once per suite (ADR-0312 §4). It
+is refused with --last, --sync-only, and --job.
+
 --record-issues records the notes in design/issues of the story's worktree,
 as flai check --story --record-issues does: each rule's notes in the open
 issue whose title names the rule, once per story and notes. The close-out
@@ -184,6 +198,7 @@ it finished.`,
   flai verify S-0270 --record-issues
   flai verify S-0270 --fresh
   flai verify S-0270 --all
+  flai verify S-0270 --suite behavior --suite smoke
   flai verify S-0270 --last --json
   flai verify S-0270 --sync-only`,
 		Args: func(_ *cobra.Command, args []string) error {
@@ -208,6 +223,10 @@ it finished.`,
 			if msg := jobFlagsRefusal(job, last, syncOnly, record, message); msg != "" {
 				return &exitError{code: exitVerifyUnusable, msg: msg}
 			}
+			named := suiteNames(suites)
+			if msg := suiteFlagsRefusal(named, job, last, syncOnly); msg != "" {
+				return &exitError{code: exitVerifyUnusable, msg: msg}
+			}
 			repo, err := a.project()
 			if err != nil {
 				return &exitError{code: exitVerifyUnusable, msg: err.Error()}
@@ -230,7 +249,7 @@ it finished.`,
 					return &exitError{code: exitVerifyUnusable, msg: roleContainerVerifyRefusal(cfg, args[0])}
 				}
 			}
-			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, all: all, max: maxFindings})
+			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, all: all, max: maxFindings, suites: named})
 		},
 	}
 	c.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
@@ -244,7 +263,43 @@ it finished.`,
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
 	c.Flags().BoolVar(&job, "job", false, "ask flai serve for the story's close-out as a job and print its id at once; wait for its verified event")
 	c.Flags().StringVarP(&message, "message", "m", "", "with --job, the commit message the close-out commits with")
+	c.Flags().StringArrayVar(&suites, "suite", nil, "run only the tiers of this suite, by a tier's suite or else its name, and store no result; repeat it for more, or give all for every suite")
 	return c
+}
+
+// suiteNames are the suites flai verify's --suite flags name, each trimmed,
+// once each, in the order given: nil, every suite, when none is given or one
+// is all (ADR-0312).
+func suiteNames(flags []string) []string {
+	var out []string
+	for _, f := range flags {
+		name := strings.TrimSpace(f)
+		if name == "all" {
+			return nil
+		}
+		if !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// suiteFlagsRefusal is why --suite, naming suites, cannot go with the other
+// flags given; "" when it can.
+func suiteFlagsRefusal(suites []string, job, last, syncOnly bool) string {
+	switch {
+	case suites == nil:
+		return ""
+	case slices.Contains(suites, ""):
+		return "--suite names no suite; give a suite's name, or all for every suite"
+	case job:
+		return "--job asks flai serve for the whole close-out, every suite, and --suite runs some suites here; drop one of them"
+	case last:
+		return "--last prints the stored result and runs nothing, and --suite runs some suites; drop one of them"
+	case syncOnly:
+		return "--sync-only runs only the rebase and sync steps, no tier, and --suite runs the tiers of some suites; drop one of them"
+	}
+	return ""
 }
 
 // verifyOptions are flai verify's flags for a run.
@@ -260,6 +315,9 @@ type verifyOptions struct {
 	// (ADR-0312 §2).
 	all bool
 	max int
+	// suites are the suites --suite names, whose tiers alone run, the report
+	// stored nowhere; nil runs every suite (ADR-0312).
+	suites []string
 }
 
 // verifyRecorded is flai verify --json with --record-issues: the report,
@@ -281,7 +339,10 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		Story: id, Project: repo, Worktree: worktree, Git: a.runner, Fresh: o.fresh,
 		RunOptions: verify.RunOptions{Max: o.max, Now: a.now},
 	}
-	if !o.all && !o.syncOnly {
+	if o.suites != nil {
+		opts.Suites, opts.NoStore = o.suites, true
+	}
+	if !o.all && !o.syncOnly && o.suites == nil {
 		// the report says why, when the queue cannot batch, so that a
 		// configuration without the host action is seen (S-0466)
 		opts.QueueOff = a.queueOff(mainRootOf(repo))
@@ -304,6 +365,11 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	} else {
 		if opts.Tiers, err = verify.CheckoutTiersFor(worktree, a.runner, buildinfo.Version); err != nil {
 			return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("verify %s: %v", id, err)}
+		}
+		for _, suite := range o.suites {
+			if err := verify.CheckSuite(opts.Tiers, suite); err != nil {
+				return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("verify %s: %v", id, err)}
+			}
 		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

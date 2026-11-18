@@ -129,14 +129,20 @@ type verifyPass struct {
 	// swept is whether the jobs an earlier flai serve left running were
 	// ended; only the pass's own loop reads and writes it.
 	swept bool
+	// stateEvery is how often the pass looks for a story that entered a
+	// state whose runs name something, and statesAt when it last did; only
+	// the pass's own loop reads and writes statesAt.
+	stateEvery time.Duration
+	statesAt   time.Time
 
 	mu      sync.Mutex
 	running map[string]string // story → id of its job that runs
+	states  map[string]string // story → the state its state job that runs is for
 }
 
 func newVerifyPass(o Options, e Entry, wg *sync.WaitGroup) *verifyPass {
-	return &verifyPass{o: o, e: e, wg: wg, every: verifyEvery, limit: verifyJobLimit, run: runCloseOut, exe: os.Executable,
-		running: map[string]string{}, recorded: recordedFor(o, e), keepAt: verify.KeepAt}
+	return &verifyPass{o: o, e: e, wg: wg, every: verifyEvery, limit: verifyJobLimit, run: runCloseOut, exe: os.Executable, stateEvery: stateEvery,
+		running: map[string]string{}, states: map[string]string{}, recorded: recordedFor(o, e), keepAt: verify.KeepAt}
 }
 
 // recordedFor asks the verify record of project e as flai verify would at
@@ -185,13 +191,19 @@ func (p *verifyPass) start(ctx context.Context) {
 // checkout, whose .flai-cache is the project's cache.
 func (p *verifyPass) dir() string { return closeout.Dir(filepath.Join(p.e.Root, ".flai-cache")) }
 
-// look ends, at its first, the jobs an earlier flai serve left running, then
-// takes each request waiting and answers it; a request another look took
-// first is left to it.
+// look ends, at its first, the jobs an earlier flai serve left running,
+// starts, every stateEvery once they are, the state jobs of the stories that
+// entered a state whose runs name something (lookStates), then takes each
+// request waiting and answers it; a request another look took first is left
+// to it.
 func (p *verifyPass) look(ctx context.Context) {
 	dir := p.dir()
 	if !p.swept {
 		p.swept = p.sweep(dir)
+	}
+	if now := p.o.Now(); p.swept && now.Sub(p.statesAt) >= p.stateEvery {
+		p.statesAt = now
+		p.lookStates(ctx)
 	}
 	requests, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.RequestSuffix))
 	if len(requests) == 0 {
@@ -258,7 +270,12 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 	// it may be committing in the worktree, and its end tells the verdict.
 	p.mu.Lock()
 	id, running := p.running[story]
+	state := p.states[story]
 	p.mu.Unlock()
+	if running && state != "" {
+		return refused(fmt.Sprintf("flai serve's job %s for %s's entry into %s runs, rebasing its branch and running what %s runs in its worktree, so no %s starts beside it: ask again once it ended; its output is in %s",
+			id, story, state, state, jobName(req.Kind), closeout.File(dir, story, closeout.StateLogSuffix)))
+	}
 	if running {
 		return closeout.Answer{Job: id, Story: story, Log: closeout.File(dir, story, closeout.LogSuffix)}
 	}
@@ -505,10 +522,14 @@ func (p *verifyPass) forget(story string) {
 }
 
 // sweep ends interrupted each job in dir that an earlier flai serve left
-// running, and reports whether it is done: false when there were some and
-// the project could not be opened, to try again at the next look.
+// running, its state job too, and reports whether it is done: false when
+// there were some and the project could not be opened, to try again at the
+// next look. Nothing is sent back; a close-out or resolve job's end is
+// announced, and an interrupted state job's entry runs again (lookStates).
 func (p *verifyPass) sweep(dir string) bool {
 	paths, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.JobSuffix))
+	states, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.StateSuffix))
+	paths = append(paths, states...)
 	var left []closeout.Job
 	for _, path := range paths {
 		j, ok, err := closeout.ReadJobAt(path)
@@ -539,7 +560,9 @@ func (p *verifyPass) sweep(dir string) bool {
 		}
 		p.journal(hostapi.Entry{At: now.Format(time.RFC3339), Method: jobMethod(j.Kind), By: j.By, Outcome: closeOutOutcome(closeout.VerdictInterrupted), Verdict: closeout.VerdictInterrupted,
 			Detail: fmt.Sprintf("%s job %s: %s, flai serve stopped while it ran", j.Story, j.ID, closeout.VerdictInterrupted)})
-		p.announce(repo, j.Story, inbox.Verification{Job: j.ID, Commit: j.Commit, Verdict: closeout.VerdictInterrupted})
+		if j.Kind != closeout.KindState {
+			p.announce(repo, j.Story, inbox.Verification{Job: j.ID, Commit: j.Commit, Verdict: closeout.VerdictInterrupted})
+		}
 		stories = append(stories, j.Story)
 	}
 	p.o.Logger.Warn("close-out jobs interrupted", "component", "serve", "root", p.e.Root, "jobs", len(left), "stories", strings.Join(stories, ","))
@@ -572,11 +595,15 @@ func (p *verifyPass) journal(e hostapi.Entry) {
 }
 
 // jobMethod is the journal method of a job of kind: resolveMethod for a
-// rebase and resolve, which flai stats does not count among the close-outs
-// (metrics.md § Close-outs), closeOutMethod for a close-out.
+// rebase and resolve and stateMethod for a state job, which flai stats does
+// not count among the close-outs (metrics.md § Close-outs), closeOutMethod
+// for a close-out.
 func jobMethod(kind string) string {
-	if kind == closeout.KindResolve {
+	switch kind {
+	case closeout.KindResolve:
 		return resolveMethod
+	case closeout.KindState:
+		return stateMethod
 	}
 	return closeOutMethod
 }

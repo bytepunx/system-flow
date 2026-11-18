@@ -655,6 +655,34 @@ func TestAnAgentTheMergeQueueSentBackIsToldTheQueueBatchesItAgain(t *testing.T) 
 	}
 }
 
+// ADR-0312 §4: an agent whose story a state's job sent back is told the
+// state it was sent back from and that the thread is resolved once the
+// story is back there, not that it is accepted again, in its last session
+// and in a new one.
+func TestAnAgentAStateJobSentBackIsToldTheState(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0013", What: "flai serve's job on entering integration found that suite smoke failed", Acceptance: true, State: "integration"}
+	for _, resumed := range []bool{true, false} {
+		r.SentBack.Resumed = resumed
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := st.Argv[2]
+		for _, want := range []string{"back from integration to in-progress", "flai serve resolves TH-0013 once S-0104 is back in integration, where the state's job runs again."} {
+			if !strings.Contains(p, want) {
+				t.Errorf("resumed %v: the prompt lacks %q:\n%s", resumed, want, p)
+			}
+		}
+		for _, not := range []string{"accepted again", "back from review"} {
+			if strings.Contains(p, not) {
+				t.Errorf("resumed %v: the prompt says %q of a story a state job sent back:\n%s", resumed, not, p)
+			}
+		}
+	}
+}
+
 // ADR-0189, ADR-0248: an agent whose story an acceptance sent back over a
 // rebase it could not settle is told that flai serve resolves the thread
 // once the story is back in review and the story is accepted again, not

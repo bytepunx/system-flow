@@ -112,6 +112,13 @@ type StoryOptions struct {
 	StepStarted func(step string)
 	Started     func(tier string)
 	Ended       func(Step)
+	// NoStore stores the report nowhere: neither as the story's last
+	// (SaveReport), which the acceptance and the merge queue read as its
+	// close-out, nor in the record (KeepAt), so that a run of some suites
+	// never stands for the whole close-out. A passing verdict the record
+	// holds at the head is still answered, when its fingerprint is this
+	// run's, as it is for the same tiers.
+	NoStore bool
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -296,7 +303,8 @@ type Note struct {
 // It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not, and, when the worktree was clean as it began and
-// ctx did not end, kept in the record as the verdict at its head (KeepAt).
+// ctx did not end, kept in the record as the verdict at its head (KeepAt);
+// with NoStore it is stored nowhere.
 // Unless Fresh is set, a passing verdict the record holds at the head is
 // answered first, as Recorded answers it, marked FromRecord: then no step
 // runs and nothing is stored (ADR-0229). It returns an error, with no
@@ -316,6 +324,9 @@ func Verify(ctx context.Context, opts StoryOptions) (Report, error) {
 		}
 	}
 	rep, runErr := v.run(ctx)
+	if opts.NoStore {
+		return rep, runErr
+	}
 	if err := SaveReport(opts.Project, rep); err != nil {
 		return rep, errors.Join(runErr, err)
 	}

@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-11-17
+updated: 2026-11-18
 status: active
 ---
 
@@ -545,7 +545,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--step` | [flai formula stop](../users/flai-reference.md#flai-formula-stop), [flai kluster log](../users/flai-reference.md#flai-kluster-log) |
 | `--story` | [flai check](../users/flai-reference.md#flai-check), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design show](../users/flai-reference.md#flai-design-show), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai doc show](../users/flai-reference.md#flai-doc-show), [flai file save](../users/flai-reference.md#flai-file-save), [flai file show](../users/flai-reference.md#flai-file-show), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai message list](../users/flai-reference.md#flai-message-list), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
-| `--suite` | [flai test](../users/flai-reference.md#flai-test) |
+| `--suite` | [flai test](../users/flai-reference.md#flai-test), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--sync-only` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--tag` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new), [flai template push](../users/flai-reference.md#flai-template-push) |

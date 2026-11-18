@@ -1852,6 +1852,48 @@ func TestVerifyAnswersFromTheRecordOnlyForEverySuiteItNeeds(t *testing.T) {
 	}
 }
 
+// ADR-0312 §4: Verify given suites runs the steps before the tiers and then
+// only the tiers of the suites, a tier only a left-out suite's tier covers
+// among them, as flai verify --all --suite runs them for a state's job, and
+// names the suites; with NoStore it stores no last report and no record, so
+// the full run before it stays the story's last and the record holds nothing.
+func TestVerifyGivenSuitesRunsTheirTiersAndWithNoStoreStoresNothing(t *testing.T) {
+	f := newVerifyFixture(t)
+	tiers := queueTiers()
+	tiers[0].Suite = "behavior"
+	tiers[2].Covers = []string{"go-test"}
+	f.opts.Tiers = tiers
+	before := Report{Story: "S-004", Commit: "aaaa", Passed: true, Steps: []Step{}}
+	if err := SaveReport(f.opts.Project, before); err != nil {
+		t.Fatal(err)
+	}
+	f.opts.Suites, f.opts.NoStore = []string{"behavior", "smoke"}, true
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:passed", "smoke:passed"}
+	if !rep.Passed || !reflect.DeepEqual(states(rep), want) || !reflect.DeepEqual(f.proc.ran, []string{"go test ./internal/x", "smoke.sh"}) {
+		t.Errorf("passed %v, steps %v, ran %q; want steps %v", rep.Passed, states(rep), f.proc.ran, want)
+	}
+	if !reflect.DeepEqual(rep.Suites, []string{"behavior", "smoke"}) {
+		t.Errorf("the report names the suites %q, want behavior and smoke", rep.Suites)
+	}
+	if last, ok, err := LastReport(f.opts.Project, "S-004"); err != nil || !ok || last.Commit != "aaaa" {
+		t.Errorf("the last report is %+v (%v, %v), want the one before, at aaaa", last, ok, err)
+	}
+	if _, err := os.Stat(RecordPath(f.opts.Project, "S-004", "0123abc")); !os.IsNotExist(err) {
+		t.Errorf("a run with NoStore kept a record at its head: %v", err)
+	}
+	f.opts.NoStore = false
+	if _, err := Verify(context.Background(), f.opts); err != nil {
+		t.Fatal(err)
+	}
+	if last, ok, err := LastReport(f.opts.Project, "S-004"); err != nil || !ok || last.Commit != "0123abc" || !reflect.DeepEqual(last.Suites, []string{"behavior", "smoke"}) {
+		t.Errorf("without NoStore the last report is %+v (%v, %v), want this run's, naming its suites", last, ok, err)
+	}
+}
+
 // S-0399: a context that ends during a tier stops Tiers there, with
 // the report so far and the context's error; the tiers after it are not
 // reached.

@@ -108,6 +108,31 @@ func TestByHandTitleSaysWhoSentItBack(t *testing.T) {
 	}
 }
 
+// ADR-0312 §4: a state job's send back's thread is titled with the prefix,
+// the story, the state, and what stopped it, and the state reads back from
+// it; no other send back's title, nor one without the prefix, names a state,
+// and a state job's is no send back by hand.
+func TestStateJobTitleNamesTheStateItsJobRanFor(t *testing.T) {
+	t.Parallel()
+	title := StateJobTitle("S-0823", "integration", "suite smoke failed")
+	if want := "Acceptance sent back: S-0823's job on entering integration: suite smoke failed"; title != want {
+		t.Errorf("StateJobTitle = %q, want %q", title, want)
+	}
+	if state, what, ok := StateJobOf(title); !ok || state != "integration" || what != "suite smoke failed" || IsByHand(title) {
+		t.Errorf("StateJobOf(%q) = %q, %q, %v; by hand %v", title, state, what, ok, IsByHand(title))
+	}
+	for _, other := range []string{
+		storygit.SentBackTitle("story/S-0823", "main", []string{"a.go"}),
+		ByHandTitle("alex", "S-0823", "review", "in-progress"),
+		"S-0823's job on entering integration: suite smoke failed",
+		storygit.SentBackPrefix + "S-0823's job on entering : nothing",
+	} {
+		if state, _, ok := StateJobOf(other); ok {
+			t.Errorf("StateJobOf(%q) = %q, true", other, state)
+		}
+	}
+}
+
 // I-0397: the operator's move of a story from review to in-progress opens
 // the send back's thread by flai with the reason, and a second one while it
 // is open writes on it; with no reason the thread says so and has the agent

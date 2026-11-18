@@ -215,7 +215,8 @@ func queueSendBackThread(repo *workitem.Repo, story string) (string, bool) {
 // before that thread was opened, told of the thread and the paths it
 // stopped on, in its last run's session where it has one. A send back by
 // hand (I-0397), whose thread flai move opens with the same prefix, starts
-// its agent the same way, told who sent it back rather than of a rebase.
+// its agent the same way, told who sent it back rather than of a rebase, and
+// so does a state job's (ADR-0312 §4), told the state and what stopped it.
 func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo, st AgentState) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
@@ -237,6 +238,10 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		b := &harness.SentBack{Thread: th.ID}
 		if by, ok := sendback.ByHandMover(th.Title); ok {
 			b.ByHand = by // a send back by hand (I-0397): the thread holds why
+		} else if state, what, ok := sendback.StateJobOf(th.Title); ok {
+			b.Acceptance, b.State = true, state
+			b.What = fmt.Sprintf("flai serve's job on entering %s found that %s, and sent the story back; the thread says what failed and how to fix it in its worktree, and once %s is back in %s the job runs again",
+				state, what, it.ID, state)
 		} else {
 			b.Acceptance = true
 			b.What = fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
@@ -255,12 +260,19 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 // resolveAcceptSentBack resolves, as flai serve, each open thread flai
 // accept opened on a story it sent back (ADR-0248) once the story is back in
 // review, a state of the waiting kind, moved there after the thread was
-// opened, so that the thread holds the next acceptance of it no longer. One
-// that cannot be resolved is warned of and tried again at the next look.
+// opened, so that the thread holds the next acceptance of it no longer; a
+// state job's thread (ADR-0312 §4) once the story is back in the state the
+// job ran for, entered after the thread was opened, where the job runs
+// again. One that cannot be resolved is warned of and tried again at the
+// next look.
 func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
-		if err != nil || !isWaiting(repo.Flow(), it.Status) {
+		if err != nil {
+			continue
+		}
+		state, _, ofState := sendback.StateJobOf(th.Title)
+		if ofState && it.Status != state || !ofState && !isWaiting(repo.Flow(), it.Status) {
 			continue
 		}
 		at, err := time.Parse(time.RFC3339, th.Created)
@@ -269,6 +281,9 @@ func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 			continue
 		}
 		why := fmt.Sprintf("%s is back in review since %s, after the send back; its next acceptance takes it up again", it.ID, back.UTC().Format(time.RFC3339))
+		if ofState {
+			why = fmt.Sprintf("%s is back in %s since %s, after the send back; the state's job runs again", it.ID, state, back.UTC().Format(time.RFC3339))
+		}
 		if _, err := threads.Resolve(repo, th.ID, forgeAuthor, why, l.now()); err != nil {
 			l.warn("send back thread not resolved", "story", it.ID, "thread", th.ID, "err", err.Error())
 			continue

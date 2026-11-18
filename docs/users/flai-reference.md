@@ -6204,6 +6204,8 @@ Each run's report is stored in the project's .flai-cache/verify, whether it pass
 
 --sync-only runs the rebase and sync steps alone, prints and exits as a full run does, and stores no report, so the stored one stays the last full run's. The close-out's last check runs it after its commit. It is refused with --last and with --record-issues.
 
+--suite &lt;suite&gt;, which may be given more than once, runs only the tiers of those suites, a tier's suite key or, with none, its name, that the branch's changes select, after the same steps before the tiers; a tier of a suite named that only a tier of another suite covers runs itself, and no tier is left to the merge queue. --suite all runs every suite, as no --suite does. A suite no tier is in is refused, naming the suites there are. The report names the suites, and is stored neither as the story's last result nor in the record, so that a run of some suites never stands for the close-out: --last still prints the last run of every suite. flai serve's job for a state whose runs name suites runs it once per suite (ADR-0312 §4). It is refused with --last, --sync-only, and --job.
+
 --record-issues records the notes in design/issues of the story's worktree, as flai check --story --record-issues does: each rule's notes in the open issue whose title names the rule, once per story and notes. The close-out commits them with the story.
 
 Each run on a worktree with nothing uncommitted is kept in the record under its commit as well. Unless --fresh, a run at a commit whose record holds a passing verdict, with the worktree clean and the main branch at the record's base commit or ahead of it only by commits the sync step passes over, answers that verdict and runs nothing: its last line ends "(answered from the record of &lt;time&gt; at &lt;commit&gt;; ran nothing)", and --record-issues records nothing for it (ADR-0229).
@@ -6221,6 +6223,7 @@ flai verify S-0270 --json
 flai verify S-0270 --record-issues
 flai verify S-0270 --fresh
 flai verify S-0270 --all
+flai verify S-0270 --suite behavior --suite smoke
 flai verify S-0270 --last --json
 flai verify S-0270 --sync-only
 ```
@@ -6236,6 +6239,7 @@ Flags:
 | `--max` int | the most findings to report across the run (default `5`) |
 | `-m`, `--message` string | with --job, the commit message the close-out commits with |
 | `--record-issues` | record the check's findings outside the story in design/issues of its worktree, once per story and findings |
+| `--suite` stringArray | run only the tiers of this suite, by a tier's suite or else its name, and store no result; repeat it for more, or give all for every suite |
 | `--sync-only` | run only the rebase and sync steps, and store no result |
 
 ### flai version

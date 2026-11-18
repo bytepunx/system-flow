@@ -2,7 +2,8 @@
 // (ADR-0248, ADR-0302): the state the workflow sends a story back to, and the
 // thread by flai, titled with storygit.SentBackPrefix, that tells its agent
 // why and that flai serve starts the agent on. flai accept's send back, flai
-// serve's Rebase and resolve job (S-0804), and the send back by hand, a
+// serve's Rebase and resolve job (S-0804), its state job (ADR-0312 §4), and
+// the send back by hand, a
 // story's move along the send-back transition by anyone but flai and its own
 // agent (I-0397), all use it, so none imports another.
 package sendback
@@ -45,6 +46,36 @@ func Thread(repo *workitem.Repo, story, title, text string, now time.Time) (*thr
 		}
 	}
 	return threads.New(repo, threads.NewOptions{Title: title, On: story, Author: storygit.SentBackAuthor, Text: text, Now: now})
+}
+
+// stateJobWords stand between the story and the state in the title of a
+// state job's send back's thread, which StateJobTitle words and StateJobOf
+// reads.
+const stateJobWords = "'s job on entering "
+
+// StateJobTitle is the title of the thread of the send back of story by the
+// job flai serve ran when it entered the state state (ADR-0312 §4), saying
+// what stopped it: "Acceptance sent back: S-0823's job on entering
+// integration: suite smoke failed". It begins with storygit.SentBackPrefix,
+// so that Thread finds it open and flai serve starts the story's agent on it.
+func StateJobTitle(story, state, what string) string {
+	return fmt.Sprintf("%s%s%s%s: %s", storygit.SentBackPrefix, story, stateJobWords, state, what)
+}
+
+// StateJobOf is the state whose job sent its story back with the thread
+// StateJobTitle titled title, and what stopped it; false when title is not
+// one.
+func StateJobOf(title string) (state, what string, ok bool) {
+	rest, ok := strings.CutPrefix(title, storygit.SentBackPrefix)
+	if !ok {
+		return "", "", false
+	}
+	_, after, ok := strings.Cut(rest, stateJobWords)
+	if !ok {
+		return "", "", false
+	}
+	state, what, ok = strings.Cut(after, ": ")
+	return state, what, ok && state != ""
 }
 
 // ByHandSuffix ends the title of a send back by hand's thread, which

@@ -49,10 +49,11 @@ func resolveRefusal(repo *workitem.Repo, story string) string {
 	return ""
 }
 
-// resolveJob is one rebase and resolve job of a story: its run, the job's
-// body, and its settle, which runJob calls once the job ended, from the same
-// goroutine, so what the run found needs no lock.
-type resolveJob struct {
+// branchRebase is the rebase of a story's branch onto the main branch that a
+// job of flai serve's runs first, the rebase and resolve job's and the state
+// job's (ADR-0312 §4), with what it found, which only the job's own
+// goroutine reads and writes.
+type branchRebase struct {
 	p        *verifyPass
 	story    string
 	worktree string
@@ -61,11 +62,10 @@ type resolveJob struct {
 	// worktree's git files the host checks before each of its own steps
 	// there (ADR-0274).
 	container bool
-	// closeOut is the story's close-out, as a close-out job runs it.
-	closeOut jobBody
+	// source begins the rebase's own lines in the job's log, the job's
+	// progress lines' source: closeout.SourceResolve or SourceState.
+	source string
 
-	// rebased is whether the sync rebased the branch cleanly.
-	rebased bool
 	// conflicts are the paths the sync's rebase stopped on.
 	conflicts []string
 	// waits says why the rebase that stopped still waits in the worktree:
@@ -74,10 +74,22 @@ type resolveJob struct {
 	waits string
 }
 
+// resolveJob is one rebase and resolve job of a story: its run, the job's
+// body, and its settle, which runJob calls once the job ended, from the same
+// goroutine, so what the run found needs no lock.
+type resolveJob struct {
+	branchRebase
+	// closeOut is the story's close-out, as a close-out job runs it.
+	closeOut jobBody
+
+	// rebased is whether the sync rebased the branch cleanly.
+	rebased bool
+}
+
 // newResolveJob is the rebase and resolve of story in worktree, which by
 // asked for, running closeOut once the rebase is clean.
 func newResolveJob(p *verifyPass, story, worktree, by string, container bool, closeOut jobBody) *resolveJob {
-	return &resolveJob{p: p, story: story, worktree: worktree, by: by, container: container, closeOut: closeOut}
+	return &resolveJob{branchRebase: branchRebase{p: p, story: story, worktree: worktree, by: by, container: container, source: closeout.SourceResolve}, closeOut: closeOut}
 }
 
 // run is the job's body: the rebase, then, when it is clean, the close-out,
@@ -110,7 +122,7 @@ func (r *resolveJob) run(ctx context.Context, out io.Writer) (int, error) {
 // rebase waiting, it reads the paths in conflict and aborts the rebase, but
 // one it found waiting before the sync, which it leaves as it was. When ctx
 // ends during the sync, it leaves the worktree as the sync left it.
-func (r *resolveJob) rebase(ctx context.Context, out io.Writer) (int, error) {
+func (r *branchRebase) rebase(ctx context.Context, out io.Writer) (int, error) {
 	p, root, git := r.p, r.p.e.Root, gitOf(r.p.o)
 	flai, err := p.exe()
 	if err != nil {
@@ -131,7 +143,7 @@ func (r *resolveJob) rebase(ctx context.Context, out io.Writer) (int, error) {
 	if r.container {
 		if err := gitPointers(root, r.story, r.worktree); err != nil {
 			r.waits = err.Error()
-			fmt.Fprintf(out, "resolve: the rebase was not aborted: %v\n", err)
+			fmt.Fprintf(out, "%s: the rebase was not aborted: %v\n", r.source, err)
 			return code, nil
 		}
 	}
@@ -139,15 +151,15 @@ func (r *resolveJob) rebase(ctx context.Context, out io.Writer) (int, error) {
 	branch := storygit.Branch(r.story)
 	if found {
 		r.waits = fmt.Sprintf("a rebase of %s was already in progress in %s, which flai left as it found it", branch, r.worktree)
-		fmt.Fprintf(out, "resolve: %s\n", r.waits)
+		fmt.Fprintf(out, "%s: %s\n", r.source, r.waits)
 		return code, nil
 	}
 	if err := storygit.AbortRebase(git, r.worktree, branch); err != nil {
 		r.waits = fmt.Sprintf("flai could not abort the rebase: %v", err)
-		fmt.Fprintf(out, "resolve: %s\n", r.waits)
+		fmt.Fprintf(out, "%s: %s\n", r.source, r.waits)
 		return code, nil
 	}
-	fmt.Fprintf(out, "resolve: flai aborted the rebase of %s, so the branch is as it was\n", branch)
+	fmt.Fprintf(out, "%s: flai aborted the rebase of %s, so the branch is as it was\n", r.source, branch)
 	return code, nil
 }
 
@@ -244,7 +256,7 @@ func (r *resolveJob) sendBack(repo *workitem.Repo, job *closeout.Job, reason, ti
 
 // base is the main branch the story's branch was rebased onto, or words for
 // it when git cannot say.
-func (r *resolveJob) base() string {
+func (r *branchRebase) base() string {
 	base, err := storygit.MainBranch(gitOf(r.p.o), r.p.e.Root)
 	if err != nil || base == "" {
 		return "the main branch"

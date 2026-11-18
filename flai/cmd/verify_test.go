@@ -1619,3 +1619,59 @@ func TestVerifyWritesItsProgressToStderrOnlyWhenAsked(t *testing.T) {
 		t.Errorf("stderr's progress\n%s\nwant\n%s", got, want.String())
 	}
 }
+
+// ADR-0312 §4: --suite runs only the tiers of the suites it names, after the
+// steps before the tiers, names them in the report, and stores the report
+// neither as the story's last nor in the record; --suite all runs every
+// suite and stores it as before; a suite no tier is in is refused naming
+// those there are, and --suite with --last, --sync-only, or --job, or naming
+// no suite, is refused before anything runs.
+func TestVerifySuiteRunsOnlyThoseSuitesAndStoresNoReport(t *testing.T) {
+	root, worktree := verifyFixture(t, "exit 0")
+	manifest, err := os.ReadFile("../internal/metrics/testdata/good/system-flow.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tiers := "tests:\n" +
+		"  - name: unit\n    suite: behavior\n    command: [sh, -c, 'exit 0', unit, \"{files}\"]\n    paths: [\"docs/**\"]\n" +
+		"  - name: lint\n    suite: static\n    command: [sh, -c, 'exit 0', lint, \"{files}\"]\n    paths: [\"docs/**\"]\n"
+	if err := os.WriteFile(filepath.Join(worktree, "system-flow.yaml"), append(manifest, tiers...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo := openProject(t, root)
+	rep := verifyReport(t, root, 0, "S-004", "--suite", " behavior ")
+	if got, want := stepStates(rep), "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed"; got != want || strings.Join(rep.Suites, ",") != "behavior" {
+		t.Errorf("--suite behavior: steps %s, suites %q; want %s naming behavior", got, rep.Suites, want)
+	}
+	if _, ok, err := verify.LastReport(repo, "S-004"); err != nil || ok {
+		t.Errorf("--suite stored the report as the story's last (%v, %v)", ok, err)
+	}
+	if _, err := os.Stat(verify.RecordPath(repo, "S-004", "0123abc4567")); !os.IsNotExist(err) {
+		t.Errorf("--suite kept the report in the record: %v", err)
+	}
+	rep = verifyReport(t, root, 0, "S-004", "--suite", "behavior", "--suite", "all")
+	if got := stepStates(rep); !strings.Contains(got, "tier unit:passed") || !strings.Contains(got, "tier lint:passed") || rep.Suites != nil {
+		t.Errorf("--suite all: steps %s, suites %q; want every tier and no suites named", got, rep.Suites)
+	}
+	if last, ok, err := verify.LastReport(repo, "S-004"); err != nil || !ok || last.Suites != nil {
+		t.Errorf("--suite all did not store the report as the story's last: %+v (%v, %v)", last, ok, err)
+	}
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--suite", "slow")
+	if code != exitVerifyUnusable || !strings.Contains(errOut, "no tier of the manifest's tests is in it") || !strings.Contains(errOut, "behavior, static") {
+		t.Errorf("--suite slow: exit %d %q\n%s", code, out, errOut)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--suite", "behavior", "--last"}, "--last prints the stored result and runs nothing, and --suite"},
+		{[]string{"--suite", "behavior", "--sync-only"}, "--sync-only runs only the rebase and sync steps, no tier"},
+		{[]string{"--suite", "behavior", "--job"}, "--job asks flai serve for the whole close-out, every suite"},
+		{[]string{"--suite", " "}, "--suite names no suite"},
+	} {
+		out, errOut, code := runVerify(t, root, verifyGit{}, append([]string{"verify", "S-004"}, c.args...)...)
+		if code != exitVerifyUnusable || out != "" || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: exit %d %q\n%s", c.args, code, out, errOut)
+		}
+	}
+}
