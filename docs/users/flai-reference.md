@@ -3798,7 +3798,7 @@ List the stories in review the merge queue would batch, and why each other would
 flai queue
 ```
 
-List the stories in review that the merge queue would batch, in the order they last entered review: the last flai verify passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review follows, with every reason it is not eligible. Then the batch under verification, its step, and its result, and each story's last outcome, from the queue's state in .flai-cache/merge-queue; first, when the queue is held, who held it and when.
+List the stories in review that the merge queue would batch, in the order they last entered review: the last flai verify passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review follows, with every reason it is not eligible. Then the batch under verification, its step, the suites it and its bisection run (all, those verify\_at.batch of the workflow file lists, or none; ADR-0312), and its result, and each story's last outcome, from the queue's state in .flai-cache/merge-queue; first, when the queue is held, who held it and when.
 
 The listing verifies, merges, and moves nothing (ADR-0173). flai queue add and remove enqueue a story and take it out, and flai queue hold and resume stop the queue building batches and let it again; flai accept takes the story it accepts out of the queue. Under acceptance.mode pull-request the queue does not run, because the forge's required checks gate each story (ADR-0169), and no story is listed.
 

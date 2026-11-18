@@ -379,6 +379,37 @@ func TestQueueShowsTheBatchsResultAndDrop(t *testing.T) {
 	}
 }
 
+// S-0809 criterion 2, ADR-0312 §6: flai queue names the suites the batch
+// runs beside its stories, all, the list verify_at.batch gives, or none, in
+// text and in --json, and nothing for a batch recorded before batches named
+// their suites.
+func TestQueueNamesTheSuitesTheBatchRuns(t *testing.T) {
+	t.Parallel()
+	root := queueProject(t)
+	for _, c := range []struct {
+		suites []string
+		line   string
+	}{
+		{[]string{"behavior", "smoke"}, "batch: S-0001, S-0004, step verify, suites behavior, smoke\n"},
+		{[]string{"all"}, "batch: S-0001, S-0004, step verify, suites all\n"},
+		{[]string{}, "batch: S-0001, S-0004, step verify, suites none\n"},
+		{nil, "batch: S-0001, S-0004, step verify\n"},
+	} {
+		writeQueueState(t, root, mergequeue.State{Batch: &mergequeue.Batch{Stories: []string{"S-0001", "S-0004"}, Suites: c.suites, Step: "verify"}})
+		if out, errOut, code := runIn(t, root, "queue"); code != 0 || !strings.Contains(out, c.line) {
+			t.Errorf("flai queue with suites %#v does not say %q: %d %s\n%s", c.suites, c.line, code, errOut, out)
+		}
+		js, errOut, code := runIn(t, root, "queue", "--json")
+		var q mergequeue.Queue
+		if code != 0 || json.Unmarshal([]byte(js), &q) != nil || q.Batch == nil {
+			t.Fatalf("flai queue --json: %d %s %s", code, js, errOut)
+		}
+		if got := q.Batch.Suites; (got == nil) != (c.suites == nil) || strings.Join(got, " ") != strings.Join(c.suites, " ") {
+			t.Errorf("flai queue --json carries suites %#v, want %#v", got, c.suites)
+		}
+	}
+}
+
 // S-0552: while the next batch fills its window, flai queue says until when
 // and which stories it holds, of merge_queue.batch_max, in place of "batch:
 // none", and --json carries the window; once it ends it says neither.

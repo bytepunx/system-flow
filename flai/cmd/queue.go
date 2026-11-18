@@ -39,9 +39,11 @@ they last entered review: the last flai verify passed at the head of the
 story's branch, every acceptance criterion is ticked, no thread on the story
 or its tasks is open, and no path is recorded as undoing main's change
 (ADR-0155). Each other story in review follows, with every reason it is not
-eligible. Then the batch under verification, its step, and its result, and
-each story's last outcome, from the queue's state in
-.flai-cache/merge-queue; first, when the queue is held, who held it and when.
+eligible. Then the batch under verification, its step, the suites it and its
+bisection run (all, those verify_at.batch of the workflow file lists, or
+none; ADR-0312), and its result, and each story's last outcome, from the
+queue's state in .flai-cache/merge-queue; first, when the queue is held, who
+held it and when.
 
 The listing verifies, merges, and moves nothing (ADR-0173). flai queue add
 and remove enqueue a story and take it out, and flai queue hold and resume
@@ -335,16 +337,20 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 	}
 }
 
-// printBatch writes the batch under verification and its step, and, once
-// it has them, its result, why it was dropped, the story its landing waits
-// on main at (ADR-0234), and the stories its landing holds back with the
-// files that hold them (ADR-0178).
+// printBatch writes the batch under verification, its step, and the suites
+// it runs (ADR-0312 §6), and, once it has them, its result, why it was
+// dropped, the story its landing waits on main at (ADR-0234), and the
+// stories its landing holds back with the files that hold them (ADR-0178).
 func printBatch(w io.Writer, b *mergequeue.Batch) {
 	if b == nil {
 		fmt.Fprintln(w, "batch: none")
 		return
 	}
-	fmt.Fprintf(w, "batch: %s, step %s\n", strings.Join(b.Stories, ", "), b.Step)
+	line := fmt.Sprintf("batch: %s, step %s", strings.Join(b.Stories, ", "), b.Step)
+	if b.Suites != nil {
+		line += ", suites " + batchSuites(b.Suites)
+	}
+	fmt.Fprintln(w, line)
 	if r := b.Result; r != nil {
 		line := "  result: passed"
 		if !r.Passed {
@@ -370,6 +376,15 @@ func printBatch(w io.Writer, b *mergequeue.Batch) {
 			fmt.Fprintf(w, "  held back: %s, by the main checkout's uncommitted %s; free it: %s\n", h.Story, strings.Join(h.Paths, ", "), mergequeue.FreeCommand(h.Paths))
 		}
 	}
+}
+
+// batchSuites is the suites a batch runs on one line: all, the suites the
+// workflow's verify_at.batch lists, or none for a batch that runs no suite.
+func batchSuites(suites []string) string {
+	if len(suites) == 0 {
+		return "none"
+	}
+	return strings.Join(suites, ", ")
 }
 
 // preflightLine is a finding of the preflight on one line: its file and line,
