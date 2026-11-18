@@ -380,6 +380,17 @@ func (w Workflow) UsesSuiteKeys() bool {
 		slices.ContainsFunc(w.States, func(s State) bool { return s.Runs != nil })
 }
 
+// SuitesAt is the suites point runs (ADR-0312 §6): the file's verify_at for
+// it, or, for a file that gives none of ADR-0312's keys, the baseline's, as
+// UsesSuiteKeys reads it; nil when the point gets none or point is no point
+// of VerifyAtPoints. It is a copy, which the caller may change.
+func (w Workflow) SuitesAt(point string) *Suites {
+	if !w.UsesSuiteKeys() {
+		return Baseline().VerifyAt.At(point)
+	}
+	return cloneSuites(w.VerifyAt.At(point))
+}
+
 // cloneSuites is a copy of s that shares no list with it.
 func cloneSuites(s *Suites) *Suites {
 	if s == nil {

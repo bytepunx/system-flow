@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -26,10 +28,10 @@ const exitTestUnusable = 2
 // and answers pass or the first findings (S-0273).
 func newTestCmd(a *app) *cobra.Command {
 	var all bool
-	var suite string
+	var suite, at string
 	var maxFindings int
 	c := &cobra.Command{
-		Use:   "test [--suite <suite>] [path|package]... | test <tier>",
+		Use:   "test [--suite <suite>] [path|package]... | test <tier> | test --at <point> [--suite <suite>]",
 		Short: "Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings",
 		Long: `Run the project's test and lint tiers, the tests list in system-flow.yaml, for
 the files and folders given, in the checkout of the working directory: a
@@ -52,6 +54,18 @@ the suite that a tier of another suite covers runs, since the covering tier
 does not. A suite no tier is in is refused, naming the suites there are
 (ADR-0312).
 
+--at <point> runs the tiers of the suites the workflow file's verify_at
+names for the point, batch, publish, or ci, over all paths, as --all runs
+them: every tier of those suites, all_only ones too, but a manual one. A
+point given all runs every tier but the manual ones. A workflow file that
+gives none of verify, runs, and verify_at reads as the baseline's, which
+gives batch and ci all and publish nothing. A point the workflow gives no
+suites is refused, as is a suite it names that no tier is in. With --suite,
+only that suite's tiers run, and only when the point names it or all, so
+that a CI job can run one suite of the point. --at with paths, with --all,
+or with a tier's name is refused, since it runs over all paths already. The
+answer's first line names the point and its suites (ADR-0312 §6).
+
 The tiers whose paths select a file run in the manifest's order, cheapest
 first, and the run stops at the first that fails. The answer is pass, or the
 failing tier's first findings, never its whole output: each as path:line
@@ -65,17 +79,22 @@ writes is not refused as the orchestrator (S-0311).
 The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could
 not answer: an argument outside the checkout, one that is neither a tier nor
 a file or folder, a tier's name given with others, a suite no tier is in,
-tiers the manifest does not declare validly, or a run stopped before it
-finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with
+a point that is not one or that the workflow gives no suites, --at with
+paths, --all, a tier's name, or a suite the point does not name, tiers the
+manifest does not declare validly, or a run stopped before it finished.
+With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with
 its state, command, duration, and findings, and a skipped tier with
-covered_by.`,
+covered_by; with --at it adds at, the point, and suites, the suites that
+ran, or ["all"].`,
 		Example: `  flai test flai/internal/manifest
   flai test flaiover/src/lib/board.ts --json
   flai test                # what this checkout changed against the main branch
   flai test --all --max 10
   flai test --suite static flai/internal/verify
   flai test --suite integration --all
-  flai test gateway        # the tier named gateway, alone, for the whole checkout`,
+  flai test gateway        # the tier named gateway, alone, for the whole checkout
+  flai test --at ci        # the suites the workflow's verify_at names for ci
+  flai test --at ci --suite static`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if maxFindings < 1 {
 				return &exitError{code: exitTestUnusable, msg: fmt.Sprintf("--max %d is not a count of findings; give 1 or more", maxFindings)}
@@ -92,6 +111,13 @@ covered_by.`,
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
+			var run *atRun
+			if cmd.Flags().Changed("at") {
+				if run, err = atSuites(root, tiers, at, suite, args, all); err != nil {
+					return &exitError{code: exitTestUnusable, msg: err.Error()}
+				}
+				all = true
+			}
 			named, err := namedTier(tiers, args, all, suite)
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
@@ -100,6 +126,9 @@ covered_by.`,
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
 			opts := verify.Options{Root: root, Tiers: tiers, All: all, Suite: suite, Git: a.runner, RunOptions: verify.RunOptions{Max: maxFindings}}
+			if run != nil {
+				opts.Suites = run.suites
+			}
 			if named == nil {
 				if opts.Args, err = checkoutArgs(root, cwd, args); err != nil {
 					var missing missingArgError
@@ -126,12 +155,18 @@ covered_by.`,
 			if err != nil && !stopped {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
-			a.logger().Debug("tiers run", "component", "cmd", "root", root, "paths", len(res.Paths), "tiers", len(res.Tiers), "passed", res.Passed)
+			if run != nil {
+				res.At, res.Suites = run.point, run.ran
+			}
+			a.logger().Debug("tiers run", "component", "cmd", "root", root, "at", res.At, "paths", len(res.Paths), "tiers", len(res.Tiers), "passed", res.Passed)
 			if a.jsonOut {
 				if err := a.printJSON(res); err != nil {
 					return err
 				}
 			} else {
+				if run != nil {
+					fmt.Fprintf(a.out, "at %s: suites %s\n", run.point, strings.Join(run.ran, ", "))
+				}
 				fmt.Fprint(a.out, res.Text())
 			}
 			switch {
@@ -148,8 +183,64 @@ covered_by.`,
 	})
 	c.Flags().BoolVar(&all, "all", false, "run every tier for the whole checkout, all_only ones too and manual ones not, whatever the paths")
 	c.Flags().StringVar(&suite, "suite", "", "run only the tiers of this suite, by a tier's suite or else its name: those the paths select, or with --all every one but the manual ones")
+	c.Flags().StringVar(&at, "at", "", "run the tiers of the suites the workflow's verify_at names for this point, batch, publish, or ci, over all paths, as --all runs them")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
 	return c
+}
+
+// atRun is what flai test --at runs: the point, the suites the run selects,
+// nil for every one, and the suites it ran as the answer names them.
+type atRun struct {
+	point  string
+	suites []string
+	ran    []string
+}
+
+// atSuites is the run of the suites the workflow of the checkout at root
+// names for point, narrowed to suite when it is given (ADR-0312 §6). It
+// refuses a point that is none of verify_at's, paths, a tier's name, or all
+// beside it, a point the workflow gives no suites, a suite the point names
+// that no tier is in, and a suite the point does not name.
+func atSuites(root string, tiers []verify.Tier, point, suite string, args []string, all bool) (*atRun, error) {
+	point = strings.TrimSpace(point)
+	points := strings.Join(workflow.VerifyAtPoints, ", ")
+	if !slices.Contains(workflow.VerifyAtPoints, point) {
+		return nil, fmt.Errorf("--at %s is not a point verify_at gives suites for; give one of %s (ADR-0312 §6)", point, points)
+	}
+	if all {
+		return nil, fmt.Errorf("--at %s runs every tier of its suites over all paths, as --all does; give --at alone, not with --all", point)
+	}
+	if len(args) > 0 {
+		if _, ok := verify.SelectTier(tiers, args[0]); ok && len(args) == 1 {
+			return nil, fmt.Errorf("%s names a tier, which runs alone, and --at %s runs the tiers of the suites the workflow names for %s; give the tier alone or --at, not both", strings.TrimSpace(args[0]), point, point)
+		}
+		return nil, fmt.Errorf("--at %s runs over all paths, so it takes no path; give --at alone, or the paths without it", point)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, fmt.Errorf("open the project at %s to read its workflow: %w", root, err)
+	}
+	flow := repo.Flow()
+	if testWorkflow != nil {
+		flow = *testWorkflow
+	}
+	s := flow.SuitesAt(point)
+	if s == nil {
+		return nil, fmt.Errorf("run the tiers at %s: the workflow names no suites for %s; give verify_at: {%s: all}, or a list of suites, in %s (ADR-0312 §6)", point, point, point, workflow.Rel(repo.Manifest.Layout["design"]))
+	}
+	run := &atRun{point: point, suites: s.Names, ran: s.Names}
+	if s.All {
+		run.suites, run.ran = nil, []string{workflow.SuitesAll}
+	} else if err := verify.CheckSuites(tiers, s.Names); err != nil {
+		return nil, fmt.Errorf("%w (the workflow names it for %s)", err, point)
+	}
+	if suite = strings.TrimSpace(suite); suite != "" {
+		if !s.All && !slices.Contains(s.Names, suite) {
+			return nil, fmt.Errorf("--suite %s is not among the suites the workflow names for %s, %s; give one of them, or leave --suite out", suite, point, strings.Join(s.Names, ", "))
+		}
+		run.ran = []string{suite}
+	}
+	return run, nil
 }
 
 // checkoutRoot is the root of the checkout holding dir: git's top level, or,

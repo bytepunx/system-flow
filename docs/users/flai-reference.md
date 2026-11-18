@@ -5890,7 +5890,7 @@ Flags:
 Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings.
 
 ```text
-flai test [--suite <suite>] [path|package]... | test <tier> [flags]
+flai test [--suite <suite>] [path|package]... | test <tier> | test --at <point> [--suite <suite>] [flags]
 ```
 
 Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier but the manual ones, all\_only ones too, for the whole checkout.
@@ -5899,9 +5899,11 @@ A lone argument that names a tier runs that tier alone for the whole checkout, a
 
 --suite &lt;suite&gt; runs only the tiers of that suite, a tier's suite key or, without one, its name: those of it that the paths select, or with --all every one of it but a manual one, which still runs only by name. A tier of the suite that a tier of another suite covers runs, since the covering tier does not. A suite no tier is in is refused, naming the suites there are (ADR-0312).
 
+--at &lt;point&gt; runs the tiers of the suites the workflow file's verify\_at names for the point, batch, publish, or ci, over all paths, as --all runs them: every tier of those suites, all\_only ones too, but a manual one. A point given all runs every tier but the manual ones. A workflow file that gives none of verify, runs, and verify\_at reads as the baseline's, which gives batch and ci all and publish nothing. A point the workflow gives no suites is refused, as is a suite it names that no tier is in. With --suite, only that suite's tiers run, and only when the point names it or all, so that a CI job can run one suite of the point. --at with paths, with --all, or with a tier's name is refused, since it runs over all paths already. The answer's first line names the point and its suites (ADR-0312 §6).
+
 The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A selected tier that another selected tier covers, by the covers key, is not run: it is listed as "skipped &lt;tier&gt;: covered by &lt;tier&gt;" (S-0342). A manifest without tests runs scripts/test.sh as its one tier. Each tier runs with FLAI\_ROLE=verify whatever role ran flai test, so a test that runs flai's writes is not refused as the orchestrator (S-0311).
 
-The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, one that is neither a tier nor a file or folder, a tier's name given with others, a suite no tier is in, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings, and a skipped tier with covered\_by.
+The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, one that is neither a tier nor a file or folder, a tier's name given with others, a suite no tier is in, a point that is not one or that the workflow gives no suites, --at with paths, --all, a tier's name, or a suite the point does not name, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings, and a skipped tier with covered\_by; with --at it adds at, the point, and suites, the suites that ran, or ["all"].
 
 Examples:
 
@@ -5913,6 +5915,8 @@ flai test --all --max 10
 flai test --suite static flai/internal/verify
 flai test --suite integration --all
 flai test gateway        # the tier named gateway, alone, for the whole checkout
+flai test --at ci        # the suites the workflow's verify_at names for ci
+flai test --at ci --suite static
 ```
 
 Flags:
@@ -5920,6 +5924,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--all` | run every tier for the whole checkout, all\_only ones too and manual ones not, whatever the paths |
+| `--at` string | run the tiers of the suites the workflow's verify\_at names for this point, batch, publish, or ci, over all paths, as --all runs them |
 | `--max` int | the most findings to report across the run (default `5`) |
 | `--suite` string | run only the tiers of this suite, by a tier's suite or else its name: those the paths select, or with --all every one but the manual ones |
 

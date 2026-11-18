@@ -13,6 +13,8 @@ import (
 	"context"
 	"io/fs"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -141,6 +143,12 @@ type Result struct {
 	// when every tier ran.
 	Paths []string     `json:"paths,omitempty"`
 	Tiers []TierResult `json:"tiers"`
+	// At is the point outside an item's moves the run was for, such as ci,
+	// as flai test --at names it; "" for any other run (ADR-0312 §6).
+	At string `json:"at,omitempty"`
+	// Suites are the suites a run At ran, as the workflow names them: their
+	// names, or all for every one.
+	Suites []string `json:"suites,omitempty"`
 }
 
 // RunOptions are what a run needs beyond the tiers it runs.
@@ -186,6 +194,10 @@ type Options struct {
 	// Suite, when not "", runs only the tiers of that suite: those the paths
 	// select, or with All every one of it but a Manual one (ADR-0312).
 	Suite string
+	// Suites, when not nil, runs only the tiers of these suites, as Suite
+	// runs those of one; with Suite too, only Suite's tiers, and none when
+	// Suites does not hold it. Nil is every suite.
+	Suites []string
 	// Base is the main branch the checkout's changes are counted against.
 	Base string
 	// Git runs git for the changed paths; nil is execx.System.
@@ -195,11 +207,15 @@ type Options struct {
 
 // Test answers whether the checkout passes the tiers its paths select: the
 // paths Args names, or, without them, the files the checkout changed against
-// Base; with All, every tier; with Suite, only those of the suite. It returns
-// an error when no tier is in Suite, when the paths cannot be read, or, with
-// the result so far, when ctx ends during the run.
+// Base; with All, every tier; with Suite or Suites, only those of the
+// suites. It returns an error when no tier is in Suite or in one of Suites,
+// when the paths cannot be read, or, with the result so far, when ctx ends
+// during the run.
 func Test(ctx context.Context, opts Options) (Result, error) {
 	if err := CheckSuite(opts.Tiers, opts.Suite); err != nil {
+		return Result{}, err
+	}
+	if err := CheckSuites(opts.Tiers, opts.Suites); err != nil {
 		return Result{}, err
 	}
 	if opts.FS == nil {
@@ -220,7 +236,21 @@ func Test(ctx context.Context, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	res, err := Run(ctx, opts.Root, SelectSuite(opts.FS, opts.Tiers, paths, opts.All, opts.Suite), opts.RunOptions)
+	res, err := Run(ctx, opts.Root, SelectSuites(opts.FS, opts.Tiers, paths, opts.All, runSuites(opts.Suite, opts.Suites)), opts.RunOptions)
 	res.Paths = paths
 	return res, err
+}
+
+// runSuites are the suites a run for suite and suites selects, as Options
+// gives them: suites when suite is "", suite alone when suites is nil or
+// holds it, and none when it does not.
+func runSuites(suite string, suites []string) []string {
+	suite = strings.TrimSpace(suite)
+	switch {
+	case suite == "":
+		return suites
+	case suites == nil || slices.ContainsFunc(suites, func(s string) bool { return strings.TrimSpace(s) == suite }):
+		return []string{suite}
+	}
+	return []string{}
 }

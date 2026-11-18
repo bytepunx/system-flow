@@ -459,6 +459,69 @@ func TestSelectStorySuitesKeepsOnlyTheTiersOfTheSuites(t *testing.T) {
 	}
 }
 
+// S-0812: a run for several suites, each trimmed, selects only the tiers of
+// any of them, all_only ones too with all, never a manual one; nil is every
+// suite and an empty list none; and a tier is covered only by a tier of the
+// suites, which runs.
+func TestSelectSuitesRunsOnlyTheTiersOfTheSuites(t *testing.T) {
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}, "flai/README.md": {}}
+	paths := []string{"flai/main.go", "flai/README.md"}
+	for _, tc := range []struct {
+		name   string
+		paths  []string
+		all    bool
+		suites []string
+		want   []string
+	}{
+		{name: "static and docs for paths", paths: paths, suites: []string{"static", " docs "}, want: []string{"gofmt", "go-vet", "docs"}},
+		{name: "behavior and integration with all", all: true, suites: []string{"behavior", "integration"}, want: []string{"go-test covered by integration", "integration", "smoke"}},
+		{name: "behavior and static with all", all: true, suites: []string{"behavior", "static"}, want: []string{"gofmt", "go-vet", "go-test"}},
+		{name: "nil is every suite", all: true, want: []string{"gofmt", "go-vet", "go-test covered by integration", "integration", "smoke", "docs"}},
+		{name: "an empty list is none", all: true, suites: []string{}},
+	} {
+		if got := coverage(SelectSuites(fsys, suiteTiers, tc.paths, tc.all, tc.suites)); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+	// SelectSuite is SelectSuites for one suite
+	if got, want := coverage(SelectSuite(fsys, suiteTiers, nil, true, "behavior")), coverage(SelectSuites(fsys, suiteTiers, nil, true, []string{"behavior"})); !reflect.DeepEqual(got, want) {
+		t.Errorf("SelectSuite %q, SelectSuites %q", got, want)
+	}
+}
+
+// S-0812: CheckSuites refuses the first suite no tier is in, as CheckSuite
+// does, and none for nil or suites the tiers have; Test runs Suites, and
+// with Suite too only Suite's tiers when Suites holds it, else none.
+func TestCheckSuitesAndTestWithSuites(t *testing.T) {
+	if err := CheckSuites(suiteTiers, nil); err != nil {
+		t.Errorf("nil refused: %v", err)
+	}
+	if err := CheckSuites(suiteTiers, []string{"static", " docs "}); err != nil {
+		t.Errorf("suites the tiers have refused: %v", err)
+	}
+	if err := CheckSuites(suiteTiers, []string{"static", "slow", "slower"}); err == nil || !strings.Contains(err.Error(), "run the tiers of the suite slow: no tier") {
+		t.Errorf("an unknown suite among them: %v", err)
+	}
+	if _, err := Test(t.Context(), Options{Root: t.TempDir(), Tiers: suiteTiers, All: true, Suites: []string{"slow"}}); err == nil || !strings.Contains(err.Error(), "suite slow") {
+		t.Errorf("Test with an unknown suite among Suites: %v, want it refused", err)
+	}
+	for _, tc := range []struct {
+		suite  string
+		suites []string
+		want   []string
+	}{
+		{"", nil, nil},
+		{"", []string{"static"}, []string{"static"}},
+		{" static ", nil, []string{"static"}},
+		{"static", []string{"behavior", " static "}, []string{"static"}},
+		{"static", []string{"behavior"}, []string{}},
+	} {
+		if got := runSuites(tc.suite, tc.suites); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("runSuites(%q, %q) = %#v, want %#v", tc.suite, tc.suites, got, tc.want)
+		}
+	}
+}
+
 // ADR-0312: the suites are each tier's, or its name, once each in list
 // order; a suite no tier is in is refused naming those there are and what
 // to do, and no suite, a suite by a tier's name, and a manual tier's suite

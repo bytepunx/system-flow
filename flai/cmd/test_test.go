@@ -521,3 +521,133 @@ func TestFlaiTestRefusesASuiteItCannotRun(t *testing.T) {
 		})
 	}
 }
+
+// writeBoard writes the baseline workflow file into the project at root as
+// its own, with verifyAt in place of the baseline's verify_at line.
+func writeBoard(t *testing.T, root, verifyAt string) {
+	t.Helper()
+	base, err := os.ReadFile(filepath.Join("..", "internal", "workflow", "baseline", "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const line = "verify_at: {batch: all, ci: all}\n"
+	if !strings.Contains(string(base), line) {
+		t.Fatalf("the baseline workflow has no line %q", line)
+	}
+	p := filepath.Join(root, "design", "workflows", "board.md")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(strings.Replace(string(base), line, verifyAt, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// tierStates are the tiers of a run as name=state, in order.
+func tierStates(res verify.Result) string {
+	var got []string
+	for _, tr := range res.Tiers {
+		got = append(got, tr.Name+"="+string(tr.State))
+	}
+	return strings.Join(got, ",")
+}
+
+// S-0812, ADR-0312 §6: --at runs the tiers of the suites the workflow names
+// for the point over all paths: with no workflow file the baseline's ci,
+// all, which runs every tier but the manual one; with --suite only that
+// suite's; the answer names the point and the suites.
+func TestFlaiTestAtRunsTheSuitesTheBaselineNamesForThePoint(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	res := testResult(t, root, 0, "--at", "ci")
+	if got, want := tierStates(res), "fmt=passed,lint=passed,unit=skipped,integration=passed,e2e=passed"; got != want || !res.Passed || len(res.Paths) != 0 {
+		t.Errorf("--at ci ran %s, want %s: %+v", got, want, res)
+	}
+	if res.At != "ci" || strings.Join(res.Suites, ",") != "all" {
+		t.Errorf("--at ci answers at %q, suites %q; want ci, all", res.At, res.Suites)
+	}
+	res = testResult(t, root, 0, "--at", "batch", "--suite", "behavior")
+	if got := tierStates(res); got != "unit=passed" || res.At != "batch" || strings.Join(res.Suites, ",") != "behavior" {
+		t.Errorf("--at batch --suite behavior ran %s, at %q, suites %q", got, res.At, res.Suites)
+	}
+	out, _, code := runIn(t, root, "test", "--at", "ci")
+	if code != 0 || !strings.HasPrefix(out, "at ci: suites all\npassed fmt (") {
+		t.Errorf("text: exit %d\n%s", code, out)
+	}
+}
+
+// S-0812, ADR-0312 §6: a workflow file's verify_at decides what --at runs:
+// ci: [static] runs static's tiers alone, over all paths, and --suite runs
+// one suite of them; a suite the point does not name is refused naming the
+// point's, as is a point the file gives none.
+func TestFlaiTestAtRunsTheSuitesTheWorkflowFileNamesForThePoint(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	writeBoard(t, root, "verify_at: {batch: all, ci: [static, integration]}\n")
+	res := testResult(t, root, 0, "--at", "ci")
+	if got, want := tierStates(res), "fmt=passed,lint=passed,integration=passed,e2e=passed"; got != want || strings.Join(res.Suites, ",") != "static,integration" {
+		t.Errorf("--at ci ran %s, suites %q; want %s", got, res.Suites, want)
+	}
+	res = testResult(t, root, 0, "--at", "ci", "--suite", "static")
+	if got := tierStates(res); got != "fmt=passed,lint=passed" || strings.Join(res.Suites, ",") != "static" {
+		t.Errorf("--at ci --suite static ran %s, suites %q", got, res.Suites)
+	}
+	out, _, code := runIn(t, root, "test", "--at", "ci")
+	if code != 0 || !strings.HasPrefix(out, "at ci: suites static, integration\n") {
+		t.Errorf("text: exit %d\n%s", code, out)
+	}
+	for _, c := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"a suite the point does not name", []string{"--at", "ci", "--suite", "behavior"}, "--suite behavior is not among the suites the workflow names for ci, static, integration; give one of them, or leave --suite out"},
+		{"a point the file gives none", []string{"--at", "publish"}, "the workflow names no suites for publish; give verify_at: {publish: all}, or a list of suites, in design/workflows/board.md"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, errOut, code := runIn(t, root, append([]string{"test"}, c.args...)...)
+			if code != exitTestUnusable || out != "" || !strings.Contains(errOut, c.want) {
+				t.Errorf("exit %d, want %d\nout %q\nerr %q, want it to say %q", code, exitTestUnusable, out, errOut, c.want)
+			}
+		})
+	}
+}
+
+// S-0812: a suite the point names that no tier is in is refused as --suite
+// refuses one.
+func TestFlaiTestAtRefusesASuiteThePointNamesThatNoTierIsIn(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	writeBoard(t, root, "verify_at: {ci: [static, slow]}\n")
+	out, errOut, code := runIn(t, root, "test", "--at", "ci")
+	if code != exitTestUnusable || out != "" || !strings.Contains(errOut, "run the tiers of the suite slow: no tier of the manifest's tests is in it") {
+		t.Errorf("exit %d, want %d\nout %q\nerr %q", code, exitTestUnusable, out, errOut)
+	}
+}
+
+// S-0812: --at refuses a point that is none of verify_at's, the publish the
+// baseline gives no suites, paths, --all, a tier's name, and a suite no tier
+// is in, each with exit 2 before any tier runs.
+func TestFlaiTestAtRefusesWhatItCannotRun(t *testing.T) {
+	t.Parallel()
+	root := shTiersFixture(t, suiteTiersManifest)
+	for _, c := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"an unknown point", []string{"--at", "deploy"}, "--at deploy is not a point verify_at gives suites for; give one of batch, publish, ci"},
+		{"publish in the baseline", []string{"--at", "publish"}, "the workflow names no suites for publish; give verify_at: {publish: all}, or a list of suites, in design/workflows/board.md"},
+		{"paths", []string{"--at", "ci", "docs/x.md"}, "--at ci runs over all paths, so it takes no path; give --at alone, or the paths without it"},
+		{"--all", []string{"--at", "ci", "--all"}, "--at ci runs every tier of its suites over all paths, as --all does; give --at alone, not with --all"},
+		{"a tier's name", []string{"--at", "ci", "fmt"}, "fmt names a tier, which runs alone, and --at ci runs the tiers of the suites the workflow names for ci; give the tier alone or --at, not both"},
+		{"a suite no tier is in", []string{"--at", "ci", "--suite", "slow"}, "run the tiers of the suite slow: no tier"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, errOut, code := runIn(t, root, append([]string{"test"}, c.args...)...)
+			if code != exitTestUnusable || out != "" || !strings.Contains(errOut, c.want) {
+				t.Errorf("exit %d, want %d\nout %q\nerr %q, want it to say %q", code, exitTestUnusable, out, errOut, c.want)
+			}
+		})
+	}
+}

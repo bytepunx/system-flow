@@ -126,3 +126,46 @@ func TestJSONOfVerifyRunsAndVerifyAt(t *testing.T) {
 		}
 	}
 }
+
+// S-0812: SuitesAt is the file's verify_at for a point, nil for a point it
+// does not name though it uses the keys; a file that gives none of the keys
+// reads as the baseline's, all at batch and ci and nothing at publish; and a
+// word that is no point gets nil from either.
+func TestSuitesAt(t *testing.T) {
+	w := mustParse(t, suited)
+	if s := w.SuitesAt(VerifyAtCI); s == nil || s.All || !slices.Equal(s.Names, []string{"static", "behavior"}) {
+		t.Errorf("ci: %+v, want static, behavior", s)
+	}
+	if s := w.SuitesAt(VerifyAtBatch); s == nil || !s.All {
+		t.Errorf("batch: %+v, want all", s)
+	}
+	if s := w.SuitesAt(VerifyAtPublish); s != nil {
+		t.Errorf("publish, which the file does not name: %+v, want nil", s)
+	}
+	// a copy: changing it leaves the workflow as it was
+	w.SuitesAt(VerifyAtCI).Names[0] = "changed"
+	if w.VerifyAt.CI.Names[0] != "static" {
+		t.Errorf("SuitesAt shares its list with the workflow: %+v", w.VerifyAt.CI)
+	}
+
+	plain := mustParse(t, minimal)
+	for point, all := range map[string]bool{VerifyAtBatch: true, VerifyAtCI: true} {
+		if s := plain.SuitesAt(point); s == nil || s.All != all || s.Names != nil {
+			t.Errorf("%s of a file giving none of the keys: %+v, want the baseline's all", point, s)
+		}
+	}
+	if s := plain.SuitesAt(VerifyAtPublish); s != nil {
+		t.Errorf("publish of a file giving none of the keys: %+v, want the baseline's none", s)
+	}
+
+	// a file that uses the keys without verify_at names no point
+	keyed := mustParse(t, strings.Replace(minimal, "to: done}", "to: done, verify: [static]}", 1))
+	if s := keyed.SuitesAt(VerifyAtCI); s != nil {
+		t.Errorf("ci of a file with verify and no verify_at: %+v, want nil", s)
+	}
+	for _, f := range []Workflow{w, plain} {
+		if s := f.SuitesAt("deploy"); s != nil {
+			t.Errorf("a word that is no point: %+v, want nil", s)
+		}
+	}
+}

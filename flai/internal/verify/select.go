@@ -53,7 +53,25 @@ func SelectSuite(fsys fs.FS, tiers []Tier, paths []string, all bool, suite strin
 	// the suite is filtered before cover, not after, so that covering skips
 	// a tier only when the covering tier itself runs; cover still reads every
 	// tier for the chains of covers, as it does through unselected tiers
-	return cover(tiers, selectTiers(fsys, tiers, paths, all, strings.TrimSpace(suite)))
+	var suites []string
+	if suite = strings.TrimSpace(suite); suite != "" {
+		suites = []string{suite}
+	}
+	return SelectSuites(fsys, tiers, paths, all, suites)
+}
+
+// SelectSuites is SelectSuite for the tiers of any of suites, each trimmed:
+// nil is every suite, as Select, and an empty list none. A tier is marked
+// covered only by a tier of the suites that runs, as SelectSuite marks it.
+func SelectSuites(fsys fs.FS, tiers []Tier, paths []string, all bool, suites []string) []Selected {
+	var in []string
+	if suites != nil {
+		in = make([]string, 0, len(suites))
+		for _, s := range suites {
+			in = append(in, strings.TrimSpace(s))
+		}
+	}
+	return cover(tiers, selectTiers(fsys, tiers, paths, all, in))
 }
 
 // SuiteOrName is the tier's suite, or its name when it gives none, each
@@ -91,6 +109,17 @@ func CheckSuite(tiers []Tier, suite string) error {
 	return fmt.Errorf("run the tiers of the suite %s: no tier of the manifest's tests is in it, by its suite or, with none, its name; name one of the suites there are, %s, or give a tier suite: %s in system-flow.yaml", suite, strings.Join(suites, ", "), suite)
 }
 
+// CheckSuites refuses the first of suites, trimmed, that no tier belongs to,
+// as CheckSuite refuses it; nil and an empty list are never refused.
+func CheckSuites(tiers []Tier, suites []string) error {
+	for _, s := range suites {
+		if err := CheckSuite(tiers, s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // SelectTier chooses the tier named name, trimmed, alone for the whole
 // checkout, as it runs with all, whether it is AllOnly, Manual, or neither;
 // false when no tier has the name (S-0548).
@@ -104,12 +133,12 @@ func SelectTier(tiers []Tier, name string) (Selected, bool) {
 	return Selected{}, false
 }
 
-// selectTiers is SelectSuite before the covered tiers are marked: only the
-// tiers of suite, trimmed, unless it is "".
-func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool, suite string) []Selected {
+// selectTiers is SelectSuites before the covered tiers are marked: only the
+// tiers of suites, trimmed, unless it is nil.
+func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool, suites []string) []Selected {
 	var out []Selected
 	for _, t := range tiers {
-		if t.Manual || (suite != "" && t.SuiteOrName() != suite) {
+		if t.Manual || (suites != nil && !slices.Contains(suites, t.SuiteOrName())) {
 			continue
 		}
 		if all {
