@@ -124,3 +124,53 @@ func TestArchiveMovesUnderTheItemsLockSoASaveWaitingIsRefused(t *testing.T) {
 		t.Errorf("the refused save wrote the archived file: tags %v", got.Tags)
 	}
 }
+
+// shippedProject is a project on a workflow whose accepted state is shipped
+// and whose cancelled state is dropped, holding story S-0001 with task
+// T-0001, both shipped, and story S-0002 still open (I-0377).
+func shippedProject(t *testing.T) *Repo {
+	t.Helper()
+	r := repoWithWorkflow(t, promoteKindRenamedFile)
+	mustCreate(t, r, Story, "Shipped", "")
+	mustCreate(t, r, Task, "Its task", "S-0001")
+	mustCreate(t, r, Story, "Open", "")
+	for _, id := range []string{"S-0001", "T-0001"} {
+		it, err := r.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Status = "shipped"
+		if err := r.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return r
+}
+
+// I-0377: on a workflow that renames done to shipped, a shipped story and
+// its task are planned for archiving, by ID and without, and the refusal of
+// an open item names the workflow's accepted and cancelled states.
+func TestPlanArchiveReadsTheRepositorysWorkflow(t *testing.T) {
+	r := shippedProject(t)
+	items, err := r.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ids := range [][]string{{"S-0001"}, nil} {
+		plan, err := r.PlanArchive(items, ids)
+		if err != nil {
+			t.Fatalf("plan %v: %v", ids, err)
+		}
+		var got []string
+		for _, it := range plan.Items {
+			got = append(got, it.ID)
+		}
+		if strings.Join(got, " ") != "S-0001 T-0001" {
+			t.Errorf("plan %v archives %v, want S-0001 T-0001", ids, got)
+		}
+	}
+	_, err = r.PlanArchive(items, []string{"S-0002"})
+	if err == nil || !strings.Contains(err.Error(), "only shipped or dropped items can be archived") {
+		t.Errorf("archiving the open story: %v, want a refusal naming shipped or dropped", err)
+	}
+}

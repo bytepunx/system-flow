@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // ArchivePlan lists what Archive would move.
@@ -19,7 +20,8 @@ type ArchivePlan struct {
 
 // PlanArchive selects items to archive. With no IDs, every closed epic,
 // closed story with its tasks, and closed task whose story is not active is
-// selected. With IDs, each must be closed; a story brings its tasks.
+// selected. With IDs, each must be closed; a story brings its tasks. An item
+// answers Closed by the workflow of the repository it was listed from.
 func (r *Repo) PlanArchive(items []*Item, ids []string) (*ArchivePlan, error) {
 	plan := &ArchivePlan{}
 	byID := map[string]*Item{}
@@ -70,7 +72,7 @@ func (r *Repo) PlanArchive(items []*Item, ids []string) (*ArchivePlan, error) {
 				return nil, fmt.Errorf("%s is already archived", id)
 			}
 			if !it.Closed() {
-				return nil, fmt.Errorf("%s is %s; only done or cancelled items can be archived", id, it.Status)
+				return nil, fmt.Errorf("%s is %s; only %s items can be archived", id, it.Status, r.closedNames())
 			}
 			add(it)
 			if it.Type == Story {
@@ -99,6 +101,24 @@ func (r *Repo) PlanArchive(items []*Item, ids []string) (*ArchivePlan, error) {
 	}
 	sort.Slice(plan.Items, func(i, j int) bool { return lessID(plan.Items[i].ID, plan.Items[j].ID) })
 	return plan, nil
+}
+
+// closedNames names the states an item may be archived in: the workflow's
+// states of the accepted kind, then those of the cancelled kind, as "done or
+// cancelled" for the baseline (I-0377).
+func (r *Repo) closedNames() string {
+	w := r.Flow()
+	var names []string
+	for _, kind := range []string{workflow.KindAccepted, workflow.KindCancelled} {
+		for _, st := range w.OfKind(kind) {
+			names = append(names, st.Name)
+		}
+	}
+	switch len(names) {
+	case 0, 1, 2:
+		return strings.Join(names, " or ")
+	}
+	return strings.Join(names[:len(names)-1], ", ") + ", or " + names[len(names)-1]
 }
 
 // Archive moves the planned files into wip/archive. The items move under the

@@ -289,10 +289,11 @@ func (r *Repo) ItemDir(typ string, archived bool) string {
 }
 
 // List loads every item, optionally including the archive. Items are sorted
-// by ID. Each is the caller's own copy; only files that changed since the
-// process last read them are read again (S-0156), and a process's first list
-// of a folder parses only the files that changed since a process last kept
-// it in the cache folder (S-0600). The folders are listed at once, each under
+// by ID, each answering Closed by the repository's workflow. Each is the
+// caller's own copy; only files that changed since the process last read
+// them are read again (S-0156), and a process's first list of a folder
+// parses only the files that changed since a process last kept it in the
+// cache folder (S-0600). The folders are listed at once, each under
 // its own lock, sharing one bound of parses at once (S-0676). A file that
 // cannot be read or does not parse is left out and the rest are listed
 // (I-0344); Unreadable names it. An error is a folder that cannot be read,
@@ -320,13 +321,15 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 		wg.Go(func() { l.items, l.err = parsed.listOn(l.dir, cache, slots) })
 	}
 	wg.Wait()
+	// the items are the store's copies, so they may take the workflow
+	flow := r.Flow()
 	var items []*Item
 	for _, l := range lists {
 		if l.err != nil {
 			return nil, l.err
 		}
 		for _, it := range l.items {
-			it.Archived = l.archived
+			it.Archived, it.flow = l.archived, &flow
 		}
 		items = append(items, l.items...)
 	}
@@ -402,8 +405,9 @@ func idCandidates(id string) []string {
 var ErrNotFound = errors.New("not found")
 
 // Get finds one item by ID in kanban or archive. IDs may be given in short
-// form (S-32) or with any zero padding; the item's own ID is returned. An ID
-// no item has is ErrNotFound.
+// form (S-32) or with any zero padding; the item's own ID is returned,
+// answering Closed by the repository's workflow. An ID no item has is
+// ErrNotFound.
 func (r *Repo) Get(id string) (*Item, error) {
 	typ := TypeOfID(CanonicalID(id))
 	if typ == "" {
@@ -437,7 +441,8 @@ func (r *Repo) Get(id string) (*Item, error) {
 			if it.ID != cand {
 				return nil, fmt.Errorf("%s: front matter id is %s", it.Path, it.ID)
 			}
-			it.Archived = archived
+			flow := r.Flow()
+			it.Archived, it.flow = archived, &flow
 			return it, nil
 		}
 	}

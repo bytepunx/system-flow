@@ -32,12 +32,13 @@ func (r *Repo) Visit(includeArchive bool, fn func(it *Item, archived bool)) erro
 // Children(List(includeArchive), id) returns, copying only the children.
 func (r *Repo) ChildrenOf(id string, includeArchive bool) ([]*Item, error) {
 	var out []*Item
+	flow := r.Flow()
 	err := r.Visit(includeArchive, func(it *Item, archived bool) {
 		if it.Parent != id {
 			return
 		}
 		c := it.clone()
-		c.Archived = archived
+		c.Archived, c.flow = archived, &flow
 		out = append(out, c)
 	})
 	if err != nil {

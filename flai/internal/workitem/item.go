@@ -16,6 +16,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Item types.
@@ -121,6 +122,11 @@ type Item struct {
 	// wrote it; empty for an item made in memory. Save merges with it what
 	// another writer saved since (I-0175).
 	readAs string
+	// flow is the workflow of the repository the item was read through, set
+	// by Repo.List and Repo.Get and shared read-only by the items of one call;
+	// nil for an item parsed alone, which answers by the baseline's names
+	// (I-0377).
+	flow *workflow.Workflow
 }
 
 // ErrNoFrontMatter is returned for files without a leading --- block.
@@ -334,13 +340,18 @@ func (it *Item) IsBlocked() bool {
 	return false
 }
 
-// Closed reports whether the item is done or cancelled.
+// Closed reports whether the item is closed: in a state of the accepted or
+// cancelled kind of the workflow of the repository it was read through, or,
+// for an item parsed alone, done or cancelled (I-0377).
 func (it *Item) Closed() bool {
+	if it.flow != nil {
+		return it.flow.Closed(it.Status)
+	}
 	return it.Status == Done || it.Status == Cancelled
 }
 
-// CompletedAt is when the item closed: its last transition while it is done
-// or cancelled, zero while it is open, so an item moved back out of cancelled
+// CompletedAt is when the item closed: its last transition while it is
+// Closed, zero while it is open, so an item moved back out of cancelled
 // is not completed (ADR-0055).
 func (it *Item) CompletedAt() time.Time {
 	if !it.Closed() || len(it.Transitions) == 0 {

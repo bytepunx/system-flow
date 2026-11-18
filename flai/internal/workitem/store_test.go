@@ -296,7 +296,8 @@ func TestAListedItemIsTheCallersOwn(t *testing.T) {
 }
 
 // clone shares nothing a caller could change: every slice, map, and pointer
-// of a copy is its own, whatever fields Item gains.
+// of a copy is its own, whatever fields Item gains, but for the workflow,
+// which no item changes and the items of one list share (I-0377).
 func TestCloneSharesNothing(t *testing.T) {
 	it := &Item{
 		ID: "S-0001", Transitions: []Transition{{To: Ready}}, Blocked: []Block{{Reason: "r"}},
@@ -311,6 +312,8 @@ func TestCloneSharesNothing(t *testing.T) {
 		Forecast:  &Forecast{Duration: "4h"},
 		Finalized: &Finalized{By: "alex"},
 	}
+	flow := baselineFlow
+	it.flow = &flow
 	c := it.clone()
 	if !reflect.DeepEqual(it, c) {
 		t.Fatalf("clone differs: %+v", c)
@@ -322,6 +325,9 @@ func TestCloneSharesNothing(t *testing.T) {
 			if a.IsNil() {
 				t.Errorf("%s: fill it in this test", path)
 				return
+			}
+			if path == "Item.flow" {
+				return // read-only, shared by design
 			}
 			if a.Pointer() == b.Pointer() {
 				t.Errorf("%s is shared", path)
@@ -891,5 +897,34 @@ func TestTheGenerationOfASnapshotMovesOnToldChangesAndSaves(t *testing.T) {
 	listed(t, r, true)
 	if got := r.Generation(); got == g {
 		t.Errorf("the list after a save found no change at %d", g)
+	}
+}
+
+// I-0377: the items List and Get return answer Closed by the repository's
+// workflow, so that a shipped item is closed, through the store's cache as
+// well as on its first read, while an item parsed alone answers by the
+// baseline's names.
+func TestListedItemsCloseByTheRepositorysWorkflow(t *testing.T) {
+	r := shippedProject(t)
+	for i := range 2 {
+		got := listed(t, r, false)
+		if s := got["S-0001"]; s == nil || !s.Closed() {
+			t.Errorf("list %d: shipped S-0001 is not closed: %v", i+1, s)
+		}
+		if s := got["S-0002"]; s == nil || s.Closed() {
+			t.Errorf("list %d: open S-0002 is closed: %v", i+1, s)
+		}
+	}
+	if s, err := r.Get("S-0001"); err != nil || !s.Closed() {
+		t.Errorf("Get: shipped S-0001 is not closed: %v %v", s, err)
+	}
+	for status, want := range map[string]bool{"shipped": false, Done: true, Cancelled: true} {
+		it, err := ParseItem("---\nid: S-0001\ntype: story\nstatus: " + status + "\n---\n")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if it.Closed() != want {
+			t.Errorf("an item parsed alone in %s: Closed is %v, want %v", status, it.Closed(), want)
+		}
 	}
 }
