@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
@@ -168,6 +170,122 @@ func TestMoveCancelsAlongTheWorkflowsTransitions(t *testing.T) {
 	for _, id := range []string{"E-0001", "S-0001", "T-0001"} {
 		if got := stateOf(t, root, id); got != "abandoned" {
 			t.Errorf("%s is %q, want abandoned", id, got)
+		}
+	}
+}
+
+// verifyWorkflow is a board whose move to review needs the suite static,
+// with the severity VERIFY_SEVERITY, passed at the story's head (ADR-0312 §2).
+const verifyWorkflow = `---
+title: Board
+updated: 2026-11-18
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: review, rules: [has-task], verify: {suites: [static], severity: VERIFY_SEVERITY}}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept], verify: all}
+  - {from: review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress], to: cancelled, effects: [cancel]}
+  - {from: review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// verifyProject is a project on verifyWorkflow at severity with S-0001 in
+// progress, a task under it, and a worktree whose one commit it answers.
+func verifyProject(t *testing.T, severity string) (root, head string) {
+	t.Helper()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	useWorkflow(t, strings.Replace(verifyWorkflow, "VERIFY_SEVERITY", severity, 1))
+	asOperator(t)
+	root = tempProject(t)
+	for _, args := range [][]string{{"config", "set", "author", "olive"}, {"epic", "new", "Epic"}, {"story", "new", "Verified", "--epic", "E-0001"}, {"task", "new", "--story", "S-0001", "Step"}} {
+		mustRun(t, root, args...)
+	}
+	for _, to := range []string{"ready", "in-progress"} {
+		mustRun(t, root, "move", "S-0001", to)
+	}
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	if err := os.MkdirAll(wt, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, wt, "init", "-q")
+	if err := os.WriteFile(filepath.Join(wt, "a.go"), []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, wt, "add", "a.go")
+	gitIn(t, wt, "commit", "-q", "-m", "a")
+	return root, gitIn(t, wt, "rev-parse", "HEAD")
+}
+
+// keepVerdict writes the verify record's verdict of S-0001 at commit: a
+// clean run whose suite static passed when passed.
+func keepVerdict(t *testing.T, root, commit string, passed bool) {
+	t.Helper()
+	state := verifyrecord.Passed
+	if !passed {
+		state = verifyrecord.Failed
+	}
+	rec := verifyrecord.Record{Story: "S-0001", Commit: commit, Passed: passed, Clean: true, SuiteRuns: []verifyrecord.Suite{
+		{Name: "static", Passed: passed, Commit: commit, Clean: true, Tiers: []verifyrecord.Tier{{Name: "gofmt", State: state}}}}}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := verifyrecord.CommitPath(filepath.Join(root, ".flai-cache"), "S-0001", commit)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0807 criterion 1: through a workflow file whose move to review gives
+// verify, flai move refuses the move until the record holds the suite passed
+// at the story's head, naming the suite and flai verify, and lets it through
+// once it does.
+func TestMoveRefusesAMoveItsVerifyHasNotPassed(t *testing.T) {
+	root, head := verifyProject(t, "refuse")
+	keepVerdict(t, root, head, false)
+	_, errOut, code := runIn(t, root, "move", "S-0001", "review")
+	for _, want := range []string{"rule: moving S-0001 to review needs its last flai verify to have passed suite static at its branch's head", "it did not pass static (0 of 1 tiers passed)", "run flai verify S-0001"} {
+		if code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("the move to review must be refused with %q: exit %d\n%s", want, code, errOut)
+		}
+	}
+	if got := stateOf(t, root, "S-0001"); got != "in-progress" {
+		t.Errorf("a refused move changes nothing: status %q, want in-progress", got)
+	}
+	keepVerdict(t, root, head, true)
+	if out := mustRun(t, root, "move", "S-0001", "review"); !strings.Contains(out, "S-0001 → review") {
+		t.Errorf("the move once static passed at the head: %s", out)
+	}
+}
+
+// S-0807 criterion 1: at warn, flai move lets the move through and warns,
+// naming the suite and flai verify.
+func TestMoveWarnsOfAVerifyNotPassedAtWarn(t *testing.T) {
+	root, _ := verifyProject(t, "warn")
+	out, errOut, code := runIn(t, root, "move", "S-0001", "review")
+	if code != 0 || !strings.Contains(out, "S-0001 → review") {
+		t.Fatalf("the move at warn must go through: exit %d\n%s%s", code, out, errOut)
+	}
+	for _, want := range []string{"workflow policy warning", "needs its last flai verify to have passed suite static", "flai verify recorded no run of it at its head", "run flai verify S-0001"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the warning must say %q:\n%s", want, errOut)
 		}
 	}
 }

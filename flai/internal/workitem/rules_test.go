@@ -1,13 +1,17 @@
 package workitem
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
@@ -461,6 +465,12 @@ func writeNarrative(t *testing.T, r *Repo, id, body string) {
 	}
 }
 
+// headUnread is the baseline's warning, from verified, of a move to review
+// whose story's head git did not read, saying why.
+func headUnread(why string) string {
+	return "moving S-0001 to review needs its last flai verify to have passed every suite at its branch's head, but its head was not read in .flai-cache/worktrees/S-0001: " + why + "; run flai verify S-0001, then move it again"
+}
+
 const reviewWithUnticked = "S-0001 goes to review with unticked acceptance criteria (1 of 2): tick each one verified with flai criteria tick S-0001 <n>, and say in its notes why any other is left unticked"
 
 // Each rule the baseline refuses with refuses its move, in today's words.
@@ -585,7 +595,8 @@ func TestBaselineRulesWarn(t *testing.T) {
 		s := storyInProgress(t, r, "- [x] one\n")
 		dirtyWorktree(t, r, s.ID, "", errors.New("exit status 128"))
 		w, err := moveWith(t, r, s, Review, MoveOptions{})
-		letThrough(t, w, err, "S-0001's worktree was not checked for uncommitted changes: git status in .flai-cache/worktrees/S-0001: exit status 128")
+		letThrough(t, w, err, "S-0001's worktree was not checked for uncommitted changes: git status in .flai-cache/worktrees/S-0001: exit status 128",
+			headUnread("exit status 128"))
 	})
 	t.Run("not-blocked at ready to in-progress", func(t *testing.T) {
 		r := newProject(t)
@@ -686,7 +697,7 @@ func TestMoveRunsTheRulesInTheirOrder(t *testing.T) {
 		refused(t, err, "rule: the worktree .flai-cache/worktrees/S-0001 has uncommitted changes (a.go); commit them on story/S-0001, or discard them, before it goes to review")
 		r.Git = statusRunner{}
 		w, err := moveWith(t, r, s, Review, MoveOptions{})
-		letThrough(t, w, err)
+		letThrough(t, w, err, headUnread("git named no commit"))
 	})
 	t.Run("refusals at backlog to ready", func(t *testing.T) {
 		r := newProject(t)
@@ -733,7 +744,8 @@ func TestMoveRunsTheRulesInTheirOrder(t *testing.T) {
 		w, err := moveWith(t, r, s, Review, MoveOptions{})
 		letThrough(t, w, err,
 			"S-0001's worktree was not checked for uncommitted changes: git status in .flai-cache/worktrees/S-0001: exit status 128",
-			reviewWithUnticked)
+			reviewWithUnticked,
+			headUnread("exit status 128"))
 	})
 }
 
@@ -849,4 +861,241 @@ func TestEveryRuleHasACheck(t *testing.T) {
 	if len(ruleChecks) != len(workflow.Vocabulary) {
 		t.Errorf("ruleChecks has %d checks for %d rules", len(ruleChecks), len(workflow.Vocabulary))
 	}
+}
+
+// S-0807: the tests below hold the verified rule (ADR-0312 §2) to the verify
+// record at the story's branch's head.
+
+// headRunner answers git rev-parse with head and every other git command,
+// git status among them, with nothing, as a clean worktree at head would.
+type headRunner struct{ head string }
+
+func (h headRunner) Run(_, _ string, args ...string) (string, error) {
+	if len(args) > 0 && args[0] == "rev-parse" {
+		return h.head, nil
+	}
+	return "", nil
+}
+
+func (h headRunner) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return h.Run(dir, name, args...)
+}
+
+func (headRunner) LookPath(name string) (string, error) { return name, nil }
+
+const (
+	verifiedHead = "1111111aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	olderHead    = "2222222bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+)
+
+// verifyStory is S-0001 in progress with its criteria ticked and a task, in
+// a project whose move to review gives v, nil for the baseline's, with a
+// worktree at verifiedHead.
+func verifyStory(t *testing.T, v *workflow.Verify) (*Repo, *Item) {
+	t.Helper()
+	r := newProject(t)
+	if v != nil {
+		w := workflow.Baseline()
+		for i, tr := range w.Transitions {
+			if tr.To == Review && slices.Contains(tr.From, InProgress) {
+				w.Transitions[i].Verify = v
+			}
+		}
+		r.Workflow = &w
+	}
+	s := storyInProgress(t, r, "- [x] one\n")
+	if err := os.MkdirAll(r.WorktreePath(s.ID), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	r.Git = headRunner{head: verifiedHead}
+	return r, s
+}
+
+// suite is a suite's entry at commit, clean, whose tiers ended in the states
+// given as name, state pairs; it passed when every tier passed.
+func suite(name, commit string, tiers ...string) verifyrecord.Suite {
+	s := verifyrecord.Suite{Name: name, Passed: true, Commit: commit, Clean: true}
+	for i := 0; i+1 < len(tiers); i += 2 {
+		state := verifyrecord.State(tiers[i+1])
+		s.Tiers = append(s.Tiers, verifyrecord.Tier{Name: tiers[i], State: state})
+		s.Passed = s.Passed && state == verifyrecord.Passed
+	}
+	return s
+}
+
+// keepRecord writes the record's verdict of S-0001 at commit: a clean run
+// that passed when passed, holding suites.
+func keepRecord(t *testing.T, r *Repo, commit string, passed bool, suites ...verifyrecord.Suite) {
+	t.Helper()
+	rec := verifyrecord.Record{Story: "S-0001", Commit: commit, Passed: passed, Clean: true, SuiteRuns: suites}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := verifyrecord.CommitPath(r.CacheDir(), "S-0001", commit)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// notVerified is verified's text for S-0001's move to review needing what
+// and failing for why.
+func notVerified(what, why string) string {
+	return "moving S-0001 to review needs its last flai verify to have passed " + what + " at its branch's head, but " + why + "; run flai verify S-0001, then move it again"
+}
+
+var (
+	staticBehavior = &workflow.Verify{Suites: workflow.Suites{Names: []string{"static", "behavior"}}}
+	everySuite     = &workflow.Verify{Suites: workflow.Suites{All: true}}
+)
+
+func TestVerifiedPassesWhenTheSuitesPassedAtTheHead(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	keepRecord(t, r, verifiedHead, true,
+		suite("static", verifiedHead, "gofmt", "passed", "vet", "passed"),
+		suite("behavior", verifiedHead, "go-test", "passed"),
+		suite("smoke", verifiedHead, "smoke", "failed"))
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err) // smoke is not a suite the move needs
+}
+
+func TestVerifiedRefusesASuiteThatDidNotPass(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	keepRecord(t, r, verifiedHead, false,
+		suite("static", verifiedHead, "gofmt", "passed", "vet", "passed"),
+		suite("behavior", verifiedHead, "go-test", "failed", "go-race", "not-reached"))
+	_, err := moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("suites static, behavior", "at 1111111 it did not pass behavior (0 of 2 tiers passed)"))
+}
+
+// A tier left to the merge queue runs in its batch, and the close-out passes
+// without it (ADR-0174), so the move needs no more of it.
+func TestVerifiedPassesASuiteLeftToTheMergeQueue(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	keepRecord(t, r, verifiedHead, true,
+		suite("static", verifiedHead, "gofmt", "passed"),
+		suite("behavior", verifiedHead, "go-test", "passed", "integration", "queued"))
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err)
+}
+
+func TestVerifiedWarnsAtWarn(t *testing.T) {
+	r, s := verifyStory(t, nil) // the baseline: every suite, at warn
+	keepRecord(t, r, verifiedHead, false, suite("static", verifiedHead, "gofmt", "failed"))
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err, notVerified("every suite", "at 1111111 it did not pass static (0 of 1 tiers passed)"))
+	if s.Status != Review {
+		t.Errorf("the move at warn went through to %s, want review", s.Status)
+	}
+	other, o := verifyStory(t, nil)
+	keepRecord(t, other, verifiedHead, true, suite("static", verifiedHead, "gofmt", "passed"))
+	w, err = moveWith(t, other, o, Review, MoveOptions{})
+	letThrough(t, w, err) // the warning is gone once every suite passed at the head
+}
+
+func TestVerifiedRefusesARecordAtAnOlderCommit(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	keepRecord(t, r, olderHead, true,
+		suite("static", olderHead, "gofmt", "passed"),
+		suite("behavior", olderHead, "go-test", "passed"))
+	_, err := moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("suites static, behavior", "flai verify recorded no run of it at its head 1111111"))
+}
+
+func TestVerifiedRefusesASuiteNotVerifiedCleanAtTheHead(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	dirty := suite("behavior", verifiedHead, "go-test", "passed")
+	dirty.Clean = false
+	keepRecord(t, r, verifiedHead, true, suite("static", verifiedHead, "gofmt", "passed"), dirty)
+	_, err := moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("suites static, behavior", "at 1111111 it did not pass behavior (its tiers passed, but not in a clean run at the head)"))
+}
+
+// A suite the record holds no entry of is one the story's paths select no
+// tier of when the run passed, and is not verified when the run did not.
+func TestVerifiedReadsAMissingSuiteByTheRun(t *testing.T) {
+	r, s := verifyStory(t, staticBehavior)
+	keepRecord(t, r, verifiedHead, true, suite("static", verifiedHead, "gofmt", "passed"))
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err)
+
+	r, s = verifyStory(t, staticBehavior)
+	keepRecord(t, r, verifiedHead, false, suite("static", verifiedHead, "gofmt", "passed"))
+	_, err = moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("suites static, behavior", "at 1111111 it did not pass behavior (not in the record, whose run did not pass)"))
+}
+
+func TestVerifiedAllNeedsEverySuiteTheRecordHolds(t *testing.T) {
+	r, s := verifyStory(t, everySuite)
+	keepRecord(t, r, verifiedHead, false,
+		suite("static", verifiedHead, "gofmt", "passed"),
+		suite("smoke", verifiedHead, "smoke", "failed"))
+	_, err := moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("every suite", "at 1111111 it did not pass smoke (0 of 1 tiers passed)"))
+
+	r, s = verifyStory(t, everySuite)
+	keepRecord(t, r, verifiedHead, false)
+	_, err = moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("every suite", "its run at 1111111 did not pass"))
+
+	r, s = verifyStory(t, everySuite)
+	keepRecord(t, r, verifiedHead, true, suite("static", verifiedHead, "gofmt", "passed"), suite("smoke", verifiedHead, "smoke", "passed"))
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err)
+}
+
+func TestVerifiedRefusesAStoryWithNoWorktree(t *testing.T) {
+	r, s := verifyStory(t, everySuite)
+	if err := os.Remove(r.WorktreePath(s.ID)); err != nil {
+		t.Fatal(err)
+	}
+	_, err := moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("every suite", "it has no worktree at .flai-cache/worktrees/S-0001"))
+}
+
+func TestVerifiedIsSkippedWithoutGit(t *testing.T) {
+	r, s := verifyStory(t, everySuite)
+	r.Git = nil
+	w, err := moveWith(t, r, s, Review, MoveOptions{})
+	letThrough(t, w, err)
+}
+
+// A record written before suites were recorded groups its tiers by the
+// manifest's suites.
+func TestVerifiedGroupsAnOldRecordByTheManifestsSuites(t *testing.T) {
+	r, s := verifyStory(t, &workflow.Verify{Suites: workflow.Suites{Names: []string{"static"}}})
+	r.Manifest.Tests = []manifest.TestTier{{Name: "gofmt", Suite: "static"}, {Name: "vet", Suite: "static"}}
+	rec := verifyrecord.Record{Story: "S-0001", Commit: verifiedHead, Passed: false, Clean: true, Steps: []verifyrecord.Step{
+		{Name: "gofmt", Tier: true, State: verifyrecord.Passed}, {Name: "vet", Tier: true, State: verifyrecord.Failed}}}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := verifyrecord.CommitPath(r.CacheDir(), "S-0001", verifiedHead)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = moveWith(t, r, s, Review, MoveOptions{})
+	refused(t, err, "rule: "+notVerified("suite static", "at 1111111 it did not pass static (1 of 2 tiers passed)"))
+}
+
+// The acceptance is not held by verified: S-0808 makes its gates read its
+// verify (ADR-0312 §3).
+func TestVerifiedDoesNotHoldTheAcceptance(t *testing.T) {
+	r, s := verifyStory(t, nil)
+	keepRecord(t, r, verifiedHead, true, suite("static", verifiedHead, "gofmt", "passed"))
+	mustMove(t, r, s, Review, "")
+	if err := os.RemoveAll(r.WorktreePath(s.ID)); err != nil {
+		t.Fatal(err)
+	}
+	tk, _ := r.Get("T-0001")
+	mustMove(t, r, tk, Cancelled, "not needed")
+	w, err := moveWith(t, r, s, Done, MoveOptions{})
+	letThrough(t, w, err)
 }

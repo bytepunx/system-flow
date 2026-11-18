@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
@@ -58,8 +59,8 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	// stops the move, and warnings come in the order of the rules that gave
 	// them (ADR-0301 §4).
 	t, _ := wf.Find(it.Type, from, to)
-	c := &moveCheck{r: r, wf: wf, it: it, to: to, opt: opt}
-	for _, ref := range t.Rules {
+	c := &moveCheck{r: r, wf: wf, t: t, it: it, to: to, opt: opt}
+	for _, ref := range wf.MoveRules(it.Type, t) {
 		if rule, _ := workflow.LookupRule(ref.Rule); !rule.Applies(it.Type) {
 			continue
 		}
@@ -119,11 +120,12 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	return warnings, nil
 }
 
-// moveCheck is the move a rule's check reads: the item, the state it goes
-// to, and the move's options, in the repository's workflow.
+// moveCheck is the move a rule's check reads: the transition, the item, the
+// state it goes to, and the move's options, in the repository's workflow.
 type moveCheck struct {
 	r     *Repo
 	wf    workflow.Workflow
+	t     workflow.Transition
 	it    *Item
 	to    string
 	opt   MoveOptions
@@ -282,6 +284,128 @@ var ruleChecks = map[string]func(c *moveCheck) *finding{
 		}
 		return found("%s is %s", c.it.ID, why)
 	},
+	// A move by a transition with verify needs the suites it lists passed at
+	// the story's branch's head (ADR-0312 §2); a repository with no git to
+	// read the head skips it, as clean-worktree's check does.
+	workflow.RuleVerified: func(c *moveCheck) *finding {
+		if c.r.Git == nil {
+			return nil
+		}
+		return c.verified()
+	},
+}
+
+// verified is what the verified rule finds against the move: nil when the
+// verify record at the head of the story's worktree holds, for every suite
+// the transition's verify needs, a verdict that passed there, all meaning
+// every suite the record holds. A suite it needs that the record holds no
+// entry of passes when the record's run passed, clean, at the head: flai
+// verify records every suite whose tiers the story's paths select, so a
+// passing run without the suite selected none of its tiers. A suite whose
+// tiers each passed, were reused, or were left to the merge queue passes, as
+// the close-out does (ADR-0174). No worktree, a
+// head git cannot read, and no record at the head fail the rule.
+func (c *moveCheck) verified() *finding {
+	id := c.it.ID
+	suites := workflow.Suites{All: true}
+	if v := c.wf.VerifyOf(c.it.Type, c.t); v != nil {
+		suites = v.Suites
+	}
+	fail := func(format string, args ...any) *finding {
+		return found("moving %s to %s needs its last flai verify to have passed %s at its branch's head, but %s; run flai verify %s, then move it again",
+			id, c.to, suitesText(suites), fmt.Sprintf(format, args...), id)
+	}
+	path := c.r.WorktreePath(id)
+	if !exists(path) {
+		return fail("it has no worktree at %s", c.r.RelToMain(path))
+	}
+	out, err := c.r.Git.Run(path, "git", "rev-parse", "HEAD")
+	head := strings.TrimSpace(out)
+	if err == nil && head == "" {
+		err = errors.New("git named no commit")
+	}
+	if err != nil {
+		return fail("its head was not read in %s: %v", c.r.RelToMain(path), err)
+	}
+	cache := c.r.CacheDir()
+	verdicts, ok, err := verifyrecord.AtHead(cache, id, head, c.r.suiteOf)
+	if err != nil {
+		return fail("%v", err)
+	}
+	if !ok {
+		return fail("flai verify recorded no run of it at its head %s", shortCommit(head))
+	}
+	rec, _, err := verifyrecord.Read(verifyrecord.CommitPath(cache, id, head))
+	if err != nil {
+		return fail("%v", err)
+	}
+	ran := rec.Passed && rec.Clean && rec.Commit == head
+	need := suites.Names
+	if suites.All {
+		need = nil
+		for _, v := range verdicts {
+			need = append(need, v.Suite)
+		}
+		if len(need) == 0 && !ran {
+			return fail("its run at %s did not pass", shortCommit(head))
+		}
+	}
+	var short []string
+	for _, name := range need {
+		i := slices.IndexFunc(verdicts, func(v verifyrecord.Verdict) bool { return v.Suite == name })
+		if i < 0 {
+			if !ran {
+				short = append(short, name+" (not in the record, whose run did not pass)")
+			}
+			continue
+		}
+		switch v := verdicts[i]; {
+		case v.Passed:
+		case v.AtHead && len(v.Held)+len(v.Queued) == len(v.Tiers):
+			// a tier left to the merge queue runs in its batch, and the
+			// close-out passes without it (ADR-0174); what the acceptance
+			// needs of it is the acceptance's gates' (S-0808)
+		case len(v.Held) == len(v.Tiers):
+			short = append(short, name+" (its tiers passed, but not in a clean run at the head)")
+		default:
+			short = append(short, fmt.Sprintf("%s (%d of %d tiers passed)", name, len(v.Held), len(v.Tiers)))
+		}
+	}
+	if len(short) == 0 {
+		return nil
+	}
+	return fail("at %s it did not pass %s", shortCommit(head), strings.Join(short, ", "))
+}
+
+// suitesText names suites for a message: "every suite", or "suite static" and
+// "suites static, behavior".
+func suitesText(s workflow.Suites) string {
+	switch {
+	case s.All:
+		return "every suite"
+	case len(s.Names) == 1:
+		return "suite " + s.Names[0]
+	}
+	return "suites " + strings.Join(s.Names, ", ")
+}
+
+// shortCommit is commit's first seven characters, for messages.
+func shortCommit(commit string) string {
+	if len(commit) > 7 {
+		return commit[:7]
+	}
+	return commit
+}
+
+// suiteOf is the suite of the manifest's tier of that name, "" for a name no
+// tier has, for a verify record written before suites were recorded.
+func (r *Repo) suiteOf(tier string) string {
+	for _, t := range r.Manifest.Tests {
+		if strings.TrimSpace(t.Name) == tier {
+			return t.SuiteOrDefault()
+		}
+	}
+	return ""
 }
 
 // Follows reports whether an item of type typ may move from one state to the

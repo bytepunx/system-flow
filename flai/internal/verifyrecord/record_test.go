@@ -159,9 +159,9 @@ func TestAtHeadAnswersEachSuitesVerdictAtTheHead(t *testing.T) {
 	cache := writeRecord(t, "S-004", "c1", data)
 	got, ok, err := AtHead(cache, "S-004", "c1", nil)
 	want := []Verdict{
-		{Suite: "static", Passed: true, Tiers: []string{"lint", "unit"}, Held: []string{"lint", "unit"}},
-		{Suite: "behavior", Tiers: []string{"integration", "smoke"}, Held: []string{"integration"}},
-		{Suite: "docs", Tiers: []string{"md"}},
+		{Suite: "static", Passed: true, AtHead: true, Tiers: []string{"lint", "unit"}, Held: []string{"lint", "unit"}},
+		{Suite: "behavior", AtHead: true, Tiers: []string{"integration", "smoke"}, Held: []string{"integration"}, Queued: []string{"smoke"}},
+		{Suite: "docs", AtHead: true, Tiers: []string{"md"}},
 		{Suite: "dirty", Tiers: []string{"x"}, Held: []string{"x"}},
 		{Suite: "elsewhere", Tiers: []string{"y"}, Held: []string{"y"}},
 	}

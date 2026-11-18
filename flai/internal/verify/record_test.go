@@ -247,8 +247,8 @@ func TestTwoRunsOfDifferentSuitesAtOneCommitBothStayInTheRecord(t *testing.T) {
 	}
 	verdicts, ok, err := verifyrecord.AtHead(f.opts.Project.CacheDir(), "S-004", "0123abc", nil)
 	want := []verifyrecord.Verdict{
-		{Suite: "static", Passed: true, Tiers: []string{"go-test"}, Held: []string{"go-test"}},
-		{Suite: "behavior", Passed: true, Tiers: []string{"smoke"}, Held: []string{"smoke"}},
+		{Suite: "static", Passed: true, AtHead: true, Tiers: []string{"go-test"}, Held: []string{"go-test"}},
+		{Suite: "behavior", Passed: true, AtHead: true, Tiers: []string{"smoke"}, Held: []string{"smoke"}},
 	}
 	if err != nil || !ok || !reflect.DeepEqual(verdicts, want) {
 		t.Errorf("the record at the head %+v, %v, %v\nwant %+v", verdicts, ok, err, want)
@@ -349,8 +349,8 @@ func TestVerifyRunsInPlaceOfARecordFromBeforeSuites(t *testing.T) {
 	}
 	verdicts, ok, err := verifyrecord.AtHead(f.opts.Project.CacheDir(), "S-004", "0123abc", nil)
 	want := []verifyrecord.Verdict{
-		{Suite: "go-test", Passed: true, Tiers: []string{"go-test"}, Held: []string{"go-test"}},
-		{Suite: "smoke", Passed: true, Tiers: []string{"smoke"}, Held: []string{"smoke"}},
+		{Suite: "go-test", Passed: true, AtHead: true, Tiers: []string{"go-test"}, Held: []string{"go-test"}},
+		{Suite: "smoke", Passed: true, AtHead: true, Tiers: []string{"smoke"}, Held: []string{"smoke"}},
 	}
 	if err != nil || !ok || !reflect.DeepEqual(verdicts, want) {
 		t.Errorf("the old record read %+v, %v, %v\nwant %+v", verdicts, ok, err, want)

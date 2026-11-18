@@ -243,10 +243,13 @@ type Verdict struct {
 	// exactly it, with every tier of it held: none failed, not reached, or
 	// left to the merge queue.
 	Passed bool
-	// Tiers are the tiers the run selected of the suite, in its order, and
-	// Held those of them that passed or were reused, or were skipped for a
-	// tier that was.
-	Tiers, Held []string
+	// AtHead says the suite's entry is of the head, in a run that verified
+	// exactly it, whatever its tiers did.
+	AtHead bool
+	// Tiers are the tiers the run selected of the suite, in its order, Held
+	// those of them that passed or were reused, or were skipped for a tier
+	// that was, and Queued those it left to the merge queue (ADR-0174).
+	Tiers, Held, Queued []string
 }
 
 // AtHead answers a Verdict for each suite of the verdict the record keeps of
@@ -271,11 +274,15 @@ func AtHead(cacheDir, story, head string, suiteOf func(tier string) string) (ver
 	for _, s := range suites {
 		v := Verdict{Suite: s.Name, Tiers: s.TierNames()}
 		for _, t := range s.Tiers {
-			if held(tiers, t) {
+			switch {
+			case held(tiers, t):
 				v.Held = append(v.Held, t.Name)
+			case t.State == Queued:
+				v.Queued = append(v.Queued, t.Name)
 			}
 		}
-		v.Passed = s.Passed && s.Commit == head && s.Clean && len(v.Held) == len(v.Tiers)
+		v.AtHead = s.Commit == head && s.Clean
+		v.Passed = s.Passed && v.AtHead && len(v.Held) == len(v.Tiers)
 		verdicts = append(verdicts, v)
 	}
 	return verdicts, true, nil
