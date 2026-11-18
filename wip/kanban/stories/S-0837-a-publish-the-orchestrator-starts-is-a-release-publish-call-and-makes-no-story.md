@@ -6,7 +6,7 @@ title: A publish the orchestrator starts is a release_publish call and makes no 
 status: ready
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T13:04:08Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -35,15 +35,21 @@ usage:
           cache_write: 27783
           cost: 0.7023
     - kind: orchestrator
-      seconds: 105
+      seconds: 118
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 316
-          cache_read: 1371614
-          cache_write: 203475
-          cost: 0.4931
+          input: 36
+          output: 346
+          cache_read: 1478637
+          cache_write: 221619
+          cost: 0.5326
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 7
+          cache_read: 7641
+          cache_write: 5121
+          cost: 0.0103
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -54,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:39:39Z
 forecast:
   duration: 1h38m
-  delivery: 2026-11-18T15:06:00Z
-  basis: "Its own forecast of 1h38m; 6th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808, S-0844 and S-0846."
+  delivery: 2026-11-18T16:50:00Z
+  basis: "Its own forecast of 1h38m; 5th in the pull order with an in-progress limit of 3, behind S-0847, S-0808, S-0844 and S-0846."
   by: flai
-  at: 2026-11-18T09:20:10Z
+  at: 2026-11-18T13:04:08Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:09Z

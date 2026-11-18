@@ -6,7 +6,7 @@ title: "ADR-0301 rules for a project's own workflow file that no code enforces y
 status: ready
 owner: alex
 created: 2026-11-17T08:32:55Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T13:04:08Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -35,15 +35,21 @@ usage:
           cache_write: 91660
           cost: 1.4863
     - kind: orchestrator
-      seconds: 66
+      seconds: 79
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 21
-          output: 177
-          cache_read: 867864
-          cache_write: 90613
-          cost: 0.3004
+          input: 24
+          output: 208
+          cache_read: 974888
+          cache_write: 108757
+          cost: 0.3399
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 8
+          cache_read: 7641
+          cache_write: 5121
+          cost: 0.0103
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -54,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:37:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-18T13:30:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847 and S-0808."
+  delivery: 2026-11-18T14:56:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0847 and S-0808."
   by: flai
-  at: 2026-11-18T09:20:10Z
+  at: 2026-11-18T13:04:08Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:08Z

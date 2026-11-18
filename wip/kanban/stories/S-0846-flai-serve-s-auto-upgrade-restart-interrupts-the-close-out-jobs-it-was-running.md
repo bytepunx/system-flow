@@ -6,7 +6,7 @@ title: flai serve's auto-upgrade restart interrupts the close-out jobs it was ru
 status: ready
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T13:04:08Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -41,15 +41,21 @@ usage:
           cache_write: 129317
           cost: 2.7491
     - kind: orchestrator
-      seconds: 99
+      seconds: 112
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 99
-          cache_read: 1284106
-          cache_write: 179384
-          cost: 0.4582
+          input: 23
+          output: 130
+          cache_read: 1391130
+          cache_write: 197528
+          cost: 0.4977
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 7
+          cache_read: 7641
+          cache_write: 5121
+          cost: 0.0103
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -76,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:08Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-18T14:05:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808 and S-0844."
+  delivery: 2026-11-18T16:23:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0847, S-0808 and S-0844."
   by: flai
-  at: 2026-11-18T09:20:10Z
+  at: 2026-11-18T13:04:08Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z

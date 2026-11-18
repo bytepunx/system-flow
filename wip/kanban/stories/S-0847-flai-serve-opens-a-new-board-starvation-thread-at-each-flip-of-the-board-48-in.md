@@ -6,7 +6,7 @@ title: flai serve opens a new board-starvation thread at each flip of the board,
 status: ready
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T13:04:08Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -41,15 +41,21 @@ usage:
           cache_write: 9307
           cost: 0.2541
     - kind: orchestrator
-      seconds: 12
+      seconds: 26
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 5
+          output: 46
+          cache_read: 231480
+          cache_write: 22249
+          cost: 0.0797
+        - model: claude-sonnet-5-5
           input: 1
-          output: 15
-          cache_read: 124456
-          cache_write: 4104
-          cost: 0.0402
+          output: 8
+          cache_read: 7641
+          cache_write: 5121
+          cost: 0.0103
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -76,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:58Z
 forecast:
   duration: 1h
-  delivery: 2026-11-18T11:52:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839 and S-0843."
+  delivery: 2026-11-18T14:19:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-11-18T09:20:10Z
+  at: 2026-11-18T13:04:08Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z

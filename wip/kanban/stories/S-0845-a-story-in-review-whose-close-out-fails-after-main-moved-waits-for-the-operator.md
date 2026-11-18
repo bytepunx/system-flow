@@ -6,7 +6,7 @@ title: A story in review whose close-out fails after main moved waits for the op
 status: ready
 owner: alex
 created: 2026-11-17T08:32:56Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T13:04:08Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:05Z
@@ -41,15 +41,21 @@ usage:
           cache_write: 81180
           cost: 2.1123
     - kind: orchestrator
-      seconds: 18
+      seconds: 30
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 48
-          cache_read: 320670
-          cache_write: 5680
-          cost: 0.1022
+          input: 7
+          output: 78
+          cache_read: 427693
+          cache_write: 23824
+          cost: 0.1417
+        - model: claude-sonnet-5-5
+          input: 0
+          output: 7
+          cache_read: 7640
+          cache_write: 5121
+          cost: 0.0103
     - kind: analyzer
       seconds: 99
       estimated: true
@@ -76,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-18T17:45:00Z
-  basis: "Its own forecast of 3h; 7th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808, S-0844, S-0846 and S-0837."
+  delivery: 2026-11-18T19:11:00Z
+  basis: "Its own forecast of 3h; 6th in the pull order with an in-progress limit of 3, behind S-0847, S-0808, S-0844, S-0846 and S-0837."
   by: flai
-  at: 2026-11-18T09:20:10Z
+  at: 2026-11-18T13:04:08Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z
