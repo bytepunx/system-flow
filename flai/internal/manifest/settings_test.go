@@ -1582,3 +1582,200 @@ func TestEditSettingsRefusesBadKlusterValues(t *testing.T) {
 		})
 	}
 }
+
+// imageFixture is a manifest whose project agent names a layer and two build
+// arguments, with comments on the agent's and the image's lines.
+const imageFixture = `version: 1
+name: demo
+layout:
+  design: d
+  docs: docs
+  wip: wip
+agent:
+  harness: claude-code   # the agents' harness
+  image:                 # the project's layer
+    layer: images/agent/Dockerfile
+    args:
+      PNPM_VERSION: "10.34.5"   # pinned for the dashboard
+      GO_VERSION: 1.26.0
+planning:
+  cycle: 168h
+`
+
+// imageAgentOnly is imageFixture with an agent that names no image.
+const imageAgentOnly = "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nagent:\n  harness: claude-code   # the agents' harness\nplanning:\n  cycle: 168h\n"
+
+// editedImage is EditSettings' output for data, failing the test on an error.
+func editedImage(t *testing.T, data string, set []Assignment, unset []string) string {
+	t.Helper()
+	out, err := EditSettings([]byte(data), set, unset)
+	if err != nil {
+		t.Fatalf("set %v, unset %v: %v", set, unset, err)
+	}
+	return string(out)
+}
+
+// S-0839, I-0364: agent.image.layer and agent.image.args.<NAME> are text
+// settings flai manifest set writes, resolved by pattern, and listed in a
+// refusal before the roles' patterns; a name that could not be one key of
+// agent.image.args is no setting.
+func TestAgentImageSettingsResolve(t *testing.T) {
+	for _, key := range []string{"agent.image.layer", "agent.image.args.GO_VERSION", "agent.image.args.go-version"} {
+		if s, ok := SettingFor(key); !ok || s.Key != key || s.Kind != KindText || s.Meaning == "" {
+			t.Errorf("%s: %+v, %v", key, s, ok)
+		}
+	}
+	for _, key := range []string{"agent.image", "agent.image.args", "agent.image.args.", "agent.image.args.A.B", "agent.image.args.A:B", "agent.image.layers"} {
+		if _, ok := SettingFor(key); ok {
+			t.Errorf("%s is a setting", key)
+		}
+	}
+	keys := settingKeys()
+	layer, args := slices.Index(keys, "agent.image.layer"), slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "agent.image.args.<NAME>") })
+	if layer < 0 || args != layer+1 || args >= len(keys)-3 {
+		t.Errorf("the image keys are not listed before the roles' patterns: %v", keys)
+	}
+	_, err := EditSettings([]byte(imageFixture), []Assignment{{"agent.image.args.A.B", "1"}}, nil)
+	var refused *RefusedError
+	if !errors.As(err, &refused) || len(refused.Problems) != 1 || refused.Problems[0].Field != "agent.image.args.A.B" ||
+		!strings.Contains(refused.Problems[0].Reason, "is not a setting flai manifest set writes") || !strings.Contains(refused.Problems[0].Reason, "agent.image.args.<NAME>") {
+		t.Errorf("want agent.image.args.A.B refused naming the image keys, got %v", err)
+	}
+}
+
+// S-0839, I-0364: an arg is written into args where they are, the others,
+// their order, and the comments kept; into an image with a layer and no args;
+// and, beside its layer, into an agent with no image or a manifest with no
+// agent. Load reads each back.
+func TestEditSettingsWritesAnImageArg(t *testing.T) {
+	got := editedImage(t, imageFixture, []Assignment{{"agent.image.args.GO_VERSION", "1.27.0"}, {"agent.image.args.SHELLCHECK_VERSION", "v0.10.0"}}, nil)
+	want := strings.Replace(imageFixture, "      GO_VERSION: 1.26.0\n", "      GO_VERSION: 1.27.0\n      SHELLCHECK_VERSION: v0.10.0\n", 1)
+	if got != want {
+		t.Errorf("into args:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if a := loaded(t, []byte(got)).Agent.Image.Args; a["GO_VERSION"] != "1.27.0" || a["SHELLCHECK_VERSION"] != "v0.10.0" || a["PNPM_VERSION"] != "10.34.5" || len(a) != 3 {
+		t.Errorf("read back: %v", a)
+	}
+
+	layerOnly := strings.Replace(imageAgentOnly, "planning:", "  image:\n    layer: images/agent/Dockerfile   # the layer\nplanning:", 1)
+	got = editedImage(t, layerOnly, []Assignment{{"agent.image.args.GO_VERSION", "1.26.0"}}, nil)
+	want = strings.Replace(layerOnly, "# the layer\n", "# the layer\n    args:\n      GO_VERSION: 1.26.0\n", 1)
+	if got != want {
+		t.Errorf("into an image with no args:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+
+	block := "  image:\n    layer: images/agent/Dockerfile\n    args:\n      GO_VERSION: 1.26.0\n"
+	set := []Assignment{{"agent.image.layer", "images/agent/Dockerfile"}, {"agent.image.args.GO_VERSION", "1.26.0"}}
+	if got = editedImage(t, imageAgentOnly, set, nil); got != strings.Replace(imageAgentOnly, "planning:", block+"planning:", 1) {
+		t.Errorf("into an agent with no image:\n%s", got)
+	}
+	noAgent := strings.Replace(imageAgentOnly, "agent:\n  harness: claude-code   # the agents' harness\n", "", 1)
+	if got = editedImage(t, noAgent, set, nil); got != noAgent+"agent:\n"+block {
+		t.Errorf("into a manifest with no agent:\n%s", got)
+	}
+	if i := loaded(t, []byte(got)).Agent.Image; i == nil || i.Layer != "images/agent/Dockerfile" || i.Args["GO_VERSION"] != "1.26.0" {
+		t.Errorf("read back: %+v", i)
+	}
+}
+
+// S-0839: the layer is written in place, or into an agent with no image.
+func TestEditSettingsWritesTheImageLayer(t *testing.T) {
+	got := editedImage(t, imageFixture, []Assignment{{"agent.image.layer", "build/agent.Dockerfile"}}, nil)
+	if want := strings.Replace(imageFixture, "    layer: images/agent/Dockerfile\n", "    layer: build/agent.Dockerfile\n", 1); got != want {
+		t.Errorf("in place:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	got = editedImage(t, imageAgentOnly, []Assignment{{"agent.image.layer", "images/agent/Dockerfile"}}, nil)
+	if want := strings.Replace(imageAgentOnly, "planning:", "  image:\n    layer: images/agent/Dockerfile\nplanning:", 1); got != want {
+		t.Errorf("into an agent with no image:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if l := loaded(t, []byte(got)).Agent.Image.Layer; l != "images/agent/Dockerfile" {
+		t.Errorf("read back: %q", l)
+	}
+}
+
+// S-0839: unsetting an arg removes its line alone; the last arg takes args:
+// with it, and the layer with no args left takes image:, so that what is
+// left is valid; the layer while args remain is refused.
+func TestEditSettingsUnsetsTheImage(t *testing.T) {
+	got := editedImage(t, imageFixture, nil, []string{"agent.image.args.PNPM_VERSION"})
+	if want := strings.Replace(imageFixture, "      PNPM_VERSION: \"10.34.5\"   # pinned for the dashboard\n", "", 1); got != want {
+		t.Errorf("one arg:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if a := loaded(t, []byte(got)).Agent.Image.Args; len(a) != 1 || a["GO_VERSION"] != "1.26.0" {
+		t.Errorf("read back: %v", a)
+	}
+	both := []string{"agent.image.args.PNPM_VERSION", "agent.image.args.GO_VERSION"}
+	got = editedImage(t, imageFixture, nil, both)
+	if want := strings.Replace(imageFixture, "    args:\n      PNPM_VERSION: \"10.34.5\"   # pinned for the dashboard\n      GO_VERSION: 1.26.0\n", "", 1); got != want {
+		t.Errorf("every arg:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	got = editedImage(t, imageFixture, nil, append([]string{"agent.image.layer"}, both...))
+	if got != imageAgentOnly {
+		t.Errorf("the whole image:\ngot:\n%s\nwant:\n%s", got, imageAgentOnly)
+	}
+	if loaded(t, []byte(got)).Agent.Image != nil {
+		t.Errorf("an image is left:\n%s", got)
+	}
+	if got := editedImage(t, imageAgentOnly, nil, []string{"agent.image.layer", "agent.image.args.GO_VERSION"}); got != imageAgentOnly {
+		t.Errorf("unsetting what is not there changed the file:\n%s", got)
+	}
+
+	_, err := EditSettings([]byte(imageFixture), nil, []string{"agent.image.layer"})
+	var refused *RefusedError
+	if !errors.As(err, &refused) || !slices.ContainsFunc(refused.Problems, func(p Problem) bool {
+		return p.Field == "agent" && strings.Contains(p.Reason, "image args name no layer to build; name its Dockerfile with agent.image.layer")
+	}) {
+		t.Errorf("want the layer's unset refused while args remain, got %v", err)
+	}
+}
+
+// S-0839: what AgentImage's validation faults is refused naming the field and
+// its reason, as is a value of more than one line, and nothing is written.
+func TestEditSettingsRefusesBadImageValues(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		data  string
+		set   Assignment
+		field string
+		want  string
+	}{
+		{"BASE", imageFixture, Assignment{"agent.image.args.BASE", "alpine"}, "agent", "image args set BASE, which flai sets to the harness image it builds the layer over"},
+		{"a name with a hyphen", imageFixture, Assignment{"agent.image.args.go-version", "1.26.0"}, "agent", `image args name "go-version" is not a Dockerfile ARG name such as GO_VERSION`},
+		{"a name beginning with a digit", imageFixture, Assignment{"agent.image.args.1GO", "1.26.0"}, "agent", `image args name "1GO" is not a Dockerfile ARG name`},
+		{"an arg with no layer", imageAgentOnly, Assignment{"agent.image.args.GO_VERSION", "1.26.0"}, "agent", "image args name no layer to build"},
+		{"a value over lines", imageFixture, Assignment{"agent.image.args.GO_VERSION", "1.26.0\n1.27.0"}, "agent.image.args.GO_VERSION", "spans lines"},
+		{"an empty value", imageFixture, Assignment{"agent.image.args.GO_VERSION", " "}, "agent.image.args.GO_VERSION", "is empty"},
+		{"a layer outside", imageFixture, Assignment{"agent.image.layer", "../Dockerfile"}, "agent", `image layer "../Dockerfile" leaves the repository`},
+		{"a layer not clean", imageFixture, Assignment{"agent.image.layer", "images//Dockerfile"}, "agent", `image layer "images//Dockerfile" is not a clean path`},
+		{"an absolute layer", imageFixture, Assignment{"agent.image.layer", "/images/Dockerfile"}, "agent", "is an absolute path"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, err := EditSettings([]byte(c.data), []Assignment{c.set}, nil)
+			var r *RefusedError
+			if !errors.As(err, &r) || out != nil {
+				t.Fatalf("err = %v, want a refusal and nothing written, got:\n%s", err, out)
+			}
+			if !slices.ContainsFunc(r.Problems, func(p Problem) bool { return p.Field == c.field && strings.Contains(p.Reason, c.want) }) {
+				t.Errorf("problems = %+v, want %s with %q", r.Problems, c.field, c.want)
+			}
+		})
+	}
+}
+
+// S-0839: a value YAML would read as a number is written quoted, so that it
+// reads back as the string given; a version YAML reads as a string is plain.
+func TestEditSettingsQuotesAnImageArgThatReadsAsANumber(t *testing.T) {
+	for _, c := range []struct{ value, line string }{
+		{"1.20", `      GO_VERSION: "1.20"`},
+		{"10", `      GO_VERSION: "10"`},
+		{"1.26.0", "      GO_VERSION: 1.26.0"},
+	} {
+		got := editedImage(t, imageFixture, []Assignment{{"agent.image.args.GO_VERSION", c.value}}, nil)
+		if !strings.Contains(got, "\n"+c.line+"\n") {
+			t.Errorf("%s: no line %q in:\n%s", c.value, c.line, got)
+		}
+		if v := loaded(t, []byte(got)).Agent.Image.Args["GO_VERSION"]; v != c.value {
+			t.Errorf("%s: read back %q", c.value, v)
+		}
+	}
+}

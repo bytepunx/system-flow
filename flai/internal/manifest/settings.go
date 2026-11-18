@@ -23,8 +23,9 @@ import (
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
 // most stories a batch of the merge queue holds (S-0399) and how long it
-// waits for a batch to fill (S-0552); and the kluster: block's keys (S-0586),
-// among them how many stories in progress may hold a namespace (ADR-0292).
+// waits for a batch to fill (S-0552); the kluster: block's keys (S-0586),
+// among them how many stories in progress may hold a namespace (ADR-0292);
+// and the project's agent image's layer and build arguments (S-0839).
 // The catalog says
 // of each its kind, its values, its default, and what it does; whether a value is allowed is always the manifest's own
 // validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
@@ -89,6 +90,9 @@ type Setting struct {
 
 	// get is the setting's value in a manifest, and whether it is set.
 	get func(Manifest) (any, bool)
+	// prune is how many of the blocks right above the key an unset removes
+	// with it when it leaves them empty.
+	prune int
 }
 
 // SettingValue is a setting with its value in a manifest.
@@ -379,13 +383,16 @@ func Settings() []Setting {
 }
 
 // SettingFor is the setting key names, and whether flai manifest set writes
-// it: a key in the catalog, roles.<name>.agent for a role's kebab-case name
-// (S-0417), roles.<name>.schedule (S-0418), or roles.<name>.permissions.<p>
-// (S-0420).
+// it: a key in the catalog, agent.image.layer or agent.image.args.<NAME>
+// (S-0839), roles.<name>.agent for a role's kebab-case name (S-0417),
+// roles.<name>.schedule (S-0418), or roles.<name>.permissions.<p> (S-0420).
 func SettingFor(key string) (Setting, bool) {
 	i := slices.IndexFunc(catalog, func(s Setting) bool { return s.Key == key })
 	if i >= 0 {
 		return catalog[i], true
+	}
+	if s, ok := agentImageSetting(key); ok {
+		return s, true
 	}
 	if s, ok := roleAgentSetting(key); ok {
 		return s, true
@@ -403,6 +410,50 @@ func SettingFor(key string) (Setting, bool) {
 func BuiltinRole(name string) bool {
 	_, ok := builtinAgents[name]
 	return ok
+}
+
+// The keys of the project's agent image flai manifest set writes, as it
+// lists them: the layer, and the pattern of a build argument's.
+const (
+	agentImageLayerKey = "agent.image.layer"
+	agentImageArgsKey  = "agent.image.args.<NAME>"
+)
+
+// agentImageSetting is the setting agent.image.layer, or
+// agent.image.args.<NAME> for a name of letters, digits, _, and -, and
+// whether key is one. Whether the name is a Dockerfile ARG name other than
+// BASE, and the value a clean path or one line, is AgentImage's validation's
+// to say, after the write; a name with other characters is no setting, since
+// it could not be written as one key of agent.image.args.
+func agentImageSetting(key string) (Setting, bool) {
+	image := func(m Manifest) *AgentImage {
+		if m.Agent == nil {
+			return nil
+		}
+		return m.Agent.Image
+	}
+	if key == agentImageLayerKey {
+		return Setting{Key: key, Kind: KindText, prune: 1,
+			Meaning: "The Dockerfile, a clean path from the repository root such as " + exampleLayer + ", that flai builds over the harness's image for the project's agents, with the tools its test tiers need; agent.image.args need it, and unset, the agents run in the harness's image.",
+			get: func(m Manifest) (any, bool) {
+				if i := image(m); i != nil {
+					return text(i.Layer)
+				}
+				return nil, false
+			}}, true
+	}
+	name, ok := strings.CutPrefix(key, "agent.image.args.")
+	if !ok || name == "" || strings.Trim(name, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-") != "" {
+		return Setting{}, false
+	}
+	return Setting{Key: key, Kind: KindText, prune: 2,
+		Meaning: "The value of the layer's build argument " + name + ", one literal line over the default its ARG gives in the Dockerfile; flai sets " + BaseArg + " itself, and an argument needs agent.image.layer.",
+		get: func(m Manifest) (any, bool) {
+			if i := image(m); i != nil {
+				return text(i.Args[name])
+			}
+			return nil, false
+		}}, true
 }
 
 // rolePermissionKey is the pattern of the key a role's permission is set
@@ -634,7 +685,7 @@ func EditSettings(data []byte, set []Assignment, unset []string) ([]byte, error)
 	for _, w := range writes {
 		var p *Problem
 		if w.unset {
-			lines, p = removeKey(lines, strings.Split(w.setting.Key, "."))
+			lines, p = removeKey(lines, strings.Split(w.setting.Key, "."), w.setting.prune)
 		} else {
 			lines, p = setKey(lines, strings.Split(w.setting.Key, "."), w.render)
 		}
@@ -841,11 +892,11 @@ func parseEdits(set []Assignment, unset []string) ([]write, []Problem) {
 }
 
 func settingKeys() []string {
-	keys := make([]string, len(catalog), len(catalog)+3)
+	keys := make([]string, len(catalog), len(catalog)+5)
 	for i, s := range catalog {
 		keys[i] = s.Key
 	}
-	return append(keys, rolePermissionKey+" (<p> a permission the role's file declares)", roleAgentKey+" (<name> a role's name in kebab-case)", roleScheduleKey)
+	return append(keys, agentImageLayerKey, agentImageArgsKey+" (<NAME> a Dockerfile ARG name such as GO_VERSION)", rolePermissionKey+" (<p> a permission the role's file declares)", roleAgentKey+" (<name> a role's name in kebab-case)", roleScheduleKey)
 }
 
 // parse reads a value given for the setting, or says why it is not one of
@@ -1323,23 +1374,34 @@ func setKey(lines []string, path []string, render func(indent, old string) []str
 	return lines, nil
 }
 
-// removeKey is lines without the key at path and its value; lines as they
-// are when it is not there.
-func removeKey(lines []string, path []string) ([]string, *Problem) {
+// removeKey is lines without the key at path and its value, and without each
+// of the prune blocks right above it that this leaves empty, deepest first;
+// lines as they are when it is not there.
+func removeKey(lines []string, path []string, prune int) ([]string, *Problem) {
 	from, to := 0, len(lines)
+	var blocks []int // the key lines of the blocks above the key, outermost first
 	for depth, k := range path {
 		sp, _ := findKey(lines, from, to, k)
 		if sp.at < 0 {
 			return lines, nil
 		}
 		if depth == len(path)-1 {
-			return slices.Delete(slices.Clone(lines), sp.at, sp.end), nil
+			out := slices.Delete(slices.Clone(lines), sp.at, sp.end)
+			for i := len(blocks) - 1; i >= 0 && i >= len(blocks)-prune; i-- {
+				if at := blocks[i]; valueEnd(out, at, len(out)) == at+1 {
+					out = slices.Delete(out, at, at+1)
+					continue
+				}
+				break
+			}
+			return out, nil
 		}
 		rest, _ := keyRest(lines[sp.at], k)
 		if value, _ := splitComment(rest); value != "" {
 			field := strings.Join(path[:depth+1], ".")
 			return nil, &Problem{Field: field, Reason: fmt.Sprintf("is written on one line (%s: %s); write it as a block, a key a line under it, then run this again", k, value)}
 		}
+		blocks = append(blocks, sp.at)
 		from, to = sp.at+1, sp.end
 	}
 	return lines, nil
