@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
@@ -287,5 +288,88 @@ func TestMoveWarnsOfAVerifyNotPassedAtWarn(t *testing.T) {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("the warning must say %q:\n%s", want, errOut)
 		}
+	}
+}
+
+// moveKlusterWarnings runs flai move S-0001 to with --json in root, with
+// git at head, and returns the move's warnings that speak of the namespace,
+// failing the test unless the move is made.
+func moveKlusterWarnings(t *testing.T, root, head, to string) []string {
+	t.Helper()
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: moveKlusterGit{head: head}}, "move", "S-0001", to, "--json")
+	var res struct {
+		Warnings []string `json:"warnings"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &res) != nil {
+		t.Fatalf("flai move S-0001 %s: exit %d\n%s%s", to, code, out, errOut)
+	}
+	var namespace []string
+	for _, w := range res.Warnings {
+		if strings.Contains(w, "namespace") {
+			namespace = append(namespace, w)
+		}
+	}
+	return namespace
+}
+
+// S-0810, ADR-0312: the baseline names kluster-verified at warn on the move
+// to review, so the move to review warns of a namespace not deployed at the
+// head in the words it said before the rule was evaluated there.
+func TestMoveToReviewWarnsOfTheKlusterNamespaceInTheBaselinesWords(t *testing.T) {
+	t.Parallel()
+	root := moveKlusterProject(t, false)
+	klusterOn(t, root, true)
+	got := moveKlusterWarnings(t, root, moveKlusterC2, "review")
+	want := "S-0001's namespace s-0001 is not deployed at the head " + moveKlusterC2[:12] + ": no deploy of it is recorded; deploy it at the head with flai kluster deploy S-0001 --job, or the MCP tool kluster_deploy, which runs its checks once the deploy passes; flai checks run S-0001 --job, or the MCP tool kluster_checks, runs the checks alone. The move is made all the same: the review deploys what has not passed at the head (ADR-0292)"
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("the move to review warns %q, want %q", got, want)
+	}
+}
+
+// klusterRefusingWorkflow is renamedWorkflow whose move from in-progress to
+// testing refuses a story whose namespace did not pass at its head.
+var klusterRefusingWorkflow = strings.Replace(renamedWorkflow, "{from: in-progress, to: testing}", "{from: in-progress, to: testing, rules: [{rule: kluster-verified, severity: refuse}]}", 1)
+
+// S-0810, ADR-0312: a transition that names kluster-verified at refuse
+// refuses a story whose namespace was not deployed at its head, and makes
+// the move once it was; a transition that does not name it says nothing of
+// the namespace, though it is a move into a state of kind waiting.
+func TestMoveChecksTheKlusterNamespaceWhereTheTransitionNamesIt(t *testing.T) {
+	useWorkflow(t, klusterRefusingWorkflow)
+	asOperator(t)
+	root := moveKlusterProject(t, false)
+	klusterOn(t, root, true)
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: moveKlusterGit{head: moveKlusterC2}}, "move", "S-0001", "testing")
+	want := "rule: S-0001's namespace s-0001 is not deployed at the head " + moveKlusterC2[:12] + ": no deploy of it is recorded; deploy it at the head with flai kluster deploy S-0001 --job"
+	if code == 0 || !strings.Contains(errOut, want) || !strings.Contains(errOut, "then move it again (ADR-0312)") {
+		t.Fatalf("the move to testing must be refused with %q: exit %d\n%s%s", want, code, out, errOut)
+	}
+	if got := stateOf(t, root, "S-0001"); got != "in-progress" {
+		t.Fatalf("a refused move changes nothing: status %q", got)
+	}
+	writeS0001Deploy(t, root, kluster.Record{Commit: moveKlusterC2, Outcome: kluster.OutcomePassed, ChecksCommit: moveKlusterC2, ChecksOutcome: kluster.OutcomePassed})
+	if got := moveKlusterWarnings(t, root, moveKlusterC2, "testing"); len(got) != 0 {
+		t.Errorf("deployed and checked at the head, the move to testing warns %q", got)
+	}
+	writeS0001Deploy(t, root, kluster.Record{})
+	if got := moveKlusterWarnings(t, root, moveKlusterC2, "acceptance-review"); len(got) != 0 {
+		t.Errorf("a transition that does not name kluster-verified warns %q", got)
+	}
+}
+
+// S-0810, ADR-0312 §5: with no kluster: block in the manifest, a transition
+// that names kluster-verified at refuse makes the move and says nothing of a
+// namespace: a cluster that is not there never holds a story.
+func TestMoveWithNoClusterPassesTheKlusterRule(t *testing.T) {
+	useWorkflow(t, klusterRefusingWorkflow)
+	asOperator(t)
+	root := moveKlusterProject(t, false)
+	writeFiles(t, root, map[string]string{"system-flow.yaml": "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"})
+	klusterOn(t, root, true)
+	if got := moveKlusterWarnings(t, root, moveKlusterC2, "testing"); len(got) != 0 {
+		t.Errorf("with no cluster the move to testing warns %q", got)
+	}
+	if got := stateOf(t, root, "S-0001"); got != "testing" {
+		t.Errorf("with no cluster the move must be made: status %q", got)
 	}
 }

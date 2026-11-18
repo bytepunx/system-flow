@@ -2530,23 +2530,66 @@ func TestItemMoveRefusesATransitionItsCallerMayNotMake(t *testing.T) {
 	}
 }
 
-// S-0746: ReviewWarnings reads a story awaiting review as one in a state of
-// kind waiting, so under another workflow it speaks of the namespace for a
-// story in acceptance-review and keeps its silence for one in testing.
-func TestReviewWarningsFollowTheProjectsWorkflow(t *testing.T) {
+// S-0810, ADR-0312: item_move checks the story's kluster namespace where
+// the move's transition names kluster-verified, at the rule's severity, and
+// nowhere else: no longer on every move into a state of kind waiting. A
+// cluster that is not there, or its host action off, never holds a story
+// (ADR-0312 §5).
+func TestItemMoveChecksTheKlusterNamespaceWhereTheTransitionNamesIt(t *testing.T) {
 	t.Parallel()
-	f := setupWith(t, mcpRepoWithWorkflow(t, mcpOtherWorkflow))
-	f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
-	git := &moveKlusterGit{story: f.story.ID, head: moveKlusterC2}
+	warned := strings.Replace(mcpOtherWorkflow, "{from: testing, to: acceptance-review}", "{from: testing, to: acceptance-review, rules: [kluster-verified]}", 1)
+	refused := strings.Replace(mcpOtherWorkflow, "{from: in-progress, to: testing}", "{from: in-progress, to: testing, rules: [{rule: kluster-verified, severity: refuse}]}", 1)
 	for _, c := range []struct {
-		status string
-		warns  bool
-	}{{"testing", false}, {"acceptance-review", true}} {
-		it, _ := f.repo.Get(f.story.ID)
-		it.Status = c.status
-		got := ReviewWarnings(git, f.repo, it, nil, moveKlusterActions(true))
-		if warns := len(got) == 1 && strings.Contains(got[0], "namespace"); warns != c.warns || !c.warns && len(got) != 0 {
-			t.Errorf("a story in %s: %q, want a warning of its namespace: %v", c.status, got, c.warns)
-		}
+		name, workflow string
+		cluster, on    bool
+		warnsAt        string // the state whose move warns of the namespace, empty for none
+		refused        bool   // the move to testing is refused
+	}{
+		{"no transition names it", mcpOtherWorkflow, true, true, "", false},
+		{"the move to acceptance-review names it", warned, true, true, "acceptance-review", false},
+		{"the move to testing refuses without it", refused, true, true, "", true},
+		{"no cluster configured", refused, false, true, "", false},
+		{"the kluster host action off", refused, true, false, "", false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			git := &moveKlusterGit{head: moveKlusterC2}
+			flow := mcpRepoWithWorkflow(t, c.workflow)
+			f := setupWith(t, func(o *Options) {
+				flow(o)
+				o.Runner, o.HostAction = git, moveKlusterActions(c.on)
+			})
+			id := f.story.ID
+			git.story = id
+			if c.cluster {
+				f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
+			}
+			ns, _ := kluster.StoryNamespace(id)
+			for _, to := range []string{"testing", "acceptance-review"} {
+				out, failed := f.call(t, "item_move", map[string]any{"id": id, "to": to})
+				if to == "testing" && c.refused {
+					want := "rule: " + id + "'s namespace " + ns + " is not deployed at the head " + moveKlusterC2[:12] + ": no deploy of it is recorded; deploy it at the head with flai kluster deploy " + id + " --job, or the MCP tool kluster_deploy"
+					if !strings.HasPrefix(failed, want) || !strings.HasSuffix(failed, ", then move it again (ADR-0312)") {
+						t.Errorf("the move to testing must be refused with %q: %v %q", want, out, failed)
+					}
+					if it, _ := f.repo.Get(id); it.Status != workitem.InProgress {
+						t.Errorf("a refused move changes nothing: %s", it.Status)
+					}
+					return
+				}
+				if failed != "" || out["status"] != to {
+					t.Fatalf("the move to %s must go through: %v %s", to, out, failed)
+				}
+				var namespace []string
+				for _, w := range moveKlusterStrings(out["warnings"]) {
+					if strings.Contains(w, "namespace") {
+						namespace = append(namespace, w)
+					}
+				}
+				if warns := to == c.warnsAt; warns != (len(namespace) == 1 && strings.Contains(namespace[0], "The move is made all the same")) || !warns && len(namespace) != 0 {
+					t.Errorf("the move to %s: %q, want a warning of the namespace: %v", to, namespace, warns)
+				}
+			}
+		})
 	}
 }

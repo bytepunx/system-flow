@@ -28,7 +28,31 @@ type MoveOptions struct {
 	// Finalize lets a draft story go to ready, and makes it no longer a
 	// draft (S-0199), recording By and Now as who finalized it (S-0201).
 	Finalize bool
+	// Kluster answers the kluster-verified rule on a transition that names
+	// it (ADR-0312); without one the rule passes saying nothing.
+	Kluster KlusterCheck
 }
+
+// KlusterVerdict is what a KlusterCheck found of a story's kluster namespace
+// at its branch's head, in the words a move says of it.
+type KlusterVerdict struct {
+	// Applies is false where the rule has nothing to judge: no kluster:
+	// block or no deploy in it, the kluster host action off, no agent
+	// namespace, or no git. The rule then passes saying nothing (ADR-0312 §5).
+	Applies bool
+	// Passed says the namespace was deployed at the head and, while the
+	// checks host action is on, its checks passed there.
+	Passed bool
+	// Refusal is what a refusal of the move says after "rule: ", and Warning
+	// what a warning of it says, of a namespace that did not pass.
+	Refusal, Warning string
+}
+
+// KlusterCheck answers the kluster-verified rule for a story. The namespace's
+// record is the host's, not the repository's, so flai move and item_move pass
+// one with the move; an error is a check that could not be made, which warns
+// and lets the move through, whatever the rule's severity.
+type KlusterCheck func(story string) (KlusterVerdict, error)
 
 // Move validates and applies a state transition. Warnings are non-fatal
 // policy breaches such as an exceeded WIP limit.
@@ -215,10 +239,22 @@ var ruleChecks = map[string]func(c *moveCheck) *finding{
 			warning: fmt.Sprintf("%s goes to review with unticked acceptance criteria (%d of %d): tick each one verified with flai criteria tick %s <n>, and say in its notes why any other is left unticked", c.it.ID, open, CriteriaCount(c.it.Body), c.it.ID),
 		}
 	},
-	// The namespace's record is the host's, not the repository's: flai move
-	// and item_move check this rule through mcpserver.ReviewWarnings, so
-	// Move finds nothing of it.
-	workflow.RuleKlusterVerified: func(*moveCheck) *finding { return nil },
+	// The namespace's record is the host's, not the repository's: the move's
+	// KlusterCheck reads it, and a cluster that is not there never holds a
+	// story (ADR-0312 §5).
+	workflow.RuleKlusterVerified: func(c *moveCheck) *finding {
+		if c.opt.Kluster == nil {
+			return nil
+		}
+		v, err := c.opt.Kluster(c.it.ID)
+		switch {
+		case err != nil:
+			return &finding{warning: fmt.Sprintf("%s went to %s, but what its kluster namespace shows at its head was not read: %v", c.it.ID, c.to, err), unchecked: true}
+		case !v.Applies || v.Passed:
+			return nil
+		}
+		return &finding{refusal: v.Refusal, warning: v.Warning}
+	},
 	workflow.RuleChildrenClosed: func(c *moveCheck) *finding {
 		for _, ch := range Children(c.opt.Items, c.it.ID) {
 			if k := c.wf.Kind(ch.Status); k != workflow.KindAccepted && k != workflow.KindCancelled {

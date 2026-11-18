@@ -145,13 +145,15 @@ word and records it in its Notes (ADR-0254).`,
 			}
 			draft, from := it.Draft, it.Status
 			// --yes is the operator's say that a draft story is finished (S-0199)
-			res, err := repo.TransitionAll(it, args[1], a.movedBy(by), reason, a.now(), a.yes)
+			// the kluster-verified rule reads what the story's namespace
+			// shows at its head where the transition names it, as item_move
+			// does (ADR-0292 §6, ADR-0312)
+			k := mcpserver.NewReviewKluster(a.runner, repo, a.hostActionOn)
+			res, err := repo.TransitionChecked(it, args[1], a.movedBy(by), reason, a.now(), a.yes, k.Check)
 			if err != nil {
 				return err
 			}
-			// what the story's kluster namespace shows at its head, as
-			// item_move says it; nothing is refused (ADR-0292 §6)
-			warnings := mcpserver.ReviewWarnings(a.runner, repo, it, res.Warnings, a.hostActionOn)
+			warnings := k.Warnings(it, res.Warnings)
 			for _, w := range warnings {
 				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}

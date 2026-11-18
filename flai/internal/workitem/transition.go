@@ -141,7 +141,15 @@ func (r *Repo) Transition(it *Item, to, by, reason string, now time.Time) (warni
 // (S-0200); the stories a cancellation takes along do not move their epic.
 // A story's or an epic's move is made under the board lock (ADR-0306).
 func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
-	res, err := r.transitionAll(it, to, by, reason, now, finalize)
+	return r.TransitionChecked(it, to, by, reason, now, finalize, nil)
+}
+
+// TransitionChecked is TransitionAll with check answering the
+// kluster-verified rule where the move's transition names it (ADR-0312):
+// flai move and item_move pass the host's. TransitionAll passes none, so the
+// rule says nothing of the moves it makes.
+func (r *Repo) TransitionChecked(it *Item, to, by, reason string, now time.Time, finalize bool, check KlusterCheck) (*MoveResult, error) {
+	res, err := r.transitionAll(it, to, by, reason, now, finalize, check)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +167,10 @@ func (r *Repo) TransitionAll(it *Item, to, by, reason string, now time.Time, fin
 // the board one after the other and neither writes back a board read before
 // the other's change (ADR-0306, I-0375). Each Save inside takes and lets go
 // of the items lock, after the board lock, never before it. A task's move
-// takes no board lock and writes no board.
-func (r *Repo) transitionAll(it *Item, to, by, reason string, now time.Time, finalize bool) (*MoveResult, error) {
+// takes no board lock and writes no board. check answers the item's own
+// move's kluster-verified rule; the moves a cancellation takes along have
+// none to answer.
+func (r *Repo) transitionAll(it *Item, to, by, reason string, now time.Time, finalize bool, check KlusterCheck) (*MoveResult, error) {
 	if it.Type != Task {
 		unlock, err := r.LockBoard()
 		if err != nil {
@@ -184,7 +194,7 @@ func (r *Repo) transitionAll(it *Item, to, by, reason string, now time.Time, fin
 	}
 	res := &MoveResult{Cancelled: []Cascaded{}}
 	from := it.Status
-	res.Warnings, err = r.Move(it, to, MoveOptions{By: by, Reason: reason, Now: now, Items: items, Board: board, Finalize: finalize})
+	res.Warnings, err = r.Move(it, to, MoveOptions{By: by, Reason: reason, Now: now, Items: items, Board: board, Finalize: finalize, Kluster: check})
 	if err != nil {
 		return nil, err
 	}

@@ -1099,3 +1099,82 @@ func TestVerifiedDoesNotHoldTheAcceptance(t *testing.T) {
 	w, err := moveWith(t, r, s, Done, MoveOptions{})
 	letThrough(t, w, err)
 }
+
+// klusterAnswer is a KlusterCheck that answers v and err, counting in asked
+// the stories it was asked of.
+func klusterAnswer(v KlusterVerdict, err error, asked *[]string) KlusterCheck {
+	return func(story string) (KlusterVerdict, error) {
+		*asked = append(*asked, story)
+		return v, err
+	}
+}
+
+// S-0810, ADR-0312: Move evaluates kluster-verified with the move's
+// KlusterCheck where the transition names it, at the rule's severity: the
+// baseline warns on the move to review, a file that says refuse refuses, a
+// transition that does not name it never asks, and a cluster that does not
+// apply, or a check that could not be made, never holds the story (§5).
+func TestMoveChecksKlusterVerifiedWithTheMovesCheck(t *testing.T) {
+	notPassed := KlusterVerdict{Applies: true, Refusal: "S-0001's namespace is not deployed", Warning: "S-0001's namespace is not deployed; the move is made"}
+	refusing := strings.Replace(otherWorkflow, "{from: in-progress, to: testing}", "{from: in-progress, to: testing, rules: [{rule: kluster-verified, severity: refuse}]}", 1)
+	t.Run("the baseline warns on the move to review", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		var asked []string
+		w, err := moveWith(t, r, s, Review, MoveOptions{Kluster: klusterAnswer(notPassed, nil, &asked)})
+		letThrough(t, w, err, notPassed.Warning)
+		if !slices.Equal(asked, []string{"S-0001"}) {
+			t.Errorf("the check was asked of %v, want S-0001", asked)
+		}
+	})
+	t.Run("the baseline says nothing without a check", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		w, err := moveWith(t, r, s, Review, MoveOptions{})
+		letThrough(t, w, err)
+	})
+	t.Run("a file that says refuse refuses", func(t *testing.T) {
+		r := repoWithWorkflow(t, refusing)
+		s := storyInProgress(t, r, "- [x] one\n")
+		var asked []string
+		_, err := moveWith(t, r, s, "testing", MoveOptions{Kluster: klusterAnswer(notPassed, nil, &asked)})
+		refused(t, err, "rule: "+notPassed.Refusal)
+		if s.Status != InProgress {
+			t.Errorf("a refused move changes nothing: %s", s.Status)
+		}
+	})
+	for _, c := range []struct {
+		name string
+		v    KlusterVerdict
+		err  error
+		want []string
+	}{
+		{"a namespace that passed moves", KlusterVerdict{Applies: true, Passed: true}, nil, nil},
+		{"no cluster to judge moves", KlusterVerdict{}, nil, nil},
+		{"a check that could not be made warns and moves", KlusterVerdict{}, errors.New("the record does not parse"), []string{"S-0001 went to testing, but what its kluster namespace shows at its head was not read: the record does not parse"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			r := repoWithWorkflow(t, refusing)
+			s := storyInProgress(t, r, "- [x] one\n")
+			var asked []string
+			w, err := moveWith(t, r, s, "testing", MoveOptions{Kluster: klusterAnswer(c.v, c.err, &asked)})
+			letThrough(t, w, err, c.want...)
+			if len(asked) != 1 {
+				t.Errorf("the check was asked %d times, want once", len(asked))
+			}
+		})
+	}
+	t.Run("a transition that does not name it never asks", func(t *testing.T) {
+		r := repoWithWorkflow(t, otherWorkflow)
+		s := storyInProgress(t, r, "- [x] one\n")
+		var asked []string
+		check := klusterAnswer(notPassed, nil, &asked)
+		for _, to := range []string{"testing", Review} {
+			w, err := moveWith(t, r, s, to, MoveOptions{Kluster: check})
+			letThrough(t, w, err)
+		}
+		if len(asked) != 0 {
+			t.Errorf("the check was asked of %v, want none", asked)
+		}
+	})
+}

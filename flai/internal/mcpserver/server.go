@@ -856,11 +856,14 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	}
 	// finalize is false: a move finalizes no draft; the orchestrator
 	// finalizes a complete one with item_edit (S-0219)
-	res, err := s.repo.TransitionAll(it, in.To, s.agent, in.Reason, s.now(), false)
+	// the kluster-verified rule reads the namespace where the transition
+	// names it (ADR-0312)
+	k := NewReviewKluster(s.runner, s.repo, s.hostAction)
+	res, err := s.repo.TransitionChecked(it, in.To, s.agent, in.Reason, s.now(), false, k.Check)
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}
-	warnings := ReviewWarnings(s.runner, s.repo, it, res.Warnings, s.hostAction)
+	warnings := k.Warnings(it, res.Warnings)
 	if warnings == nil {
 		warnings = []string{}
 	}
@@ -920,42 +923,71 @@ type HostAction func(action, root string) (bool, error)
 // unticked acceptance criteria goes on after the story's ID.
 const untickedWarning = " goes to review with unticked acceptance criteria ("
 
-// ReviewWarnings is warnings, those of the move that took story it to
-// review, with what its kluster namespace shows at its branch's head
-// (ADR-0292 §6), in the words flai move and item_move both say: while the
-// kluster host action is on and the manifest's kluster: block names a
-// deploy, a warning that says what stands and names the commands that deploy
-// and check it unless it was deployed and checked at the head, and the same
-// sentence added to the warning of unticked acceptance criteria. It refuses
-// nothing, as the move is made: a host action or a record it cannot read is
-// a warning too. Nothing is said while kluster.agent_namespaces is 0, as
-// no story's agent deploys before review then. Any other move, and a
-// project without a kluster: block or without git, keeps warnings as they
-// are.
-func ReviewWarnings(git execx.Runner, repo *workitem.Repo, it *workitem.Item, warnings []string, on HostAction) []string {
-	if it.Type != workitem.Story || repo.Flow().Kind(it.Status) != workflow.KindWaiting || repo.Manifest.Kluster == nil || git == nil {
-		return warnings
+// ReviewKluster answers the kluster-verified rule of one move flai move or
+// item_move makes, where its transition names the rule (ADR-0312), from what
+// the story's kluster namespace shows at its branch's head (ADR-0292 §6), in
+// the words both say. The rule has nothing to judge, and says nothing, while
+// the manifest has no kluster: block or no deploy in it, the kluster host
+// action is off, kluster.agent_namespaces is 0, as no story's agent deploys
+// before review then, or there is no git (ADR-0312 §5).
+type ReviewKluster struct {
+	git  execx.Runner
+	repo *workitem.Repo
+	on   HostAction
+	// read is what the rule read of the namespace, nil until it read
+	// evidence that applies.
+	read *kluster.Evidence
+}
+
+// NewReviewKluster is the ReviewKluster of a move in repo, reading the
+// namespace's record with git and the host actions with on; a nil on reads
+// them off. Use one per move.
+func NewReviewKluster(git execx.Runner, repo *workitem.Repo, on HostAction) *ReviewKluster {
+	return &ReviewKluster{git: git, repo: repo, on: on}
+}
+
+// Check is the move's workitem.KlusterCheck: a namespace that did not pass
+// at the head is a finding that says what stands and names the commands that
+// deploy and check it; a host action or a record it cannot read is an error,
+// which the move warns of.
+func (k *ReviewKluster) Check(story string) (workitem.KlusterVerdict, error) {
+	if k.repo.Manifest.Kluster == nil || k.git == nil {
+		return workitem.KlusterVerdict{}, nil
 	}
-	if repo.Manifest.KlusterAgentNamespaces() == 0 {
+	if k.repo.Manifest.KlusterAgentNamespaces() == 0 {
 		// deploys before review are off (ADR-0292 §4): the review deploys it
-		return warnings
+		return workitem.KlusterVerdict{}, nil
 	}
-	e, err := reviewEvidence(git, repo, it.ID, on)
+	e, err := reviewEvidence(k.git, k.repo, story, k.on)
 	if err != nil {
-		return append(warnings, fmt.Sprintf("%s went to review, but what its kluster namespace shows at its head was not read: %v", it.ID, err))
+		return workitem.KlusterVerdict{}, err
 	}
 	if !e.Applies {
+		return workitem.KlusterVerdict{}, nil
+	}
+	k.read = &e
+	run := klusterRun(e)
+	return workitem.KlusterVerdict{
+		Applies: true,
+		Passed:  e.Passed,
+		Refusal: fmt.Sprintf("%s; %s, then move it again (ADR-0312)", e.Summary(), run),
+		Warning: fmt.Sprintf("%s; %s. The move is made all the same: the review deploys what has not passed at the head (ADR-0292)", e.Summary(), run),
+	}, nil
+}
+
+// Warnings is warnings, those of the move, with what the namespace shows
+// added to the warning of unticked acceptance criteria of story it, where
+// the move's rule read it; any other move keeps warnings as they are.
+func (k *ReviewKluster) Warnings(it *workitem.Item, warnings []string) []string {
+	if k.read == nil {
 		return warnings
 	}
-	out := make([]string, 0, len(warnings)+1)
+	out := make([]string, 0, len(warnings))
 	for _, w := range warnings {
 		if strings.HasPrefix(w, it.ID+untickedWarning) {
-			w += "; " + e.Summary()
+			w += "; " + k.read.Summary()
 		}
 		out = append(out, w)
-	}
-	if !e.Passed {
-		out = append(out, klusterReviewWarning(e))
 	}
 	return out
 }
@@ -977,10 +1009,9 @@ func reviewEvidence(git execx.Runner, repo *workitem.Repo, story string, on Host
 	return kluster.ReadEvidence(git, root, repo.Manifest, story, klusterOn, checksOn)
 }
 
-// klusterReviewWarning is the warning of a story gone to review whose
-// namespace e did not pass at the head: what stands, and the commands that
-// deploy and check it.
-func klusterReviewWarning(e kluster.Evidence) string {
+// klusterRun names the commands that deploy and check the namespace e did
+// not pass at the head: its checks alone when it was deployed there.
+func klusterRun(e kluster.Evidence) string {
 	c := e.Commands
 	run := fmt.Sprintf("deploy it at the head with %s, or the MCP tool %s", c.Deploy, c.DeployTool)
 	switch {
@@ -989,7 +1020,7 @@ func klusterReviewWarning(e kluster.Evidence) string {
 	case e.ChecksOn:
 		run += fmt.Sprintf(", which runs its checks once the deploy passes; %s, or the MCP tool %s, runs the checks alone", c.Checks, c.ChecksTool)
 	}
-	return fmt.Sprintf("%s; %s. The move is made all the same: the review deploys what has not passed at the head (ADR-0292)", e.Summary(), run)
+	return run
 }
 
 // orchestrator says whether the caller is the orchestrator (S-0219).
