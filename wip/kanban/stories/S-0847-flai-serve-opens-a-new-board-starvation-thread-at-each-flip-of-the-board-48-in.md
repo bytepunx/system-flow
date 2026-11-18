@@ -3,11 +3,14 @@ id: S-0847
 type: story
 nature: improvement
 title: flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T09:20:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:20:03Z
+    by: orchestrator
 tags: [flai, serve]
 topics: [threads, ready, orchestration]
 touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/system/workflow.md, docs/users/flai.md, design/adrs/README.md, design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md]
@@ -73,10 +76,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:58Z
 forecast:
   duration: 1h
-  delivery: 2026-11-18T18:00:00Z
-  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843, S-0844, S-0845 and S-0846."
+  delivery: 2026-11-18T11:52:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839 and S-0843."
   by: flai
-  at: 2026-11-18T08:31:07Z
+  at: 2026-11-18T09:20:10Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z

@@ -6,7 +6,7 @@ title: Measure planned stories again with forked task sub-agents once a headless
 status: backlog
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-11-18T08:13:57Z
+updated: 2026-11-18T09:20:10Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:25Z
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-10-07T23:14:44Z
 forecast:
   duration: 2h
-  delivery: 2026-11-18T14:05:00Z
-  basis: "Its own forecast of 2h; 6th in the pull order with an in-progress limit of 3, behind S-0811, S-0834, S-0842, S-0809, S-0812, S-0808, S-0807 and S-0810."
+  delivery: 2026-11-18T17:20:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808, S-0844, S-0846, S-0837 and S-0845."
   by: flai
-  at: 2026-11-18T08:13:57Z
+  at: 2026-11-18T09:20:10Z
 ---
 # S-0241 Measure planned stories again with forked task sub-agents once a headless session offers forks
 

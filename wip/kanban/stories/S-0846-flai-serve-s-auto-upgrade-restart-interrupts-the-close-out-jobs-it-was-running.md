@@ -3,11 +3,14 @@ id: S-0846
 type: story
 nature: improvement
 title: flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T09:20:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:20:04Z
+    by: orchestrator
 tags: []
 topics: [serve, close-out, release]
 touches: [design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
@@ -73,10 +76,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:08Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-18T18:31:00Z
-  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843, S-0844 and S-0845."
+  delivery: 2026-11-18T14:05:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808 and S-0844."
   by: flai
-  at: 2026-11-18T08:31:07Z
+  at: 2026-11-18T09:20:10Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z

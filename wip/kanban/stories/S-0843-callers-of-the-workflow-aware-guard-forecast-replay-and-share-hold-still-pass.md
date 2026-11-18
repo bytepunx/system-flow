@@ -3,11 +3,14 @@ id: S-0843
 type: story
 nature: remediation
 title: Callers of the workflow-aware guard, forecast replay, and share hold still pass the baseline, so a project's own workflow file will not reach them
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:32:54Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T09:20:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:20:02Z
+    by: orchestrator
 tags: []
 topics: [workflow]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:29:46Z
 forecast:
   duration: 1h
-  delivery: 2026-11-18T16:28:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837 and S-0839."
+  delivery: 2026-11-18T11:35:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0807, S-0810 and S-0839."
   by: flai
-  at: 2026-11-18T08:31:07Z
+  at: 2026-11-18T09:20:10Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z

@@ -3,11 +3,14 @@ id: S-0845
 type: story
 nature: improvement
 title: A story in review whose close-out fails after main moved waits for the operator to send it back, while its after chain holds the backlog and the board starves
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:32:56Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T09:20:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:20:05Z
+    by: orchestrator
 tags: [flai, orchestrator]
 topics: [acceptance, verify, orchestration]
 touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, flai/cmd/accept_resolve.go, flai/cmd/accept_resolve_test.go, flai/internal/mcpserver/resolve.go, flai/internal/mcpserver/resolve_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_rules.go, flai/internal/guard/orchestrate_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/serve/resolvejob_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, design/issues/I-0386-a-story-in-review-whose-close-out-fails-after-main-moved-waits-for-the-operator.md, design/issues/summary.md]
@@ -73,10 +76,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-18T20:24:00Z
-  basis: "Its own forecast of 3h; 15th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839, S-0843 and S-0844."
+  delivery: 2026-11-18T17:45:00Z
+  basis: "Its own forecast of 3h; 7th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808, S-0844, S-0846 and S-0837."
   by: flai
-  at: 2026-11-18T08:31:07Z
+  at: 2026-11-18T09:20:10Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z

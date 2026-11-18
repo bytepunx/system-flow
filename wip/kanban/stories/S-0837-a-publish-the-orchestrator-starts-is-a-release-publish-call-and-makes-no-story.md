@@ -3,11 +3,14 @@ id: S-0837
 type: story
 nature: improvement
 title: A publish the orchestrator starts is a release_publish call and makes no story, and the baseline publish formula is retired
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T09:20:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:20:04Z
+    by: orchestrator
 tags: [flai, template]
 topics: [release, orchestration, upgrade]
 touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, flai/internal/roles/roles_test.go, flai/internal/guard/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/workflow.md, design/system/pushing-from-the-board.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, docs/contributors/index.md, docs/contributors/template.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-11-17T12:39:39Z
 forecast:
   duration: 1h38m
-  delivery: 2026-11-18T16:40:00Z
-  basis: "Its own forecast of 1h38m; 11th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824 and S-0835."
+  delivery: 2026-11-18T15:06:00Z
+  basis: "Its own forecast of 1h38m; 6th in the pull order with an in-progress limit of 3, behind S-0807, S-0810, S-0839, S-0843, S-0847, S-0808, S-0844 and S-0846."
   by: flai
-  at: 2026-11-18T08:31:07Z
+  at: 2026-11-18T09:20:10Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:09Z
