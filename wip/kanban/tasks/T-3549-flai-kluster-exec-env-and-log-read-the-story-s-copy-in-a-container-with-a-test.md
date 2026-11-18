@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1133
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 570
-      cache_read: 5578880
-      cache_write: 336235
-      cost: 3.4718
+      input: 58
+      output: 19405
+      cache_read: 5766236
+      cache_write: 214544
+      cost: 2.862
 ---
 # T-3549 flai kluster exec, env, and log read the story's copy in a container, with a test over a container's layout that reproduces I-0361
 

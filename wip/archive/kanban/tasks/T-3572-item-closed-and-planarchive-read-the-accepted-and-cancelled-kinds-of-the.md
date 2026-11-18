@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1036
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 231
-      cache_read: 2295033
-      cache_write: 156363
-      cost: 0.9379
+      input: 30
+      output: 5897
+      cache_read: 2398661
+      cache_write: 71959
+      cost: 1.0642
 ---
 # T-3572 Item.Closed and PlanArchive read the accepted and cancelled kinds of the workflow the repository runs
 

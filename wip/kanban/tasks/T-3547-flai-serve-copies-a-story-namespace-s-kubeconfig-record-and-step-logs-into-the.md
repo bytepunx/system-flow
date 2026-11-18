@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1707
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 85
-      output: 513
-      cache_read: 5636526
-      cache_write: 501178
-      cost: 3.6024
+      input: 60
+      output: 20135
+      cache_read: 5983212
+      cache_write: 222617
+      cost: 2.9697
 ---
 # T-3547 flai serve copies a story namespace's kubeconfig, record, and step logs into the story's agent cache folder, and a teardown removes them
 

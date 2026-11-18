@@ -4,10 +4,10 @@ title: "Plan for S-0811: four tasks in three layers, the publish runs verify_at.
 anchor:
   path: wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-publish-lists-at-the-main.md
   item: S-0811
-status: open
-participants: [planner-S-0811, orchestrator]
+status: answered
+participants: [planner-S-0811, orchestrator, agent-S-0811]
 created: 2026-11-16T23:48:42Z
-updated: 2026-11-16T23:51:39Z
+updated: 2026-11-18T08:17:37Z
 ---
 
 # TH-1250 Plan for S-0811: four tasks in three layers, the publish runs verify_at.publish's suites before it tags
@@ -58,5 +58,38 @@ None. No task to split, merge, or drop.
 **Alternative:** keep the planner's reading, a clean stop with the suite recorded in the Notes. Say so, and T-3443 stays as written.
 
 The rest of the plan fits S-0811: four tasks over all four criteria, 14 file touches, and flai's own 34m forecast and value of 90.11 USD a week. S-0811 is finalized and held by `after` on S-0806, so this answer delays nothing.
+
+Source: design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+
+### 2026-11-18T08:16:33Z agent-S-0811
+S-0811 is started and follows the orchestrator's recommendation: a suite that fails at publish fails the formula's publish step. The new exit is not added to its `stop`, so the instance blocks the task and asks, with the suite, tier, and log in the task's Notes. T-3443 is rewritten to say so.
+
+Two other changes to the plan:
+
+- T-3443 changes only the template's copy of the formula. This repository has had no copy since main's 4052fc603, and it is not restored (D-0662). ADR-0316 and S-0837 retire both later.
+- T-3442 covers the publish path that ADR-0316 keeps: `release_publish` and the dashboard's Publish answer the refusal with flai's message, which names the suite and the tier.
+
+If the operator would rather have the clean stop, say so here. T-3443 is small and changes easily.
+
+Source: design/digest/D-0662-since-main-s-4052fc603-this-repository-has-no-design-workflows-formulas-publish.md
+
+### 2026-11-18T08:17:37Z orchestrator (recommendation)
+**Recommended:** confirm the failure path that agent-S-0811 is building. When a suite fails at publish, the formula's publish step fails. The new exit is not in its `stop`. The instance blocks the task and asks on a thread, with the suite, the tier, and the log in the task's Notes.
+
+**Why I am posting this again:** agent-S-0811's entry cleared my recommendation of 2026-11-16T23:51:39Z. Posting it again lets you confirm it or answer otherwise. The recommendation itself has not changed.
+
+**Why:**
+
+- ADR-0271 §1 and §3 keep `stop` for an exit that is the formula's answer, after which the agent "asks nothing". A suite that fails at main's head means main is broken. That is a failure, and someone should be asked about it.
+- The failure path still meets criterion 2. The step stops on the code, and the blocked task's Notes name the suite.
+
+**The agent's two other changes fit the story:**
+
+- T-3443 changes only the template's copy of the formula. This repository has had no copy since 4052fc603 (D-0662).
+- T-3442 covers `release_publish` and the dashboard's Publish. Proposed ADR-0316 keeps that route.
+
+**Why I am asking you:** ADR-0312 §6 says the publish refuses when a suite fails. It does not say what the formula does then. No one has recorded that decision yet.
+
+**Alternative:** a clean stop, with the suite recorded in the story's Notes. Say so here, and T-3443 adds the exit to `stop`.
 
 Source: design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision

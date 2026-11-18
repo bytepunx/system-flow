@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2262.5194
-accrued_seconds: 1578745
-tasks_completed: 4016
-last_run: 2026-11-18T08:14:07Z
+accrued_cost: 2263.2709
+accrued_seconds: 1578878
+tasks_completed: 4023
+last_run: 2026-11-18T08:18:11Z
 ---
 
 # Orchestrator activity
@@ -28147,6 +28147,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0840
 - Seconds: 51
 - Cost: 0.2137 USD, estimated
+
+### 2026-11-18T08:14:33Z
+
+- Summary: Published flai 1.107.0 → 1.107.1 (tag flai/v1.107.1, pushed) bundling S-0840, under threshold: count 1 at threshold 1, value 75 of 1000 USD/week.
+- Items: S-0840
+- Seconds: 26
+- Cost: 0.0640 USD, estimated
+
+### 2026-11-18T08:14:52Z
+
+- Summary: I accepted S-0840 and published it as flai 1.107.1.
+- Items: none
+- Seconds: 19
+- Cost: 0.1903 USD, estimated
+
+### 2026-11-18T08:15:16Z
+
+- Summary: Release-due for S-0840: no publish needed. S-0840 already went out in flai 1.107.1 (commit ebb439976, tag flai/v1.107.1). release_evaluate under threshold: not met, 0 pending, value 0 of 1000 USD, count 0 of 1.
+- Items: S-0840
+- Seconds: 10
+- Cost: 0.0745 USD, estimated
+
+### 2026-11-18T08:15:32Z
+
+- Summary: I didn't publish anything for S-0840, because it has already been released. It went out in flai 1.107.1: commit `ebb439976`, tag `flai/v1.107.1`.
+- Items: none
+- Seconds: 16
+- Cost: 0.1078 USD, estimated
+
+### 2026-11-18T08:17:37Z
+
+- Summary: Recommended an answer on TH-1250, citing design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+- Items: S-0811
+- Seconds: 28
+- Cost: 0.1211 USD, estimated
+
+### 2026-11-18T08:17:52Z
+
+- Summary: TH-1250 (S-0811): reposted the recommendation agent-S-0811's entry cleared. A suite failing at publish fails the formula's publish step, with no clean stop (ADR-0271). Also judged the agent's T-3442/T-3443 changes to fit (D-0662, ADR-0316). Left the thread open for the operator, since no one has recorded this decision; confirm_after 48h applies.
+- Items: S-0811, TH-1250
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-18T08:18:11Z
+
+- Summary: ## TH-1250 (S-0811): recommendation posted again, now waiting on you
+- Items: none
+- Seconds: 19
+- Cost: 0.1938 USD, estimated
 
 ## Refusals
 

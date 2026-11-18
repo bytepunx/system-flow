@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-18T08:12:44Z
+updated: 2026-11-18T08:16:10Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
@@ -46,15 +46,15 @@ usage:
           cache_write: 94362
           cost: 2.9176
     - kind: orchestrator
-      seconds: 68
+      seconds: 96
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 184
-          cache_read: 849783
-          cache_write: 57652
-          cost: 0.2783
+          input: 28
+          output: 259
+          cache_read: 1181715
+          cache_write: 110554
+          cost: 0.3994
 cost_of_delay:
   value: 90.11
   by: planner-S-0811
@@ -85,7 +85,7 @@ finalized:
 ## Tasks
 - T-3441 flai release --pending runs the suites verify_at.publish lists at the main branch's head before it applies or tags, and exits with a code of its own naming the failed tier
 - T-3442 The dashboard's Publish and release_publish answer a publish a failed suite refused with the suite, the tier, and the log
-- T-3443 The publish formula's publish step stops on a failed suite's exit, and its story records which suite and tier failed
+- T-3443 The publish formula's publish step fails on a failed suite's exit, so its instance blocks and asks, naming the suite and tier
 - T-3445 The release design, the workflow design, the board runbook, and the user guide describe the suites a publish runs
 
 ## Notes

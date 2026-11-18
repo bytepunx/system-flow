@@ -24,16 +24,16 @@ touches: [design/system/kluster.md, design/system/agent-adapters.md, docs/users/
 after: [T-3549]
 usage:
   source: log
-  seconds: 440
+  seconds: 446
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 300
-      cache_read: 4789226
-      cache_write: 117998
-      cost: 2.8801
+      input: 48
+      output: 16099
+      cache_read: 4783702
+      cache_write: 177987
+      cost: 2.3743
 ---
 # T-3550 The design and the user guide say exec, env, and log serve a container's agent, and I-0361 is closed
 

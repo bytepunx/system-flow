@@ -3,10 +3,10 @@ id: S-0842
 type: story
 nature: remediation
 title: workitem's Item.Closed and PlanArchive read the baseline's done and cancelled names, so on a board that renames them flai accept moves a story to the accepted state and then cannot archive it
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:32:53Z
-updated: 2026-11-18T08:08:36Z
+updated: 2026-11-18T08:31:06Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-18T07:31:16Z
     by: agent-S-0842
+  - to: review
+    at: 2026-11-18T08:29:42Z
+    by: agent-S-0842
+  - to: done
+    at: 2026-11-18T08:31:06Z
+    by: orchestrator
 tags: []
 topics: [workflow]
 touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go, design/system/workflow.md, flai/internal/workitem/view.go, design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md, design/issues/summary.md]
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2221
-  estimated: true
-  priced_by: estimate
+  seconds: 3518
+  priced_by: harness
   turns:
     - day: 2026-11-18
+      ceremony: 1
       test_runs: 2
-      work: 26
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 150
-      output: 792
-      cache_read: 7729059
-      cache_write: 453470
-      cost: 3.1307
+      input: 232
+      output: 45285
+      cache_read: 18419735
+      cache_write: 552585
+      cost: 8.172
   strategic:
     - kind: planner
       seconds: 161
@@ -125,3 +131,12 @@ Touches, all files, no folder:
 Forecast: `flai forecast` gave 27m, the median 147 s per unit over 70 done remediation stories in the medium band times size 11 (2 criteria, 9 touches). Raised to 45m: a change to `workitem`'s `Item` selects the tests of nearly every Go package that imports it in the close-out. Delivery moved by the same 18m, to 2026-11-17T21:10:00Z.
 
 Cost of delay: `flai cod` gives 37.50 USD a week from the 15m time lost per 168h cycle at 150 USD an hour; it stands, since the input is flai's from I-0377's one instance.
+
+### Accepted by the orchestrator
+
+- Verified: fc5389f5d8fefe17fbf3083dd7e804d0ef4ef382
+- At: 2026-11-18T08:31:06Z
+
+Verdict: pass, both criteria are met at fc5389f and the close-out passed every step there.
+- 1: flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/archive.go, flai/internal/workitem/view.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go, design/system/workflow.md
+- 2: design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md, design/issues/summary.md

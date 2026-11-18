@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1726
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 314
-      cache_read: 3279258
-      cache_write: 107053
-      cost: 1.9876
+      input: 33
+      output: 11109
+      cache_read: 3301078
+      cache_write: 122823
+      cost: 1.6384
 ---
 # T-3548 A story's container is told the host name by which it reaches the cluster's API server on its network
 

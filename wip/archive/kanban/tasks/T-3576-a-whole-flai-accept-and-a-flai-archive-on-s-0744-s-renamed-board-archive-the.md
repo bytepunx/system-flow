@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 413
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 342
-      cache_read: 2627856
-      cache_write: 74160
-      cost: 1.0338
+      input: 33
+      output: 6500
+      cache_read: 2643878
+      cache_write: 79315
+      cost: 1.173
 ---
 # T-3576 A whole flai accept and a flai archive on S-0744's renamed board archive the shipped story
 

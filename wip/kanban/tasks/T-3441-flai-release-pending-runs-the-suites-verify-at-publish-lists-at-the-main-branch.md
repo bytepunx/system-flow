@@ -3,12 +3,18 @@ id: T-3441
 type: task
 nature: feature
 title: flai release --pending runs the suites verify_at.publish lists at the main branch's head before it applies or tags, and exits with a code of its own naming the failed tier
-status: backlog
+status: in-progress
 parent: S-0811
 owner: alex
 created: 2026-11-16T23:48:01Z
-updated: 2026-11-16T23:48:01Z
-transitions: []
+updated: 2026-11-18T08:16:43Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:16:43Z
+    by: agent-S-0811
+  - to: in-progress
+    at: 2026-11-18T08:16:43Z
+    by: agent-S-0811
 stream: S-0811
 tags: [flai]
 touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md]

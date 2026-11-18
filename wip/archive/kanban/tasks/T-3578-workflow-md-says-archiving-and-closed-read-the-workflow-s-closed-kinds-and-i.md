@@ -24,16 +24,16 @@ touches: [design/system/workflow.md]
 after: [T-3572, T-3576]
 usage:
   source: log
-  seconds: 13
+  seconds: 16
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 28
-      cache_read: 527817
-      cache_write: 1682
-      cost: 0.2026
+      input: 7
+      output: 1274
+      cache_read: 518100
+      cache_write: 15543
+      cost: 0.2299
 ---
 # T-3578 workflow.md says archiving and Closed read the workflow's closed kinds, and I-0377 is closed
 

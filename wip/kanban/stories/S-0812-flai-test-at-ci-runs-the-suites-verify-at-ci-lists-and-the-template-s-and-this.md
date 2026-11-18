@@ -3,15 +3,18 @@ id: S-0812
 type: story
 nature: feature
 title: flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:08Z
-updated: 2026-11-18T08:13:57Z
+updated: 2026-11-18T08:30:35Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:41Z
     by: alex
+  - to: in-progress
+    at: 2026-11-18T08:30:35Z
+    by: agent-S-0812
 tags: [flai, template]
 topics: [verify, workflow]
 touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md]

@@ -3,16 +3,19 @@ id: S-0834
 type: story
 nature: remediation
 title: flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-18T08:09:05Z
+updated: 2026-11-18T08:30:24Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-17T12:03:23Z
+    by: agent-S-0834
+  - to: review
+    at: 2026-11-18T08:30:24Z
     by: agent-S-0834
 blocked:
   - from: 2026-11-17T12:08:37Z
@@ -28,23 +31,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3719
-  estimated: true
-  priced_by: estimate
+  seconds: 5084
+  priced_by: harness
   turns:
     - day: 2026-11-17
       ceremony: 2
       work: 26
     - day: 2026-11-18
-      ceremony: 1
-      work: 34
+      ceremony: 2
+      work: 75
   models:
     - model: claude-opus-5-5
-      input: 376
-      output: 21392
-      cache_read: 28778430
-      cache_write: 1640155
-      cost: 17.8647
+      input: 472
+      output: 158882
+      cache_read: 47211590
+      cache_write: 1756595
+      cost: 23.4327
   strategic:
     - kind: planner
       seconds: 115

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 139
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 9378
-      cache_read: 3708057
-      cache_write: 411583
-      cost: 2.4232
+      input: 40
+      output: 13515
+      cache_read: 4015930
+      cache_write: 149420
+      cost: 1.9932
 ---
 # T-3546 An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it
 

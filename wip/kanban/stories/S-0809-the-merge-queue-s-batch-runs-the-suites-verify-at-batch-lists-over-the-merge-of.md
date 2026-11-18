@@ -3,15 +3,18 @@ id: S-0809
 type: story
 nature: feature
 title: The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:05Z
-updated: 2026-11-18T08:13:57Z
+updated: 2026-11-18T08:29:51Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:02Z
     by: alex
+  - to: in-progress
+    at: 2026-11-18T08:29:51Z
+    by: agent-S-0809
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md]
