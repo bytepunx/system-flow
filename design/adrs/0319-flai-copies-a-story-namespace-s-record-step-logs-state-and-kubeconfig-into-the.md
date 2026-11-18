@@ -1,8 +1,8 @@
 ---
 id: ADR-0319
 title: "flai copies a story namespace's record, step logs, state, and kubeconfig into the story's agent cache folder, which its container mounts, and flai kluster log, env, and exec read that copy where the main checkout's .flai-cache/kluster is absent, naming the API server as host.docker.internal off the host's network"
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-18
 supersedes: []
 superseded_by: []
 refines: [ADR-0253, ADR-0292]
