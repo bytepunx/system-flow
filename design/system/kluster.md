@@ -1,6 +1,6 @@
 ---
 title: Running a project's kluster
-updated: 2026-11-17
+updated: 2026-11-18
 status: active
 topics: [kluster, deployment, manifest]
 ---
@@ -19,6 +19,7 @@ system-flow itself runs no cluster. This is what flai does for a project that na
 - The cluster's name is the config's `name`. Its provider is `k3d`; `flai check` reports any other.
 - The shared infrastructure is what the config's profile installs. kluster v1.3.1 has no profile that installs nothing: a config with no `profile` gets `spire`, which installs cert-manager, SPIRE, and traefik-tls ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). For authstar's `integration/kluster.yaml`, profile `authstar`, it is SPIRE, signet, RabbitMQ, Postgres, ClickHouse, and Dex. flai installs nothing in the cluster and changes no shared service's own settings.
 - flai brings the cluster up with `kluster --config <config> up` and takes it down with `kluster down`, in the main checkout. A bring-up took 11m31s in S-0575.
+- A bring-up reads `kluster status` first, since `kluster up` refuses a cluster that exists before flai can write its kubeconfig (S-0840, [I-0367](../issues/I-0367-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md), decided on TH-1305). A cluster that runs is not brought up again: flai says it was up already and writes its kubeconfig again. That is how a stale kubeconfig is refreshed, such as after the k3d node containers restart and the API port moves. A cluster that is listed but stopped is refused, and nothing runs: start its k3d node containers with `docker start` and bring it up again, or take it down and bring it up anew. A cluster that is not listed is brought up with `kluster up`. `flai kluster up`, the dashboard's **Up** job, and flai serve's bring-up before a deploy all run this one bring-up (`Cluster.Up`).
 - flai writes the cluster's kubeconfig to `.flai-cache/kluster/kubeconfig` with `kluster kubeconfig --name <name> --output`, and passes it to every command as `KUBECONFIG`. It never merges it into `~/.kube/config`. The context is `k3d-<name>`.
 
 What flai keeps, all under `.flai-cache/kluster/`:
@@ -347,7 +348,7 @@ The commands run `kluster` in the project's main checkout, with the block's conf
 
 | Command | What it runs | What it prints | Exit |
 |---------|--------------|----------------|------|
-| `flai kluster up` | `kluster up`, its output streamed; then `kluster kubeconfig --name <name> --output .flai-cache/kluster/kubeconfig` | kluster's output, then the cluster's name, the kubeconfig's path, and the context `k3d-<name>` | 1 when either fails, naming the step; a failed `up` writes no kubeconfig |
+| `flai kluster up` | `kluster status` first (S-0840). For a cluster it does not list: `kluster up`, its output streamed. For one that runs: no `kluster up`. Then, for either: `kluster kubeconfig --name <name> --output .flai-cache/kluster/kubeconfig`. For one that is listed but stopped: nothing more | kluster's output, or for a cluster that runs a line saying it was up already and that its kubeconfig is written again; then the cluster's name, the kubeconfig's path, and the context `k3d-<name>` | 1 when a step fails, naming it; a failed `up` writes no kubeconfig. 1 for a stopped cluster, naming the fixes: `docker start` its k3d node containers and run `flai kluster up` again, or `flai kluster down` and then `flai kluster up` |
 | `flai kluster down [--yes]` | `kluster down --name <name> --yes`, so kluster never prompts | kluster's output, then `<name> is down` | 1 when kluster fails, when the operator answers no, or without a terminal and without `--yes` |
 | `flai kluster status [--json]` | `kluster status`, read by its `NAME`, `RUNNING`, and `AGE` headers, the row of the config's `name` | The name and running, stopped, or not created, then the profile, provider, context, and age; `--json` prints one object with `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, and `age_seconds` | 0 whether the cluster runs, is stopped, or is absent; 1 when kluster fails or prints a table without `NAME` and `RUNNING` |
 | `flai kluster deploy S-nnnn [--json]` | `git rev-parse HEAD` in the story's worktree, then build, load, and deploy into the story's namespace from that worktree | A line per step, `<namespace>: <step>, log <path>`, then the record: outcome, commit, tag, images, and each step with its outcome and log; `--json` prints the record and sends the step lines to standard error | 1 when a step fails, naming the step, its exit code, and its log, after printing the record; 1 on a refusal |

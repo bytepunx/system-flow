@@ -1,6 +1,6 @@
 ---
 title: kluster
-updated: 2026-11-07
+updated: 2026-11-18
 status: active
 topics: [kluster, cli]
 ---
@@ -13,7 +13,7 @@ topics: [kluster, cli]
 | Version | v1.3.1 tested (`kluster version v1.3.1` on the dev host). flai pins none: it runs the `kluster` on `PATH` |
 | Install | `curl -fsSL https://raw.githubusercontent.com/bytepunx/kluster/main/install.sh \| bash`, which installs the release binary to `/usr/local/bin`, or `go install github.com/bytepunx/kluster/kluster@latest`. It needs Docker. Only a host that runs a project with a `kluster:` block needs it; system-flow itself runs no cluster |
 | Used in | `flai/internal/kluster`, behind `flai kluster up`, `down`, and `status` (S-0577). `flai kluster deploy`, `teardown`, and `promote` (S-0578) and `flai serve`'s jobs behind the `kluster` host action (S-0579) build on it |
-| Calls | `kluster --config <config> --provider <provider>` with `up`, `down --name <name> --yes`, `status`, and `kubeconfig --name <name> --output <file>`, run in the project's main checkout |
+| Calls | `kluster --config <config> --provider <provider>` with `up`, `down --name <name> --yes`, `status`, and `kubeconfig --name <name> --output <file>`, run in the project's main checkout. A bring-up runs `status` first, and runs `up` only when the cluster is not listed: kluster v1.3.1's `up` refuses a cluster that exists (`create cluster: cluster "<name>" already exists`), so for one that runs flai writes only the kubeconfig again (S-0840, [I-0367](../issues/I-0367-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md)) |
 | Decision | [ADR-0254](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md), refined by [ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md); the design is [kluster.md](../system/kluster.md) |
 
 ## Why
