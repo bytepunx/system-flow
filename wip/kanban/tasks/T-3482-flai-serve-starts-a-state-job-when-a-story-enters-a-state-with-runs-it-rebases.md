@@ -3,16 +3,37 @@ id: T-3482
 type: task
 nature: feature
 title: "flai serve starts a state job when a story enters a state with runs: it rebases the branch, runs the state's suites, records each step, and sends the story back by the state's send-back transition when one fails"
-status: backlog
+status: done
 parent: S-0810
 owner: alex
 created: 2026-11-16T23:51:15Z
-updated: 2026-11-16T23:51:39Z
-transitions: []
+updated: 2026-11-18T10:37:07Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:47:08Z
+    by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-18T09:47:08Z
+    by: agent-S-0810
+  - to: done
+    at: 2026-11-18T10:37:07Z
+    by: agent-S-0810
 stream: S-0810
 tags: [flai]
-touches: [flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/serve.go, flai/internal/serve/agents_restart.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/verify.go, flai/internal/verify/story.go, docs/users/flai-reference.md]
+touches: [flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/verifyjob.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_restart_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-3479]
+usage:
+  source: log
+  seconds: 2999
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 258
+      output: 128730
+      cache_read: 25269207
+      cache_write: 878676
+      cost: 12.4871
 ---
 # T-3482 flai serve starts a state job when a story enters a state with runs: it rebases the branch, runs the state's suites, records each step, and sends the story back by the state's send-back transition when one fails
 

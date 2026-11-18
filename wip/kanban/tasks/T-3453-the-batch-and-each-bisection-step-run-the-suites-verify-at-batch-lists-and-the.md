@@ -3,16 +3,37 @@ id: T-3453
 type: task
 nature: feature
 title: The batch and each bisection step run the suites verify_at.batch lists, and the batch's record names them
-status: backlog
+status: done
 parent: S-0809
 owner: alex
 created: 2026-11-16T23:49:26Z
-updated: 2026-11-16T23:49:26Z
-transitions: []
+updated: 2026-11-18T09:03:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:47:45Z
+    by: agent-S-0809
+  - to: in-progress
+    at: 2026-11-18T08:47:45Z
+    by: agent-S-0809
+  - to: done
+    at: 2026-11-18T09:03:10Z
+    by: agent-S-0809
 stream: S-0809
 tags: [flai]
-touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go]
+touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go]
 after: [T-3451]
+usage:
+  source: log
+  seconds: 925
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 13977
+      cache_read: 3843485
+      cache_write: 131789
+      cost: 1.873
 ---
 # T-3453 The batch and each bisection step run the suites verify_at.batch lists, and the batch's record names them
 

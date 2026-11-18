@@ -3,15 +3,36 @@ id: T-3451
 type: task
 nature: feature
 title: verify.Tiers keeps the tiers of the suites it is given among those the paths select, and every one under all
-status: backlog
+status: done
 parent: S-0809
 owner: alex
 created: 2026-11-16T23:49:15Z
-updated: 2026-11-16T23:49:15Z
-transitions: []
+updated: 2026-11-18T08:47:20Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:36:48Z
+    by: agent-S-0809
+  - to: in-progress
+    at: 2026-11-18T08:36:48Z
+    by: agent-S-0809
+  - to: done
+    at: 2026-11-18T08:47:20Z
+    by: agent-S-0809
 stream: S-0809
 tags: [flai]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+usage:
+  source: log
+  seconds: 632
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 5741
+      cache_read: 1578689
+      cache_write: 54132
+      cost: 0.7693
 ---
 # T-3451 verify.Tiers keeps the tiers of the suites it is given among those the paths select, and every one under all
 

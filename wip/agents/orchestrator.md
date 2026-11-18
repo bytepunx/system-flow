@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2263.4776
-accrued_seconds: 1578930
-tasks_completed: 4024
-last_run: 2026-11-18T08:31:22Z
+accrued_cost: 2267.9559
+accrued_seconds: 1579855
+tasks_completed: 4046
+last_run: 2026-11-18T11:25:21Z
 ---
 
 # Orchestrator activity
@@ -28203,6 +28203,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0842
 - Seconds: 52
 - Cost: 0.2067 USD, estimated
+
+### 2026-11-18T08:32:02Z
+
+- Summary: Published flai 1.107.1 → 1.107.2 (tag flai/v1.107.2, pushed) with release_publish under threshold: count 1 at or over threshold 1, value 37.5 USD/week; bundled S-0842
+- Items: S-0842
+- Seconds: 40
+- Cost: 0.0913 USD, estimated
+
+### 2026-11-18T08:32:19Z
+
+- Summary: I accepted S-0842 and published it as flai 1.107.2. The tag `flai/v1.107.2` is pushed.
+- Items: none
+- Seconds: 17
+- Cost: 0.0917 USD, estimated
+
+### 2026-11-18T08:35:25Z
+
+- Summary: S-0834 left in review: the verifier passed both criteria at 533a5c0, but the accept dry run blocks on protected_paths (scripts/agent-container.sh, so the operator alone accepts, ADR-0106) and on verify_behind_main. Asked for a new close-out (job S-0834-20261118T083512Z) and opened TH-1307 for the operator.
+- Items: S-0834
+- Seconds: 84
+- Cost: 0.2656 USD, estimated
+
+### 2026-11-18T08:35:44Z
+
+- Summary: Release reason (S-0842 release-due): did not publish. release_evaluate under threshold shows count 0 of 1 and value 0 of 1000 USD: no accepted story is waiting for a release.
+- Items: S-0842
+- Seconds: 19
+- Cost: 0.0000 USD
+
+### 2026-11-18T08:36:06Z
+
+- Summary: S-0834 is still in review: only you can accept it, because its branch changes `scripts/agent-container.sh`, a path Claude Code protects (ADR-0106). Nothing was published, because no accepted story is waiting for a release.
+- Items: none
+- Seconds: 22
+- Cost: 0.2351 USD, estimated
+
+### 2026-11-18T09:09:50Z
+
+- Summary: Left S-0811 in review: verify passed at head 5541dbf and the verifier met all 4 criteria, but the accept dry run's one blocker is thread_open TH-1250, the operator's unrecorded decision on the publish formula's failure path (my recommendation pending, confirm_after 48h); opened TH-1308 saying so. Value 90.11/wk, forecast 34m.
+- Items: S-0811
+- Seconds: 82
+- Cost: 0.3077 USD, estimated
+
+### 2026-11-18T09:10:09Z
+
+- Summary: I didn't accept S-0811 yet. It stays in review because one decision on TH-1250 is still yours to make.
+- Items: none
+- Seconds: 19
+- Cost: 0.1168 USD, estimated
+
+### 2026-11-18T09:17:52Z
+
+- Summary: Verified S-0812 at cca8f937 (close-out passed; verifier met all 4 criteria; dry run no blocker) but accept refused: uncommitted main file design/digest/D-0671 fails MD028 at line 20, which lint --fix cannot fix. Left S-0812 in review and opened TH-1309 asking the operator to fix the blank line in the blockquote; I accept on the next run. Value 115.74 USD/week.
+- Items: S-0812
+- Seconds: 95
+- Cost: 0.2729 USD, estimated
+
+### 2026-11-18T09:18:16Z
+
+- Summary: I didn't accept S-0812. Its review passed, but the acceptance stopped on a lint error in a file on main that the story didn't write.
+- Items: none
+- Seconds: 24
+- Cost: 0.3521 USD, estimated
+
+### 2026-11-18T09:20:15Z
+
+- Summary: ready-empty: promoted the 7 promote_candidates to ready in throughput order (S-0839 1h, S-0843 1h, S-0847 1h, S-0844 1h30m, S-0846 1h30m, S-0837 1h38m, S-0845 3h; ranks 1-7), ready had room (1/10), then applied flai order --by throughput; S-0839 was no longer in ready by then, likely pulled
+- Items: S-0839, S-0843, S-0847, S-0844, S-0846, S-0837, S-0845
+- Seconds: 38
+- Cost: 0.2480 USD, estimated
+
+### 2026-11-18T09:20:52Z
+
+- Summary: review:S-0809: close-out passed at head 902cd57, the verifier matched all 3 criteria, and the dry run named no blocker. accept refused on the D-0671 MD028 lint error in the main checkout's uncommitted digest (same as TH-1309). Left S-0809 in review and opened TH-1310 asking the operator to fix D-0671 line 20
+- Items: S-0809
+- Seconds: 37
+- Cost: 0.1316 USD, estimated
+
+### 2026-11-18T09:21:19Z
+
+- Summary: Both reasons are handled. S-0809 is still in review: its acceptance is stopped by a lint error in an uncommitted file on main, and you need to fix it.
+- Items: none
+- Seconds: 27
+- Cost: 0.1043 USD, estimated
+
+### 2026-11-18T09:22:45Z
+
+- Summary: Reason reordered: applied flai order --by throughput to the ready column; the order already matched the policy (S-0843 1h, S-0847 1h, S-0808 1h15m, S-0844 1h30m, S-0846 1h30m, S-0837 1h38m, S-0845 3h), so nothing moved. promote_candidates lists none, and no thread awaiting the operator needs a reply.
+- Items: S-0843, S-0847, S-0808, S-0844, S-0846, S-0837, S-0845
+- Seconds: 55
+- Cost: 0.1007 USD, estimated
+
+### 2026-11-18T09:23:05Z
+
+- Summary: Nothing changed on the board this run. I reapplied the ready column's order, and it already followed the throughput policy, so no story moved.
+- Items: none
+- Seconds: 20
+- Cost: 0.1144 USD, estimated
+
+### 2026-11-18T10:03:26Z
+
+- Summary: S-0839 verified at bba6c9b: close-out passed, verifier met both criteria, dry run named no blocker. accept refused on the MD028 lint error in uncommitted D-0671 on main. Left S-0839 in review and opened TH-1311 asking the operator to fix D-0671 line 20, as TH-1309/TH-1310 do for S-0812/S-0809.
+- Items: S-0839
+- Seconds: 62
+- Cost: 0.2709 USD, estimated
+
+### 2026-11-18T10:03:47Z
+
+- Summary: I could not accept S-0839: the acceptance stops on a lint error in another file on main, so the story stays in review.
+- Items: none
+- Seconds: 21
+- Cost: 0.1727 USD, estimated
+
+### 2026-11-18T11:08:10Z
+
+- Summary: Reviewed S-0843 at edaeadd: close-out passed, verifier met both criteria, dry run no blocker; accept refused on the main checkout's D-0671 MD028 lint error (line 20), so S-0843 stays in review and TH-1312 asks the operator to fix it
+- Items: S-0843, TH-1312
+- Seconds: 61
+- Cost: 0.2824 USD, estimated
+
+### 2026-11-18T11:08:30Z
+
+- Summary: I didn't accept S-0843. The story checks out, but flai refused the acceptance because of a lint error in a file on main, not in the story.
+- Items: none
+- Seconds: 20
+- Cost: 0.2654 USD, estimated
+
+### 2026-11-18T11:22:08Z
+
+- Summary: Reviewed S-0807 at 8f0a57fac052: the close-out passed, the verifier found criteria 1-5 met, and the dry run named no blocker. accept refused on the main checkout's unfixable lint (D-0671:20 MD028). S-0807 stays in review, and TH-1313 asks the operator to fix the file. Value 140.92 USD a week.
+- Items: S-0807, TH-1313
+- Seconds: 67
+- Cost: 0.3698 USD, estimated
+
+### 2026-11-18T11:22:30Z
+
+- Summary: S-0807 is still in review: it passed every check, but flai refused the acceptance because of a lint error in the main checkout.
+- Items: none
+- Seconds: 22
+- Cost: 0.1148 USD, estimated
+
+### 2026-11-18T11:25:01Z
+
+- Summary: Verified S-0810 at 43c394db (close-out passed, verifier: all 5 criteria met, dry run no blocker); accept refused on the D-0671 MD028 lint error in main's uncommitted markdown, as for S-0807/S-0809/S-0812/S-0839/S-0843; left S-0810 in review and opened a thread asking the operator to fix D-0671 line 20
+- Items: S-0810
+- Seconds: 73
+- Cost: 0.3548 USD, estimated
+
+### 2026-11-18T11:25:21Z
+
+- Summary: I couldn't accept S-0810. It passed review, but the acceptance was refused because of a lint error in an uncommitted file on main. The same error has now stopped six acceptances.
+- Items: none
+- Seconds: 20
+- Cost: 0.2153 USD, estimated
 
 ## Refusals
 

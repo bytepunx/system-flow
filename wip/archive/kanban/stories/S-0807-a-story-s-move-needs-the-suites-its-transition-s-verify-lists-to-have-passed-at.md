@@ -3,18 +3,27 @@ id: S-0807
 type: story
 nature: feature
 title: A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need
-status: ready
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-18T08:31:07Z
+updated: 2026-11-18T13:04:07Z
 transitions:
   - to: ready
     at: 2026-11-17T07:47:01Z
     by: alex
+  - to: in-progress
+    at: 2026-11-18T09:08:03Z
+    by: agent-S-0807
+  - to: review
+    at: 2026-11-18T11:20:21Z
+    by: agent-S-0807
+  - to: done
+    at: 2026-11-18T13:04:07Z
+    by: alex
 tags: [flai, template]
 topics: [verify, workflow, conventions]
-touches: [flai/internal/verifyrecord/record.go, flai/internal/verifyrecord/record_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/record.go, flai/internal/verify/record_test.go, flai/internal/verify/suites.go, flai/internal/verify/suites_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move_workflow_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/mcpserver/verify.go, scripts/close-out.sh, template/root/scripts/close-out.sh, flai/cmd/verify_baseline_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, template/CHANGELOG.md]
+touches: [flai/internal/verifyrecord/record.go, flai/internal/verifyrecord/record_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/record.go, flai/internal/verify/record_test.go, flai/internal/verify/suites.go, flai/internal/verify/suites_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move_workflow_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mcpserver/verify.go, scripts/close-out.sh, template/root/scripts/close-out.sh, flai/cmd/verify_baseline_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, template/CHANGELOG.md, flai/internal/workflow/baseline/board.md, template/root/design/workflows/board.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -22,9 +31,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 7957
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 5
+      work: 67
+  models:
+    - model: claude-opus-5-5
+      input: 736
+      output: 302199
+      cache_read: 59723375
+      cache_write: 2751924
+      cost: 33.0056
   strategic:
     - kind: planner
       seconds: 2
@@ -37,15 +57,21 @@ usage:
           cache_write: 10653
           cost: 0.2051
     - kind: orchestrator
-      seconds: 19
+      seconds: 86
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 52
-          cache_read: 260334
-          cache_write: 15858
-          cost: 0.085
+          input: 25
+          output: 250
+          cache_read: 1108183
+          cache_write: 108466
+          cost: 0.3819
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 33
+          cache_read: 49478
+          cache_write: 40399
+          cost: 0.0729
 cost_of_delay:
   value: 140.92
   by: planner-S-0807
@@ -68,11 +94,11 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] The rule `verified` is in the vocabulary: a story's move by a transition with `verify:` is refused, or warned of at `warn`, unless its last `flai verify` passed at its branch's head every tier of those suites its paths select.
-- [ ] `flai verify <S-nnnn>` and the close-out job run the suites the transitions out of the story's state need, and `--all` every suite.
-- [ ] The verify report records each suite's tiers and the head and base they passed at, and a later run reuses them as ADR-0156 reuses tiers.
-- [ ] On the baseline, a story's close-out and its move to review run and require what they did before this story.
-- [ ] The conventions, the workflow design, and the user guide say what a close-out runs.
+- [x] The rule `verified` is in the vocabulary: a story's move by a transition with `verify:` is refused, or warned of at `warn`, unless its last `flai verify` passed at its branch's head every tier of those suites its paths select.
+- [x] `flai verify <S-nnnn>` and the close-out job run the suites the transitions out of the story's state need, and `--all` every suite.
+- [x] The verify report records each suite's tiers and the head and base they passed at, and a later run reuses them as ADR-0156 reuses tiers.
+- [x] On the baseline, a story's close-out and its move to review run and require what they did before this story.
+- [x] The conventions, the workflow design, and the user guide say what a close-out runs.
 
 ## Tasks
 - T-3454 The verify report records each suite's tiers with the head and base they passed at, merges suites per commit, and reuses them across a clean rebase

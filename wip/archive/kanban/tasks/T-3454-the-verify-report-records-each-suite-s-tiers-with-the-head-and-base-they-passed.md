@@ -3,15 +3,36 @@ id: T-3454
 type: task
 nature: feature
 title: The verify report records each suite's tiers with the head and base they passed at, merges suites per commit, and reuses them across a clean rebase
-status: backlog
+status: done
 parent: S-0807
 owner: alex
 created: 2026-11-16T23:49:27Z
-updated: 2026-11-16T23:49:27Z
-transitions: []
+updated: 2026-11-18T09:47:32Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:09:27Z
+    by: agent-S-0807
+  - to: in-progress
+    at: 2026-11-18T09:09:27Z
+    by: agent-S-0807
+  - to: done
+    at: 2026-11-18T09:47:32Z
+    by: agent-S-0807
 stream: S-0807
 tags: [flai]
 touches: [flai/internal/verifyrecord/record.go, flai/internal/verifyrecord/record_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/record.go, flai/internal/verify/record_test.go]
+usage:
+  source: log
+  seconds: 2285
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 39598
+      cache_read: 7825697
+      cache_write: 360591
+      cost: 4.3248
 ---
 # T-3454 The verify report records each suite's tiers with the head and base they passed at, merges suites per commit, and reuses them across a clean rebase
 

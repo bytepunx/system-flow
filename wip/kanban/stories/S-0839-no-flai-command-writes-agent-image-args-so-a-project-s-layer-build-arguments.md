@@ -3,11 +3,20 @@ id: S-0839
 type: story
 nature: improvement
 title: No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand
-status: backlog
+status: review
 owner: alex
 created: 2026-11-17T08:32:50Z
-updated: 2026-11-18T08:31:07Z
-transitions: []
+updated: 2026-11-18T10:01:48Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:19:58Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-18T09:20:08Z
+    by: agent-S-0839
+  - to: review
+    at: 2026-11-18T10:01:48Z
+    by: agent-S-0839
 tags: [flai, template]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, design/system/project-manifest.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md, design/issues/summary.md]
 agent:
@@ -16,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2513
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 2
+      work: 35
+  models:
+    - model: claude-opus-5-5
+      input: 212
+      output: 62652
+      cache_read: 11500372
+      cache_write: 598041
+      cost: 7.3545
   strategic:
     - kind: planner
       seconds: 4
@@ -37,15 +57,21 @@ usage:
           cache_write: 14423
           cost: 0.2521
     - kind: orchestrator
-      seconds: 12
+      seconds: 80
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 18
-          cache_read: 124457
-          cache_write: 4104
-          cost: 0.0402
+          input: 21
+          output: 199
+          cache_read: 794806
+          cache_write: 80023
+          cost: 0.2756
+        - model: claude-sonnet-5-5
+          input: 7
+          output: 68
+          cache_read: 51462
+          cache_write: 36035
+          cost: 0.0709
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -71,8 +97,8 @@ finalized:
 This story remediates [I-0364](../../../design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md), "No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0364 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0364 is closed with `flai issue close I-0364 --reason` saying what fixed it
+- [x] The cause I-0364 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0364 is closed with `flai issue close I-0364 --reason` saying what fixed it
 
 ## Tasks
 - T-3574 flai manifest set writes and unsets agent.image.layer and agent.image.args.<NAME>, checked by the manifest's image validation

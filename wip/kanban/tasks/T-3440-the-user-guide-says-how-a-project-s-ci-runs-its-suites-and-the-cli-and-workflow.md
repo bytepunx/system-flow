@@ -3,16 +3,37 @@ id: T-3440
 type: task
 nature: feature
 title: The user guide says how a project's CI runs its suites, and the CLI and workflow design describe flai test --at
-status: backlog
+status: done
 parent: S-0812
 owner: alex
 created: 2026-11-16T23:47:40Z
-updated: 2026-11-16T23:47:40Z
-transitions: []
+updated: 2026-11-18T09:04:10Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:57:03Z
+    by: agent-S-0812
+  - to: in-progress
+    at: 2026-11-18T08:57:03Z
+    by: agent-S-0812
+  - to: done
+    at: 2026-11-18T09:04:10Z
+    by: agent-S-0812
 stream: S-0812
 tags: [flai]
-touches: [docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md]
+touches: [docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md]
 after: [T-3437]
+usage:
+  source: log
+  seconds: 427
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 10221
+      cache_read: 2513437
+      cache_write: 89636
+      cost: 1.2654
 ---
 # T-3440 The user guide says how a project's CI runs its suites, and the CLI and workflow design describe flai test --at
 

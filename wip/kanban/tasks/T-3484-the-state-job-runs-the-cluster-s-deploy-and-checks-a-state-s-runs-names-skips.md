@@ -3,16 +3,37 @@ id: T-3484
 type: task
 nature: feature
 title: The state job runs the cluster's deploy and checks a state's runs names, skips them with the reason where no cluster can run them, and the cluster no longer deploys on review in code
-status: backlog
+status: done
 parent: S-0810
 owner: alex
 created: 2026-11-16T23:51:27Z
-updated: 2026-11-16T23:51:27Z
-transitions: []
+updated: 2026-11-18T11:02:27Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:37:52Z
+    by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-18T10:37:52Z
+    by: agent-S-0810
+  - to: done
+    at: 2026-11-18T11:02:27Z
+    by: agent-S-0810
 stream: S-0810
 tags: [flai]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go]
 after: [T-3482]
+usage:
+  source: log
+  seconds: 1475
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 176
+      output: 87685
+      cache_read: 17212327
+      cache_write: 598517
+      cost: 8.5057
 ---
 # T-3484 The state job runs the cluster's deploy and checks a state's runs names, skips them with the reason where no cluster can run them, and the cluster no longer deploys on review in code
 

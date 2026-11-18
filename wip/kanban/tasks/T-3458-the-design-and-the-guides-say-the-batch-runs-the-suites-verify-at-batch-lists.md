@@ -3,16 +3,37 @@ id: T-3458
 type: task
 nature: feature
 title: The design and the guides say the batch runs the suites verify_at.batch lists, and the baseline runs every one
-status: backlog
+status: done
 parent: S-0809
 owner: alex
 created: 2026-11-16T23:49:38Z
-updated: 2026-11-16T23:49:45Z
-transitions: []
+updated: 2026-11-18T09:08:01Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:03:18Z
+    by: agent-S-0809
+  - to: in-progress
+    at: 2026-11-18T09:03:18Z
+    by: agent-S-0809
+  - to: done
+    at: 2026-11-18T09:08:01Z
+    by: agent-S-0809
 stream: S-0809
 tags: [flai]
 touches: [design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-3453]
+usage:
+  source: log
+  seconds: 283
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 9128
+      cache_read: 2509994
+      cache_write: 86065
+      cost: 1.2232
 ---
 # T-3458 The design and the guides say the batch runs the suites verify_at.batch lists, and the baseline runs every one
 

@@ -3,15 +3,36 @@ id: T-3563
 type: task
 nature: remediation
 title: itemedit's covering stories and grown-claim watch read claims under the project's workflow
-status: backlog
+status: done
 parent: S-0843
 owner: alex
 created: 2026-11-17T12:29:08Z
-updated: 2026-11-17T12:29:08Z
-transitions: []
+updated: 2026-11-18T10:21:28Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:04:11Z
+    by: agent-S-0843
+  - to: in-progress
+    at: 2026-11-18T10:04:11Z
+    by: agent-S-0843
+  - to: done
+    at: 2026-11-18T10:21:28Z
+    by: agent-S-0843
 stream: S-0843
 tags: [flai, workflow, claims]
 touches: [flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go]
+usage:
+  source: log
+  seconds: 1037
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 4076
+      cache_read: 1189762
+      cache_write: 53872
+      cost: 0.6416
 ---
 # T-3563 itemedit's covering stories and grown-claim watch read claims under the project's workflow
 

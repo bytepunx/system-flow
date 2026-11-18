@@ -7,9 +7,12 @@ wip_limits:
   in-progress: 3
   review: 6
 order:
+  - S-0847
   - S-0808
-  - S-0807
-  - S-0810
+  - S-0844
+  - S-0846
+  - S-0837
+  - S-0845
 ---
 
 # Board

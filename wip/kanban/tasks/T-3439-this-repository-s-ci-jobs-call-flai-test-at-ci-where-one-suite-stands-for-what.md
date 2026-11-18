@@ -3,16 +3,37 @@ id: T-3439
 type: task
 nature: improvement
 title: This repository's CI jobs call flai test --at ci where one suite stands for what the job ran, and the CI design says which keep their own commands and why
-status: backlog
+status: done
 parent: S-0812
 owner: alex
 created: 2026-11-16T23:47:33Z
-updated: 2026-11-16T23:47:33Z
-transitions: []
+updated: 2026-11-18T09:03:59Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:57:02Z
+    by: agent-S-0812
+  - to: in-progress
+    at: 2026-11-18T08:57:03Z
+    by: agent-S-0812
+  - to: done
+    at: 2026-11-18T09:03:59Z
+    by: agent-S-0812
 stream: S-0812
 tags: [flai]
 touches: [".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md]
 after: [T-3437]
+usage:
+  source: log
+  seconds: 416
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 10528
+      cache_read: 2588908
+      cache_write: 92328
+      cost: 1.3034
 ---
 # T-3439 This repository's CI jobs call flai test --at ci where one suite stands for what the job ran, and the CI design says which keep their own commands and why
 

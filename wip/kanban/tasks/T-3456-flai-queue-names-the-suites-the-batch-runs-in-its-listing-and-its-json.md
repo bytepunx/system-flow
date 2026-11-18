@@ -3,16 +3,37 @@ id: T-3456
 type: task
 nature: feature
 title: flai queue names the suites the batch runs, in its listing and its --json
-status: backlog
+status: done
 parent: S-0809
 owner: alex
 created: 2026-11-16T23:49:32Z
-updated: 2026-11-16T23:49:32Z
-transitions: []
+updated: 2026-11-18T09:07:47Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:03:18Z
+    by: agent-S-0809
+  - to: in-progress
+    at: 2026-11-18T09:03:18Z
+    by: agent-S-0809
+  - to: done
+    at: 2026-11-18T09:07:47Z
+    by: agent-S-0809
 stream: S-0809
 tags: [flai]
 touches: [flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md]
 after: [T-3453]
+usage:
+  source: log
+  seconds: 269
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3323
+      cache_read: 913750
+      cache_write: 31332
+      cost: 0.4453
 ---
 # T-3456 flai queue names the suites the batch runs, in its listing and its --json
 

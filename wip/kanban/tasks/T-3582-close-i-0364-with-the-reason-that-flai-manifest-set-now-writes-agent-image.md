@@ -3,16 +3,37 @@ id: T-3582
 type: task
 nature: remediation
 title: Close I-0364 with the reason that flai manifest set now writes agent.image.layer and agent.image.args
-status: backlog
+status: done
 parent: S-0839
 owner: alex
 created: 2026-11-17T12:30:08Z
-updated: 2026-11-17T12:30:08Z
-transitions: []
+updated: 2026-11-18T09:51:40Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:51:25Z
+    by: agent-S-0839
+  - to: in-progress
+    at: 2026-11-18T09:51:28Z
+    by: agent-S-0839
+  - to: done
+    at: 2026-11-18T09:51:40Z
+    by: agent-S-0839
 stream: S-0839
 tags: [flai]
 touches: [design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md, design/issues/summary.md]
 after: [T-3577, T-3581]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 4227
+      cache_read: 775977
+      cache_write: 40352
+      cost: 0.4962
 ---
 # T-3582 Close I-0364 with the reason that flai manifest set now writes agent.image.layer and agent.image.args
 

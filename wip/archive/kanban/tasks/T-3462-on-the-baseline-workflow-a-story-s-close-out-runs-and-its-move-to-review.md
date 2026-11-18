@@ -3,16 +3,37 @@ id: T-3462
 type: task
 nature: feature
 title: On the baseline workflow a story's close-out runs and its move to review requires what they did before this story
-status: backlog
+status: done
 parent: S-0807
 owner: alex
 created: 2026-11-16T23:49:59Z
-updated: 2026-11-16T23:49:59Z
-transitions: []
+updated: 2026-11-18T11:09:24Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:48:42Z
+    by: agent-S-0807
+  - to: in-progress
+    at: 2026-11-18T10:48:42Z
+    by: agent-S-0807
+  - to: done
+    at: 2026-11-18T11:09:24Z
+    by: agent-S-0807
 stream: S-0807
 tags: [flai]
 touches: [flai/cmd/verify_baseline_test.go]
 after: [T-3457, T-3460]
+usage:
+  source: log
+  seconds: 1242
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 19912
+      cache_read: 3935230
+      cache_write: 181327
+      cost: 2.1748
 ---
 # T-3462 On the baseline workflow a story's close-out runs and its move to review requires what they did before this story
 

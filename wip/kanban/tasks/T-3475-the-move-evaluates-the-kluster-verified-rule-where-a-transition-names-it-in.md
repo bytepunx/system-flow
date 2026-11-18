@@ -3,15 +3,36 @@ id: T-3475
 type: task
 nature: feature
 title: The move evaluates the kluster-verified rule where a transition names it, in place of a warning on every move into a waiting state
-status: backlog
+status: done
 parent: S-0810
 owner: alex
 created: 2026-11-16T23:50:52Z
-updated: 2026-11-16T23:50:52Z
-transitions: []
+updated: 2026-11-18T09:41:06Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:21:13Z
+    by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-18T09:21:13Z
+    by: agent-S-0810
+  - to: done
+    at: 2026-11-18T09:41:06Z
+    by: agent-S-0810
 stream: S-0810
 tags: [flai]
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/transition.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/move.go, flai/cmd/move_workflow_test.go]
+usage:
+  source: log
+  seconds: 1193
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 16543
+      cache_read: 3247235
+      cache_write: 112915
+      cost: 1.6047
 ---
 # T-3475 The move evaluates the kluster-verified rule where a transition names it, in place of a warning on every move into a waiting state
 

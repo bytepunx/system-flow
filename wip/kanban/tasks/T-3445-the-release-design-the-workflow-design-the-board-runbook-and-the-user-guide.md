@@ -3,16 +3,37 @@ id: T-3445
 type: task
 nature: feature
 title: The release design, the workflow design, the board runbook, and the user guide describe the suites a publish runs
-status: backlog
+status: done
 parent: S-0811
 owner: alex
 created: 2026-11-16T23:48:23Z
-updated: 2026-11-18T08:16:27Z
-transitions: []
+updated: 2026-11-18T08:56:16Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:53:14Z
+    by: agent-S-0811
+  - to: in-progress
+    at: 2026-11-18T08:53:14Z
+    by: agent-S-0811
+  - to: done
+    at: 2026-11-18T08:56:16Z
+    by: agent-S-0811
 stream: S-0811
 tags: [flai, docs]
 touches: [design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md]
 after: [T-3441, T-3443]
+usage:
+  source: log
+  seconds: 182
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 8586
+      cache_read: 2398004
+      cache_write: 67087
+      cost: 1.0883
 ---
 # T-3445 The release design, the workflow design, the board runbook, and the user guide describe the suites a publish runs
 

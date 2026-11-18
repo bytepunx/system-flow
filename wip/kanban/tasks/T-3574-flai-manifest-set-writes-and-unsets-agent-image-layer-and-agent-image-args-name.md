@@ -3,15 +3,36 @@ id: T-3574
 type: task
 nature: improvement
 title: "flai manifest set writes and unsets agent.image.layer and agent.image.args.<NAME>, checked by the manifest's image validation"
-status: backlog
+status: done
 parent: S-0839
 owner: alex
 created: 2026-11-17T12:29:41Z
-updated: 2026-11-17T12:29:41Z
-transitions: []
+updated: 2026-11-18T09:36:41Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:22:00Z
+    by: agent-S-0839
+  - to: in-progress
+    at: 2026-11-18T09:22:03Z
+    by: agent-S-0839
+  - to: done
+    at: 2026-11-18T09:36:41Z
+    by: agent-S-0839
 stream: S-0839
 tags: [flai]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go]
+usage:
+  source: log
+  seconds: 878
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 12260
+      cache_read: 2250478
+      cache_write: 117029
+      cost: 1.4392
 ---
 # T-3574 flai manifest set writes and unsets agent.image.layer and agent.image.args.<NAME>, checked by the manifest's image validation
 

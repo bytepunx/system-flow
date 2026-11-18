@@ -3,16 +3,37 @@ id: T-3465
 type: task
 nature: feature
 title: The conventions, the workflow design, the CLI design, and the user and operator guides say what a close-out runs and what the verified rule needs
-status: backlog
+status: done
 parent: S-0807
 owner: alex
 created: 2026-11-16T23:50:06Z
-updated: 2026-11-16T23:50:06Z
-transitions: []
+updated: 2026-11-18T11:09:36Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:48:43Z
+    by: agent-S-0807
+  - to: in-progress
+    at: 2026-11-18T10:48:43Z
+    by: agent-S-0807
+  - to: done
+    at: 2026-11-18T11:09:36Z
+    by: agent-S-0807
 stream: S-0807
 tags: [flai, template]
-touches: [design/system/workflow.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, template/CHANGELOG.md]
+touches: [design/system/workflow.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, template/CHANGELOG.md, template/root/design/workflows/board.md, flai/internal/workflow/baseline/board.md]
 after: [T-3457, T-3460]
+usage:
+  source: log
+  seconds: 1253
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 35058
+      cache_read: 6928421
+      cache_write: 319247
+      cost: 3.8289
 ---
 # T-3465 The conventions, the workflow design, the CLI design, and the user and operator guides say what a close-out runs and what the verified rule needs
 

@@ -3,16 +3,37 @@ id: T-3565
 type: task
 nature: remediation
 title: flai stats' cost order and hold replay play out under the report's workflow
-status: backlog
+status: done
 parent: S-0843
 owner: alex
 created: 2026-11-17T12:29:16Z
-updated: 2026-11-17T12:29:16Z
-transitions: []
+updated: 2026-11-18T10:34:56Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:21:45Z
+    by: agent-S-0843
+  - to: in-progress
+    at: 2026-11-18T10:21:45Z
+    by: agent-S-0843
+  - to: done
+    at: 2026-11-18T10:34:56Z
+    by: agent-S-0843
 stream: S-0843
 tags: [flai, workflow, metrics]
 touches: [flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go]
 after: [T-3561]
+usage:
+  source: log
+  seconds: 791
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 7386
+      cache_read: 2156011
+      cache_write: 97623
+      cost: 1.1626
 ---
 # T-3565 flai stats' cost order and hold replay play out under the report's workflow
 

@@ -3,16 +3,37 @@ id: T-3581
 type: task
 nature: improvement
 title: The settings index, the manifest design, the CLI design, the user guide, and the template's manifest say flai manifest set writes the layer and its args
-status: backlog
+status: done
 parent: S-0839
 owner: alex
 created: 2026-11-17T12:30:01Z
-updated: 2026-11-17T12:30:01Z
-transitions: []
+updated: 2026-11-18T09:48:43Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:43:06Z
+    by: agent-S-0839
+  - to: in-progress
+    at: 2026-11-18T09:43:12Z
+    by: agent-S-0839
+  - to: done
+    at: 2026-11-18T09:48:43Z
+    by: agent-S-0839
 stream: S-0839
 tags: [flai, template, docs]
 touches: [docs/operators/settings.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
 after: [T-3574]
+usage:
+  source: log
+  seconds: 331
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 12712
+      cache_read: 2333328
+      cache_write: 121337
+      cost: 1.4922
 ---
 # T-3581 The settings index, the manifest design, the CLI design, the user guide, and the template's manifest say flai manifest set writes the layer and its args
 

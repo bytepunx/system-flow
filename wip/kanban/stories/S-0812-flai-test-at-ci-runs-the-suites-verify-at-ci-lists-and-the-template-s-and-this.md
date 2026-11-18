@@ -3,11 +3,11 @@ id: S-0812
 type: story
 nature: feature
 title: flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:08Z
-updated: 2026-11-18T08:30:35Z
+updated: 2026-11-18T09:15:42Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:41Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-18T08:30:35Z
     by: agent-S-0812
+  - to: review
+    at: 2026-11-18T09:15:42Z
+    by: agent-S-0812
 tags: [flai, template]
 topics: [verify, workflow]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, docs/operators/runbooks/change-the-board.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -25,9 +28,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2743
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 1
+      test_runs: 1
+      work: 59
+  models:
+    - model: claude-opus-5-5
+      input: 330
+      output: 93918
+      cache_read: 23094915
+      cache_write: 823632
+      cost: 11.6272
   strategic:
     - kind: planner
       seconds: 15
@@ -40,15 +55,21 @@ usage:
           cache_write: 29002
           cost: 0.7049
     - kind: orchestrator
-      seconds: 23
+      seconds: 118
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 66
-          cache_read: 384986
-          cache_write: 17683
-          cost: 0.1237
+          input: 22
+          output: 212
+          cache_read: 1032589
+          cache_write: 111616
+          cost: 0.3574
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 30
+          cache_read: 14191
+          cache_write: 34169
+          cost: 0.0392
 cost_of_delay:
   value: 115.74
   by: planner-S-0812
@@ -71,10 +92,10 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] `flai test --at <point>` runs the tiers of the suites the file lists for `ci`, `batch`, or `publish`, over all paths.
-- [ ] The template's CI workflow calls `flai test --at ci` once flai is installed in it, and a project made from the template runs its suites in CI with no command of its own.
-- [ ] This repository's CI workflows call it where a suite stands for what the job ran, and a note in the design says which jobs keep commands of their own and why.
-- [ ] The user guide says how a project's CI runs its suites.
+- [x] `flai test --at <point>` runs the tiers of the suites the file lists for `ci`, `batch`, or `publish`, over all paths.
+- [x] The template's CI workflow calls `flai test --at ci` once flai is installed in it, and a project made from the template runs its suites in CI with no command of its own.
+- [x] This repository's CI workflows call it where a suite stands for what the job ran, and a note in the design says which jobs keep commands of their own and why.
+- [x] The user guide says how a project's CI runs its suites.
 
 ## Tasks
 

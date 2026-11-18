@@ -3,26 +3,43 @@ id: S-0843
 type: story
 nature: remediation
 title: Callers of the workflow-aware guard, forecast replay, and share hold still pass the baseline, so a project's own workflow file will not reach them
-status: ready
+status: review
 owner: alex
 created: 2026-11-17T08:32:54Z
-updated: 2026-11-18T09:20:10Z
+updated: 2026-11-18T11:06:34Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:02Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-18T10:01:55Z
+    by: agent-S-0843
+  - to: review
+    at: 2026-11-18T11:06:34Z
+    by: agent-S-0843
 tags: []
 topics: [workflow]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/mcpserver/shared.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/cmd/items.go, flai/cmd/plan.go, flai/internal/hostapi/hostapi.go, flai/internal/inbox/inbox.go, flai/internal/inbox/starved.go, flai/internal/mcpserver/server.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/kluster.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, design/issues/I-0406-flai-serve-still-reads-three-state-questions-by-the-baseline-workflow-directly.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3890
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 2
+      work: 69
+  models:
+    - model: claude-opus-5-5
+      input: 342
+      output: 80578
+      cache_read: 23521026
+      cache_write: 1065017
+      cost: 12.6836
   strategic:
     - kind: planner
       seconds: 14
@@ -41,15 +58,21 @@ usage:
           cache_write: 40766
           cost: 0.8704
     - kind: orchestrator
-      seconds: 34
+      seconds: 109
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 44
-          cache_read: 423129
-          cache_write: 15722
-          cost: 0.1373
+          input: 28
+          output: 268
+          cache_read: 1219641
+          cache_write: 147051
+          cost: 0.4301
+        - model: claude-sonnet-5-5
+          input: 5
+          output: 43
+          cache_read: 21802
+          cache_write: 26809
+          cost: 0.0394
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -75,14 +98,16 @@ finalized:
 This story remediates [I-0379](../../../design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md), "Callers of the workflow-aware guard, forecast replay, and share hold still pass the baseline, so a project's own workflow file will not reach them". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0379 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0379 is closed with `flai issue close I-0379 --reason` saying what fixed it
+- [x] The cause I-0379 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0379 is closed with `flai issue close I-0379 --reason` saying what fixed it
 
 ## Tasks
 - T-3561 HoldsMemo builds its Holds under a workflow it is given, as NewHoldsIn does
 - T-3563 itemedit's covering stories and grown-claim watch read claims under the project's workflow
 - T-3565 flai stats' cost order and hold replay play out under the report's workflow
 - T-3567 Confirm no caller with a workflow at hand runs a baseline wrapper, and close I-0379
+- T-3609 The share hold's and the other claim readers' Holds read task states under the repository's workflow
+- T-3610 The task plan, changes, epic follow, cancel cascade, plan and promotion candidates read states under the repository's workflow
 
 ## Notes
 

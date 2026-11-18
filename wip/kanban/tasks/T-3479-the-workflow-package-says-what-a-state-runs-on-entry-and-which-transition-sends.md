@@ -3,15 +3,36 @@ id: T-3479
 type: task
 nature: feature
 title: The workflow package says what a state runs on entry and which transition sends a story back from it
-status: backlog
+status: done
 parent: S-0810
 owner: alex
 created: 2026-11-16T23:51:01Z
-updated: 2026-11-16T23:51:01Z
-transitions: []
+updated: 2026-11-18T09:40:54Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:21:13Z
+    by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-18T09:21:13Z
+    by: agent-S-0810
+  - to: done
+    at: 2026-11-18T09:40:54Z
+    by: agent-S-0810
 stream: S-0810
 tags: [flai]
 touches: [flai/internal/workflow/runs.go, flai/internal/workflow/runs_test.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go]
+usage:
+  source: log
+  seconds: 1181
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 6283
+      cache_read: 1233332
+      cache_write: 42886
+      cost: 0.6095
 ---
 # T-3479 The workflow package says what a state runs on entry and which transition sends a story back from it
 

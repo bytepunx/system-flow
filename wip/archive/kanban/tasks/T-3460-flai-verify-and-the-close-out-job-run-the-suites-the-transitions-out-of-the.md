@@ -3,16 +3,37 @@ id: T-3460
 type: task
 nature: feature
 title: flai verify and the close-out job run the suites the transitions out of the story's state need, and --all every suite
-status: backlog
+status: done
 parent: S-0807
 owner: alex
 created: 2026-11-16T23:49:44Z
-updated: 2026-11-16T23:49:44Z
-transitions: []
+updated: 2026-11-18T10:34:37Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:55:59Z
+    by: agent-S-0807
+  - to: in-progress
+    at: 2026-11-18T09:55:59Z
+    by: agent-S-0807
+  - to: done
+    at: 2026-11-18T10:34:37Z
+    by: agent-S-0807
 stream: S-0807
 tags: [flai, template]
-touches: [flai/internal/verify/suites.go, flai/internal/verify/suites_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/mcpserver/verify.go, scripts/close-out.sh, template/root/scripts/close-out.sh]
+touches: [flai/internal/verify/suites.go, flai/internal/verify/suites_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/mcpserver/verify.go, scripts/close-out.sh, template/root/scripts/close-out.sh, docs/users/flai-reference.md, flai/internal/verify/record.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
 after: [T-3454]
+usage:
+  source: log
+  seconds: 2318
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 205
+      output: 84212
+      cache_read: 16642661
+      cache_write: 766858
+      cost: 9.1974
 ---
 # T-3460 flai verify and the close-out job run the suites the transitions out of the story's state need, and --all every suite
 

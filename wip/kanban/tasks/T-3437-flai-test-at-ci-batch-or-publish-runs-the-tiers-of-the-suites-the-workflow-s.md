@@ -3,15 +3,36 @@ id: T-3437
 type: task
 nature: feature
 title: flai test --at ci, batch, or publish runs the tiers of the suites the workflow's verify_at lists, over all paths
-status: backlog
+status: done
 parent: S-0812
 owner: alex
 created: 2026-11-16T23:47:16Z
-updated: 2026-11-16T23:47:16Z
-transitions: []
+updated: 2026-11-18T08:56:05Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:35:53Z
+    by: agent-S-0812
+  - to: in-progress
+    at: 2026-11-18T08:35:53Z
+    by: agent-S-0812
+  - to: done
+    at: 2026-11-18T08:56:05Z
+    by: agent-S-0812
 stream: S-0812
 tags: [flai]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go]
+usage:
+  source: log
+  seconds: 1212
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 12846
+      cache_read: 3158798
+      cache_write: 112652
+      cost: 1.5903
 ---
 # T-3437 flai test --at ci, batch, or publish runs the tiers of the suites the workflow's verify_at lists, over all paths
 

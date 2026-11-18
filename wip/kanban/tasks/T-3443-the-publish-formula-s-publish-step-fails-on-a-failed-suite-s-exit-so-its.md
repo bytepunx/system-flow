@@ -3,16 +3,37 @@ id: T-3443
 type: task
 nature: feature
 title: The publish formula's publish step fails on a failed suite's exit, so its instance blocks and asks, naming the suite and tier
-status: backlog
+status: done
 parent: S-0811
 owner: alex
 created: 2026-11-16T23:48:14Z
-updated: 2026-11-18T08:16:10Z
-transitions: []
+updated: 2026-11-18T08:47:56Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:38:26Z
+    by: agent-S-0811
+  - to: in-progress
+    at: 2026-11-18T08:38:27Z
+    by: agent-S-0811
+  - to: done
+    at: 2026-11-18T08:47:56Z
+    by: agent-S-0811
 stream: S-0811
 tags: [flai, template]
 touches: [template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md]
 after: [T-3441]
+usage:
+  source: log
+  seconds: 569
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 3995
+      cache_read: 1115953
+      cache_write: 31220
+      cost: 0.5065
 ---
 # T-3443 The publish formula's publish step fails on a failed suite's exit, so its instance blocks and asks, naming the suite and tier
 

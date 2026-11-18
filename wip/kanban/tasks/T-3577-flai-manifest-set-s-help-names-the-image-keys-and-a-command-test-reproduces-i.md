@@ -3,16 +3,37 @@ id: T-3577
 type: task
 nature: improvement
 title: flai manifest set's help names the image keys, and a command test reproduces I-0364
-status: backlog
+status: done
 parent: S-0839
 owner: alex
 created: 2026-11-17T12:29:51Z
-updated: 2026-11-17T12:29:51Z
-transitions: []
+updated: 2026-11-18T09:48:28Z
+transitions:
+  - to: ready
+    at: 2026-11-18T09:43:06Z
+    by: agent-S-0839
+  - to: in-progress
+    at: 2026-11-18T09:43:12Z
+    by: agent-S-0839
+  - to: done
+    at: 2026-11-18T09:48:28Z
+    by: agent-S-0839
 stream: S-0839
 tags: [flai]
 touches: [flai/cmd/manifest.go, flai/cmd/manifest_test.go, docs/users/flai-reference.md]
 after: [T-3574]
+usage:
+  source: log
+  seconds: 316
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 7943
+      cache_read: 1458026
+      cache_write: 75820
+      cost: 0.9324
 ---
 # T-3577 flai manifest set's help names the image keys, and a command test reproduces I-0364
 

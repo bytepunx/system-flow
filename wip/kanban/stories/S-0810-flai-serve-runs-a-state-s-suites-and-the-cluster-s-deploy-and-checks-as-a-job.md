@@ -3,18 +3,24 @@ id: S-0810
 type: story
 nature: feature
 title: flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails
-status: ready
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:06Z
-updated: 2026-11-18T08:31:07Z
+updated: 2026-11-18T11:23:13Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:12Z
     by: alex
+  - to: in-progress
+    at: 2026-11-18T09:16:11Z
+    by: agent-S-0810
+  - to: review
+    at: 2026-11-18T11:23:13Z
+    by: agent-S-0810
 tags: [flai]
 topics: [verify, workflow, kluster]
-touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/transition.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/move.go, flai/cmd/move_workflow_test.go, flai/internal/workflow/runs.go, flai/internal/workflow/runs_test.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/serve.go, flai/internal/serve/agents_restart.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/verify.go, flai/internal/verify/story.go, docs/users/flai-reference.md, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md]
+touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/transition.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/move.go, flai/cmd/move_workflow_test.go, flai/internal/workflow/runs.go, flai/internal/workflow/runs_test.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/serve.go, flai/internal/serve/agents_restart.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/verify.go, flai/internal/verify/story.go, docs/users/flai-reference.md, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md, docs/operators/settings.md, flai/cmd/verify_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart_test.go, flai/internal/serve/verifyjob.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story_test.go, flai/internal/workflow/baseline/board.md, template/CHANGELOG.md, template/root/design/workflows/board.md]
 after: [S-0806, S-0804]
 agent:
   harness: claude-code
@@ -22,9 +28,26 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 7668
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 3
+      work: 70
+  models:
+    - model: claude-haiku-5-5
+      input: 18
+      output: 16958
+      cache_read: 696349
+      cache_write: 129985
+      cost: 0.1
+    - model: claude-opus-5-5
+      input: 730
+      output: 364322
+      cache_read: 71515098
+      cache_write: 2486766
+      cost: 35.3401
   strategic:
     - kind: planner
       seconds: 5
@@ -37,15 +60,21 @@ usage:
           cache_write: 8404
           cost: 0.1355
     - kind: orchestrator
-      seconds: 26
+      seconds: 99
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 80
-          cache_read: 367799
-          cache_write: 66491
-          cost: 0.1335
+          input: 27
+          output: 274
+          cache_read: 1185262
+          cache_write: 155832
+          cost: 0.4199
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 34
+          cache_read: 53154
+          cache_write: 31039
+          cost: 0.0684
 cost_of_delay:
   value: 175.37
   by: planner-S-0810
@@ -68,11 +97,11 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] When a story enters a state with `runs:`, flai serve rebases its branch onto the main branch and runs the state's suites and `kluster:` steps as a job, with its output kept and its steps recorded as they start and end.
-- [ ] A job that passes leaves the story in the state; a rebase that stops on conflicts or a step that fails sends it back by the state's `send-back` transition, with the thread its agent is started on.
-- [ ] A `kluster:` step is skipped, and the record says so and why, when the project configures no deploy, the kluster host action is off, or no agent namespace is available, and it never holds the story.
-- [ ] The cluster's deploy and checks run where a state's `runs:` names them and on no other state, and the `kluster-verified` rule is evaluated by the move where a transition names it.
-- [ ] On the baseline the cluster's deploy and checks run on entering `review` as before this story.
+- [x] When a story enters a state with `runs:`, flai serve rebases its branch onto the main branch and runs the state's suites and `kluster:` steps as a job, with its output kept and its steps recorded as they start and end.
+- [x] A job that passes leaves the story in the state; a rebase that stops on conflicts or a step that fails sends it back by the state's `send-back` transition, with the thread its agent is started on.
+- [x] A `kluster:` step is skipped, and the record says so and why, when the project configures no deploy, the kluster host action is off, or no agent namespace is available, and it never holds the story.
+- [x] The cluster's deploy and checks run where a state's `runs:` names them and on no other state, and the `kluster-verified` rule is evaluated by the move where a transition names it.
+- [x] On the baseline the cluster's deploy and checks run on entering `review` as before this story.
 
 ## Tasks
 

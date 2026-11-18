@@ -3,16 +3,37 @@ id: T-3567
 type: task
 nature: remediation
 title: Confirm no caller with a workflow at hand runs a baseline wrapper, and close I-0379
-status: backlog
+status: done
 parent: S-0843
 owner: alex
 created: 2026-11-17T12:29:26Z
-updated: 2026-11-17T12:29:26Z
-transitions: []
+updated: 2026-11-18T10:51:58Z
+transitions:
+  - to: ready
+    at: 2026-11-18T10:35:11Z
+    by: agent-S-0843
+  - to: in-progress
+    at: 2026-11-18T10:35:11Z
+    by: agent-S-0843
+  - to: done
+    at: 2026-11-18T10:51:58Z
+    by: agent-S-0843
 stream: S-0843
 tags: [flai, workflow, issues]
 touches: [design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md]
-after: [T-3563, T-3565]
+after: [T-3563, T-3565, T-3609, T-3610]
+usage:
+  source: log
+  seconds: 1007
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 17523
+      cache_read: 5115009
+      cache_write: 231604
+      cost: 2.7582
 ---
 # T-3567 Confirm no caller with a workflow at hand runs a baseline wrapper, and close I-0379
 

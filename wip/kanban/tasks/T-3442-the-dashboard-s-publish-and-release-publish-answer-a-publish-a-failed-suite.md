@@ -3,16 +3,37 @@ id: T-3442
 type: task
 nature: feature
 title: The dashboard's Publish and release_publish answer a publish a failed suite refused with the suite, the tier, and the log
-status: backlog
+status: done
 parent: S-0811
 owner: alex
 created: 2026-11-16T23:48:09Z
-updated: 2026-11-16T23:48:09Z
-transitions: []
+updated: 2026-11-18T08:47:41Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:38:26Z
+    by: agent-S-0811
+  - to: in-progress
+    at: 2026-11-18T08:38:26Z
+    by: agent-S-0811
+  - to: done
+    at: 2026-11-18T08:47:41Z
+    by: agent-S-0811
 stream: S-0811
 tags: [flai]
-touches: [flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/writes_actions.go]
 after: [T-3441]
+usage:
+  source: log
+  seconds: 555
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 6534
+      cache_read: 1824875
+      cache_write: 51053
+      cost: 0.8282
 ---
 # T-3442 The dashboard's Publish and release_publish answer a publish a failed suite refused with the suite, the tier, and the log
 

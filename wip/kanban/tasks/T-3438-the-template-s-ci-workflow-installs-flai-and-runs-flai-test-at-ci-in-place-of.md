@@ -3,16 +3,37 @@ id: T-3438
 type: task
 nature: feature
 title: The template's CI workflow installs flai and runs flai test --at ci in place of commands of its own
-status: backlog
+status: done
 parent: S-0812
 owner: alex
 created: 2026-11-16T23:47:26Z
-updated: 2026-11-16T23:47:26Z
-transitions: []
+updated: 2026-11-18T09:03:51Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:57:02Z
+    by: agent-S-0812
+  - to: in-progress
+    at: 2026-11-18T08:57:02Z
+    by: agent-S-0812
+  - to: done
+    at: 2026-11-18T09:03:51Z
+    by: agent-S-0812
 stream: S-0812
 tags: [template]
 touches: [template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh]
 after: [T-3437]
+usage:
+  source: log
+  seconds: 409
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 8894
+      cache_read: 2186984
+      cache_write: 77994
+      cost: 1.101
 ---
 # T-3438 The template's CI workflow installs flai and runs flai test --at ci in place of commands of its own
 

@@ -9,7 +9,7 @@ date: 2026-11-17
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0811, T-3443, TH-1250]
 ---
 
 # D-0662 Since main's 4052fc603 this repository has no design/workflows/formulas/publish.md, so the orchestrator publishes with release_publish, and a test that reads the publish formula reads the template's copy until S-0837 retires both

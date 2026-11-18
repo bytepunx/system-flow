@@ -3,16 +3,37 @@ id: T-3487
 type: task
 nature: feature
 title: The design and the guides say a state's runs starts a job with the cluster's steps, which are skipped where no cluster can run them, and kluster-verified is checked where a transition names it
-status: backlog
+status: done
 parent: S-0810
 owner: alex
 created: 2026-11-16T23:51:46Z
-updated: 2026-11-16T23:51:46Z
-transitions: []
+updated: 2026-11-18T11:11:37Z
+transitions:
+  - to: ready
+    at: 2026-11-18T11:02:41Z
+    by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-18T11:02:41Z
+    by: agent-S-0810
+  - to: done
+    at: 2026-11-18T11:11:37Z
+    by: agent-S-0810
 stream: S-0810
 tags: [flai]
-touches: [design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md]
+touches: [design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md, flai/internal/workflow/baseline/board.md, template/root/design/workflows/board.md, template/CHANGELOG.md]
 after: [T-3475, T-3484]
+usage:
+  source: log
+  seconds: 536
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 125
+      output: 62416
+      cache_read: 12252040
+      cache_write: 426035
+      cost: 6.0545
 ---
 # T-3487 The design and the guides say a state's runs starts a job with the cluster's steps, which are skipped where no cluster can run them, and kluster-verified is checked where a transition names it
 

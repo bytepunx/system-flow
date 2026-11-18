@@ -3,11 +3,11 @@ id: S-0811
 type: story
 nature: feature
 title: The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-18T08:16:10Z
+updated: 2026-11-18T09:07:52Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-18T08:12:44Z
     by: agent-S-0811
+  - to: review
+    at: 2026-11-18T09:07:52Z
+    by: agent-S-0811
 tags: [flai, template]
 topics: [verify, workflow, release]
-touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md]
+touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -25,9 +28,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3328
+  priced_by: harness
+  turns:
+    - day: 2026-11-18
+      ceremony: 1
+      work: 66
+  models:
+    - model: claude-opus-5-5
+      input: 368
+      output: 89865
+      cache_read: 25099718
+      cache_write: 702199
+      cost: 11.3912
   strategic:
     - kind: planner
       seconds: 40
@@ -46,15 +60,21 @@ usage:
           cache_write: 94362
           cost: 2.9176
     - kind: orchestrator
-      seconds: 96
+      seconds: 178
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 259
-          cache_read: 1181715
-          cache_write: 110554
-          cost: 0.3994
+          input: 46
+          output: 381
+          cache_read: 1850043
+          cache_write: 193865
+          cost: 0.6362
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 56
+          cache_read: 48153
+          cache_write: 39555
+          cost: 0.0709
 cost_of_delay:
   value: 90.11
   by: planner-S-0811
@@ -77,10 +97,10 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] With `verify_at.publish` set, the publish of what is pending runs those suites at the main branch's head before any tag or version file is written, with the output kept, and exits with its own code, naming the tier, when one fails.
-- [ ] The publish formula stops on that code and its story says which suite failed.
-- [ ] With no `publish` in the file, as on the baseline, publishing runs no tier, as before this story.
-- [ ] The release design and the runbook describe it.
+- [x] With `verify_at.publish` set, the publish of what is pending runs those suites at the main branch's head before any tag or version file is written, with the output kept, and exits with its own code, naming the tier, when one fails.
+- [x] The publish formula stops on that code and its story says which suite failed.
+- [x] With no `publish` in the file, as on the baseline, publishing runs no tier, as before this story.
+- [x] The release design and the runbook describe it.
 
 ## Tasks
 - T-3441 flai release --pending runs the suites verify_at.publish lists at the main branch's head before it applies or tags, and exits with a code of its own naming the failed tier
