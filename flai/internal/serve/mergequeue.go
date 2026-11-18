@@ -367,8 +367,10 @@ func (p *queuePass) look(ctx context.Context) {
 	}
 	defer p.runs.release(p.e.Root)
 	git, started := gitOf(p.o), p.o.Now()
-	d := mergequeue.Deps{Runner: git, Now: p.o.Now, Verify: mergequeue.CheckoutVerifier(git, p.o.Version), Log: p.o.Logger.With("root", p.e.Root),
-		Actions: p.actions()}
+	// a batch runs the suites the main checkout's workflow gives it, every
+	// suite on the baseline (ADR-0312 §6)
+	d := mergequeue.Deps{Runner: git, Now: p.o.Now, Verify: mergequeue.CheckoutVerifier(git, p.o.Version), Suites: mergequeue.BatchSuites(repo.Flow()),
+		Log: p.o.Logger.With("root", p.e.Root), Actions: p.actions()}
 	// a story the queue sent back that is in review again at a new commit
 	// has its send back's thread resolved, so that it can be batched again
 	if resolved, err := mergequeue.ResolveSentBack(d, repo); err != nil {

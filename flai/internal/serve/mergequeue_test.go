@@ -351,6 +351,35 @@ func TestTheMergeQueueOpensTheProjectWithTheOptionsWorkflow(t *testing.T) {
 	}
 }
 
+// S-0809 criteria 1 and 3: flai serve gives the queue the suites the main
+// checkout's workflow file lists under verify_at.batch, and every suite, nil,
+// on the baseline, so that a batch there runs what it ran before.
+func TestTheMergeQueueRunsTheSuitesOfTheMainCheckoutsVerifyAtBatch(t *testing.T) {
+	lab := newQueueLab(t)
+	lab.look()
+	if n := lab.batches.count(); n != 1 {
+		t.Fatalf("batches run on the baseline = %d, want 1", n)
+	}
+	if s := lab.batches.deps[0].Suites; s != nil {
+		t.Errorf("on the baseline the queue was given suites %#v, want nil, every suite", s)
+	}
+	flow := strings.Replace(renamedFlow, "effects: [reopen]}\n---\n", "effects: [reopen]}\nverify_at: {batch: [behavior, static]}\n---\n", 1)
+	file := filepath.Join(lab.root, filepath.FromSlash(workflow.Rel("design")))
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(flow), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.look()
+	if n := lab.batches.count(); n != 2 {
+		t.Fatalf("batches run with the workflow file = %d, want 2", n)
+	}
+	if s := lab.batches.deps[1].Suites; !slices.Equal(s, []string{"behavior", "static"}) {
+		t.Errorf("with verify_at.batch [behavior, static] the queue was given suites %#v, want them", s)
+	}
+}
+
 // S-0399: a batch that fails is logged as an error with the project and the
 // error, and the next look tries again.
 func TestAFailedMergeQueueBatchIsLoggedAndTriedAgain(t *testing.T) {
@@ -1081,7 +1110,7 @@ func TestAPassLandsAndSendsBackThroughTheRealAdvance(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	tiers := func(_ context.Context, dir, _, _ string, _ []string, started func(string)) (verify.Report, error) {
+	tiers := func(_ context.Context, dir, _, _ string, _, _ []string, started func(string)) (verify.Report, error) {
 		started("unit")
 		if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil {
 			return verify.Report{StoppedAt: "unit", Steps: []verify.Step{{Name: "unit", Tier: true, State: verify.Failed}}}, nil

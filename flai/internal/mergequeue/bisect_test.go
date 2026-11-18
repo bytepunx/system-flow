@@ -29,8 +29,8 @@ var t2 = t1.Add(time.Hour)
 // head to <tier>.log in the folder it is given, standing for the tier's
 // output. Its finding names the files, or, with output set, is a plain
 // tier's that printed output and exited 1, as flai verify finds one. It
-// keeps the batch's step in the state and the stories it was given as each
-// verification runs; cancel, when set, ends the run's context as one runs,
+// keeps the batch's step in the state and the stories and suites it was
+// given as each verification runs; cancel, when set, ends the run's context as one runs,
 // and drop, when set, runs once as one runs.
 type fileVerifier struct {
 	cacheDir string
@@ -41,12 +41,14 @@ type fileVerifier struct {
 	drop     func()
 	steps    []string
 	stories  [][]string
+	suites   [][]string
 }
 
-func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, stories []string, started func(string)) (verify.Report, error) {
+func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, stories, suites []string, started func(string)) (verify.Report, error) {
 	tier := orDefault(v.tier, "unit")
 	started(tier)
 	v.stories = append(v.stories, slices.Clone(stories))
+	v.suites = append(v.suites, slices.Clone(suites))
 	if head, err := (execx.System{}).Run(dir, "git", "rev-parse", "HEAD"); err == nil {
 		if err := os.MkdirAll(logDir, 0o755); err == nil {
 			_ = os.WriteFile(filepath.Join(logDir, tier+".log"), []byte(tier+" at "+head), 0o644)
@@ -251,6 +253,73 @@ func TestEachBisectionStepIsVerifiedGivenItsStories(t *testing.T) {
 	}
 }
 
+// S-0809 criterion 1: each bisection step's verifier is given the suites its
+// batch's record names, as the batch's own was, whatever suites the queue is
+// given now: a batch built to run behavior bisects with behavior after the
+// workflow changed to static, and one whose record names all, or that was
+// recorded before batches named their suites, bisects with every suite.
+func TestEachBisectionStepRunsTheSuitesItsBatchRan(t *testing.T) {
+	repo, _ := gitProject(t, "")
+	v := &fileVerifier{cacheDir: repo.CacheDir(), files: []string{"f3.txt"}}
+	var stories []string
+	for i := 1; i <= 4; i++ {
+		id, _ := readyStory(t, repo, fmt.Sprintf("Story %d", i), t0.Add(time.Duration(i)*time.Hour), fmt.Sprintf("f%d.txt", i), "f\n")
+		stories = append(stories, id)
+	}
+	enqueue(t, repo, stories...)
+	d := fileDeps(v, t1)
+	d.Suites = []string{"behavior"}
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || st.Batch.Step != StepFailed || !slices.Equal(st.Batch.Suites, []string{"behavior"}) {
+		t.Fatalf("batch %+v, want it failed, naming behavior", st.Batch)
+	}
+	if len(v.suites) != 1 || !slices.Equal(v.suites[0], []string{"behavior"}) {
+		t.Fatalf("the batch was verified given suites %v, want [behavior] once", v.suites)
+	}
+	v.suites = nil
+	d = fileDeps(v, t2)
+	d.Suites = []string{"static"}
+	_, st = runBisect(t, d, repo)
+	if bs := st.Batch.Bisect; bs == nil || !bs.Found() || len(bs.Steps) != 2 || len(v.suites) != 2 {
+		t.Fatalf("bisection %+v, verified given suites %v; want two steps found", bs, v.suites)
+	}
+	for i, s := range v.suites {
+		if !slices.Equal(s, []string{"behavior"}) {
+			t.Errorf("step %d verified given suites %v, want its batch's [behavior]", i, s)
+		}
+	}
+
+	for _, tc := range []struct {
+		name   string
+		record []string
+	}{
+		{name: "a record naming all", record: []string{workflow.SuitesAll}},
+		{name: "a record from before suites", record: nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, v, _, _, _ := failedBatch(t, 4, 3)
+			if _, err := Update(repo.CacheDir(), func(s *State) error {
+				s.Batch.Suites = tc.record
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			v.suites = nil
+			d := fileDeps(v, t2)
+			d.Suites = []string{"static"}
+			runBisect(t, d, repo)
+			if len(v.suites) != 2 {
+				t.Fatalf("verified given suites %v, want two steps", v.suites)
+			}
+			for i, s := range v.suites {
+				if s != nil {
+					t.Errorf("step %d verified given suites %#v, want nil, every suite", i, s)
+				}
+			}
+		})
+	}
+}
+
 // eventsOf are the lines of the event log in dir of kind.
 func eventsOf(t *testing.T, dir, kind string) []Event {
 	t.Helper()
@@ -387,7 +456,7 @@ func TestRunBisectDoesNothingWhenThereIsNothingToBisect(t *testing.T) {
 			writeState(t, repo.CacheDir(), tc.state)
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}

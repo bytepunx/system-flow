@@ -118,6 +118,12 @@ type Batch struct {
 	// Base is the main branch's commit the batch was built on.
 	Base    string   `json:"base,omitempty"`
 	Stories []string `json:"stories"`
+	// Suites are the suites the batch and its bisection run: [all] for
+	// every suite, the list the workflow's verify_at.batch gives, or none,
+	// [], for a workflow that names no suite for the batch (ADR-0312 §6);
+	// nil for a batch recorded before batches named their suites, which ran
+	// every suite.
+	Suites []string `json:"suites"`
 	// LeftOut are the stories selected for the batch whose rebase onto it
 	// stopped, in the order they were selected.
 	LeftOut []LeftOut `json:"left_out,omitempty"`

@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -66,28 +67,73 @@ const logsKept = 20
 
 // Verifier verifies the batch's worktree at dir, built on base with
 // stories, in batch order, with the tiers flai verify selects for what it
-// changes against base, calling started with each tier's name as it starts,
-// and writing each tier's whole output to <tier>.log in logDir, an absolute
-// folder outside the worktree. An error with ctx ended is a verification
-// stopped; any other is one that could not run.
-type Verifier func(ctx context.Context, dir, base, logDir string, stories []string, started func(tier string)) (verify.Report, error)
+// changes against base, of them only those of suites when it is not nil, as
+// verify.TierOptions takes them, calling started with each tier's name as it
+// starts, and writing each tier's whole output to <tier>.log in logDir, an
+// absolute folder outside the worktree. An error with ctx ended is a
+// verification stopped; any other is one that could not run.
+type Verifier func(ctx context.Context, dir, base, logDir string, stories, suites []string, started func(tier string)) (verify.Report, error)
 
 // CheckoutVerifier is the Verifier flai serve runs: the test tiers of the
 // manifest in the batch's worktree, read for the flai at version, run with
 // verify.Tiers, git run through r, each logged in logDir and run with
 // verify.MergeQueueStoriesEnv set to the stories, comma-separated, and no
-// verify.StoryEnv, as the batch is no close-out. It leaves no tier out: the
-// tiers marked queue, which flai verify leaves to the batch while the queue
-// can batch, run here whenever the batch's paths select them (ADR-0174).
+// verify.StoryEnv, as the batch is no close-out. Of the tiers the batch's
+// paths select it runs those of the suites it is given, every one of them
+// under all, and leaves no other out: the tiers marked queue, which flai
+// verify leaves to the batch while the queue can batch, run here whenever
+// the batch's paths select them and their suite is given (ADR-0174,
+// ADR-0312 §6).
 func CheckoutVerifier(r execx.Runner, version string) Verifier {
-	return func(ctx context.Context, dir, base, logDir string, stories []string, started func(string)) (verify.Report, error) {
+	return func(ctx context.Context, dir, base, logDir string, stories, suites []string, started func(string)) (verify.Report, error) {
 		tiers, err := verify.CheckoutTiersFor(dir, r, version)
 		if err != nil {
 			return verify.Report{}, err
 		}
 		env := []string{verify.MergeQueueStoriesEnv + "=" + strings.Join(stories, ",")}
-		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started, RunOptions: verify.RunOptions{LogDir: logDir, Env: env}})
+		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started, Suites: suites, RunOptions: verify.RunOptions{LogDir: logDir, Env: env}})
 	}
+}
+
+// BatchSuites are the suites a batch runs under workflow w, as
+// verify.TierOptions.Suites takes them (ADR-0312 §6): nil, every suite, for
+// a file that gives none of ADR-0312's keys, which reads as the baseline's
+// verify_at: {batch: all} (ADR-0312 §8), and for verify_at.batch: all; a
+// copy of the list verify_at.batch gives; and an empty list, which runs no
+// tier, for a file that gives the keys but not verify_at.batch, as a key it
+// leaves out names nothing.
+func BatchSuites(w workflow.Workflow) []string {
+	if !w.UsesSuiteKeys() {
+		return nil
+	}
+	b := w.VerifyAt.Batch
+	switch {
+	case b == nil:
+		return []string{}
+	case b.All:
+		return nil
+	}
+	return append([]string{}, b.Names...)
+}
+
+// recordedSuites are the suites a batch's record names, as Batch.Suites
+// gives them: [all] for nil, every suite, else a copy of suites.
+func recordedSuites(suites []string) []string {
+	if suites == nil {
+		return []string{workflow.SuitesAll}
+	}
+	return append([]string{}, suites...)
+}
+
+// runSuites are the suites a batch whose record names recorded runs, as
+// verify.TierOptions.Suites takes them: nil, every suite, for [all] and for
+// the nil of a record from before batches named their suites, else a copy
+// of recorded.
+func runSuites(recorded []string) []string {
+	if recorded == nil || slices.Equal(recorded, []string{workflow.SuitesAll}) {
+		return nil
+	}
+	return append([]string{}, recorded...)
 }
 
 // Deps are what RunBatch works with.
@@ -100,6 +146,10 @@ type Deps struct {
 	// Verify verifies the built batch; nil is CheckoutVerifier with this
 	// flai's version.
 	Verify Verifier
+	// Suites are the suites a new batch and its bisection run, as
+	// BatchSuites gives them from the main checkout's workflow; nil is every
+	// suite, as on the baseline.
+	Suites []string
 	// Preflight runs the landing's preflight on the main checkout before a
 	// batch is built (ADR-0234); nil is MainPreflight with Runner and Now.
 	Preflight Preflighter
@@ -310,8 +360,9 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 	for _, e := range picks {
 		stories = append(stories, e.Story)
 	}
+	suites := recordedSuites(b.d.Suites)
 	if _, err := Update(b.repo.CacheDir(), func(s *State) error {
-		s.Batch = &Batch{ID: b.id, Branch: b.branch, Worktree: rel, Base: b.base, Stories: slices.Clone(stories), StartedAt: now, Step: StepBuilding}
+		s.Batch = &Batch{ID: b.id, Branch: b.branch, Worktree: rel, Base: b.base, Stories: slices.Clone(stories), Suites: slices.Clone(suites), StartedAt: now, Step: StepBuilding}
 		return nil
 	}); err != nil {
 		return err
@@ -365,7 +416,7 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 	if err := b.step(StepVerifying); err != nil {
 		return err
 	}
-	rep, verr := b.d.Verify(ctx, b.path, b.base, b.logs(""), kept, func(tier string) {
+	rep, verr := b.d.Verify(ctx, b.path, b.base, b.logs(""), kept, runSuites(suites), func(tier string) {
 		if ctx.Err() != nil {
 			return
 		}

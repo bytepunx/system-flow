@@ -629,7 +629,7 @@ func TestAdvanceDoesNothingWithNoVerifiedBatch(t *testing.T) {
 				called = true
 				return nil
 			}
-			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t3 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t3 }, Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}
@@ -846,7 +846,7 @@ func newKeptBatch(t *testing.T) *keptBatch {
 
 func (k *keptBatch) deps() Deps {
 	return Deps{Runner: k.g, Now: func() time.Time { return k.at }, Log: slog.New(slog.NewJSONHandler(&k.logs, nil)),
-		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+		Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 			k.verified++
 			return verify.Report{Passed: true}, nil
 		},

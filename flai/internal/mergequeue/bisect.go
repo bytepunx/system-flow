@@ -88,6 +88,8 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 		return false, err
 	}
 	b := &build{d: d, repo: repo, id: batch.ID, branch: batch.Branch, base: batch.Base, path: filepath.Join(repo.CacheDir(), "worktrees", WorktreeName)}
+	// each step runs the suites its batch ran, whatever the workflow names now
+	suites := runSuites(batch.Suites)
 	n := len(batch.Stories)
 	ran := false
 	for {
@@ -136,7 +138,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 		if err := os.RemoveAll(b.logs(sub)); err != nil {
 			d.Log.Warn("merge queue bisection step's earlier logs not removed; bisection goes on", "component", "mergequeue", "batch", b.id, "path", b.logs(sub), "err", err.Error())
 		}
-		rep, verr := d.Verify(ctx, b.path, b.base, b.logs(sub), stories, func(tier string) {
+		rep, verr := d.Verify(ctx, b.path, b.base, b.logs(sub), stories, suites, func(tier string) {
 			if ctx.Err() != nil {
 				return
 			}

@@ -3,6 +3,7 @@ package mergequeue
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -66,8 +68,8 @@ func (p *tierProc) Run(_ context.Context, _ string, argv, _ []string, _, stderr 
 // CheckoutVerifier does, with batchTiers run by p and real git, each tier
 // logged in the folder it is given.
 func verifier(p *tierProc) Verifier {
-	return func(ctx context.Context, dir, base, logDir string, _ []string, started func(string)) (verify.Report, error) {
-		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: batchTiers, Git: execx.System{}, Started: started, RunOptions: verify.RunOptions{Proc: p, LogDir: logDir}})
+	return func(ctx context.Context, dir, base, logDir string, _, suites []string, started func(string)) (verify.Report, error) {
+		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: batchTiers, Git: execx.System{}, Started: started, Suites: suites, RunOptions: verify.RunOptions{Proc: p, LogDir: logDir}})
 	}
 }
 
@@ -937,6 +939,130 @@ func TestTheBatchRunsTheTiersMarkedQueue(t *testing.T) {
 	}
 }
 
+// S-0809 criterion 1 (ADR-0312 §6): a batch whose workflow's verify_at.batch
+// lists behavior runs, as flai serve runs it, only the behavior tiers its
+// paths select, the tier that runs under all and is marked queue among them,
+// and no tier of another suite or that its paths do not select; its verifier
+// is given the suites, and its record and its result name them.
+func TestTheBatchRunsOnlyTheTiersOfItsSuitesThatItsPathsSelect(t *testing.T) {
+	ran := filepath.Join(t.TempDir(), "ran")
+	tier := func(name, suite, paths string) string {
+		return "  - name: " + name + "\n    suite: " + suite + "\n    command: [sh, -c, \"echo " + name + " >> '" + ran + "'\"]\n    paths: [\"" + paths + "\"]\n"
+	}
+	repo, _ := gitProject(t, "orchestration:\n  permissions:\n    accept_reviews: true\ntests:\n"+
+		tier("unit", "behavior", "**/*.txt")+
+		tier("lint", "static", "**/*.txt")+
+		tier("smoke", "behavior", "**/*.txt")+"    all_only: true\n    queue: true\n"+
+		tier("e2e", "behavior", "**/*.go"))
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+
+	var given [][]string
+	checkout := CheckoutVerifier(execx.System{}, "")
+	d := Deps{Runner: execx.System{}, Now: func() time.Time { return t1 }, Suites: []string{"behavior"},
+		Verify: func(ctx context.Context, dir, base, logDir string, stories, suites []string, started func(string)) (verify.Report, error) {
+			given = append(given, slices.Clone(suites))
+			return checkout(ctx, dir, base, logDir, stories, suites, started)
+		}}
+	_, st := runBatch(t, d, repo)
+	if len(given) != 1 || !slices.Equal(given[0], []string{"behavior"}) {
+		t.Errorf("the verifier was given suites %v, want [behavior] once", given)
+	}
+	if st.Batch == nil || st.Batch.Step != StepVerified || !slices.Equal(st.Batch.Suites, []string{"behavior"}) {
+		t.Fatalf("batch %+v, want it verified, naming behavior", st.Batch)
+	}
+	if r := st.Batch.Result; r == nil || !r.Passed || r.Summary != "passed unit, smoke" {
+		t.Errorf("result %+v, want unit and smoke passed", r)
+	}
+	data, err := os.ReadFile(ran)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Fields(string(data)); !slices.Equal(got, []string{"unit", "smoke"}) {
+		t.Errorf("ran %v, want unit and then smoke, behavior's tiers the paths select, and not lint or e2e", got)
+	}
+}
+
+// S-0809 criteria 2 and 3: a batch's record in state.json names the suites
+// it runs, [all] for every suite, as on the baseline, where its verifier is
+// given nil and so runs what it ran before; the list for a list; and [] for
+// none, where its verifier is given an empty list and runs no tier.
+func TestABatchsRecordNamesItsSuites(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		suites []string
+		record string
+	}{
+		{name: "every suite", suites: nil, record: `["all"]`},
+		{name: "a list", suites: []string{"behavior", "static"}, record: `["behavior","static"]`},
+		{name: "none", suites: []string{}, record: `[]`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, _ := gitProject(t, "")
+			a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+			enqueue(t, repo, a)
+			var given [][]string
+			d := Deps{Runner: execx.System{}, Now: func() time.Time { return t1 }, Suites: tc.suites,
+				Verify: func(_ context.Context, _, _, _ string, _, suites []string, _ func(string)) (verify.Report, error) {
+					given = append(given, suites)
+					return verify.Report{Passed: true}, nil
+				}}
+			runBatch(t, d, repo)
+			if len(given) != 1 || (given[0] == nil) != (tc.suites == nil) || !slices.Equal(given[0], tc.suites) {
+				t.Errorf("the verifier was given %#v, want %#v once", given, tc.suites)
+			}
+			data, err := os.ReadFile(StatePath(repo.CacheDir()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var raw struct {
+				Batch struct {
+					Suites json.RawMessage `json:"suites"`
+				} `json:"batch"`
+			}
+			if err := json.Unmarshal(data, &raw); err != nil {
+				t.Fatal(err)
+			}
+			var compact bytes.Buffer
+			if err := json.Compact(&compact, raw.Batch.Suites); err != nil || compact.String() != tc.record {
+				t.Errorf("the batch's record names suites %s (%v), want %s:\n%s", raw.Batch.Suites, err, tc.record, data)
+			}
+		})
+	}
+}
+
+// S-0809: BatchSuites gives every suite, nil, for the baseline, for a file
+// that gives none of ADR-0312's keys, and for verify_at.batch: all; a copy of
+// the list verify_at.batch gives; and none, an empty list, for a file that
+// gives the keys but not verify_at.batch.
+func TestBatchSuites(t *testing.T) {
+	behavior := workflow.Workflow{VerifyAt: workflow.VerifyAt{Batch: &workflow.Suites{Names: []string{"behavior"}}}}
+	for _, tc := range []struct {
+		name string
+		w    workflow.Workflow
+		want []string
+	}{
+		{name: "the baseline", w: workflow.Baseline(), want: nil},
+		{name: "a file with no suite keys", w: workflow.Workflow{States: []workflow.State{{Name: "review"}}}, want: nil},
+		{name: "batch all", w: workflow.Workflow{VerifyAt: workflow.VerifyAt{Batch: &workflow.Suites{All: true}}}, want: nil},
+		{name: "batch [behavior]", w: behavior, want: []string{"behavior"}},
+		{name: "the keys but no batch", w: workflow.Workflow{VerifyAt: workflow.VerifyAt{CI: &workflow.Suites{All: true}}}, want: []string{}},
+		{name: "a transition's verify alone", w: workflow.Workflow{Transitions: []workflow.Transition{{To: "done", Verify: &workflow.Verify{Suites: workflow.Suites{All: true}}}}}, want: []string{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := BatchSuites(tc.w)
+			if (got == nil) != (tc.want == nil) || !slices.Equal(got, tc.want) {
+				t.Errorf("BatchSuites = %#v, want %#v", got, tc.want)
+			}
+		})
+	}
+	got := BatchSuites(behavior)
+	got[0] = "static"
+	if behavior.VerifyAt.Batch.Names[0] != "behavior" {
+		t.Error("BatchSuites shares its list with the workflow's")
+	}
+}
+
 // S-0464 (I-0174): the batch's tiers, as flai serve runs them, are given the
 // stories the batch verifies, in batch order, in MERGE_QUEUE_STORIES, so that
 // the scripts they run scope flai check to them, and no CLOSE_OUT_STORY, as
@@ -1125,11 +1251,11 @@ func TestADroppedBatchKeepsItsResultAndIsReplaced(t *testing.T) {
 	enqueue(t, repo, a, b)
 	d := deps(proc, t1)
 	inner := d.Verify
-	d.Verify = func(ctx context.Context, dir, base, logDir string, stories []string, started func(string)) (verify.Report, error) {
+	d.Verify = func(ctx context.Context, dir, base, logDir string, stories, suites []string, started func(string)) (verify.Report, error) {
 		if _, err := AcceptedByHand(repo.CacheDir(), a, "alex", t1); err != nil {
 			t.Fatal(err)
 		}
-		return inner(ctx, dir, base, logDir, stories, started)
+		return inner(ctx, dir, base, logDir, stories, suites, started)
 	}
 
 	_, st := runBatch(t, d, repo)
@@ -1211,7 +1337,7 @@ func TestRunBatchDoesNothingWhenThereIsNothingToBuild(t *testing.T) {
 			}
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}, Actions: Actions{Kluster: tc.kluster}}
@@ -1356,7 +1482,7 @@ func TestAPreflightFindingHoldsTheQueueUntilALookFindsMainClean(t *testing.T) {
 	looks, verified, at := 0, false, t1
 	var logs bytes.Buffer
 	d := Deps{Runner: g, Now: func() time.Time { return at }, Log: slog.New(slog.NewJSONHandler(&logs, nil)),
-		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+		Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 			verified = true
 			return verify.Report{}, nil
 		},
@@ -1436,7 +1562,7 @@ func TestAPreflightThatCannotRunBuildsAndHoldsNothing(t *testing.T) {
 	enqueue(t, repo, s.ID)
 	verified := false
 	d := Deps{Runner: g, Now: func() time.Time { return t1 },
-		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+		Verify: func(context.Context, string, string, string, []string, []string, func(string)) (verify.Report, error) {
 			verified = true
 			return verify.Report{}, nil
 		},
