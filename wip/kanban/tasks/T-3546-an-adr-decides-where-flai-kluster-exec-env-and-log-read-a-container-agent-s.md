@@ -23,16 +23,16 @@ tags: [adr, kluster, container]
 touches: [design/adrs/README.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md]
 usage:
   source: log
-  seconds: 118
+  seconds: 139
   estimated: true
-  priced_by: harness
+  priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 29
-      output: 9294
-      cache_read: 2838615
-      cache_write: 123790
-      cost: 1.744
+      input: 39
+      output: 9378
+      cache_read: 3708057
+      cache_write: 411583
+      cost: 2.4232
 ---
 # T-3546 An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it
 

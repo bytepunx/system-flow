@@ -6,8 +6,8 @@ sources: [TH-1289]
 topics: [verify, workflow, cli, template, flai, go, conventions, code, all]
 paths: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, template/root/design/workflows/board.md, template/CHANGELOG.md, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, design/system/workflow.md, design/system/work-hierarchy.md, design/system/flai-cli.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
 date: 2026-11-18
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#suites-a-step-needs-and-runs-adr-0312adrs0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transitionmd"
 asked_again: []
 cited: []
 ---

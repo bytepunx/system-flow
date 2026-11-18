@@ -6,7 +6,7 @@ title: flai kluster exec and log read .flai-cache/kluster, which a story's agent
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-18T07:10:25Z
+updated: 2026-11-18T08:09:05Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
@@ -20,7 +20,7 @@ blocked:
     reason: awaiting the operator on TH-1290
 tags: [flai, kluster, container]
 topics: [kluster, harness]
-touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md]
+touches: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md, flai/internal/kluster/log.go, design/issues/I-0405-flai-kluster-deploy-job-teardown-job-and-flai-checks-run-job-from-a-story-s.md, design/system/flai-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -28,19 +28,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 284
-  priced_by: harness
+  seconds: 3719
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-17
       ceremony: 2
       work: 26
+    - day: 2026-11-18
+      ceremony: 1
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 19531
-      cache_read: 5965176
-      cache_write: 260137
-      cost: 3.665
+      input: 376
+      output: 21392
+      cache_read: 28778430
+      cache_write: 1640155
+      cost: 17.8647
   strategic:
     - kind: planner
       seconds: 115
@@ -93,8 +97,8 @@ finalized:
 This story remediates [I-0361](../../../design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md), "flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0361 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0361 is closed with `flai issue close I-0361 --reason` saying what fixed it
+- [x] The cause I-0361 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0361 is closed with `flai issue close I-0361 --reason` saying what fixed it
 
 ## Tasks
 - T-3546 An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it

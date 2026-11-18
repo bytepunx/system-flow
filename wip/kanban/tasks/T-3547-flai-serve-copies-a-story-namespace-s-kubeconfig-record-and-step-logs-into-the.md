@@ -3,11 +3,11 @@ id: T-3547
 type: task
 nature: remediation
 title: flai serve copies a story namespace's kubeconfig, record, and step logs into the story's agent cache folder, and a teardown removes them
-status: in-progress
+status: done
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:32:18Z
-updated: 2026-11-18T07:11:52Z
+updated: 2026-11-18T07:40:19Z
 transitions:
   - to: ready
     at: 2026-11-18T07:11:51Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-18T07:11:52Z
     by: agent-S-0834
+  - to: done
+    at: 2026-11-18T07:40:19Z
+    by: agent-S-0834
 stream: S-0834
 tags: [kluster, go]
-touches: [flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+touches: [flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 after: [T-3546]
+usage:
+  source: log
+  seconds: 1707
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 513
+      cache_read: 5636526
+      cache_write: 501178
+      cost: 3.6024
 ---
 # T-3547 flai serve copies a story namespace's kubeconfig, record, and step logs into the story's agent cache folder, and a teardown removes them
 

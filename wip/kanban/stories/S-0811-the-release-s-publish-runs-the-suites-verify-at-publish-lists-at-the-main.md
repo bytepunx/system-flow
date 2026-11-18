@@ -3,15 +3,18 @@ id: S-0811
 type: story
 nature: feature
 title: The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-18T07:32:43Z
+updated: 2026-11-18T08:12:44Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
     by: alex
+  - to: in-progress
+    at: 2026-11-18T08:12:44Z
+    by: agent-S-0811
 tags: [flai, template]
 topics: [verify, workflow, release]
 touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md]

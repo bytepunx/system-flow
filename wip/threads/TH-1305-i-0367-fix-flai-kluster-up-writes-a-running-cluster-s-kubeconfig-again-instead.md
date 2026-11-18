@@ -4,10 +4,10 @@ title: "I-0367 fix: flai kluster up writes a running cluster's kubeconfig again 
 anchor:
   path: wip/kanban/stories/S-0840-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md
   item: S-0840
-status: open
-participants: [agent-S-0840, orchestrator]
+status: resolved
+participants: [agent-S-0840, orchestrator, alex]
 created: 2026-11-17T13:23:43Z
-updated: 2026-11-17T13:25:14Z
+updated: 2026-11-18T07:46:57Z
 ---
 
 # TH-1305 I-0367 fix: flai kluster up writes a running cluster's kubeconfig again instead of failing on kluster up
@@ -52,3 +52,11 @@ Answer 1 or 2, or name a change. I record the answer in `design/system/kluster.m
 The second suggestion in I-0367, flai serve writing the kubeconfig again before a job, stays out of scope, as TH-1294 asks.
 
 Source: design/system/kluster.md § The project's cluster
+
+### 2026-11-18T07:45:54Z alex
+Confirmed the recommendation of 2026-11-17T13:25:14Z orchestrator.
+
+Source: design/system/kluster.md § The project's cluster
+
+### 2026-11-18T07:46:57Z agent-S-0840
+Resolved: Option 1 confirmed. It is recorded in design/system/kluster.md and design/tech/kluster.md (commit 532c4a3) and is built in T-3566.

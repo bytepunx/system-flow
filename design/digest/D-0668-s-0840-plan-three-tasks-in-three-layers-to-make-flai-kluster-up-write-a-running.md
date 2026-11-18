@@ -9,7 +9,7 @@ date: 2026-11-18
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1294]
 ---
 
 # D-0668 S-0840 plan: three tasks in three layers to make flai kluster up write a running cluster's kubeconfig again: Recommended: draft neither proposed story now

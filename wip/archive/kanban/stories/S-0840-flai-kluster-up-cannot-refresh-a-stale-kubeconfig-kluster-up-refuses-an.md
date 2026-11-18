@@ -3,10 +3,10 @@ id: S-0840
 type: story
 nature: remediation
 title: "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:32:51Z
-updated: 2026-11-18T07:12:17Z
+updated: 2026-11-18T08:13:56Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -14,15 +14,22 @@ transitions:
   - to: in-progress
     at: 2026-11-17T13:22:14Z
     by: agent-S-0840
+  - to: review
+    at: 2026-11-18T08:12:26Z
+    by: agent-S-0840
+  - to: done
+    at: 2026-11-18T08:13:56Z
+    by: orchestrator
 blocked:
   - from: 2026-11-17T13:24:02Z
     until: 2026-11-18T07:11:06Z
     reason: awaiting the operator on TH-1305
   - from: 2026-11-18T07:12:17Z
+    until: 2026-11-18T07:45:55Z
     reason: awaiting the operator on TH-1305
 tags: [flai, kluster]
 topics: [kluster]
-touches: [flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, design/system/kluster.md, design/tech/kluster.md]
+touches: [flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, design/system/kluster.md, design/tech/kluster.md, design/issues/I-0367-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md, design/issues/summary.md, docs/users/flai.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -30,21 +37,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 144
+  seconds: 1746
   priced_by: harness
   turns:
     - day: 2026-11-17
       ceremony: 1
       work: 12
     - day: 2026-11-18
-      work: 5
+      ceremony: 1
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 8647
-      cache_read: 3371765
-      cache_write: 469588
-      cost: 4.6042
+      input: 132
+      output: 29622
+      cache_read: 16353827
+      cache_write: 555413
+      cost: 8.307
   strategic:
     - kind: planner
       seconds: 33
@@ -63,15 +71,15 @@ usage:
           cache_write: 69067
           cost: 1.705
     - kind: orchestrator
-      seconds: 105
+      seconds: 120
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 249
-          cache_read: 1418111
-          cache_write: 168901
-          cost: 0.498
+          input: 41
+          output: 311
+          cache_read: 1598108
+          cache_write: 238101
+          cost: 0.5764
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -97,8 +105,8 @@ finalized:
 This story remediates [I-0367](../../../design/issues/I-0367-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md), "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0367 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0367 is closed with `flai issue close I-0367 --reason` saying what fixed it
+- [x] The cause I-0367 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0367 is closed with `flai issue close I-0367 --reason` saying what fixed it
 
 ## Tasks
 - T-3564 Propose the fix for I-0367 and record it in the kluster design
@@ -132,3 +140,12 @@ Forecast: `flai forecast` gave 23m: the median of 147 s per unit of size over 70
 Cost of delay: `flai cod` gives 75 USD a week: 30m lost per 168h cycle at 150 USD an hour. The value stands as flai worked it out from the inputs, which are the operator's.
 
 `after`: none. No story writes output this one reads.
+
+### Accepted by the orchestrator
+
+- Verified: e67f75e76594142403f86e99177d21267c889509
+- At: 2026-11-18T08:13:56Z
+
+Verdict: pass
+- 1: flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/tech/kluster.md, docs/users/flai.md, docs/users/flai-reference.md
+- 2: design/issues/I-0367-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md, design/issues/summary.md

@@ -6,7 +6,7 @@ title: workitem's Item.Closed and PlanArchive read the baseline's done and cance
 status: in-progress
 owner: alex
 created: 2026-11-17T08:32:53Z
-updated: 2026-11-18T07:31:16Z
+updated: 2026-11-18T08:08:36Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0842
 tags: []
 topics: [workflow]
-touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/store.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go, design/system/workflow.md]
+touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go, design/system/workflow.md, flai/internal/workitem/view.go, design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2221
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-18
+      test_runs: 2
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 150
+      output: 792
+      cache_read: 7729059
+      cache_write: 453470
+      cost: 3.1307
   strategic:
     - kind: planner
       seconds: 161
@@ -78,8 +90,8 @@ finalized:
 This story remediates [I-0377](../../../design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md), "workitem's Item.Closed and PlanArchive read the baseline's done and cancelled names, so on a board that renames them flai accept moves a story to the accepted state and then cannot archive it". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0377 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0377 is closed with `flai issue close I-0377 --reason` saying what fixed it
+- [x] The cause I-0377 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0377 is closed with `flai issue close I-0377 --reason` saying what fixed it
 
 ## Tasks
 - T-3572 Item.Closed and PlanArchive read the accepted and cancelled kinds of the workflow the repository runs

@@ -3,16 +3,37 @@ id: T-3566
 type: task
 nature: remediation
 title: Cluster.Up writes the kubeconfig again for a cluster that runs, with a test that reproduces I-0367
-status: backlog
+status: done
 parent: S-0840
 owner: alex
 created: 2026-11-17T12:29:20Z
-updated: 2026-11-17T12:29:20Z
-transitions: []
+updated: 2026-11-18T07:56:39Z
+transitions:
+  - to: ready
+    at: 2026-11-18T07:46:59Z
+    by: agent-S-0840
+  - to: in-progress
+    at: 2026-11-18T07:46:59Z
+    by: agent-S-0840
+  - to: done
+    at: 2026-11-18T07:56:39Z
+    by: agent-S-0840
 stream: S-0840
 tags: [flai, kluster]
 touches: [flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go]
 after: [T-3564]
+usage:
+  source: log
+  seconds: 580
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 3674
+      cache_read: 2028391
+      cache_write: 68889
+      cost: 1.0303
 ---
 # T-3566 Cluster.Up writes the kubeconfig again for a cluster that runs, with a test that reproduces I-0367
 

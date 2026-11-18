@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 367.3340
-accrued_seconds: 40359
-tasks_completed: 258
-last_run: 2026-11-17T13:24:30Z
+accrued_cost: 369.0529
+accrued_seconds: 40468
+tasks_completed: 259
+last_run: 2026-11-18T07:34:38Z
 ---
 
 # Curator activity
@@ -2075,3 +2075,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0565
 - Seconds: 48
 - Cost: 0.6261 USD, estimated
+
+### 2026-11-18T07:34:38Z
+
+- Summary: I wrote D-0669, merged nothing, absorbed D-0666 into `design/system/workflow.md` § Suites a step needs and runs, and `flai digest compact` compacted no entries.
+- Trigger: accepted S-0806
+- Items: D-0666, D-0668, D-0669
+- Seconds: 109
+- Cost: 1.7189 USD, estimated

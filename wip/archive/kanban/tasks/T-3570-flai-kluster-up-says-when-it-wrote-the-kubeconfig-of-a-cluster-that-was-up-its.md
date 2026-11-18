@@ -3,16 +3,37 @@ id: T-3570
 type: task
 nature: remediation
 title: flai kluster up says when it wrote the kubeconfig of a cluster that was up, its reference is regenerated, and I-0367 is closed
-status: backlog
+status: done
 parent: S-0840
 owner: alex
 created: 2026-11-17T12:29:29Z
-updated: 2026-11-17T12:29:29Z
-transitions: []
+updated: 2026-11-18T08:01:45Z
+transitions:
+  - to: ready
+    at: 2026-11-18T07:56:58Z
+    by: agent-S-0840
+  - to: in-progress
+    at: 2026-11-18T07:56:58Z
+    by: agent-S-0840
+  - to: done
+    at: 2026-11-18T08:01:45Z
+    by: agent-S-0840
 stream: S-0840
 tags: [flai, kluster, docs]
-touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/users/flai.md]
 after: [T-3566]
+usage:
+  source: log
+  seconds: 287
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 5109
+      cache_read: 2820542
+      cache_write: 95792
+      cost: 1.4327
 ---
 # T-3570 flai kluster up says when it wrote the kubeconfig of a cluster that was up, its reference is regenerated, and I-0367 is closed
 

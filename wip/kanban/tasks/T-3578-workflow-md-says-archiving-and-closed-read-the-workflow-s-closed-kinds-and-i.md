@@ -3,16 +3,37 @@ id: T-3578
 type: task
 nature: remediation
 title: workflow.md says archiving and Closed read the workflow's closed kinds, and I-0377 is closed
-status: backlog
+status: done
 parent: S-0842
 owner: alex
 created: 2026-11-17T12:29:51Z
-updated: 2026-11-17T12:29:51Z
-transitions: []
+updated: 2026-11-18T08:08:17Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:08:01Z
+    by: agent-S-0842
+  - to: in-progress
+    at: 2026-11-18T08:08:01Z
+    by: agent-S-0842
+  - to: done
+    at: 2026-11-18T08:08:17Z
+    by: agent-S-0842
 stream: S-0842
 tags: [docs, workflow]
 touches: [design/system/workflow.md]
 after: [T-3572, T-3576]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 28
+      cache_read: 527817
+      cache_write: 1682
+      cost: 0.2026
 ---
 # T-3578 workflow.md says archiving and Closed read the workflow's closed kinds, and I-0377 is closed
 

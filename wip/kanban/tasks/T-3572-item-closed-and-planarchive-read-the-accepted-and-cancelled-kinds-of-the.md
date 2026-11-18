@@ -3,11 +3,11 @@ id: T-3572
 type: task
 nature: remediation
 title: Item.Closed and PlanArchive read the accepted and cancelled kinds of the workflow the repository runs
-status: in-progress
+status: done
 parent: S-0842
 owner: alex
 created: 2026-11-17T12:29:38Z
-updated: 2026-11-18T07:32:41Z
+updated: 2026-11-18T07:49:58Z
 transitions:
   - to: ready
     at: 2026-11-18T07:32:41Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-18T07:32:41Z
     by: agent-S-0842
+  - to: done
+    at: 2026-11-18T07:49:57Z
+    by: agent-S-0842
 stream: S-0842
 tags: [flai, workflow]
-touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/store.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go]
+touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/internal/workitem/view.go]
+usage:
+  source: log
+  seconds: 1036
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 231
+      cache_read: 2295033
+      cache_write: 156363
+      cost: 0.9379
 ---
 # T-3572 Item.Closed and PlanArchive read the accepted and cancelled kinds of the workflow the repository runs
 

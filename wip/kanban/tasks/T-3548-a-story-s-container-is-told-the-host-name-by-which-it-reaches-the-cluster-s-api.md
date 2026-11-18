@@ -3,11 +3,11 @@ id: T-3548
 type: task
 nature: remediation
 title: A story's container is told the host name by which it reaches the cluster's API server on its network
-status: in-progress
+status: done
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:32:37Z
-updated: 2026-11-18T07:11:52Z
+updated: 2026-11-18T07:40:38Z
 transitions:
   - to: ready
     at: 2026-11-18T07:11:52Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-18T07:11:52Z
     by: agent-S-0834
+  - to: done
+    at: 2026-11-18T07:40:38Z
+    by: agent-S-0834
 stream: S-0834
 tags: [harness, container, go]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md]
 after: [T-3546]
+usage:
+  source: log
+  seconds: 1726
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 53
+      output: 314
+      cache_read: 3279258
+      cache_write: 107053
+      cost: 1.9876
 ---
 # T-3548 A story's container is told the host name by which it reaches the cluster's API server on its network
 

@@ -3,16 +3,37 @@ id: T-3549
 type: task
 nature: remediation
 title: flai kluster exec, env, and log read the story's copy in a container, with a test over a container's layout that reproduces I-0361
-status: backlog
+status: done
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-17T08:32:57Z
-transitions: []
+updated: 2026-11-18T07:59:53Z
+transitions:
+  - to: ready
+    at: 2026-11-18T07:40:59Z
+    by: agent-S-0834
+  - to: in-progress
+    at: 2026-11-18T07:40:59Z
+    by: agent-S-0834
+  - to: done
+    at: 2026-11-18T07:59:52Z
+    by: agent-S-0834
 stream: S-0834
 tags: [kluster, cli, go]
-touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/kluster.go, flai/cmd/kluster_container_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, docs/users/flai-reference.md, flai/internal/kluster/log.go]
 after: [T-3547, T-3548]
+usage:
+  source: log
+  seconds: 1133
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 570
+      cache_read: 5578880
+      cache_write: 336235
+      cost: 3.4718
 ---
 # T-3549 flai kluster exec, env, and log read the story's copy in a container, with a test over a container's layout that reproduces I-0361
 

@@ -3,16 +3,37 @@ id: T-3576
 type: task
 nature: remediation
 title: A whole flai accept and a flai archive on S-0744's renamed board archive the shipped story
-status: backlog
+status: done
 parent: S-0842
 owner: alex
 created: 2026-11-17T12:29:45Z
-updated: 2026-11-17T12:29:45Z
-transitions: []
+updated: 2026-11-18T08:05:16Z
+transitions:
+  - to: ready
+    at: 2026-11-18T07:58:23Z
+    by: agent-S-0842
+  - to: in-progress
+    at: 2026-11-18T07:58:23Z
+    by: agent-S-0842
+  - to: done
+    at: 2026-11-18T08:05:16Z
+    by: agent-S-0842
 stream: S-0842
 tags: [flai, workflow, test]
 touches: [flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go]
 after: [T-3572]
+usage:
+  source: log
+  seconds: 413
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 342
+      cache_read: 2627856
+      cache_write: 74160
+      cost: 1.0338
 ---
 # T-3576 A whole flai accept and a flai archive on S-0744's renamed board archive the shipped story
 

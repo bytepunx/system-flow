@@ -3,16 +3,37 @@ id: T-3550
 type: task
 nature: remediation
 title: The design and the user guide say exec, env, and log serve a container's agent, and I-0361 is closed
-status: backlog
+status: done
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:33:05Z
-updated: 2026-11-17T08:33:05Z
-transitions: []
+updated: 2026-11-18T08:07:54Z
+transitions:
+  - to: ready
+    at: 2026-11-18T08:00:28Z
+    by: agent-S-0834
+  - to: in-progress
+    at: 2026-11-18T08:00:28Z
+    by: agent-S-0834
+  - to: done
+    at: 2026-11-18T08:07:54Z
+    by: agent-S-0834
 stream: S-0834
 tags: [docs, kluster]
-touches: [design/system/kluster.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md]
+touches: [design/system/kluster.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md, design/system/flai-cli.md]
 after: [T-3549]
+usage:
+  source: log
+  seconds: 440
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 300
+      cache_read: 4789226
+      cache_write: 117998
+      cost: 2.8801
 ---
 # T-3550 The design and the user guide say exec, env, and log serve a container's agent, and I-0361 is closed
 
