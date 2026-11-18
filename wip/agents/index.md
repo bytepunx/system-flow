@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-18T13:04:08Z
+updated: 2026-11-18T13:04:38Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0809](S-0809.md) | The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories | review | agent-S-0809 | 2026-11-18T09:19:01Z |
+| [S-0809](S-0809.md) | The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories | in-progress | agent-S-0809 | 2026-11-18T09:19:01Z |
 | [S-0810](S-0810.md) | flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails | review | agent-S-0810 | 2026-11-18T11:23:23Z |
 | [S-0811](S-0811.md) | The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails | review | agent-S-0811 | 2026-11-18T09:07:44Z |
 | [S-0812](S-0812.md) | flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it | review | agent-S-0812 | 2026-11-18T09:15:38Z |

@@ -3,11 +3,11 @@ id: S-0809
 type: story
 nature: feature
 title: The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
-status: review
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:05Z
-updated: 2026-11-18T09:19:01Z
+updated: 2026-11-18T13:04:38Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:02Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-18T09:19:01Z
     by: agent-S-0809
+  - to: in-progress
+    at: 2026-11-18T13:04:38Z
+    by: flai
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, flai/internal/mergequeue/land_test.go]
@@ -108,3 +111,4 @@ finalized:
 - The forecast stands at flai's figure: 41m, delivered 2026-11-17T05:47:00Z. That is the median of 110 s per unit of size over 142 done feature stories on this model in the large band, times size 22 (3 criteria, 19 touches). No evidence was found to move it. The story's work is a filter, a parameter carried through, a field, a printed line, and five documents.
 - The cost of delay value, 64.20 USD a week, is flai's figure, left unchanged. It is the story's share of E-0034's 1500.00 USD a week, which comes from the operator's input `time_lost_per_cycle: 10h`. The share is 41m of the 15h58m forecast over the epic's 20 open stories that have no inputs of their own.
 - Layers: T-3451 first. T-3453 next, since it passes T-3451's suites. Then T-3456 and T-3458 together, since both read T-3453's field and behaviour and share no file.
+- 2026-11-18T13:04:38Z: moved to in-progress: rebase and resolve job S-0809-20261118T130438Z: the rebase of story/S-0809 onto main stopped on conflicts in flai/internal/verify/select.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, which flai aborted, so the branch is as it was; its agent settles it in the worktree and syncs it with flai stream sync S-0809
