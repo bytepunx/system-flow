@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,30 +70,129 @@ func inlineAuthority(data []byte, path string) ([]byte, error) {
 	return out, nil
 }
 
+// APIHostEnv is the variable a story's container is given off the host's
+// network, naming the host the container reaches the cluster's API server at
+// (ADR-0319 §3).
+const APIHostEnv = "FLAI_KLUSTER_API_HOST"
+
+// AgentFolder is the folder flai kluster log, env, and exec read story's
+// namespace from: the main checkout's .flai-cache/kluster under root when it
+// is there, as on the host, else the story's copy, AgentCopyDir, as in the
+// story's container (ADR-0319 §2); copied says which.
+func AgentFolder(root, story string) (f Folder, copied bool) {
+	if info, err := os.Stat(Dir(root)); err == nil && info.IsDir() {
+		return Folder(Dir(root)), false
+	}
+	return Folder(AgentCopyDir(root, story)), true
+}
+
+// ContainerKubeconfig is the kubeconfig of namespace ns kept in f with the
+// API server named by the host APIHostEnv gives (ADR-0319 §3).
+func (f Folder) ContainerKubeconfig(ns string) string {
+	return filepath.Join(string(f), "agents", ns+".container.kubeconfig")
+}
+
 // AgentEnv is the environment a story's agent gets for its namespace, at the
-// commit its record names: Env's variables, with KUBECONFIG the namespace's
-// own kubeconfig in place of flai's. A story with no record is
-// ErrNotDeployed.
-func (c Cluster) AgentEnv(story string) ([]string, error) {
+// commit its record names, read from AgentFolder: Env's variables, with
+// KUBECONFIG the namespace's own kubeconfig in place of flai's and
+// FLAI_KLUSTER_STATE the folder's state folder. Where the folder is the
+// story's copy and apiHost, APIHostEnv's value, is not empty, KUBECONFIG is
+// ContainerKubeconfig, written again from the copy's kubeconfig. A story with
+// no record is ErrNotDeployed.
+func (c Cluster) AgentEnv(story, apiHost string) ([]string, error) {
 	t, err := StoryTarget(story, "", "")
 	if err != nil {
 		return nil, err
 	}
-	r, ok, err := ReadRecord(c.Root, t.Namespace)
+	f, copied := AgentFolder(c.Root, t.Story)
+	r, ok, err := f.ReadRecord(t.Namespace)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		return nil, fmt.Errorf("%s: %w; deploy it first", t.Story, ErrNotDeployed)
 	}
+	kube := f.AgentKubeconfig(t.Namespace)
+	if copied && apiHost != "" {
+		if kube, err = writeContainerKubeconfig(f, t.Namespace, apiHost); err != nil {
+			return nil, err
+		}
+	}
 	t.Commit = r.Commit
 	env := c.Env(t)
 	for i, v := range env {
-		if strings.HasPrefix(v, "KUBECONFIG=") {
-			env[i] = "KUBECONFIG=" + AgentKubeconfigPath(c.Root, t.Story)
+		switch {
+		case strings.HasPrefix(v, "KUBECONFIG="):
+			env[i] = "KUBECONFIG=" + kube
+		case strings.HasPrefix(v, "FLAI_KLUSTER_STATE="):
+			env[i] = "FLAI_KLUSTER_STATE=" + f.State(t.Namespace)
 		}
 	}
 	return env, nil
+}
+
+// writeContainerKubeconfig writes f's kubeconfig of namespace ns at
+// ContainerKubeconfig with apiHost as its server's host, whole and readable
+// by its owner alone, and returns its path. With no kubeconfig in f, as
+// before a deploy step passes, the one written before is removed, so that
+// none outlives its source, and the path is returned all the same.
+func writeContainerKubeconfig(f Folder, ns, apiHost string) (string, error) {
+	src, dst := f.AgentKubeconfig(ns), f.ContainerKubeconfig(ns)
+	data, err := os.ReadFile(src)
+	if errors.Is(err, fs.ErrNotExist) {
+		if err := os.Remove(dst); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return "", fmt.Errorf("remove the container's kubeconfig %s, whose source %s is gone: %w", dst, src, err)
+		}
+		return dst, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read the namespace %s's kubeconfig %s: %w", ns, src, err)
+	}
+	out, err := withAPIHost(data, src, apiHost)
+	if err != nil {
+		return "", err
+	}
+	if err := atomicfile.WriteFile(dst, out, 0o600); err != nil {
+		return "", fmt.Errorf("write the namespace %s's kubeconfig for the container, naming the API server at %s, to %s: %w", ns, apiHost, dst, err)
+	}
+	return dst, nil
+}
+
+// withAPIHost is the kubeconfig data, read from path, with each cluster's
+// server host replaced by host, its scheme and port kept, and its
+// tls-server-name the host it replaced unless it names one already, so that
+// the API server's certificate is still verified against the name it was
+// issued for (ADR-0319 §3).
+func withAPIHost(data []byte, path, host string) ([]byte, error) {
+	var kc kubeconfig
+	if err := yaml.Unmarshal(data, &kc); err != nil {
+		return nil, fmt.Errorf("read the namespace's kubeconfig %s: %w; ask for the namespace's deploy again", path, err)
+	}
+	for i := range kc.Clusters {
+		e := &kc.Clusters[i].Cluster
+		u, err := url.Parse(e.Server)
+		if err != nil || u.Host == "" {
+			return nil, fmt.Errorf("the cluster %s in the kubeconfig %s names the server %q, which is not a URL with a host; ask for the namespace's deploy again", kc.Clusters[i].Name, path, e.Server)
+		}
+		was := u.Hostname()
+		switch {
+		case u.Port() != "":
+			u.Host = net.JoinHostPort(host, u.Port())
+		case strings.Contains(host, ":"):
+			u.Host = "[" + host + "]"
+		default:
+			u.Host = host
+		}
+		e.Server = u.String()
+		if e.TLSServerName == "" {
+			e.TLSServerName = was
+		}
+	}
+	out, err := yaml.Marshal(kc)
+	if err != nil {
+		return nil, fmt.Errorf("encode the kubeconfig %s with the API server at %s: %w", path, host, err)
+	}
+	return out, nil
 }
 
 // kubeconfig is the part of a kubeconfig flai reads and writes.

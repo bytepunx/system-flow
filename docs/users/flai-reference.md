@@ -2916,7 +2916,11 @@ Prints the variables of a story's namespace, s-nnnn, the ones flai kluster exec 
 
 It prints one line a variable, sorted by name, of the form export NAME='value', each value quoted for sh and zsh, so that eval "$(flai kluster env S-nnnn)" sets them in the shell, for a command of the agent's own such as a request to a service in its namespace. flai guard refuses a story's agent a line with $ around it, as one not written plainly, so an agent writes them to a file and sources it on the same line, flai kluster env S-nnnn &gt; /tmp/s-nnnn.env && . /tmp/s-nnnn.env && &lt;command&gt;, or runs the command with flai kluster exec. --json prints one object of each variable's name and value.
 
-It prints while the namespace has a record under .flai-cache/kluster/deployments, a failed one included, for diagnosis: a deploy that failed before its kubeconfig was written is said to have none on standard error, and the variables are printed all the same. A story with no record is refused, saying to deploy it first with flai kluster deploy S-nnnn --job. It needs no worktree, runs neither kluster nor flai serve, and so needs no kluster on PATH. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's namespace, as exec is.
+It prints while the namespace has a record under .flai-cache/kluster/deployments, a failed one included, for diagnosis: a deploy that failed before its kubeconfig was written is said to have none on standard error, and the variables are printed all the same. A story with no record is refused, saying to deploy it first with flai kluster deploy S-nnnn --job. It needs no worktree, runs neither kluster nor flai serve, and so needs no kluster on PATH.
+
+Where the main checkout's .flai-cache/kluster is not there, as in a story's container, which mounts neither it nor the kluster config at the main checkout's root, it reads the story's copy of its namespace, .flai-cache/agents/S-nnnn/kluster, which each deploy, checks run, and teardown writes again, and the kluster config from the story's worktree (ADR-0319): KUBECONFIG and FLAI\_KLUSTER\_STATE then name the copy's kubeconfig, agents/s-nnnn.kubeconfig, and its state folder, state/s-nnnn. Where FLAI\_KLUSTER\_API\_HOST is set too, as in a container off the host's network, KUBECONFIG names agents/s-nnnn.container.kubeconfig in the copy, written again on each call: the copy's kubeconfig with the API server's host replaced by that variable's value, its scheme and port kept, and tls-server-name the host it replaced, so the server's certificate is still verified against the name it was issued for.
+
+A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's namespace, as exec is.
 
 Examples:
 
@@ -2939,6 +2943,8 @@ Runs a command in a story's worktree, .flai-cache/worktrees/S-nnnn of the main c
 
 It runs while the namespace has a record under .flai-cache/kluster/deployments, a failed one included, for diagnosis: a deploy that failed before its kubeconfig was written is said to have none, and the command still runs. A story with no record is refused, saying to deploy it first with flai kluster deploy S-nnnn --job; a story with no worktree is refused, saying to open it with flai stream open S-nnnn.
 
+Where the main checkout's .flai-cache/kluster is not there, as in a story's container, which mounts neither it nor the kluster config at the main checkout's root, it reads the story's copy of its namespace, .flai-cache/agents/S-nnnn/kluster, which each deploy, checks run, and teardown writes again, and the kluster config from the story's worktree (ADR-0319): KUBECONFIG and FLAI\_KLUSTER\_STATE then name the copy's kubeconfig, agents/s-nnnn.kubeconfig, and its state folder, state/s-nnnn. Where FLAI\_KLUSTER\_API\_HOST is set too, as in a container off the host's network, KUBECONFIG names agents/s-nnnn.container.kubeconfig in the copy, written again on each call: the copy's kubeconfig with the API server's host replaced by that variable's value, its scheme and port kept, and tls-server-name the host it replaced, so the server's certificate is still verified against the name it was issued for.
+
 It reads the kluster: block for the cluster's name and the record for the commit, and runs neither kluster nor flai serve, so it needs no kluster on PATH. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's namespace, as deploy --job is. The command goes after --, and with none it is refused.
 
 Examples:
@@ -2960,9 +2966,9 @@ flai kluster log S-nnnn --step <step> [flags]
 
 Prints the log of one step of the last job in a story's namespace, s-nnnn: .flai-cache/kluster/logs/&lt;namespace&gt;/&lt;step&gt;.log, read from its start to its end in the 64 KB parts the host method kluster.log answers the dashboard's live feed, each ending on a whole character. A step is build, build-&lt;name&gt; for a component, load, deploy, or teardown; flai kluster deployments lists the steps each namespace's last job ran. A log a new job clears while it is read is read again from its start.
 
-It only reads files, so it needs no kluster: block and no flai serve, and reads the logs of the checkout it runs in. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's log, as deploy --job is (ADR-0292). A step not of that form is refused, and a log that is not there is said to be absent, exiting 1.
+It only reads files, so it needs no kluster: block and no flai serve. It reads the main checkout's .flai-cache/kluster, or, where that folder is not there, as in a story's container, which does not mount it, the story's copy of its namespace, .flai-cache/agents/S-nnnn/kluster, which each deploy, checks run, and teardown writes again (ADR-0319). A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's log, as deploy --job is (ADR-0292). A step not of that form is refused, and a log that is not there is said to be absent, exiting 1.
 
---json prints one object: namespace, step, log (its path from the root), exists, offset (0), next (where the text ends), size, text (the whole log), and outcome, the step's outcome in the namespace's record.
+--json prints one object: namespace, step, log (its path from the main checkout's root), exists, offset (0), next (where the text ends), size, text (the whole log), and outcome, the step's outcome in the namespace's record.
 
 Examples:
 

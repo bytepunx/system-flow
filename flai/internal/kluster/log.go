@@ -55,13 +55,19 @@ type LogPart struct {
 // from the namespace's record; ns is a DNS label, step is one IsStep
 // accepts, and offset is 0 or more, as the caller checks.
 func ReadLog(root, ns, step string, offset int64) (LogPart, error) {
-	path := LogPath(root, ns, step)
+	return ReadLogIn(root, Folder(Dir(root)), ns, step, offset)
+}
+
+// ReadLogIn is ReadLog over the step log and record kept in dir, such as a
+// story's copy (ADR-0319 §2), with the part's Log given from root.
+func ReadLogIn(root string, dir Folder, ns, step string, offset int64) (LogPart, error) {
+	path := dir.Log(ns, step)
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
 		rel = path
 	}
 	out := LogPart{Namespace: ns, Step: step, Log: filepath.ToSlash(rel), Offset: offset, Next: offset}
-	if r, ok, err := ReadRecord(root, ns); err == nil && ok {
+	if r, ok, err := dir.ReadRecord(ns); err == nil && ok {
 		for _, st := range r.Steps {
 			if st.Name == step {
 				out.Outcome = st.Outcome

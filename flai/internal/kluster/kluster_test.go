@@ -114,6 +114,36 @@ func TestNewReadsTheConfig(t *testing.T) {
 	}
 }
 
+// ADR-0319 §2: NewOr reads the config file from the main checkout's root
+// when it is there, and from the fallback, the story's worktree, otherwise;
+// Root stays the main checkout's.
+func TestNewOrReadsTheConfigFromTheFallback(t *testing.T) {
+	f := setup(t, "name: shop\n")
+	wt := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(wt, "integration"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wt, "integration", "kluster.yaml"), []byte("name: worktree\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := manifest.Manifest{Kluster: &manifest.Kluster{Config: "integration/kluster.yaml"}}
+	if c, err := NewOr(f.root, wt, m, System{}); err != nil || c.Name != "shop" || c.Root != f.root {
+		t.Errorf("the main checkout's config is read first: %+v %v", c, err)
+	}
+	if err := os.Remove(filepath.Join(f.root, "integration", "kluster.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := NewOr(f.root, wt, m, System{}); err != nil || c.Name != "worktree" || c.Root != f.root {
+		t.Errorf("with none there, the worktree's: %+v %v", c, err)
+	}
+	if _, err := New(f.root, m, System{}); err == nil || !strings.Contains(err.Error(), f.root) {
+		t.Errorf("New reads the main checkout alone: %v", err)
+	}
+	if _, err := NewOr(f.root, t.TempDir(), m, System{}); err == nil || !strings.Contains(err.Error(), "integration/kluster.yaml") {
+		t.Errorf("a config in neither is said: %v", err)
+	}
+}
+
 func TestArgs(t *testing.T) {
 	c := Cluster{Root: "/r", Config: "integration/kluster.yaml", Name: "a", Provider: "k3d"}
 	for _, tc := range []struct {

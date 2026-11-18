@@ -193,17 +193,18 @@ func TestClusterEntry(t *testing.T) {
 }
 
 // S-0763: the agent's variables are the deploy's, at the recorded commit,
-// with KUBECONFIG the namespace's kubeconfig alone and no images file.
+// with KUBECONFIG the namespace's kubeconfig alone and no images file; on
+// the host, an API host changes nothing (ADR-0319 §3).
 func TestAgentEnv(t *testing.T) {
 	f := deploySetup(t)
-	if _, err := f.c.AgentEnv("S-0578"); !errors.Is(err, ErrNotDeployed) {
+	if _, err := f.c.AgentEnv("S-0578", ""); !errors.Is(err, ErrNotDeployed) {
 		t.Errorf("a namespace never deployed has no variables: %v", err)
 	}
-	if _, err := f.c.AgentEnv("main"); err == nil {
+	if _, err := f.c.AgentEnv("main", ""); err == nil {
 		t.Error("a name that is no story ID has variables")
 	}
 	f.deployed(t, "S-0578")
-	env, err := f.c.AgentEnv("s-0578")
+	env, err := f.c.AgentEnv("s-0578", "host.docker.internal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,6 +240,130 @@ func TestTokenOfPassesOverAWarning(t *testing.T) {
 	} {
 		if got := tokenOf(out); got != want {
 			t.Errorf("tokenOf(%q) = %q, want %q", out, got, want)
+		}
+	}
+}
+
+// copyFixture is a cluster run from a main checkout with no
+// .flai-cache/kluster, as a story's container mounts it, and S-0578's copy
+// of its namespace at commitA, with a kubeconfig naming the API server at
+// 127.0.0.1:6443 (ADR-0319).
+func copyFixture(t *testing.T) (Cluster, Folder) {
+	t.Helper()
+	f := setup(t, authstarConfig)
+	cp := Folder(AgentCopyDir(f.root, "S-0578"))
+	kc := "apiVersion: v1\nkind: Config\nclusters:\n- name: k3d-authstar-integration\n  cluster:\n    server: https://127.0.0.1:6443\n    certificate-authority-data: Y2E=\ncontexts:\n- name: k3d-authstar-integration\n  context:\n    cluster: k3d-authstar-integration\n    user: flai-agent\n    namespace: s-0578\nusers:\n- name: flai-agent\n  user:\n    token: agent-token\ncurrent-context: k3d-authstar-integration\n"
+	for path, data := range map[string]string{
+		cp.Record("s-0578"):          `{"story":"S-0578","namespace":"s-0578","commit":"` + commitA + `","outcome":"passed"}`,
+		cp.AgentKubeconfig("s-0578"): kc,
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := os.Stat(Dir(f.root)); err == nil {
+		t.Fatalf("the fixture has %s", Dir(f.root))
+	}
+	return f.c, cp
+}
+
+// ADR-0319 §2: the readers read the main checkout's .flai-cache/kluster when
+// it is there, and the story's copy otherwise.
+func TestAgentFolder(t *testing.T) {
+	root := t.TempDir()
+	if f, copied := AgentFolder(root, "s-0578"); !copied || f != Folder(AgentCopyDir(root, "S-0578")) {
+		t.Errorf("with no .flai-cache/kluster, the story's copy: %s %v", f, copied)
+	}
+	if err := os.MkdirAll(Dir(root), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if f, copied := AgentFolder(root, "S-0578"); copied || f != Folder(Dir(root)) {
+		t.Errorf("with .flai-cache/kluster, the main checkout's: %s %v", f, copied)
+	}
+}
+
+// ADR-0319 §2, §3: read from the copy, KUBECONFIG and FLAI_KLUSTER_STATE
+// name the copy's kubeconfig and state folder; with an API host, KUBECONFIG
+// names the container's kubeconfig, written from the copy's with the
+// server's host replaced, 0600, and removed once the copy's is gone.
+func TestAgentEnvFromTheCopy(t *testing.T) {
+	c, cp := copyFixture(t)
+	env, err := c.AgentEnv("S-0578", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"KUBECONFIG=" + cp.AgentKubeconfig("s-0578"), "FLAI_KLUSTER_STATE=" + cp.State("s-0578"), "FLAI_KLUSTER_COMMIT=" + commitA} {
+		if !slices.Contains(env, want) {
+			t.Errorf("the copy's variables have %q: %q", want, env)
+		}
+	}
+	ckc := cp.ContainerKubeconfig("s-0578")
+	if _, err := os.Stat(ckc); err == nil {
+		t.Errorf("with no API host, no container kubeconfig is written")
+	}
+	env, err = c.AgentEnv("S-0578", "host.docker.internal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(env, "KUBECONFIG="+ckc) {
+		t.Errorf("KUBECONFIG names the container's kubeconfig %s: %q", ckc, env)
+	}
+	data, err := os.ReadFile(ckc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kc kubeconfig
+	if err := yaml.Unmarshal(data, &kc); err != nil || len(kc.Clusters) != 1 || len(kc.Users) != 1 {
+		t.Fatalf("the container's kubeconfig reads: %v\n%s", err, data)
+	}
+	if e := kc.Clusters[0].Cluster; e.Server != "https://host.docker.internal:6443" || e.TLSServerName != "127.0.0.1" || e.CertificateAuthorityData != "Y2E=" || kc.Users[0].User.Token != "agent-token" {
+		t.Errorf("the container's kubeconfig names the API host and keeps the rest: %+v %+v", e, kc.Users)
+	}
+	if fi, err := os.Stat(ckc); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Errorf("the container's kubeconfig is readable by its owner alone: %v %v", fi, err)
+	}
+	if err := os.Remove(cp.AgentKubeconfig("s-0578")); err != nil {
+		t.Fatal(err)
+	}
+	if env, err = c.AgentEnv("S-0578", "host.docker.internal"); err != nil || !slices.Contains(env, "KUBECONFIG="+ckc) {
+		t.Errorf("with no kubeconfig in the copy, KUBECONFIG names the container's all the same: %v %q", err, env)
+	}
+	if _, err := os.Stat(ckc); err == nil {
+		t.Errorf("a container kubeconfig whose source is gone is removed")
+	}
+}
+
+// ADR-0319 §3: each cluster's server host is replaced, its scheme and port
+// kept, and tls-server-name is the host it replaced unless it names one.
+func TestWithAPIHost(t *testing.T) {
+	for _, tc := range []struct{ name, cluster, host, server, tls string }{
+		{"an IPv4 host", "    server: https://127.0.0.1:6443\n", "host.docker.internal", "https://host.docker.internal:6443", "127.0.0.1"},
+		{"a name", "    server: https://kluster.local:443\n", "host.docker.internal", "https://host.docker.internal:443", "kluster.local"},
+		{"an IPv6 host", "    server: https://[::1]:6443\n", "host.docker.internal", "https://host.docker.internal:6443", "::1"},
+		{"an IPv6 API host", "    server: https://127.0.0.1:6443\n", "fd00::1", "https://[fd00::1]:6443", "127.0.0.1"},
+		{"no port", "    server: https://0.0.0.0\n", "host.docker.internal", "https://host.docker.internal", "0.0.0.0"},
+		{"a server name of its own", "    server: https://0.0.0.0:6443\n    tls-server-name: k3d-demo-serverlb\n", "host.docker.internal", "https://host.docker.internal:6443", "k3d-demo-serverlb"},
+	} {
+		out, err := withAPIHost([]byte("clusters:\n- name: k3d-a\n  cluster:\n"+tc.cluster), "/p/s-0578.kubeconfig", tc.host)
+		if err != nil {
+			t.Errorf("%s: %v", tc.name, err)
+			continue
+		}
+		var kc kubeconfig
+		if err := yaml.Unmarshal(out, &kc); err != nil || len(kc.Clusters) != 1 {
+			t.Errorf("%s: %v\n%s", tc.name, err, out)
+			continue
+		}
+		if e := kc.Clusters[0].Cluster; e.Server != tc.server || e.TLSServerName != tc.tls {
+			t.Errorf("%s: server %q tls-server-name %q, want %q %q", tc.name, e.Server, e.TLSServerName, tc.server, tc.tls)
+		}
+	}
+	for _, data := range []string{"clusters: [", "clusters:\n- name: k3d-a\n  cluster:\n    server: 127.0.0.1:6443\n"} {
+		if _, err := withAPIHost([]byte(data), "/p/s-0578.kubeconfig", "host.docker.internal"); err == nil || !strings.Contains(err.Error(), "/p/s-0578.kubeconfig") {
+			t.Errorf("%q is refused, naming the file: %v", data, err)
 		}
 	}
 }

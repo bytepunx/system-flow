@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,7 +64,8 @@ type Cluster struct {
 	// Root is the directory kluster runs in, the project's main checkout,
 	// where Config is read from and the kubeconfig is kept.
 	Root string
-	// Config is the kluster config file, from Root.
+	// Config is the kluster config file, from Root, or from the story's
+	// worktree where NewOr read it there.
 	Config string
 	// Name, Provider, and Profile are what the config file names.
 	Name, Provider, Profile string
@@ -86,6 +88,14 @@ func flowOf(w *workflow.Workflow) workflow.Workflow {
 // the config file for the cluster's name, provider, and profile. A manifest
 // with no block is ErrNoBlock.
 func New(root string, m manifest.Manifest, x Exec) (Cluster, error) {
+	return NewOr(root, "", m, x)
+}
+
+// NewOr is New with the config file read from fallback, a story's worktree,
+// when root has none, as in the story's container, which mounts the main
+// checkout without it (ADR-0319 §2); Root is root either way. An empty
+// fallback is New.
+func NewOr(root, fallback string, m manifest.Manifest, x Exec) (Cluster, error) {
 	if m.Kluster == nil {
 		return Cluster{}, ErrNoBlock
 	}
@@ -93,12 +103,16 @@ func New(root string, m manifest.Manifest, x Exec) (Cluster, error) {
 	if cfg == "" {
 		return Cluster{}, fmt.Errorf("the kluster: block of %s names no config; write kluster.config, the kluster config file from the repository root, and run flai check", filepath.Join(root, "system-flow.yaml"))
 	}
-	kc, err := manifest.ReadKlusterConfig(os.DirFS(root), filepath.ToSlash(cfg))
+	dir := root
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(cfg))); fallback != "" && errors.Is(err, fs.ErrNotExist) {
+		dir = fallback
+	}
+	kc, err := manifest.ReadKlusterConfig(os.DirFS(dir), filepath.ToSlash(cfg))
 	if err != nil {
-		return Cluster{}, fmt.Errorf("read the kluster config %s in %s: %w; fix kluster.config in system-flow.yaml or the file, and run flai check", cfg, root, err)
+		return Cluster{}, fmt.Errorf("read the kluster config %s in %s: %w; fix kluster.config in system-flow.yaml or the file, and run flai check", cfg, dir, err)
 	}
 	if kc.Name == "" {
-		return Cluster{}, fmt.Errorf("the kluster config %s in %s names no cluster; give it a name:, and run flai check", cfg, root)
+		return Cluster{}, fmt.Errorf("the kluster config %s in %s names no cluster; give it a name:, and run flai check", cfg, dir)
 	}
 	return Cluster{Root: root, Config: cfg, Name: kc.Name, Provider: kc.Provider, Profile: kc.Profile, Exec: x}, nil
 }

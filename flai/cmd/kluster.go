@@ -649,14 +649,18 @@ for a component, load, deploy, or teardown; flai kluster deployments lists
 the steps each namespace's last job ran. A log a new job clears while it is
 read is read again from its start.
 
-It only reads files, so it needs no kluster: block and no flai serve, and
-reads the logs of the checkout it runs in. A session with a story of its
-own, FLAI_STORY, else the story in an
-agent name of the form agent-S-nnnn, is refused another story's log, as
-deploy --job is (ADR-0292). A step not of that form is refused, and a log
+It only reads files, so it needs no kluster: block and no flai serve. It
+reads the main checkout's .flai-cache/kluster, or, where that folder is not
+there, as in a story's container, which does not mount it, the story's copy
+of its namespace, .flai-cache/agents/S-nnnn/kluster, which each deploy,
+checks run, and teardown writes again (ADR-0319). A session with a story of
+its own, FLAI_STORY, else the story in an agent name of the form
+agent-S-nnnn, is refused another story's log, as deploy --job is
+(ADR-0292). A step not of that form is refused, and a log
 that is not there is said to be absent, exiting 1.
 
---json prints one object: namespace, step, log (its path from the root),
+--json prints one object: namespace, step, log (its path from the main
+checkout's root),
 exists, offset (0), next (where the text ends), size, text (the whole log),
 and outcome, the step's outcome in the namespace's record.`,
 		Example: `  flai kluster log S-0578 --step deploy
@@ -679,7 +683,9 @@ and outcome, the step's outcome in the namespace's record.`,
 			if err != nil {
 				return err
 			}
-			l, err := readWholeLog(mainRootOf(repo), ns, step)
+			root := mainRootOf(repo)
+			f, _ := kluster.AgentFolder(root, story)
+			l, err := readWholeLog(root, f, ns, step)
 			if err != nil {
 				return err
 			}
@@ -725,6 +731,8 @@ deploy that failed before its kubeconfig was written is said to have none,
 and the command still runs. A story with no record is refused, saying to
 deploy it first with flai kluster deploy S-nnnn --job; a story with no
 worktree is refused, saying to open it with flai stream open S-nnnn.
+
+` + klusterCopyHelp + `
 
 It reads the kluster: block for the cluster's name and the record for the
 commit, and runs neither kluster nor flai serve, so it needs no kluster on
@@ -792,9 +800,13 @@ deploy that failed before its kubeconfig was written is said to have none on
 standard error, and the variables are printed all the same. A story with no
 record is refused, saying to deploy it first with flai kluster deploy S-nnnn
 --job. It needs no worktree, runs neither kluster nor flai serve, and so
-needs no kluster on PATH. A session with a story of its own, FLAI_STORY, else
-the story in an agent name of the form agent-S-nnnn, is refused another
-story's namespace, as exec is.`,
+needs no kluster on PATH.
+
+` + klusterCopyHelp + `
+
+A session with a story of its own, FLAI_STORY, else the story in an agent
+name of the form agent-S-nnnn, is refused another story's namespace, as
+exec is.`,
 		Example: `  flai kluster env S-0578
   eval "$(flai kluster env S-0578)"
   flai kluster env S-0578 > /tmp/s-0578.env && . /tmp/s-0578.env && kubectl get pods
@@ -822,6 +834,22 @@ story's namespace, as exec is.`,
 	}
 }
 
+// klusterCopyHelp is the part of exec's and env's help that says what they
+// read in a story's container (ADR-0319).
+const klusterCopyHelp = `Where the main checkout's .flai-cache/kluster is not there, as in a
+story's container, which mounts neither it nor the kluster config at the
+main checkout's root, it reads the story's copy of its namespace,
+.flai-cache/agents/S-nnnn/kluster, which each deploy, checks run, and
+teardown writes again, and the kluster config from the story's worktree
+(ADR-0319): KUBECONFIG and FLAI_KLUSTER_STATE then name the copy's
+kubeconfig, agents/s-nnnn.kubeconfig, and its state folder, state/s-nnnn.
+Where FLAI_KLUSTER_API_HOST is set too, as in a container off the host's
+network, KUBECONFIG names agents/s-nnnn.container.kubeconfig in the copy,
+written again on each call: the copy's kubeconfig with the API server's host
+replaced by that variable's value, its scheme and port kept, and
+tls-server-name the host it replaced, so the server's certificate is still
+verified against the name it was issued for.`
+
 // shellQuote is v in single quotes for sh and zsh, each single quote in it
 // written as a quote that closes the string, a backslash-escaped quote, and
 // a quote that opens it again.
@@ -830,14 +858,13 @@ func shellQuote(v string) string {
 }
 
 // klusterAgent is a story's namespace as flai kluster exec and env give it
-// to the story's agent: the story, its namespace, the project, the cluster,
-// and the namespace's variables at its record's commit.
+// to the story's agent: the story, its namespace, the project, and the
+// namespace's variables at its record's commit.
 type klusterAgent struct {
-	story   string
-	ns      string
-	repo    *workitem.Repo
-	cluster kluster.Cluster
-	vars    []string
+	story string
+	ns    string
+	repo  *workitem.Repo
+	vars  []string
 }
 
 // klusterAgentEnv reads the namespace of the story arg names and its
@@ -856,24 +883,32 @@ func (a *app) klusterAgentEnv(arg string) (klusterAgent, error) {
 	if err != nil {
 		return klusterAgent{}, err
 	}
-	c, err := kluster.New(mainRootOf(repo), repo.Manifest, kluster.System{})
+	root := mainRootOf(repo)
+	c, err := kluster.NewOr(root, repo.WorktreePath(story), repo.Manifest, kluster.System{})
 	if err != nil {
 		return klusterAgent{}, err
 	}
-	vars, err := c.AgentEnv(story)
+	vars, err := c.AgentEnv(story, os.Getenv(kluster.APIHostEnv))
 	if errors.Is(err, kluster.ErrNotDeployed) {
-		return klusterAgent{}, fmt.Errorf("%s's namespace %s has no record under .flai-cache/kluster/deployments, so there are no variables or kubeconfig to run with; deploy it first with flai kluster deploy %s --job", story, ns, story)
+		f, _ := kluster.AgentFolder(root, story)
+		return klusterAgent{}, fmt.Errorf("%s's namespace %s has no record at %s, so there are no variables or kubeconfig to run with; deploy it first with flai kluster deploy %s --job", story, ns, f.Record(ns), story)
 	}
 	if err != nil {
 		return klusterAgent{}, err
 	}
-	return klusterAgent{story: story, ns: ns, repo: repo, cluster: c, vars: vars}, nil
+	return klusterAgent{story: story, ns: ns, repo: repo, vars: vars}, nil
 }
 
 // warnNoAgentKubeconfig says on standard error that e's namespace has no
-// kubeconfig of its own yet, when it has none.
+// kubeconfig of its own yet, when the one its KUBECONFIG names is not there.
 func (a *app) warnNoAgentKubeconfig(e klusterAgent) {
-	if kc := kluster.AgentKubeconfigPath(e.cluster.Root, e.story); !fileExists(kc) {
+	kc := ""
+	for _, v := range e.vars {
+		if p, ok := strings.CutPrefix(v, "KUBECONFIG="); ok {
+			kc = p
+		}
+	}
+	if !fileExists(kc) {
 		fmt.Fprintf(a.errOut, "flai: %s's namespace %s has no kubeconfig at %s yet, as its deploy step has not passed; KUBECONFIG names it all the same\n", e.story, e.ns, kc)
 	}
 }
@@ -937,14 +972,15 @@ func (a *app) execIn(cmd *cobra.Command, dir string, env, argv []string) error {
 	}
 }
 
-// readWholeLog reads namespace ns's step log under root from 0 to its end in
-// kluster.ReadLog's parts, as one part holding the whole text; a log a new
-// job clears while it is read is read again from 0.
-func readWholeLog(root, ns, step string) (kluster.LogPart, error) {
+// readWholeLog reads namespace ns's step log kept in f from 0 to its end in
+// kluster.ReadLogIn's parts, as one part holding the whole text, its Log
+// given from root; a log a new job clears while it is read is read again
+// from 0.
+func readWholeLog(root string, f kluster.Folder, ns, step string) (kluster.LogPart, error) {
 	var text strings.Builder
 	var offset int64
 	for {
-		part, err := kluster.ReadLog(root, ns, step, offset)
+		part, err := kluster.ReadLogIn(root, f, ns, step, offset)
 		if err != nil {
 			return kluster.LogPart{}, err
 		}
