@@ -2,12 +2,12 @@
 id: I-0364
 title: No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-13T20:00:47Z
 last_reported: 2026-11-13T20:00:47Z
-updated: 2026-11-17T08:32:50Z
+updated: 2026-11-18T09:51:32Z
 ---
 
 # I-0364 No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand
@@ -24,3 +24,4 @@ S-0760's criterion 1 asked for system-flow.yaml's agent.image.args to be written
 ## Remediation
 
 Story S-0839 remediates this issue, created from it at 2026-11-17T08:32:50Z.
+Closed 2026-11-18T09:51:32Z: S-0839: flai manifest set now writes agent.image.layer=<path> and agent.image.args.<NAME>=<value>, and --unset removes either, each checked by the manifest's own image validation (no BASE, an ARG name, one line, a clean layer path, no args without a layer). TestManifestSetWritesAgentImageArgs in flai/cmd/manifest_test.go reproduces the case S-0760 met: a manifest with a layer and no args gets its args through the command.
