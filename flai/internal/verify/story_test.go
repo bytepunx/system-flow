@@ -1714,6 +1714,144 @@ func TestVerifyTiersStopsAtTheFirstTierThatFails(t *testing.T) {
 	}
 }
 
+// ADR-0312: Tiers given suites runs only the tiers of them that the paths
+// select, a tier that only a tier of a suite left out covers among them, and
+// never a manual one, and its report names the suites; given nil it runs
+// what SelectStory selects and names none; given an empty list it runs none.
+func TestVerifyTiersRunsOnlyTheTiersOfTheSuites(t *testing.T) {
+	tiers := slices.Clone(storyTiers)
+	tiers[0].Suite = "behavior"
+	tiers[2].Covers = []string{"go-test"}
+	tiers = append(tiers, Tier{Name: "race", Suite: "behavior", Manual: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "-race", "{packages}"}})
+	for _, tc := range []struct {
+		name   string
+		suites []string
+		steps  []string
+		ran    []string
+	}{
+		{"every suite", nil, []string{"go-test:skipped", "integration:passed", "smoke:passed"}, []string{"go test ./...", "smoke.sh"}},
+		{"behavior and smoke", []string{"behavior", "smoke"}, []string{"go-test:passed", "smoke:passed"}, []string{"go test ./internal/x", "smoke.sh"}},
+		{"none", []string{}, nil, nil},
+	} {
+		f := newVerifyFixture(t)
+		f.opts.Tiers = tiers
+		opts := f.tierOptions(new([]string), new([]string))
+		opts.Suites = tc.suites
+		rep, err := Tiers(context.Background(), opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !rep.Passed || !reflect.DeepEqual(states(rep), tc.steps) || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+			t.Errorf("%s: passed %v, steps %v, ran %q; want steps %v, ran %q", tc.name, rep.Passed, states(rep), f.proc.ran, tc.steps, tc.ran)
+		}
+		if !reflect.DeepEqual(rep.Suites, tc.suites) {
+			t.Errorf("%s: the report names the suites %#v, want %#v", tc.name, rep.Suites, tc.suites)
+		}
+		if tc.suites == nil {
+			var got []string
+			for _, s := range rep.Steps {
+				got = append(got, coverage([]Selected{{Tier: Tier{Name: s.Name}, CoveredBy: s.CoveredBy}})...)
+			}
+			if want := coverage(SelectStory(f.opts.FS, tiers, rep.Paths)); !reflect.DeepEqual(got, want) {
+				t.Errorf("every suite: steps %q, want SelectStory's %q", got, want)
+			}
+			data, err := json.Marshal(rep)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), `"suites"`) {
+				t.Errorf("a report of every suite names suites: %s", data)
+			}
+		}
+	}
+}
+
+// suitedTiers are storyTiers in suites, as a workflow's verify names them:
+// go-test in behavior, integration, which covers go-test, and template in
+// integration, and smoke its own; integration and smoke are marked queue.
+func suitedTiers() []Tier {
+	tiers := queueTiers()
+	tiers[0].Suite, tiers[2].Suite, tiers[3].Suite = "behavior", "integration", "integration"
+	tiers[2].Covers = []string{"go-test"}
+	return tiers
+}
+
+// ADR-0312 §2: Verify given the suites a story's next moves need runs the
+// steps before the tiers and only the tiers of those suites the branch
+// selects, a tier that only a tier of a suite left out covers among them,
+// leaves no tier of another suite to the merge queue, and names the suites
+// in its report; given nil, as --all and a workflow without verify give it,
+// it runs every suite's, as it did before suites, and names none.
+func TestVerifyRunsOnlyTheTiersOfTheSuitesItIsGiven(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name         string
+		suites       []string
+		leaveToQueue bool
+		tiers, ran   []string
+	}{
+		{"behavior alone", []string{"behavior"}, false, []string{"go-test:passed"}, []string{"go test ./internal/x"}},
+		{"behavior and smoke, smoke left to the queue", []string{"behavior", "smoke"}, true, []string{"go-test:passed", "smoke:queued"}, []string{"go test ./internal/x"}},
+		{"integration, which covers go-test", []string{"integration"}, false, []string{"integration:passed"}, []string{"go test ./..."}},
+		{"every suite", nil, false, []string{"go-test:skipped", "integration:passed", "smoke:passed"}, []string{"go test ./...", "smoke.sh"}},
+		{"every suite, the queue tiers left to it", nil, true, []string{"go-test:passed", "integration:queued", "smoke:queued"}, []string{"go test ./internal/x"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			f := newVerifyFixture(t)
+			f.opts.Tiers, f.opts.Suites, f.opts.LeaveToQueue = suitedTiers(), tc.suites, tc.leaveToQueue
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !rep.Passed || !reflect.DeepEqual(tierStates(rep), tc.tiers) || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Errorf("passed %v, tiers %v, ran %q; want tiers %v, ran %q", rep.Passed, tierStates(rep), f.proc.ran, tc.tiers, tc.ran)
+			}
+			if got := states(rep)[:4]; !reflect.DeepEqual(got, []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed"}) {
+				t.Errorf("the steps before the tiers %v", got)
+			}
+			if !reflect.DeepEqual(rep.Suites, tc.suites) {
+				t.Errorf("the report names the suites %#v, want %#v", rep.Suites, tc.suites)
+			}
+		})
+	}
+}
+
+// ADR-0312 §2, ADR-0229 §5: an ask is answered from the record only when it
+// holds a passing verdict at the head for every suite the ask selects tiers
+// of: a run of behavior answers a later ask for behavior, but not one for
+// integration, nor one for every suite, which runs smoke and reuses the
+// rest; the record then answers an ask for every suite, and one for
+// behavior with behavior alone.
+func TestVerifyAnswersFromTheRecordOnlyForEverySuiteItNeeds(t *testing.T) {
+	t.Parallel()
+	f := newVerifyFixture(t)
+	f.opts.Tiers, f.opts.Suites = suitedTiers(), []string{"behavior"}
+	if first, err := Verify(context.Background(), f.opts); err != nil || !first.Passed || first.FromRecord {
+		t.Fatalf("the run of behavior %+v, %v", first, err)
+	}
+	if again := f.verifyAgain(t); !again.FromRecord || !reflect.DeepEqual(again.Suites, []string{"behavior"}) || len(f.proc.ran) != 0 {
+		t.Errorf("behavior again %+v ran %q; want it from the record, naming behavior", again, f.proc.ran)
+	}
+	f.opts.Suites = []string{"integration"}
+	if rep := f.verifyAgain(t); rep.FromRecord || !reflect.DeepEqual(f.proc.ran, []string{"go test ./..."}) {
+		t.Errorf("integration %+v ran %q; want integration run, not answered from behavior's record", rep, f.proc.ran)
+	}
+	f.opts.Suites = nil
+	every := f.verifyAgain(t)
+	if every.FromRecord || !reflect.DeepEqual(f.proc.ran, []string{"smoke.sh"}) {
+		t.Errorf("every suite %+v ran %q; want smoke run, which no run recorded, and the rest reused", every, f.proc.ran)
+	}
+	if rep, ok, err := Recorded(f.opts); err != nil || !ok || rep.Suites != nil || len(rep.SuiteRuns) != 3 {
+		t.Errorf("every suite from the record %+v, %v, %v; want all three suites", rep, ok, err)
+	}
+	f.opts.Suites = []string{"behavior"}
+	rep, ok, err := Recorded(f.opts)
+	if err != nil || !ok || !reflect.DeepEqual(rep.Suites, []string{"behavior"}) || len(rep.SuiteRuns) != 1 || rep.SuiteRuns[0].Name != "behavior" {
+		t.Errorf("behavior from the record %+v, %v, %v; want behavior alone", rep, ok, err)
+	}
+}
+
 // S-0399: a context that ends during a tier stops Tiers there, with
 // the report so far and the context's error; the tiers after it are not
 // reached.

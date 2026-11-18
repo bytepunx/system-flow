@@ -88,6 +88,13 @@ type StoryOptions struct {
 	// not leave to the queue, with it. "" when the queue can batch, or the
 	// caller asked for every tier (S-0466).
 	QueueOff string
+	// Suites are the suites whose tiers the run selects, by each tier's
+	// SuiteOrName, as StorySuites gives those the story's next moves need
+	// (ADR-0312 §2): nil selects every suite's, as flai verify --all does; a
+	// list that is not nil selects only the tiers of its suites, which the
+	// report's Suites names, and a tier of it that only a tier of another
+	// suite covers runs itself, as SelectStorySuites selects them.
+	Suites []string
 	// KlusterOn and ChecksOn say whether the kluster and checks host actions
 	// are on for the project, as the kluster step reads the story's
 	// namespace's record under them (ADR-0292 §6).
@@ -148,7 +155,13 @@ type Report struct {
 	// Paths are the root-relative files the branch changed against Base,
 	// which the tiers were selected for.
 	Paths []string `json:"paths,omitempty"`
-	Steps []Step   `json:"steps"`
+	// Suites are the suites Tiers ran the tiers of, as TierOptions.Suites
+	// named them, so that a caller such as the merge queue's batch can name
+	// them (ADR-0312), or that Verify selected the tiers of, as
+	// StoryOptions.Suites named them; nil for a run of every suite. The JSON
+	// leaves out an empty list as it leaves out nil.
+	Suites []string `json:"suites,omitempty"`
+	Steps  []Step   `json:"steps"`
 	// SuiteRuns are what the run recorded of each suite whose tiers it
 	// selected: its tiers, how each ended, and the head and base they passed
 	// at (ADR-0312 §7). The story's last report, and its verdict at a commit,
@@ -257,8 +270,9 @@ type Note struct {
 // story passes, while the main checkout's manifest has a kluster: block the
 // story's namespace's deploy and checks run did not fail at its head (the
 // kluster step, which runs nothing and keeps what it read as the report's
-// Kluster), and then each tier the branch's changes select (SelectStory)
-// passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
+// Kluster), and then each tier of Suites, nil for every suite, that the
+// branch's changes select (SelectStorySuites) passes, run with
+// CLOSE_OUT_STORY set to the story. It stops at the first
 // step that fails; the steps after it are not reached, but for a tier that
 // another selected tier covers, which is skipped either way. With
 // LeaveToQueue, the selected tiers marked Queue are not run but reported
@@ -426,7 +440,7 @@ func (v *storyRun) syncSteps() []storyStep {
 func (v *storyRun) newReport(start time.Time) Report {
 	return Report{
 		Story: v.story, Commit: v.commit, Base: v.base, BaseCommit: v.baseCommit, MergeBase: v.mergeBase, Patch: v.patch,
-		RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}, Clean: v.clean,
+		RanAt: start.UTC(), Passed: true, Paths: v.paths, Suites: slices.Clone(v.opts.Suites), Steps: []Step{}, Clean: v.clean,
 	}
 }
 
@@ -643,14 +657,14 @@ func tierNames(selection []Selected) []string {
 	return names
 }
 
-// selection is the tiers the branch's paths select: those the run runs, and,
-// with LeaveToQueue, those it leaves to the merge queue, and the fingerprint
-// of both.
+// selection is the tiers of the run's Suites that the branch's paths select:
+// those the run runs, and, with LeaveToQueue, those it leaves to the merge
+// queue, and the fingerprint of both.
 func (v *storyRun) selection() (selected, queued []Selected, fp string) {
 	if v.opts.LeaveToQueue {
-		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths, v.claim())
+		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths, v.claim(), v.opts.Suites)
 	} else {
-		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+		selected = SelectStorySuites(v.opts.FS, v.opts.Tiers, v.paths, v.opts.Suites)
 	}
 	return selected, queued, fingerprint(v.opts.Tiers, inListOrder(v.opts.Tiers, selected, queued))
 }
@@ -895,19 +909,25 @@ type TierOptions struct {
 	// is skipped or not reached.
 	Started func(tier string)
 	Ended   func(Step)
+	// Suites are the suites whose tiers run, by each tier's SuiteOrName, as
+	// the batch runs those its workflow's verify_at.batch lists (ADR-0312):
+	// nil runs every tier the paths select, as the word all does; a list
+	// that is not nil runs only those of its suites; an empty one runs none.
+	Suites []string
 	// RunOptions are the tiers' run's; FS is the checkout, read for the
 	// tiers' packages, and Now times every tier and stamps the report.
 	RunOptions
 }
 
 // Tiers runs, in the checkout at Dir, the tiers flai verify selects for
-// the paths its HEAD changed against Base (SelectStory), cheapest first, and
-// stops at the first that fails, as Verify runs them, and answers them as a
-// report with no story and no step before the tiers. It verifies a checkout
-// that is no story's, as the merge queue's batch: it reuses no earlier run,
-// sets no CLOSE_OUT_STORY, and stores no report. The caller may name the
-// stories a batch verifies to its tiers by setting MergeQueueStoriesEnv in
-// RunOptions.Env. It returns an error, with no
+// the paths its HEAD changed against Base (SelectStory), or of them those of
+// Suites when it is not nil (SelectStorySuites), cheapest first, and stops at
+// the first that fails, as Verify runs them, and answers them as a report
+// with no story and no step before the tiers, naming the Suites it was given.
+// It verifies a checkout that is no story's, as the merge queue's batch: it
+// reuses no earlier run, sets no CLOSE_OUT_STORY, and stores no report. The
+// caller may name the stories a batch verifies to its tiers by setting
+// MergeQueueStoriesEnv in RunOptions.Env. It returns an error, with no
 // report, when the checkout's HEAD or changes cannot be read, and, with the
 // report so far, when ctx ends.
 func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
@@ -933,7 +953,10 @@ func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
 	if base, err := opts.Git.Run(opts.Dir, "git", "rev-parse", "--verify", "--quiet", opts.Base+"^{commit}"); err == nil {
 		rep.BaseCommit = strings.TrimSpace(base)
 	}
-	selected := SelectStory(opts.FS, opts.Tiers, paths)
+	if opts.Suites != nil {
+		rep.Suites = slices.Clone(opts.Suites)
+	}
+	selected := SelectStorySuites(opts.FS, opts.Tiers, paths, opts.Suites)
 	rep.Fingerprint = fingerprint(opts.Tiers, selected)
 	var runErr error
 	// what passed earlier in the batch, which each tier is told as one Run

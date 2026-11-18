@@ -149,7 +149,7 @@ func readRecord(project *workitem.Repo, story, commit string) (Report, bool, err
 // the tiers did not pass is not answered: what it stopped at may lie outside
 // the commit, as the narrative does, and a run again resumes at it (S-0341).
 // The answer holds only the suites this run selects and their tier steps,
-// which all passed.
+// which all passed, and names the run's Suites, as a run's report does.
 func (v *storyRun) recorded() (Report, bool, error) {
 	if !v.clean || v.baseCommit == "" {
 		return Report{}, false, nil
@@ -174,7 +174,7 @@ func (v *storyRun) recorded() (Report, bool, error) {
 		return Report{}, false, nil
 	}
 	rec = rec.ofSuites(need)
-	rec.FromRecord = true
+	rec.FromRecord, rec.Suites = true, slices.Clone(v.opts.Suites)
 	return rec, true, nil
 }
 

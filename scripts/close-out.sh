@@ -19,11 +19,11 @@
 # step whatever the verify record holds, so a second close-out, in another
 # place such as the agent's container, checks a commit the record already
 # passed; later rounds reuse what this run passed (ADR-0156). --all, or
-# CLOSE_OUT_ALL=1, has every round's flai verify run the tiers it would leave
-# to the merge queue (ADR-0174). Both go before the story, since everything
-# after it is git commit's and --all is a git commit option too. flai serve's
-# close-out job sets the two variables when the request asks for fresh or all
-# (S-0671).
+# CLOSE_OUT_ALL=1, has every round's flai verify run every suite's tiers and
+# the tiers it would leave to the merge queue (ADR-0174, ADR-0312). Both go
+# before the story, since everything after it is git commit's and --all is a
+# git commit option too. flai serve's close-out job sets the two variables
+# when the request asks for fresh or all (S-0671).
 # The cycle before it (git.md): close each task when it is done with
 # flai task done, which commits, syncs, and checks, resolve what a stopped
 # sync lists, run the task's tests, and close any fix the same way; then
@@ -32,10 +32,14 @@
 # the close-out and flai verify never disagree: no rebase left unfinished, the
 # branch contains the main branch, the narrative, flai check --strict scoped
 # to the story, then the tiers of system-flow.yaml's tests that the branch's
-# changes select, with CLOSE_OUT_STORY set to the story in their environment
-# (which scripts/check.sh in smoke and TestMonorepoIsClean in integration read
-# to scope themselves, ADR-0085). --record-issues records the check's findings
-# outside the story in design/issues, which the commit step commits (S-0249).
+# changes select, of the suites the moves out of the story's state need: those
+# the verify of each transition out of it in the workflow file lists, or every
+# suite when one gives all or none gives verify, as the baseline's move to
+# review does (ADR-0312 §2), with CLOSE_OUT_STORY set to the story in their
+# environment (which scripts/check.sh in smoke and TestMonorepoIsClean in
+# integration read to scope themselves, ADR-0085). --record-issues records the
+# check's findings outside the story in design/issues, which the commit step
+# commits (S-0249).
 # While the merge queue can batch for the project (the merge-queue host action
 # on for it in the configuration flai reads, which scripts/flai.sh sets to
 # .flai-cache/config.json, accept_reviews on, acceptance local), flai verify

@@ -76,6 +76,17 @@ after it are not reached:
              "skipped tier <name>: covered by <tier>", even after a step
              before it failed (S-0342)
 
+The tiers are those of the suites the story's next moves need (ADR-0312
+§2): the suites listed by the verify of each transition the workflow file,
+design/workflows/board.md or the baseline flai carries, lets a story take
+out of the state it is in. When one of them gives all, or none gives
+verify, every suite's tiers run; a workflow file that gives none of verify,
+runs, and verify_at reads as the baseline, whose move to review gives
+verify: all, so a story in progress or in review runs every suite. When the
+suites are not every suite, a line before the outcome names them, as
+"suites <suite>, ...: those the moves out of the story's state need", and
+--json carries them as suites. --all runs every suite's tiers.
+
 While the merge queue can batch for the project, a tier the manifest marks
 queue is left to the queue's batch, which runs it, and not run here: the
 merge-queue host action is on for the project in the configuration this flai
@@ -88,8 +99,8 @@ tasks'), or a path its branch changed runs here all the same, and the batch
 runs it again: its line names the pattern and the touch or path that chose
 it, as "passed tier <name> (<duration>): ran here, its when <pattern> matches
 <touch or path>", and --json carries that as its step's ran_for (ADR-0233).
---all leaves no tier to the queue: every tier the branch selects runs
-(ADR-0174). When the branch selects a tier marked queue but the queue cannot
+--all leaves no tier to the queue: every tier the branch selects runs,
+of every suite (ADR-0174). When the branch selects a tier marked queue but the queue cannot
 batch, a line before the notes and the outcome names those tiers and the
 condition that is off, such as the host action off for the project in the
 configuration this flai reads, and --json carries it as queue_off (S-0466).
@@ -122,7 +133,8 @@ queue" when tiers were left to it, and then by " (reused N tiers from
 --json the answer is the report, with the story, the commit and base it was verified at
 and the base's commit, the merge base and the branch's patch id, when it ran,
 how long it took, passed, stopped_at, the
-paths the branch changed, and each step's state, duration, and findings, a
+paths the branch changed, the suites it selected the tiers of when they are
+not every suite, and each step's state, duration, and findings, a
 reused tier's reused_from, a skipped tier's covered_by, a tier left to the
 merge queue as queued, the ran_for of a tier marked queue that ran here,
 and the notes.
@@ -243,7 +255,9 @@ type verifyOptions struct {
 	syncOnly bool
 	// fresh runs every selected tier, reusing none from the last run.
 	fresh bool
-	// all leaves no tier to the merge queue (ADR-0174).
+	// all leaves no tier to the merge queue (ADR-0174) and selects every
+	// suite's tiers, not only those the moves out of the story's state need
+	// (ADR-0312 §2).
 	all bool
 	max int
 }
@@ -272,6 +286,10 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		// configuration without the host action is seen (S-0466)
 		opts.QueueOff = a.queueOff(mainRootOf(repo))
 		opts.LeaveToQueue = opts.QueueOff == ""
+		// the suites the moves out of the story's state need (ADR-0312 §2)
+		if opts.Suites, err = verify.StorySuites(repo, id); err != nil {
+			return &exitError{code: exitVerifyUnusable, msg: err.Error()}
+		}
 	}
 	if !o.syncOnly {
 		opts.KlusterOn, opts.ChecksOn = a.verifyKlusterActions(mainRootOf(repo))
@@ -553,9 +571,11 @@ func verifyKlusterHeadText(j kluster.HeadJudgement) string {
 // line naming the tier that covers it in place of a duration, after the
 // duration of a tier marked queue that ran here why it was not left to the
 // merge queue (ADR-0233), a passing step's
-// note and the failing step's findings indented under it, then why the tiers
-// marked queue ran here when the merge queue cannot batch (S-0466), at most
-// maxNotes of the notes outside the story, the issues they were recorded in,
+// note and the failing step's findings indented under it, then the suites the
+// run selected the tiers of when they are not every suite (ADR-0312 §2), why
+// the tiers marked queue ran here when the merge queue cannot batch
+// (S-0466), at most maxNotes of the notes outside the story, the issues they
+// were recorded in,
 // and last the outcome as the close-out's last line has it.
 func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNotes int) string {
 	var b strings.Builder
@@ -584,6 +604,9 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 			b.WriteString("    " + strings.Join(strings.Fields(s.Note), " ") + "\n")
 		}
 		b.WriteString(verify.StepFindings(s, "    "))
+	}
+	if rep.Suites != nil {
+		fmt.Fprintf(&b, "suites %s: those the moves out of the story's state need\n", strings.Join(rep.Suites, ", "))
 	}
 	if rep.QueueOff != "" {
 		b.WriteString(strings.Join(strings.Fields(rep.QueueOff), " ") + "\n")

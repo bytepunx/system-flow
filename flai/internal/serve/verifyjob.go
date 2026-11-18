@@ -140,9 +140,12 @@ func newVerifyPass(o Options, e Entry, wg *sync.WaitGroup) *verifyPass {
 }
 
 // recordedFor asks the verify record of project e as flai verify would at
-// the worktree: with the tiers its branch's manifest declares, leaving those
-// marked queue to the merge queue while it batches, unless the request asks
-// for all (ADR-0229 §5).
+// the worktree: with the tiers its branch's manifest declares, of the suites
+// the moves out of the story's state need, leaving those marked queue to the
+// merge queue while it batches, unless the request asks for all, which is
+// every suite with none left to the queue (ADR-0229 §5, ADR-0312 §2). The
+// record answers only when it holds a passing verdict at the head for every
+// suite of those that the branch selects tiers of.
 func recordedFor(o Options, e Entry) func(*workitem.Repo, string, string, bool) (verify.Report, bool, error) {
 	return func(repo *workitem.Repo, story, worktree string, all bool) (verify.Report, bool, error) {
 		git := gitOf(o)
@@ -150,8 +153,14 @@ func recordedFor(o Options, e Entry) func(*workitem.Repo, string, string, bool) 
 		if err != nil {
 			return verify.Report{}, false, err
 		}
-		return verify.Recorded(verify.StoryOptions{Story: story, Project: repo, Worktree: worktree, Tiers: tiers, Git: git,
-			LeaveToQueue: !all && queueBatches(o, e, repo.Manifest)})
+		opts := verify.StoryOptions{Story: story, Project: repo, Worktree: worktree, Tiers: tiers, Git: git}
+		if !all {
+			opts.LeaveToQueue = queueBatches(o, e, repo.Manifest)
+			if opts.Suites, err = verify.StorySuites(repo, story); err != nil {
+				return verify.Report{}, false, err
+			}
+		}
+		return verify.Recorded(opts)
 	}
 }
 

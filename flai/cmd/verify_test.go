@@ -1145,6 +1145,106 @@ func TestVerifyAnswersAPassingVerdictFromTheRecordAndSaysSo(t *testing.T) {
 	}
 }
 
+// suitesFixture is verifyFixture whose worktree's unit tier is in the suite
+// behavior beside a lint tier in static, each for docs/, and whose main
+// checkout's workflow file is the baseline with the move to review verifying
+// review instead of every suite. It answers the main checkout, and sets the
+// move's verify.
+func suitesFixture(t *testing.T, review string) (root string, setReview func(string)) {
+	t.Helper()
+	root, worktree := verifyFixture(t, "exit 0")
+	path := filepath.Join(worktree, "system-flow.yaml")
+	manifest, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lint := "  - name: lint\n    suite: static\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n"
+	suited := strings.Replace(string(manifest), "  - name: unit\n", "  - name: unit\n    suite: behavior\n", 1) + lint
+	if err := os.WriteFile(path, []byte(suited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := os.ReadFile("../internal/workflow/baseline/board.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const toReview = "    verify: {suites: all, severity: warn}\n"
+	if !strings.Contains(string(baseline), toReview) {
+		t.Fatalf("the baseline board has no %q", toReview)
+	}
+	board := filepath.Join(root, "design", "workflows", "board.md")
+	setReview = func(verify string) {
+		t.Helper()
+		if err := os.WriteFile(board, []byte(strings.Replace(string(baseline), toReview, "    verify: "+verify+"\n", 1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setReview(review)
+	return root, setReview
+}
+
+// S-0807 criterion 2, ADR-0312 §2: flai verify runs the tiers of the suites
+// the moves out of the story's state need, names them on a line before the
+// outcome and in --json, and with --all runs every suite's and names none.
+func TestVerifyRunsTheSuitesTheMovesOutOfTheStorysStateNeed(t *testing.T) {
+	t.Parallel()
+	root, _ := suitesFixture(t, "[behavior]")
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 || !strings.Contains(out, "\npassed tier unit (") || strings.Contains(out, "tier lint") {
+		t.Fatalf("the needed suite: exit %d, want unit alone\n%s%s", code, out, errOut)
+	}
+	if want := "\npassed tier unit (0s)\nsuites behavior: those the moves out of the story's state need\n"; !strings.Contains(out, want) || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("text should name the suites after the steps and before the outcome, %q:\n%s", want, out)
+	}
+	if rep := verifyReport(t, root, 0, "S-004"); strings.Join(rep.Suites, ",") != "behavior" || !strings.HasSuffix(stepStates(rep), ",check:passed,tier unit:passed") {
+		t.Errorf("--json: suites %q, steps %s", rep.Suites, stepStates(rep))
+	}
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--all")
+	if code != 0 || !strings.Contains(out, "\npassed tier unit (") || !strings.Contains(out, "\npassed tier lint (") || strings.Contains(out, "suites ") {
+		t.Errorf("--all: exit %d, want every suite and no suites line\n%s%s", code, out, errOut)
+	}
+	if rep := verifyReport(t, root, 0, "S-004", "--all"); rep.Suites != nil {
+		t.Errorf("--all names the suites %q", rep.Suites)
+	}
+}
+
+// S-0807 criteria 2 and 4: a workflow file whose move to review verifies all,
+// as the baseline does, runs every suite and prints what it printed before
+// suites, with no suites line and none in --json.
+func TestVerifyOnTheBaselineRunsEverySuiteAsBefore(t *testing.T) {
+	t.Parallel()
+	root, _ := suitesFixture(t, "{suites: all, severity: warn}")
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 || !strings.Contains(out, "\npassed tier unit (") || !strings.Contains(out, "\npassed tier lint (") || strings.Contains(out, "suites ") {
+		t.Errorf("the baseline: exit %d, want every suite and no suites line\n%s%s", code, out, errOut)
+	}
+	if rep := verifyReport(t, root, 0, "S-004"); rep.Suites != nil {
+		t.Errorf("the baseline names the suites %q", rep.Suites)
+	}
+}
+
+// S-0807 criterion 2, ADR-0229 §5: flai verify answers from the record only
+// when it holds a passing verdict at the head for every suite the run
+// selects tiers of: a run of behavior answers behavior again, but not
+// behavior and static, which runs lint; then --all answers from the record.
+func TestVerifyAnswersFromTheRecordOnlyWhenEveryNeededSuitePassedThere(t *testing.T) {
+	t.Parallel()
+	root, setReview := suitesFixture(t, "[behavior]")
+	if out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004"); code != 0 || strings.Contains(out, "the record") {
+		t.Fatalf("the run of behavior: exit %d\n%s%s", code, out, errOut)
+	}
+	if rep, _ := resumeReport(t, root, "S-004"); !rep.FromRecord || strings.Join(rep.Suites, ",") != "behavior" {
+		t.Errorf("behavior again: from the record %v, suites %q; want it answered, naming behavior", rep.FromRecord, rep.Suites)
+	}
+	setReview("[behavior, static]")
+	rep, _ := resumeReport(t, root, "S-004")
+	if rep.FromRecord || strings.Join(rep.Suites, ",") != "behavior,static" || !strings.HasSuffix(stepStates(rep), ",tier unit:reused,tier lint:passed") {
+		t.Errorf("behavior and static: from the record %v, suites %q, steps %s; want lint run and unit reused", rep.FromRecord, rep.Suites, stepStates(rep))
+	}
+	if rep, _ := resumeReport(t, root, "S-004", "--all"); !rep.FromRecord || rep.Suites != nil {
+		t.Errorf("--all after both: from the record %v, suites %q; want every suite answered", rep.FromRecord, rep.Suites)
+	}
+}
+
 // takeCloseOut stands in for flai serve: it waits for the close-out request
 // of the fixture's S-004 in the project's cache dir, takes it, and answers
 // with what answer makes of it. The request it read arrives on the channel,

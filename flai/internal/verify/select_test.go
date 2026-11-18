@@ -274,7 +274,7 @@ func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
 	}
 	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
 	paths := []string{"flai/main.go"}
-	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, nil)
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, nil, nil)
 	if got, want := coverage(run), []string{"go-test covered by lint", "lint", "vet covered by lint"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("run %q, want %q", got, want)
 	}
@@ -288,7 +288,7 @@ func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
 
 	// without lint, nothing that runs covers go-test or vet
 	alone := append(append([]Tier{}, tiers[0]), tiers[2:]...)
-	run, _ = SelectStoryLeavingQueue(fsys, alone, paths, nil)
+	run, _ = SelectStoryLeavingQueue(fsys, alone, paths, nil, nil)
 	if got, want := coverage(run), []string{"go-test", "vet"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("run without lint %q, want %q", got, want)
 	}
@@ -313,7 +313,7 @@ var manualTiers = []Tier{
 func TestSelectLeavesTheManualTiersOut(t *testing.T) {
 	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
 	paths := []string{"flai/main.go"}
-	run, queued := SelectStoryLeavingQueue(fsys, manualTiers, paths, nil)
+	run, queued := SelectStoryLeavingQueue(fsys, manualTiers, paths, nil, nil)
 	for _, tc := range []struct {
 		name string
 		got  []Selected
@@ -432,6 +432,33 @@ func TestSelectSuiteCoversATierOnlyByATierThatRuns(t *testing.T) {
 	}
 }
 
+// ADR-0312: a story's selection for a list of suites, each trimmed, keeps of
+// the tiers SelectStory chooses those of the suites, before covering, so a
+// tier that only a tier of a suite left out covers runs; nil is SelectStory,
+// an empty list keeps none, and a manual tier is never kept.
+func TestSelectStorySuitesKeepsOnlyTheTiersOfTheSuites(t *testing.T) {
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}, "flai/README.md": {}}
+	paths := []string{"flai/main.go", "flai/README.md"}
+	if got, want := SelectStorySuites(fsys, suiteTiers, paths, nil), SelectStory(fsys, suiteTiers, paths); !reflect.DeepEqual(got, want) {
+		t.Errorf("nil suites selected %q, want SelectStory's %q", coverage(got), coverage(want))
+	}
+	for _, tc := range []struct {
+		name   string
+		suites []string
+		want   []string
+	}{
+		{"every suite", nil, []string{"gofmt", "go-vet", "go-test covered by integration", "integration", "smoke", "docs"}},
+		{"a covered tier whose coverer's suite is left out runs", []string{"behavior", "docs"}, []string{"go-test", "docs"}},
+		{"the suites trimmed, the manual tier left out", []string{" static ", "integration "}, []string{"gofmt", "go-vet", "integration", "smoke"}},
+		{"a suite of no tier", []string{"slow"}, nil},
+		{"an empty list", []string{}, nil},
+	} {
+		if got := coverage(SelectStorySuites(fsys, suiteTiers, paths, tc.suites)); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 // ADR-0312: the suites are each tier's, or its name, once each in list
 // order; a suite no tier is in is refused naming those there are and what
 // to do, and no suite, a suite by a tier's name, and a manual tier's suite
@@ -478,7 +505,7 @@ func TestSelectStoryLeavingQueueRunsAQueueTierWhoseWhenMatches(t *testing.T) {
 	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/internal/x/x.go": {}}
 	paths := []string{"flai/internal/x/x.go"}
 	claim := []string{"README.md", "flai/internal/check"}
-	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, claim)
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, claim, nil)
 	var got []string
 	for _, s := range run {
 		got = append(got, s.Tier.Name+" covered by "+s.CoveredBy+", ran for "+s.RanFor)
@@ -501,12 +528,12 @@ func TestSelectStoryLeavingQueueRunsAQueueTierWhoseWhenMatches(t *testing.T) {
 
 	// with no claim, integration runs for the changed path, and with a when
 	// that matches nothing it is left to the queue and covers nothing
-	run, _ = SelectStoryLeavingQueue(fsys, tiers, paths, nil)
+	run, _ = SelectStoryLeavingQueue(fsys, tiers, paths, nil, nil)
 	if run[1].RanFor != "its when flai/** matches flai/internal/x/x.go" {
 		t.Errorf("integration ran for %q with no claim", run[1].RanFor)
 	}
 	tiers[1].When = []string{"docs/**"}
-	run, queued = SelectStoryLeavingQueue(fsys, tiers, paths, nil)
+	run, queued = SelectStoryLeavingQueue(fsys, tiers, paths, nil, nil)
 	if got, want := coverage(run), []string{"go-test", "by-path"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("run with integration's when matching nothing %q, want %q", got, want)
 	}
@@ -861,7 +888,7 @@ func TestRepositoryManifestRunsIntegrationAndSmokeForATemplateOnlyChange(t *test
 	for _, s := range SelectStory(fsys, tiers, paths) {
 		batch[s.Tier.Name] = true
 	}
-	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, paths)
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, paths, nil)
 	ranFor := map[string]string{}
 	for _, s := range run {
 		ranFor[s.Tier.Name] = s.RanFor

@@ -132,20 +132,45 @@ func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool, suite strin
 // run as they do with all, each tier another of them covers marked as Select
 // marks it; never a Manual tier. Verify runs them.
 func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
-	return cover(tiers, selectStoryTiers(fsys, tiers, paths))
+	return SelectStorySuites(fsys, tiers, paths, nil)
 }
 
-// SelectStoryLeavingQueue chooses the tiers SelectStory chooses, but answers
-// those marked Queue apart, in list order, as left to the merge queue's
-// batch, which runs them (ADR-0174), unless a pattern of the tier's When
-// matches an entry of claim, the story's claim as Holds.Claim reads it, or
-// one of paths: such a tier runs with the rest, its RanFor naming the first
-// pattern and the first claim entry, then path, it matches, and the batch
-// runs it again (ADR-0233). The tiers that run are marked covered as
-// SelectStory marks them, but by none of those left out: a tier that only a
-// queue tier left out covers runs, as the tier that covers it does not.
-func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths, claim []string) (run, queued []Selected) {
-	for _, s := range selectStoryTiers(fsys, tiers, paths) {
+// SelectStorySuites is SelectStory for the tiers of the suites listed, each
+// trimmed, as the merge queue's batch runs those its workflow's
+// verify_at.batch lists (ADR-0312): the tiers SelectStory would choose whose
+// SuiteOrName is one of suites. Nil suites is every suite, as SelectStory;
+// an empty list that is not nil keeps no tier. As SelectSuite does, a tier is
+// marked covered only by a tier of the suites that runs: a tier of a listed
+// suite that only a tier of another suite covers runs itself.
+func SelectStorySuites(fsys fs.FS, tiers []Tier, paths, suites []string) []Selected {
+	selected := selectStoryTiers(fsys, tiers, paths)
+	if suites != nil {
+		keep := make([]string, len(suites))
+		for i, s := range suites {
+			keep[i] = strings.TrimSpace(s)
+		}
+		selected = slices.DeleteFunc(selected, func(s Selected) bool { return !slices.Contains(keep, s.Tier.SuiteOrName()) })
+	}
+	// the suites are filtered before cover, not after, for the reason
+	// SelectSuite gives
+	return cover(tiers, selected)
+}
+
+// SelectStoryLeavingQueue chooses the tiers SelectStorySuites chooses for
+// suites, nil for every suite, but answers those marked Queue apart, in list
+// order, as left to the merge queue's batch, which runs them (ADR-0174),
+// unless a pattern of the tier's When matches an entry of claim, the story's
+// claim as Holds.Claim reads it, or one of paths: such a tier runs with the
+// rest, its RanFor naming the first pattern and the first claim entry, then
+// path, it matches, and the batch runs it again (ADR-0233). A queue tier of a
+// suite not listed is neither run nor left to the queue. The tiers that run
+// are marked covered as SelectStorySuites marks them, but by none of those
+// left out: a tier that only a queue tier left out covers runs, as the tier
+// that covers it does not.
+func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths, claim, suites []string) (run, queued []Selected) {
+	for _, s := range SelectStorySuites(fsys, tiers, paths, suites) {
+		// covered again below, by the tiers that run alone
+		s.CoveredBy = ""
 		if s.Tier.Queue {
 			pattern, entry, ok := firstMatching(s.Tier.When, claim)
 			if !ok {

@@ -17,10 +17,10 @@
 # step whatever the verify record holds, so a second close-out, in another
 # place, checks a commit the record already passed; later rounds reuse what
 # this run passed. --all, or CLOSE_OUT_ALL=1, has every round's flai verify
-# run the tiers it would leave to the merge queue. Both go before the story,
-# since everything after it is git commit's and --all is a git commit option
-# too. flai serve's close-out job sets the two variables when the request
-# asks for fresh or all.
+# run every suite's tiers and the tiers it would leave to the merge queue.
+# Both go before the story, since everything after it is git commit's and
+# --all is a git commit option too. flai serve's close-out job sets the two
+# variables when the request asks for fresh or all.
 # The cycle before it (git.md): close each task when it is done with
 # flai task done, which commits, syncs, and checks, resolve what a stopped
 # sync lists, run the task's tests, and close any fix the same way; then
@@ -29,7 +29,10 @@
 # close-out and flai verify never disagree: no rebase left unfinished, the
 # branch contains the main branch, the narrative, flai check --strict scoped
 # to the story, then the tiers of system-flow.yaml's tests that the branch's
-# changes select, with CLOSE_OUT_STORY set to the story in their environment.
+# changes select, of the suites the moves out of the story's state need: those
+# the verify of each transition out of it in the workflow file lists, or every
+# suite when one gives all or none gives verify, as the baseline's move to
+# review does, with CLOSE_OUT_STORY set to the story in their environment.
 # --record-issues records the check's findings outside the story in
 # design/issues, which the commit step commits. Add this project's other
 # checks as tiers in system-flow.yaml's tests, not as steps here.

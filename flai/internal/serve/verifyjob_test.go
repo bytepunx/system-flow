@@ -1173,3 +1173,172 @@ func TestTheHostsCommitRunsNoHookTheContainerWrote(t *testing.T) {
 		t.Errorf("the story's branch's last commit: %q", got)
 	}
 }
+
+// suitesGit answers the git commands flai verify runs for a story whose
+// branch changed docs/README.md, contains main, which is at 89abcdef0123,
+// and has nothing uncommitted, as flai verify's tests in cmd answer them,
+// and refuses every other.
+type suitesGit struct{}
+
+func (suitesGit) Run(_, _ string, args ...string) (string, error) {
+	switch strings.Join(args, " ") {
+	case "rev-parse --abbrev-ref HEAD":
+		return "main", nil
+	case "rev-parse HEAD":
+		return "0123abc4567\n", nil
+	case "rev-parse --verify --quiet main^{commit}":
+		return "89abcdef0123\n", nil
+	case "diff --name-only --diff-filter=d main...HEAD":
+		return "docs/README.md\n", nil
+	case "status --porcelain --untracked-files=all", "diff --no-renames --name-only HEAD...main", "rev-list --abbrev-commit HEAD..main":
+		return "", nil
+	}
+	return "", errors.New("fatal: not a git repository")
+}
+
+func (g suitesGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (suitesGit) LookPath(name string) (string, error) { return name, nil }
+
+// suitesProject is a project whose S-004 is in progress with its narrative
+// written, and whose worktree, a copy of it under the canonical ID S-0004 by
+// which flai serve names the story, declares a unit tier in the suite
+// behavior and a lint tier in static, each for docs/ and passing. It answers
+// the main checkout, the worktree, and what sets the verify of the main
+// checkout's workflow file's move to review, the baseline's otherwise.
+func suitesProject(t *testing.T) (root, worktree string, setReview func(string)) {
+	t.Helper()
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("sh not installed")
+	}
+	root = t.TempDir()
+	worktree = filepath.Join(root, ".flai-cache", "worktrees", "S-0004")
+	for _, dir := range []string{root, worktree} {
+		if err := os.CopyFS(dir, os.DirFS("../metrics/testdata/good")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifest, err := os.ReadFile(filepath.Join(worktree, "system-flow.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tiers := "tests:\n" +
+		"  - name: unit\n    suite: behavior\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n" +
+		"  - name: lint\n    suite: static\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n"
+	for path, body := range map[string]string{
+		filepath.Join(root, ".gitignore"):           ".flai-cache/\n",
+		filepath.Join(worktree, "system-flow.yaml"): string(manifest) + tiers,
+		filepath.Join(worktree, ".git"):             "gitdir: " + filepath.Join(root, ".git", "worktrees", "S-0004") + "\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	baseline, err := os.ReadFile("../workflow/baseline/board.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const toReview = "    verify: {suites: all, severity: warn}\n"
+	if !strings.Contains(string(baseline), toReview) {
+		t.Fatalf("the baseline board has no %q", toReview)
+	}
+	setReview = func(verify string) {
+		t.Helper()
+		board := strings.Replace(string(baseline), toReview, "    verify: "+verify+"\n", 1)
+		if err := os.WriteFile(filepath.Join(root, "design", "workflows", "board.md"), []byte(board), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root, worktree, setReview
+}
+
+// S-0807 criterion 2, ADR-0312 §2, ADR-0229 §5: the record answers a
+// close-out only when it holds a passing verdict at the head for every suite
+// the moves out of the story's state need that the branch selects tiers of,
+// and all needs every suite; a request it does not answer starts the job,
+// whose flai verify picks the same suites, and one it answers starts none.
+func TestTheRecordAnswersACloseOutOnlyWhenEveryNeededSuitePassedThere(t *testing.T) {
+	t.Parallel()
+	root, worktree, setReview := suitesProject(t)
+	setReview("[behavior]")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tiers, err := verify.CheckoutTiersFor(worktree, suitesGit{}, buildinfo.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	suites, err := verify.StorySuites(repo, "S-004")
+	if err != nil || !slices.Equal(suites, []string{"behavior"}) {
+		t.Fatalf("the story's suites %q, %v; want behavior", suites, err)
+	}
+	rep, err := verify.Verify(context.Background(), verify.StoryOptions{Story: "S-004", Project: repo, Worktree: worktree, Tiers: tiers, Git: suitesGit{}, Suites: suites})
+	if err != nil || !rep.Passed || len(rep.SuiteRuns) != 1 || rep.SuiteRuns[0].Name != "behavior" {
+		t.Fatalf("the run of behavior %+v, %v", rep, err)
+	}
+
+	o := Options{Logger: slog.New(slog.DiscardHandler), Now: time.Now, Git: suitesGit{}}
+	e := Entry{Key: "g", Name: "good", Root: root}
+	answered := func(all bool) bool {
+		t.Helper()
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, ok, err := recordedFor(o, e)(repo, "S-0004", worktree, all)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+	if !answered(false) {
+		t.Error("behavior, which passed at the head, is not answered from the record")
+	}
+	if answered(true) {
+		t.Error("all, which needs static too, is answered from the record")
+	}
+	setReview("[behavior, static]")
+	if answered(false) {
+		t.Error("behavior and static, of which static never ran, is answered from the record")
+	}
+
+	var wg sync.WaitGroup
+	pass := newVerifyPass(o, e, &wg)
+	fake := &fakeCloseOut{}
+	pass.every, pass.run = 5*time.Millisecond, fake.run
+	pass.exe = func() (string, error) { return "/opt/flai", nil }
+	ctx, cancel := context.WithCancel(context.Background())
+	pass.start(ctx)
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
+	ask := func() closeout.Answer {
+		t.Helper()
+		a, err := closeout.Ask(context.Background(), repo.CacheDir(), closeout.Request{Story: "S-0004", By: "agent-S-0004"}, closeout.Wait{Take: 5 * time.Second, Answer: 5 * time.Second, Poll: 5 * time.Millisecond})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	if a := ask(); !a.Started || a.Recorded {
+		t.Fatalf("a close-out whose static the record lacks: %+v; want its job started", a)
+	}
+	waitFor(t, "the job's end", func() bool {
+		job, ok, err := closeout.ReadJob(repo.CacheDir(), "S-0004")
+		return err == nil && ok && !job.Running()
+	})
+	if calls := fake.ran(); len(calls) != 1 || !slices.Equal(calls[0].argv, []string{"/opt/flai", "verify", "S-0004", "--record-issues"}) {
+		t.Errorf("the job ran %q; want flai verify, which picks the suites itself", argvs(calls))
+	}
+	setReview("[behavior]")
+	if a := ask(); !a.Recorded || a.Started || a.Verdict != closeout.VerdictPassed || a.Commit != "0123abc4567" {
+		t.Errorf("a close-out whose behavior the record passed: %+v; want it answered from the record", a)
+	}
+	if n := len(fake.ran()); n != 1 {
+		t.Errorf("the answer from the record ran a job: %d calls", n)
+	}
+}
