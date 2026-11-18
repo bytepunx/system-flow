@@ -975,3 +975,26 @@ func TestHoldKindTestingHoldsAndRepoReadsItsFlow(t *testing.T) {
 		t.Errorf("the baseline has no state doing, so it holds nothing: %+v", h)
 	}
 }
+
+// I-0379: a memo's Holds read a task's state by its kind in the workflow they
+// are given, so under a board whose closed task state is shipped, not done,
+// a shipped task's touch outside the story's is not claimed and holds
+// nothing; the baseline, which knows no state shipped, reads it as open.
+func TestMemoHoldsReadTaskStatesInTheirWorkflow(t *testing.T) {
+	f := promoteKindFlows()[2]
+	w, st := f.of(t), f.state
+	story := claimed("S-0001", st(InProgress), "docs")
+	items := []*Item{story,
+		claimTask("T-0001", "S-0001", st(Done), "flai/cmd/serve.go"),
+		claimed("S-0009", st(Ready), "flai/cmd/serve.go"),
+	}
+	if got := strings.Join(NewHoldsMemo().NewHoldsIn(w, items, holdProjects).Claim(story), ","); got != "docs" {
+		t.Errorf("claim under the renamed board = %s, want docs", got)
+	}
+	if h := NewHoldsMemo().NewHoldsIn(w, items, holdProjects).Of(items[2]); h != nil {
+		t.Errorf("held by a shipped task's touch: %s", h.Reason)
+	}
+	if got := strings.Join(NewHoldsMemo().NewHolds(items, holdProjects).Claim(story), ","); got != "docs,flai/cmd/serve.go" {
+		t.Errorf("claim under the baseline = %s, want docs,flai/cmd/serve.go", got)
+	}
+}

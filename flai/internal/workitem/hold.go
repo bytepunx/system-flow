@@ -110,9 +110,10 @@ func (h *Holds) holdsFlow() workflow.Workflow {
 // HoldsMemo remembers, for the Holds that share it, the claim of each story,
 // whether the shared paths cover a path, and how one claim holds another, for
 // a caller that judges the same stories again and again, such as the replay
-// of the holds (I-0155). Its Holds must be given the same projects and shared
-// paths, and its caller must Forget a story's claim when the story's tasks or
-// their states change. The claims it gives are shared, not to be changed.
+// of the holds (I-0155). Its Holds must be given the same workflow each time,
+// as they are given the same projects and shared paths, and its caller must
+// Forget a story's claim when the story's tasks or their states change. The
+// claims it gives are shared, not to be changed.
 type HoldsMemo struct {
 	claims  map[string][]memoClaim // by story ID, one per story item
 	covered map[string]bool        // whether the shared paths cover a path
@@ -148,10 +149,15 @@ func (m *HoldsMemo) Forget(id string) {
 	delete(m.claims, id)
 }
 
-// NewHolds is NewHolds with the Holds remembering what they work out in m,
-// the claims of the active stories among items too.
+// NewHolds is NewHoldsIn under the baseline workflow.
 func (m *HoldsMemo) NewHolds(items []*Item, projects []manifest.Project) *Holds {
-	return newHolds(baselineFlow, items, projects, m)
+	return m.NewHoldsIn(baselineFlow, items, projects)
+}
+
+// NewHoldsIn is NewHoldsIn with the Holds remembering what they work out in
+// m, the claims of the active stories of w among items too (I-0379).
+func (m *HoldsMemo) NewHoldsIn(w workflow.Workflow, items []*Item, projects []manifest.Project) *Holds {
+	return newHolds(w, items, projects, m)
 }
 
 type openClaim struct {
