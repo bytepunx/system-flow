@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
@@ -27,13 +28,19 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// Deploying the stories in review into the project's kluster (S-0579,
-// ADR-0254 §5). Once a minute, and at once when a project is first served,
+// Deploying the stories in a state whose runs name the cluster's deploy,
+// review in the baseline, into the project's kluster (S-0579, ADR-0254 §5,
+// ADR-0312 §4). Once a minute, and at once when a project is first served,
 // for each served project whose manifest has a kluster: block while its
 // kluster host action is on, flai serve queues a deploy of each story in
-// review whose namespace was not deployed, or tried, at its branch's head:
-// once when the story enters review, and again at each new head. With the
-// action off or no block, it runs no kluster command at all.
+// such a state whose namespace was not deployed, or tried there, at its
+// branch's head: once when the story enters the state, and again at each new
+// head; in a state whose runs name the checks and no deploy, it queues a
+// checks run against a namespace deployed at the head instead. A story whose
+// state job (statejob.go) for its entry has not reached its cluster steps is
+// left for a later look, so that the deploy is of the head the job rebased.
+// A state whose runs name no cluster step deploys nothing. With the action
+// off or no block, it runs no kluster command at all.
 //
 // The jobs of a project run one at a time, in the order their causes came,
 // on one worker of the project's own, so that a look never waits for a job.
@@ -43,10 +50,12 @@ import (
 // fails, or a checks run against the namespace that does not pass, opens one
 // thread on the story naming the job, the step, its exit code, the commit,
 // and the log, or adds an entry to the one open, and sends the story back
-// from review to in-progress, as flai, with a reason naming the job, the step,
-// and the commit (ADR-0254 §5a), as a failing required check does (ADR-0167):
-// unless the action went off meanwhile, or the story is no longer in review
-// at that head. The send back is kept with what the pass tried, naming the
+// by the send-back transition out of its state, review to in-progress in the
+// baseline, as flai, with a reason naming the job, the step, and the commit
+// (ADR-0254 §5a), as a failing required check does (ADR-0167): unless the
+// action went off meanwhile, or the story is no longer in a state whose runs
+// name a cluster step at that head. The state job's cluster steps wait for
+// what this pass records and send nothing back themselves. The send back is kept with what the pass tried, naming the
 // thread, so that the story's agent is started on it once
 // (startKlusterSentBack), and the story keeps its namespace while it stands
 // in progress where the send back put it. Back in review, at a new head or
@@ -242,27 +251,31 @@ func (p *klusterPass) refuseOverLimit(file kluster.Request, limit int, format st
 }
 
 // klusterTried is what the pass last did for a story's namespace, kept in
-// klusterTriedPath, so that a head is tried once whether a record was written
-// or the deploy was refused before it, and a failed teardown is tried again
-// only once the story has moved to another column than Teardown names. It
-// keeps too the send back a failure at Head made of the story, if one did.
+// klusterTriedPath, so that a head is tried once in a state, State, whether
+// a record was written or the deploy was refused before it, and a failed
+// teardown is tried again only once the story has moved to another column
+// than Teardown names. It keeps too the send back a failure at Head made of
+// the story, if one did. A file from before State was kept has none, and
+// stands for every state.
 type klusterTried struct {
 	Story    string           `json:"story"`
 	Head     string           `json:"head,omitempty"`
+	State    string           `json:"state,omitempty"`
 	Outcome  string           `json:"outcome,omitempty"`
 	Teardown string           `json:"teardown,omitempty"` // the story's column when a teardown failed
 	SentBack *klusterSentBack `json:"sent_back,omitempty"`
 	At       time.Time        `json:"at"`
 }
 
-// klusterSentBack is the pass's send back of a story from the state it
-// awaited its acceptance in, review in the baseline, along the workflow's
-// transition with the send-back effect, to in-progress in the baseline,
-// after its deploy or its checks run failed (ADR-0254 §5a, ADR-0301): the
-// head it failed at, the thread it opened or added to, the move's reason, the
-// state it moved the story to, and the move's time, to the second, as the
-// story's transition keeps it. The next deploy the story's return to review
-// queues writes what the pass tried afresh, without it.
+// klusterSentBack is the pass's send back of a story from a state whose runs
+// name a cluster step, review in the baseline, along the workflow's
+// transition with the send-back effect out of it, to in-progress in the
+// baseline, after its deploy or its checks run failed (ADR-0254 §5a,
+// ADR-0301, ADR-0312 §4): the head it failed at, the thread it opened or
+// added to, the move's reason, the state it moved the story to, and the
+// move's time, to the second, as the story's transition keeps it. The next
+// deploy the story's return to the state queues writes what the pass tried
+// afresh, without it.
 type klusterSentBack struct {
 	Head   string    `json:"head"`
 	Thread string    `json:"thread"`
@@ -293,6 +306,12 @@ func klusterKept(it *workitem.Item, t klusterTried) bool {
 		return it.Status == t.SentBack.To
 	}
 	return n > 1 && baselineFlow.Gives(it.Type, it.Transitions[n-2].To, last.To, workflow.EffectSendBack)
+}
+
+// triedIn reports whether t's head was tried in state: t names state, or
+// no state, as a file from before State was kept.
+func (t klusterTried) triedIn(state string) bool {
+	return t.State == "" || t.State == state
 }
 
 // klusterTriedPath is where the pass keeps what it last did for namespace ns.
@@ -341,8 +360,9 @@ func klusterTriedNamespaces(root string) map[string]string {
 	return out
 }
 
-// klusterPass deploys the stories in review of one served project into its
-// kluster, tears down those that left, and promotes main on acceptance: the
+// klusterPass deploys the stories of one served project in a state whose
+// runs name the cluster's deploy into its kluster, tears down those that
+// left, and promotes main on acceptance: the
 // looks queue jobs, and one worker runs them one at a time.
 type klusterPass struct {
 	o    Options
@@ -431,9 +451,102 @@ func klusterDeployable(m manifest.Manifest) bool {
 	return m.Kluster != nil && len(m.Kluster.Deploy) > 0 && strings.TrimSpace(m.Kluster.Deploy[0]) != ""
 }
 
-// look queues a deploy of each story in review whose namespace was neither
-// deployed nor tried at its branch's head, a teardown of each deployed story
-// that left review, and one promotion when stories were accepted since the
+// klusterRuns says which of the cluster's steps flow's state runs when a
+// story enters it (ADR-0312 §4): the deploy and the checks on review in the
+// baseline, neither on a state whose runs name no kluster: step.
+func klusterRuns(flow workflow.Workflow, state string) (deploy, checks bool) {
+	r := flow.StateRuns(state)
+	return r.RunsStep(workflow.KlusterDeploy), r.RunsStep(workflow.KlusterChecks)
+}
+
+// klusterIn reports whether flow's state runs a cluster step: where the
+// pass deploys a story, or runs its checks, itself.
+func klusterIn(flow workflow.Workflow, state string) bool {
+	deploy, checks := klusterRuns(flow, state)
+	return deploy || checks
+}
+
+// klusterSkip is why flai serve's kluster pass runs nothing of step,
+// workflow.KlusterDeploy or workflow.KlusterChecks, for story it in its
+// state, in the project repo served from root, with o's host actions, or
+// empty when it runs it (ADR-0312 §5): no kluster: block, a block that names
+// no deploy, the kluster host action off, no agent namespace available
+// (namespaceUnavailable) for a deploy, or, for the checks, the checks host
+// action off or no checks named.
+func klusterSkip(o Options, root string, repo *workitem.Repo, it *workitem.Item, step string) string {
+	m := repo.Manifest
+	switch {
+	case m.Kluster == nil:
+		return "the manifest has no kluster: block, so flai serve's kluster pass deploys nothing and runs no checks"
+	case !klusterDeployable(m):
+		return "the manifest's kluster: block names no deploy command, so deploys are not set up yet and flai serve's kluster pass deploys nothing"
+	case o.Host.Enabled == nil || !o.Host.Enabled(hostapi.ActionKluster, root):
+		return "the kluster host action is off for this project, so flai serve's kluster pass deploys nothing: turning it on with flai serve enable kluster is the operator's"
+	case step == workflow.KlusterChecks:
+		_, why := checksConfigOf(o, repo)
+		return why
+	}
+	flow := repo.Flow()
+	if flow.Kind(it.Status) != workflow.KindActive {
+		return ""
+	}
+	items, err := repo.List(false)
+	if err != nil {
+		o.Logger.Warn("stories holding a kluster namespace not counted", "component", "serve", "root", root, "story", it.ID, "err", err.Error())
+		return ""
+	}
+	return namespaceUnavailable(m, items, flow, mainCheckout(repo), it)
+}
+
+// namespaceUnavailable says why no agent namespace is available for story it
+// in its state, or is empty when one is, items being the project's. Only a
+// state of flow's active kind bounds its stories' namespaces, by m's
+// kluster.agent_namespaces (ADR-0292 §4): a story there with no namespace
+// record, while the limit is 0, or other stories in states of the active
+// kind hold as many namespaces, has none. A story in any other state, review
+// in the baseline, always has one, and so does one whose namespace has a
+// record.
+func namespaceUnavailable(m manifest.Manifest, items []*workitem.Item, flow workflow.Workflow, root string, it *workitem.Item) string {
+	if flow.Kind(it.Status) != workflow.KindActive {
+		return ""
+	}
+	ns, err := kluster.StoryNamespace(it.ID)
+	if err != nil {
+		return ""
+	}
+	if _, recorded, _ := kluster.ReadRecord(root, ns); recorded {
+		return ""
+	}
+	limit := m.KlusterAgentNamespaces()
+	if limit == 0 {
+		return fmt.Sprintf("%s is in %s, a state of the active kind, with no namespace, and kluster.agent_namespaces is 0, so no story there holds one", it.ID, it.Status)
+	}
+	holders := namespaceHolders(items, flow, root, it.ID, nil)
+	if len(holders) < limit {
+		return ""
+	}
+	return fmt.Sprintf("%s is in %s, a state of the active kind, with no namespace, and %s in such states hold one already, the most kluster.agent_namespaces allows (%d): %s",
+		it.ID, it.Status, countStories(len(holders)), limit, strings.Join(holders, "; "))
+}
+
+// stateJobBeforeKluster reports whether story it's state job for its entry
+// into its state, under cache, the project's .flai-cache, runs and has not
+// reached its cluster steps: it is rebasing the story's branch, or running
+// the state's suites, and the deploy waits for the head it leaves.
+func stateJobBeforeKluster(cache string, it *workitem.Item) bool {
+	j, ok, err := closeout.ReadStateJob(cache, it.ID)
+	if err != nil || !ok || !j.Running() || j.State != it.Status || !j.Entry.Equal(it.EnteredAt().UTC()) {
+		return false
+	}
+	return !slices.ContainsFunc(j.StateSteps, func(s closeout.StateStep) bool {
+		return s.Kind == closeout.StateStepKluster && (!s.Started.IsZero() || s.Outcome != "")
+	})
+}
+
+// look queues a deploy of each story in a state whose runs name the
+// cluster's deploy whose namespace was neither deployed nor tried there at
+// its branch's head (lookReview), a teardown of each deployed story that is
+// no longer underway, and one promotion when stories were accepted since the
 // last look, and wakes the worker. With the action off it queues nothing, and
 // the acceptances meanwhile promote nothing. With a block that names no
 // deploy it queues only teardowns, and the acceptances meanwhile promote
@@ -494,7 +607,7 @@ func klusterAccepted(flow workflow.Workflow, changes []workitem.Change) bool {
 // by a checks run against the namespace: the checks host action is on and
 // names checks.
 func (p *klusterPass) checksOn(repo *workitem.Repo) bool {
-	_, why := p.checksConfig(repo)
+	_, why := checksConfigOf(p.o, repo)
 	return why == ""
 }
 
@@ -509,36 +622,52 @@ func passedAt(r kluster.Record, head string, checksOn bool) bool {
 	return !checksOn || r.ChecksCommit == head && r.ChecksOutcome == kluster.OutcomePassed
 }
 
-// lookReview queues a deploy of each story in review whose namespace's record
-// did not pass at its branch's head, its checks too while checksOn, and that
-// the pass did not try at that head, or that is back in review after a send
-// back, at whatever head; and names them. A deploy the agent asked for that
-// passed at the head stands as the review's. At the head is as the
-// acceptance gate judges it with m's layout (ADR-0292 §3): the head, or a
-// commit followed only by changes under the design, docs, and wip folders,
-// so the issues a close-out commits do not deploy the story again. A record
-// or a diff that cannot be read is not at the head: it is logged, and the
-// story deployed. flow is the project's workflow.
+// lookReview queues a deploy of each story in a state whose runs name the
+// cluster's deploy, review in the baseline, whose namespace's record did not
+// pass at its branch's head, its checks too while checksOn and the state's
+// runs name them, and that the pass did not try at that head in that state,
+// or that is back in it after a send back, at whatever head; and names them.
+// In a state whose runs name the checks and no deploy, it queues a checks run
+// in place of the deploy, only against a namespace whose deploy passed at the
+// head. A deploy the agent asked for that passed at the head stands as the
+// state's. At the head is as the acceptance gate judges it with m's layout
+// (ADR-0292 §3): the head, or a commit followed only by changes under the
+// design, docs, and wip folders, so the issues a close-out commits do not
+// deploy the story again. A record or a diff that cannot be read is not at
+// the head: it is logged, and the story deployed. A story whose state job
+// has not reached its cluster steps, or for which no agent namespace is
+// available (namespaceUnavailable), is passed over. flow is the project's
+// workflow.
 func (p *klusterPass) lookReview(ctx context.Context, flow workflow.Workflow, items []*workitem.Item, root string, m manifest.Manifest, checksOn bool) []string {
 	git := gitOf(p.o)
+	cache := filepath.Join(p.e.Root, ".flai-cache")
 	var queued []string
 	for _, it := range items {
 		if ctx.Err() != nil {
 			return queued
 		}
-		if it.Type != workitem.Story || !flow.AwaitsAcceptance(it.Type, it.Status) || it.Archived {
+		deploys, checks := klusterRuns(flow, it.Status)
+		if it.Type != workitem.Story || !deploys && !checks || it.Archived {
 			continue
 		}
 		ns, err := kluster.StoryNamespace(it.ID)
 		if err != nil {
 			continue
 		}
-		head, err := kluster.StoryHead(git, root, it.ID)
-		if err != nil {
-			p.o.Logger.Debug("story in review has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID)
+		if stateJobBeforeKluster(cache, it) {
+			p.o.Logger.Debug("story's state job has not reached its cluster steps, so it is deployed at a later look", "component", "serve", "root", p.e.Root, "story", it.ID, "state", it.Status)
 			continue
 		}
-		passed, _, err := kluster.AcceptGate(git, root, m, it.ID, head, checksOn)
+		if why := namespaceUnavailable(m, items, flow, root, it); deploys && why != "" {
+			p.o.Logger.Debug("story not deployed, no agent namespace being available", "component", "serve", "root", p.e.Root, "story", it.ID, "why", why)
+			continue
+		}
+		head, err := kluster.StoryHead(git, root, it.ID)
+		if err != nil {
+			p.o.Logger.Debug("story has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID, "state", it.Status)
+			continue
+		}
+		passed, _, err := kluster.AcceptGate(git, root, m, it.ID, head, checksOn && checks)
 		if err != nil {
 			p.o.Logger.Warn("kluster record not judged at the story's head, so it is deployed again", "component", "serve", "root", p.e.Root, "story", it.ID, "head", head, "err", err.Error())
 		}
@@ -547,11 +676,18 @@ func (p *klusterPass) lookReview(ctx context.Context, flow workflow.Workflow, it
 		}
 		// back from a send back, it is deployed again in place, at a new head or
 		// the same one: its deploy writes what was tried afresh
-		if t, tried := readKlusterTried(root, ns); tried && t.SentBack == nil && t.Head == head {
+		if t, tried := readKlusterTried(root, ns); tried && t.SentBack == nil && t.Head == head && t.triedIn(it.Status) {
 			continue
 		}
-		if p.enqueue(klusterJob{kind: klusterDeploy, story: it.ID, head: head}) {
-			queued = append(queued, klusterDeploy+" "+it.ID)
+		kind := klusterDeploy
+		if !deploys {
+			if deployed, _, _ := kluster.AcceptGate(git, root, m, it.ID, head, false); !checksOn || !deployed {
+				continue // nothing deployed at the head to run the checks against
+			}
+			kind = klusterChecks
+		}
+		if p.enqueue(klusterJob{kind: kind, story: it.ID, head: head}) {
+			queued = append(queued, kind+" "+it.ID)
 		}
 	}
 	return queued
@@ -621,9 +757,10 @@ func (p *klusterPass) lookLeft(flow workflow.Workflow, items []*workitem.Item, r
 
 // klusterHolds is whether story it keeps its namespace: it is underway, in
 // a state of flow's active or waiting kind, in progress or in review in the
-// baseline, and not archived (ADR-0292 §3, ADR-0301).
+// baseline, or in a state whose runs name a cluster step, and not archived
+// (ADR-0292 §3, ADR-0301, ADR-0312 §4).
 func klusterHolds(flow workflow.Workflow, it *workitem.Item) bool {
-	return !it.Archived && flow.Underway(it.Status)
+	return !it.Archived && (flow.Underway(it.Status) || klusterIn(flow, it.Status))
 }
 
 // forget removes what the pass tried for namespace ns.
@@ -748,9 +885,11 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to deploy it (%v)", j.story, err))
 		}
-		if flow := repo.Flow(); !klusterHolds(flow, it) || (!j.asked() && !flow.AwaitsAcceptance(it.Type, it.Status)) {
-			// left review since it was queued: the next look tears it down
-			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress or in review", j.story, it.Status))
+		flow := repo.Flow()
+		if deploys, _ := klusterRuns(flow, it.Status); !klusterHolds(flow, it) || (!j.asked() && !deploys) {
+			// left the state since it was queued: the next look tears it down
+			// once it is no longer underway
+			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress, at its agent's request, or in a state whose runs name the cluster's deploy", j.story, it.Status))
 		}
 		return p.deploy(ctx, repo, j, it.Status)
 	case klusterChecks:
@@ -758,8 +897,14 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 		if err != nil {
 			return refusedEnd(fmt.Sprintf("flai serve could not read %s to run its checks (%v)", j.story, err))
 		}
-		if !klusterHolds(repo.Flow(), it) {
-			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve runs a story's checks against its namespace only while it is in progress or in review", j.story, it.Status))
+		flow := repo.Flow()
+		if _, checks := klusterRuns(flow, it.Status); !klusterHolds(flow, it) || (!j.asked() && !checks) {
+			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve runs a story's checks against its namespace only while it is in progress, at its agent's request, or in a state whose runs name the cluster's checks", j.story, it.Status))
+		}
+		if !j.asked() {
+			// a head is tried once in a state, as a deploy's is: its send back,
+			// if the run fails, is kept with it
+			p.tried(repo, klusterTried{Story: j.story, Head: j.head, State: it.Status, Outcome: kluster.OutcomePassed, At: p.o.Now().UTC()})
 		}
 		return p.checksJob(ctx, repo, j)
 	case klusterTeardown:
@@ -799,10 +944,20 @@ func refusedEnd(why string) klusterEnd {
 	return klusterEnd{outcome: kluster.OutcomeRefused, fail: klusterFailure{exit: -1, err: why}}
 }
 
+// tried keeps t as what the pass last did for its story's namespace in
+// repo's main checkout; a failure to keep it is logged.
+func (p *klusterPass) tried(repo *workitem.Repo, t klusterTried) {
+	ns, _ := kluster.StoryNamespace(t.Story)
+	if err := writeKlusterTried(mainCheckout(repo), ns, t); err != nil {
+		p.o.Logger.Warn("kluster job not recorded", "component", "serve", "root", p.e.Root, "story", t.Story, "err", err.Error())
+	}
+}
+
 // deploy deploys j's story, whose status is status, at j.head, bringing the
-// cluster up first when it is absent, then runs its checks; it settles the
-// story's failure thread for a job the looks queued, and opens none for one
-// its agent asked for (ADR-0292 §5).
+// cluster up first when it is absent, then runs its checks, for a job the
+// looks queued only when status's runs name them; it settles the story's
+// failure thread for a job the looks queued, and opens none for one its
+// agent asked for (ADR-0292 §5).
 func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j klusterJob, status string) klusterEnd {
 	root := mainCheckout(repo)
 	ns, _ := kluster.StoryNamespace(j.story)
@@ -826,13 +981,11 @@ func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j kluster
 		return refusedEnd(err.Error())
 	}
 	if !j.asked() {
-		tried := klusterTried{Story: j.story, Head: j.head, Outcome: kluster.OutcomePassed, At: p.o.Now().UTC()}
+		tried := klusterTried{Story: j.story, Head: j.head, State: status, Outcome: kluster.OutcomePassed, At: p.o.Now().UTC()}
 		if err != nil {
 			tried.Outcome = kluster.OutcomeFailed
 		}
-		if werr := writeKlusterTried(root, ns, tried); werr != nil {
-			p.o.Logger.Warn("kluster deploy not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "err", werr.Error())
-		}
+		p.tried(repo, tried)
 	}
 	if err != nil {
 		p.journalJob(j, "failed", fmt.Sprintf("deploy of %s into %s at %s failed %s: %s", j.story, ns, short(j.head), fail.where(), fail.err))
@@ -846,6 +999,9 @@ func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j kluster
 	p.journalJob(j, "done", fmt.Sprintf("deployed %s into %s at %s", j.story, ns, short(j.head)))
 	p.o.Logger.Info("kluster deploy passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "by", j.asker())
 	p.passed(repo, j, ns)
+	if _, checks := klusterRuns(repo.Flow(), status); !j.asked() && !checks {
+		return end // the state's runs name the deploy alone
+	}
 	run := p.checks(ctx, repo, j, ns)
 	if run == nil {
 		return end
@@ -1008,7 +1164,7 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 // configuration or a record that cannot be read, or the namespace not
 // deployed at the story branch's head with a deploy that passed.
 func (p *klusterPass) checksReady(repo *workitem.Repo, story string) (cfg ChecksConfig, env []string, why string) {
-	if cfg, why = p.checksConfig(repo); why != "" {
+	if cfg, why = checksConfigOf(p.o, repo); why != "" {
 		return ChecksConfig{}, nil, why
 	}
 	_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled)
@@ -1022,16 +1178,16 @@ func (p *klusterPass) checksReady(repo *workitem.Repo, story string) (cfg Checks
 	return cfg, env, ""
 }
 
-// checksConfig is the project's checks configuration in repo, or why flai
-// serve runs no checks for it, in a refusal's words naming what the operator
-// does: the checks host action off, no checks named, or checks that cannot
-// be read.
-func (p *klusterPass) checksConfig(repo *workitem.Repo) (ChecksConfig, string) {
+// checksConfigOf is the project's checks configuration in repo as o's
+// checks host action gives it, or why flai serve runs no checks for it, in a
+// refusal's words naming what the operator does: the checks host action off,
+// no checks named, or checks that cannot be read.
+func checksConfigOf(o Options, repo *workitem.Repo) (ChecksConfig, string) {
 	const off = "the checks host action is off for this project: turning it on with flai serve enable checks is the operator's"
-	if p.o.Checks == nil {
+	if o.Checks == nil {
 		return ChecksConfig{}, off
 	}
-	cfg, err := p.o.Checks(repo)
+	cfg, err := o.Checks(repo)
 	switch {
 	case err != nil:
 		return ChecksConfig{}, fmt.Sprintf("flai serve could not read the project's checks (%v)", err)
@@ -1212,14 +1368,14 @@ func (p *klusterPass) failed(repo *workitem.Repo, j klusterJob, ns string, f klu
 // open, with what text says for the state the story is sent back to and why
 // it was not sent back, empty when it was; then, once the thread is open,
 // moves the story along the workflow's transition with the send-back effect
-// out of the state it awaits its acceptance in, review to in-progress in the
-// baseline, as flai for reason, and keeps the send back with what the pass
-// tried for namespace ns (ADR-0254 §5a, ADR-0301). It moves nothing when the
-// kluster action went off meanwhile, the story no longer awaits its
-// acceptance at j.head, or the workflow has no send back out of its state,
-// and the thread says so.
+// out of its state, whose runs name a cluster step, review to in-progress in
+// the baseline, as flai for reason, and keeps the send back with what the
+// pass tried for namespace ns (ADR-0254 §5a, ADR-0301, ADR-0312 §4). It moves
+// nothing when the kluster action went off meanwhile, the story is no longer
+// in such a state at j.head, or the workflow has no send back out of its
+// state, and the thread says so.
 func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, reason string, text func(to, unsent string) string) {
-	fresh, it, to, unsent := p.inReviewAt(j)
+	fresh, it, to, unsent := p.inKlusterStateAt(j)
 	th := p.report(repo, j.story, title, text(to, unsent))
 	if unsent != "" {
 		p.o.Logger.Info("story not sent back after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "commit", j.head, "why", unsent)
@@ -1244,14 +1400,14 @@ func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, rea
 	p.o.Logger.Info("story sent back after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "to", to, "thread", th.ID, "reason", reason)
 }
 
-// inReviewAt reads the project and j's story again, and answers them, with
-// the state the workflow's send back out of the story's state goes to, and
-// an empty why when the story may be sent back: the kluster action is still
-// on, the story still awaits its acceptance at j.head, and the workflow sends
-// it back from there. Otherwise why says, in a thread's words, why it is not
-// sent back, and to is where the workflow sends back a story that awaits its
-// acceptance, empty when it names nowhere.
-func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, to, why string) {
+// inKlusterStateAt reads the project and j's story again, and answers them,
+// with the state the workflow's send back out of the story's state goes to,
+// and an empty why when the story may be sent back: the kluster action is
+// still on, the story is still in a state whose runs name a cluster step, at
+// j.head, and the workflow sends it back from there. Otherwise why says, in a
+// thread's words, why it is not sent back, and to is where the workflow
+// sends back a story from the first such state, empty when it names nowhere.
+func (p *klusterPass) inKlusterStateAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, to, why string) {
 	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		return nil, nil, sentBackTo(p.o.flow()), "flai serve could not read the project again to move it (" + err.Error() + ")"
@@ -1264,8 +1420,8 @@ func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workite
 	if it, err = repo.Get(j.story); err != nil {
 		return nil, nil, to, "flai serve could not read the story again to move it (" + err.Error() + ")"
 	}
-	if !flow.AwaitsAcceptance(it.Type, it.Status) || it.Archived {
-		return nil, nil, to, fmt.Sprintf("it is %s now, no longer in review", it.Status)
+	if !klusterIn(flow, it.Status) || it.Archived {
+		return nil, nil, to, fmt.Sprintf("it is %s now, no longer in a state whose runs name the cluster's deploy or checks", it.Status)
 	}
 	back, ok := flow.SendBack(it.Type, it.Status)
 	if !ok {
@@ -1278,10 +1434,10 @@ func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workite
 }
 
 // sentBackTo is the state flow sends a story back to from the first state
-// it awaits its acceptance in, in-progress in the baseline; empty when it
+// whose runs name a cluster step, in-progress in the baseline; empty when it
 // names none.
 func sentBackTo(flow workflow.Workflow) string {
-	for _, from := range flow.AcceptFrom(workflow.TypeStory) {
+	for _, from := range flow.KlusterStates() {
 		if back, ok := flow.SendBack(workflow.TypeStory, from); ok {
 			return back.To
 		}
@@ -1308,9 +1464,9 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		return refusedEnd(fmt.Sprintf("flai serve could not read %s to tear it down (%v)", j.story, err))
 	}
 	flow := repo.Flow()
-	if flow.AwaitsAcceptance(it.Type, it.Status) && !it.Archived {
-		// back in review: its deploy updates the namespace in place
-		return refusedEnd(fmt.Sprintf("%s moved to review while the teardown waited, and a namespace in review is the review's: flai serve tears it down once the story leaves review for ready or backlog, is cancelled, or is accepted", j.story))
+	if klusterIn(flow, it.Status) && !it.Archived {
+		// back in a state that deploys it: its deploy updates the namespace in place
+		return refusedEnd(fmt.Sprintf("%s moved to %s while the teardown waited, and a namespace in a state whose runs name the cluster's deploy or checks is that state's: flai serve tears it down once the story is no longer underway, moved back to ready or backlog, cancelled, or accepted", j.story, it.Status))
 	}
 	if !j.asked() && klusterHolds(flow, it) {
 		return klusterEnd{} // back in progress since it was queued: it keeps its namespace

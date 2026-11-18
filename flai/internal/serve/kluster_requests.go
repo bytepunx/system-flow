@@ -116,7 +116,7 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 		return refuse("deploys are not set up yet for this project: its kluster: block names no deploy command, so flai serve deploys no story and runs no checks against a namespace. Setting kluster.deploy is the operator's; say in %s's Notes which criteria you could not verify against a running system, and why", story)
 	}
 	if kind == kluster.KindChecks {
-		if _, why := p.checksConfig(repo); why != "" {
+		if _, why := checksConfigOf(p.o, repo); why != "" {
 			return refuse("%s, so flai serve runs no checks against %s's namespace. Say in %s's Notes which criteria you could not verify against a running system, and why", why, story, story)
 		}
 	}
@@ -130,15 +130,17 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 	if err != nil {
 		return refuse("flai serve could not read %s's namespace's record (%v), so nothing is queued: ask again, and say so on a thread on %s if it goes on", story, err, story)
 	}
-	flow := p.o.flow()
-	review := flow.AwaitsAcceptance(it.Type, it.Status)
+	// a state whose runs name a cluster step, review in the baseline, is
+	// deployed by the looks themselves (ADR-0312 §4)
+	flow := repo.Flow()
+	review := klusterIn(flow, it.Status)
 	switch {
 	case it.Archived || !flow.Underway(it.Status):
 		return refuse("%s is %s, and a story's agent asks for its namespace only while the story is in progress: move it to %s first", story, it.Status, activeState(flow))
 	case review && kind == kluster.KindTeardown:
 		return refuse("%s is in %s, and its namespace is the review's evidence for its acceptance: flai serve tears it down once the story is accepted, cancelled, or moved back to ready or backlog", story, it.Status)
 	case review:
-		return p.answerReview(repo, file, record, recorded), false
+		return p.answerReview(repo, file, it.Status, record, recorded), false
 	case kind == kluster.KindDeploy && m.KlusterAgentNamespaces() == 0:
 		return refuse("deploys before review are off for this project (kluster.agent_namespaces is 0), so flai serve deploys %s only once it is in review. Say in its Notes which criteria you could not verify against a running system, and why: the review's deploy checks them", story)
 	}
@@ -181,7 +183,7 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 	}
 	if kind == kluster.KindDeploy && !recorded {
 		limit := m.KlusterAgentNamespaces()
-		if holders := p.holders(repo, root, story); len(holders) >= limit {
+		if holders := p.holders(repo, flow, root, story); len(holders) >= limit {
 			asker := file
 			asker.By = req.By
 			return p.refuseOverLimit(asker, limit, "%s has no namespace yet, and %s in progress hold one already, the most kluster.agent_namespaces allows (%d): %s. A namespace frees only when its story is accepted, cancelled, moved back to ready or backlog, or torn down, so nothing is queued: go on with the work that needs no namespace and ask again later, or say in %s's Notes which criteria you could not verify against a running system and why; the review's deploy checks them",
@@ -208,12 +210,13 @@ func (p *klusterPass) logOf(kind, root, ns string) string {
 }
 
 // answerReview answers the deploy or checks request in file for a story in
-// review: with the job of the story that waits or runs, from record when its
-// deploy passed at its branch's head, its checks too while they are on, or
-// saying that the review deploys it; it queues nothing (ADR-0292 §1). A
+// status, a state whose runs name a cluster step, review in the baseline:
+// with the job of the story that waits or runs, from record when its deploy
+// passed at its branch's head, its checks too while they are on, or saying
+// that the state deploys it; it queues nothing (ADR-0292 §1, ADR-0312 §4). A
 // checks request answered from the record has its checks run's commit,
 // outcome, and log.
-func (p *klusterPass) answerReview(repo *workitem.Repo, file kluster.Request, record kluster.Record, recorded bool) kluster.Answer {
+func (p *klusterPass) answerReview(repo *workitem.Repo, file kluster.Request, status string, record kluster.Record, recorded bool) kluster.Answer {
 	story := file.Story
 	if j, ahead, _, found := p.jobOf(story); found {
 		return p.found(file, j, ahead)
@@ -230,7 +233,7 @@ func (p *klusterPass) answerReview(repo *workitem.Repo, file kluster.Request, re
 		}
 		return a
 	}
-	return p.refuse(file, fmt.Sprintf("%s is in review, where flai serve deploys it itself at its branch's head on its next look, and again at each new head, and runs its checks once the deploy passes, so a request for it queues nothing: flai kluster deployments shows its namespace's record, and a deploy or checks run that fails there sends it back to in-progress with a thread", story))
+	return p.refuse(file, fmt.Sprintf("%s is in %s, where flai serve deploys it itself at its branch's head on its next look, and again at each new head, and runs its checks once the deploy passes where the state's runs name them, so a request for it queues nothing: flai kluster deployments shows its namespace's record, and a deploy or checks run that fails there sends it back by the state's send-back transition with a thread", story, status))
 }
 
 // found answers the request in file with j, the job of its story that waits
@@ -284,21 +287,29 @@ func (p *klusterPass) queueAsked(j klusterJob) (klusterJob, int) {
 	return j, len(p.queue) - 1 + p.runningCount()
 }
 
-// holders names each story in progress, in a state of the workflow's active
-// kind, but story that holds a namespace, its record's commit and when its
-// deploy started, or a deploy its agent asked
-// for that waits or runs, which will make one (ADR-0292 §4). Stories in
-// review, the waiting kind, never count.
-func (p *klusterPass) holders(repo *workitem.Repo, root, story string) []string {
+// holders names each story in progress, in a state of flow's active kind,
+// but story that holds a namespace, or for which a deploy its agent asked for
+// waits or runs, which will make one, as namespaceHolders names them
+// (ADR-0292 §4).
+func (p *klusterPass) holders(repo *workitem.Repo, flow workflow.Workflow, root, story string) []string {
 	items, err := repo.List(false)
 	if err != nil {
 		p.o.Logger.Warn("stories holding a kluster namespace not counted", "component", "serve", "root", p.e.Root, "err", err.Error())
 		return nil
 	}
-	asked := p.askedDeploys()
+	return namespaceHolders(items, flow, root, story, p.askedDeploys())
+}
+
+// namespaceHolders names each story of items in progress, in a state of
+// flow's active kind, but story, that holds a namespace in the main checkout
+// root, its record's commit and when its deploy started, or has a deploy its
+// agent asked for in asked, by story, which will make one (ADR-0292 §4).
+// Stories in any other state, review in the baseline, never count, nor do
+// archived ones.
+func namespaceHolders(items []*workitem.Item, flow workflow.Workflow, root, story string, asked map[string]klusterJob) []string {
 	var out []string
 	for _, it := range items {
-		if it.Type != workitem.Story || p.o.flow().Kind(it.Status) != workflow.KindActive || it.Archived || it.ID == story {
+		if it.Type != workitem.Story || flow.Kind(it.Status) != workflow.KindActive || it.Archived || it.ID == story {
 			continue
 		}
 		ns, err := kluster.StoryNamespace(it.ID)

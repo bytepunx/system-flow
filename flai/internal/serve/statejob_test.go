@@ -3,16 +3,19 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/sendback"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
@@ -60,8 +63,14 @@ const (
 // every look.
 func newStateLab(t *testing.T) (*verifyLab, *fakeCloseOut, *resolveGit) {
 	t.Helper()
+	return newStateLabOn(t, statesFlow)
+}
+
+// newStateLabOn is newStateLab on the board flow.
+func newStateLabOn(t *testing.T, flow string) (*verifyLab, *fakeCloseOut, *resolveGit) {
+	t.Helper()
 	lab := newVerifyLab(t, false)
-	w, problem := workflow.Parse("design/workflows/board.md", statesFlow)
+	w, problem := workflow.Parse("design/workflows/board.md", flow)
 	if problem != nil {
 		t.Fatalf("the board: %v", problem)
 	}
@@ -155,7 +164,8 @@ func passing(lab *verifyLab) func(argv []string, out io.Writer) int {
 // and a cluster step gets one job for the entry, which rebases its branch,
 // then runs flai verify limited to each suite in its worktree with its
 // progress written, and records each step as it starts and ends, the cluster
-// step skipped with its reason; a job that passes leaves the story in the
+// step skipped with its reason, the project having no kluster: block; a job
+// that passes leaves the story in the
 // state with nothing sent back, its output and progress lines in its own log,
 // journaled apart from the close-outs, and the story's last job as the
 // dashboard reads it. A later look runs nothing for the same entry. Before
@@ -188,7 +198,7 @@ func TestAStateJobThatPassesLeavesTheStoryInTheState(t *testing.T) {
 			t.Errorf("step %s was not recorded as it started and ended: %+v", s.Label(), s)
 		}
 	}
-	if deploy := job.StateSteps[3]; !deploy.Started.IsZero() || !strings.Contains(deploy.Reason, "kluster pass") {
+	if deploy := job.StateSteps[3]; !deploy.Started.IsZero() || !strings.Contains(deploy.Reason, "no kluster: block") {
 		t.Errorf("the cluster step is not skipped with its reason: %+v", deploy)
 	}
 	if status, by := lab.status(); status != integration || by != "agent-"+lab.story {
@@ -467,7 +477,7 @@ func TestAStateJobWithNoSendBackTransitionMovesNothing(t *testing.T) {
 }
 
 // S-0810 criterion 5: on the baseline, a story entering review, whose runs
-// name only the cluster's steps, which the kluster pass runs, gets its entry
+// name only the cluster's steps, in a project with no cluster, gets its entry
 // recorded with every step skipped and why: nothing is rebased, nothing runs,
 // nothing is journaled or sent back, and the story's last job, as the
 // dashboard reads it, is not this record.
@@ -541,5 +551,264 @@ func TestACloseOutWhileAStateJobRunsIsRefused(t *testing.T) {
 	}
 	if n := len(fake.ran()); n != 3 {
 		t.Errorf("a close-out ran beside the state job: %d calls", n)
+	}
+}
+
+// branchGit is resolveGit answering, too, git rev-parse of a story's branch
+// in the main checkout, as kluster.StoryHead asks it, with the head of the
+// story's worktree, which the state job's rebase moves.
+type branchGit struct {
+	*resolveGit
+	repo *workitem.Repo
+}
+
+func (g branchGit) Run(dir, name string, args ...string) (string, error) {
+	if name == "git" && len(args) == 4 && args[0] == "rev-parse" && args[1] == "--verify" {
+		story := strings.TrimSuffix(strings.TrimPrefix(args[3], "refs/heads/story/"), "^{commit}")
+		return g.resolveGit.Run(g.repo.WorktreePath(story), "git", "rev-parse", "HEAD")
+	}
+	return g.resolveGit.Run(dir, name, args...)
+}
+
+func (g branchGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+// klusterOn gives the lab's project block as its manifest's kluster: block
+// and the cluster's config, the kluster host action on while on, checks as
+// its checks host action gives them, none when nil, and branchGit over git,
+// and answers flai serve's kluster pass over the project, with a fake
+// kluster.
+func (lab *verifyLab) klusterOn(git *resolveGit, block string, on bool, checks *ChecksConfig) (*klusterPass, *fakeKluster) {
+	lab.t.Helper()
+	root := lab.pass.e.Root
+	files := map[string]string{
+		"system-flow.yaml":         "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + block,
+		"integration/kluster.yaml": "name: t-int\nprovider: k3d\n",
+	}
+	for rel, content := range files {
+		path := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			lab.t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			lab.t.Fatal(err)
+		}
+	}
+	o := &lab.pass.o
+	o.Git = branchGit{resolveGit: git, repo: lab.repo}
+	o.Host.Enabled = func(action, r string) bool { return on && action == hostapi.ActionKluster && r == root }
+	if checks != nil {
+		cfg := *checks
+		o.Dir = Dir(lab.t.TempDir())
+		o.Checks = func(*workitem.Repo) (ChecksConfig, error) { return cfg, nil }
+	}
+	fk := &fakeKluster{}
+	ko := *o
+	ko.Kluster = fk
+	return newKlusterPass(ko, lab.pass.e, &sync.WaitGroup{}), fk
+}
+
+// klusterRound looks once with the kluster pass kp and runs what it queued.
+func klusterRound(kp *klusterPass) {
+	kp.look(context.Background())
+	kp.drain(context.Background())
+}
+
+// stepOf is the state job's step labelled label, and whether it has one.
+func stepOf(j closeout.Job, label string) (closeout.StateStep, bool) {
+	for _, s := range j.StateSteps {
+		if s.Label() == label {
+			return s, true
+		}
+	}
+	return closeout.StateStep{}, false
+}
+
+// awaitStep waits until the story's state job has started its step label.
+func (lab *verifyLab) awaitStep(label string) {
+	lab.t.Helper()
+	waitFor(lab.t, "the state job's "+label+" starts", func() bool {
+		j, ok, err := closeout.ReadStateJob(lab.repo.CacheDir(), lab.story)
+		s, found := stepOf(j, label)
+		return err == nil && ok && found && !s.Started.IsZero()
+	})
+}
+
+// sendBacks counts the story's moves by flai.
+func (lab *verifyLab) sendBacks() int {
+	lab.t.Helper()
+	st, err := lab.repo.Get(lab.story)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	n := 0
+	for _, tr := range st.Transitions {
+		if tr.By == sendBackBy {
+			n++
+		}
+	}
+	return n
+}
+
+// klusterChecksFlow is statesFlow whose integration runs the cluster's
+// deploy and checks and no suite.
+var klusterChecksFlow = strings.Replace(statesFlow, "runs: {suites: [behavior, smoke], kluster: [deploy]}", "runs: {kluster: [deploy, checks]}", 1)
+
+// S-0810 criteria 3 and 5: each reason flai serve's kluster pass runs
+// nothing for a story is recorded as its state job's cluster step skipped,
+// with that reason, a skipped deploy skipping the checks, and the story
+// stays in its state with nothing sent back: no kluster: block, a block
+// naming no deploy, the kluster host action off, no agent namespace for a
+// state of the active kind, and, for the checks alone, the checks host
+// action off or no checks named. With every cluster step skipped and no
+// suite, nothing runs, not even the rebase. Before S-0810 each step was
+// skipped saying only that the kluster pass ran apart.
+func TestAStateJobSkipsAClusterStepTheKlusterPassWouldNotRun(t *testing.T) {
+	t.Parallel()
+	activeFlow := strings.Replace(klusterChecksFlow, "{name: integration, kind: waiting,", "{name: integration, kind: active,", 1)
+	for _, c := range []struct {
+		name, flow, block string
+		on, deployed      bool // deployed: the namespace's record passed at the rebased head
+		checks            *ChecksConfig
+		deploy, check     string // the outcome and a word of the reason of each
+		ran               int
+	}{
+		{name: "no kluster block", flow: klusterChecksFlow, on: true,
+			deploy: "skipped:no kluster: block", check: "skipped:kluster deploy is skipped before it"},
+		{name: "no deploy", flow: klusterChecksFlow, block: "kluster:\n  config: integration/kluster.yaml\n", on: true,
+			deploy: "skipped:names no deploy command", check: "skipped:kluster deploy is skipped before it"},
+		{name: "kluster off", flow: klusterChecksFlow, block: klusterBlock,
+			deploy: "skipped:kluster host action is off", check: "skipped:kluster deploy is skipped before it"},
+		{name: "no agent namespace", flow: activeFlow, block: klusterBlock + "  agent_namespaces: 0\n", on: true,
+			deploy: "skipped:kluster.agent_namespaces is 0", check: "skipped:kluster deploy is skipped before it"},
+		{name: "checks off", flow: klusterChecksFlow, block: klusterBlock, on: true, deployed: true,
+			deploy: "passed:deployed", check: "skipped:checks host action is off", ran: 1},
+		{name: "no checks named", flow: klusterChecksFlow, block: klusterBlock, on: true, deployed: true, checks: &ChecksConfig{Enabled: true},
+			deploy: "passed:deployed", check: "skipped:no checks are named", ran: 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			lab, fake, git := newStateLabOn(t, c.flow)
+			fake.answer = passing(lab)
+			lab.klusterOn(git, c.block, c.on, c.checks)
+			if c.deployed {
+				writeFakeRecord(lab.pass.e.Root, kluster.Record{Story: lab.story, Commit: "head-r", Outcome: kluster.OutcomePassed})
+			}
+			lab.moveStory(integration)
+			lab.lookOnce()
+			job, _ := lab.stateJob()
+			for label, want := range map[string]string{"kluster deploy": c.deploy, "kluster checks": c.check} {
+				outcome, word, _ := strings.Cut(want, ":")
+				if s, ok := stepOf(job, label); !ok || s.Outcome != outcome || !strings.Contains(s.Reason, word) {
+					t.Errorf("the step %s: %+v; want it %s saying %q", label, s, outcome, word)
+				}
+			}
+			if job.Verdict != closeout.VerdictPassed || job.Outcome != closeout.OutcomeStayedInState || len(fake.ran()) != c.ran {
+				t.Errorf("the state job: %+v, %d calls; want it passed with %d", job, len(fake.ran()), c.ran)
+			}
+			if status, by := lab.status(); status != integration || by != "agent-"+lab.story {
+				t.Errorf("the story is %s, last moved by %s; want it left in %s", status, by, integration)
+			}
+			if th := lab.threadsOn(); len(th) != 0 {
+				t.Errorf("a skipped cluster step opened threads: %+v", th)
+			}
+		})
+	}
+}
+
+// S-0810 criteria 4 and 5: the state job's deploy waits for flai serve's
+// kluster pass, which deploys nothing while the job rebases and runs its
+// suites, then deploys the head the job left once it reaches its cluster
+// step, and the step passes with the deploy at that head; the story stays
+// in its state. Before S-0810 the pass deployed only on the state the
+// acceptance leaves from, and the step was skipped.
+func TestAStateJobsDeployPassesOnceThePassDeployedTheRebasedHead(t *testing.T) {
+	t.Parallel()
+	lab, fake, git := newStateLab(t)
+	kp, fk := lab.klusterOn(git, klusterBlock, true, nil)
+	hold := make(chan struct{})
+	pass := passing(lab)
+	fake.answer = func(argv []string, out io.Writer) int {
+		if strings.Join(argv, " ") == suiteArgv(lab.story, "behavior") {
+			<-hold
+		}
+		return pass(argv, out)
+	}
+	lab.moveStory(integration)
+	lab.pass.lookStates(context.Background())
+	waitFor(t, "the first suite runs", func() bool { return len(fake.ran()) == 2 })
+	klusterRound(kp)
+	if got := fk.deploys(); len(got) != 0 {
+		t.Fatalf("the kluster pass deployed %v while the state job ran its suites", got)
+	}
+	close(hold)
+	lab.awaitStep("kluster deploy")
+	klusterRound(kp)
+	lab.wg.Wait()
+	if got := strings.Join(fk.deploys(), ";"); got != "deploy "+lab.story+" head-r" {
+		t.Fatalf("deploys = %q, want one at the rebased head head-r", got)
+	}
+	job, _ := lab.stateJob()
+	wantSteps := []string{"rebase:passed", "suite behavior:passed", "suite smoke:passed", "kluster deploy:passed"}
+	if !slices.Equal(outcomes(job), wantSteps) || job.Outcome != closeout.OutcomeStayedInState || !strings.Contains(job.StateSteps[3].Reason, "at the head head-r") {
+		t.Fatalf("the state job: %+v, steps %v; want %v", job, outcomes(job), wantSteps)
+	}
+	if status, _ := lab.status(); status != integration {
+		t.Errorf("the story is %s; want it left in %s", status, integration)
+	}
+	if th := lab.threadsOn(); len(th) != 0 {
+		t.Errorf("a passing deploy opened threads: %+v", th)
+	}
+}
+
+// S-0810 criteria 2 and 4: a deploy, or the checks after it, that fails in
+// a state that names them sends the story back by that state's send-back
+// transition once, with the kluster pass's one thread, and the state job
+// records its cluster step failed and sends nothing back itself. Before
+// S-0810 the pass deployed only on the state the acceptance leaves from.
+func TestAStateJobsFailedClusterStepSendsTheStoryBackOnce(t *testing.T) {
+	t.Parallel()
+	failing, _ := nsCheck(t, 3)
+	for _, c := range []struct {
+		name   string
+		checks *ChecksConfig
+		fail   func(story, head string) error
+		steps  []string
+		title  func(story string) string
+	}{
+		{name: "deploy", fail: func(string, string) error {
+			return &kluster.StepError{Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
+		}, steps: []string{"rebase:passed", "kluster deploy:failed", "kluster checks:skipped"}, title: klusterFailureTitle},
+		{name: "checks", checks: &failing,
+			steps: []string{"rebase:passed", "kluster deploy:passed", "kluster checks:failed"}, title: checksFailureTitle},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			lab, fake, git := newStateLabOn(t, klusterChecksFlow)
+			fake.answer = passing(lab)
+			kp, fk := lab.klusterOn(git, klusterBlock, true, c.checks)
+			fk.fail = c.fail
+			lab.moveStory(integration)
+			lab.pass.lookStates(context.Background())
+			lab.awaitStep("kluster deploy")
+			klusterRound(kp)
+			lab.wg.Wait()
+			job, _ := lab.stateJob()
+			if !slices.Equal(outcomes(job), c.steps) || job.Outcome != closeout.OutcomeNotSentBack || job.Thread != "" ||
+				!strings.Contains(job.Reason, "kluster pass's to send "+lab.story+" back") {
+				t.Fatalf("the state job: %+v, steps %v; want %v", job, outcomes(job), c.steps)
+			}
+			if status, by := lab.status(); status != workitem.InProgress || by != sendBackBy {
+				t.Errorf("the story is %s, last moved by %s; want it sent back to in-progress by %s", status, by, sendBackBy)
+			}
+			if n := lab.sendBacks(); n != 1 {
+				t.Errorf("the story was sent back %d times, want once", n)
+			}
+			ths := lab.threadsOn()
+			if len(ths) != 1 || ths[0].Title != workitem.CleanTitle(c.title(lab.story)) {
+				t.Errorf("the threads on the story: %+v; want the kluster pass's one", ths)
+			}
+		})
 	}
 }

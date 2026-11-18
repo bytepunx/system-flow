@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/sendback"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
@@ -29,18 +30,27 @@ import (
 // as the Rebase and resolve job rebases it (branchRebase), then each suite
 // the state names, run as flai verify S-nnnn --all --suite <suite>, in the
 // story's container when its agent runs in one (ADR-0274), then the cluster's
-// steps. A step with nothing to run is recorded skipped with its reason, and
-// when no step after the rebase runs, the rebase is skipped too and nothing
-// runs at all: on the baseline, whose review runs only the cluster's steps,
-// which the kluster pass runs, entering review rebases nothing and sends
-// nothing back. The job's state is S-nnnn.state.json and its output
-// S-nnnn.state.log, apart from the close-out's, and its progress lines are
-// the state job's own and flai verify's. A job that passes leaves the story
-// in the state; a rebase that stops or a step that fails sends it back as
-// flai by the state's send-back transition, with the send back's thread
+// steps, deploy then checks, each of which waits for flai serve's kluster
+// pass (kluster.go) to record that step at the head the job left, as passed
+// or failed: the pass deploys a story in a state whose runs name the deploy,
+// once the job has reached its cluster steps, and keeps its own thread and
+// send back. A cluster step the pass would not run, as klusterSkip says why
+// (ADR-0312 §5), is skipped with that reason and never holds the story; a
+// skipped deploy skips the checks. A step with nothing to run is recorded
+// skipped with its reason, and when no step after the rebase runs, the
+// rebase is skipped too and nothing runs at all: on the baseline, whose
+// review runs only the cluster's steps, a project with no cluster rebases
+// nothing on entering review and sends nothing back. The job's state is
+// S-nnnn.state.json and its output S-nnnn.state.log, apart from the
+// close-out's, and its progress lines are the state job's own and flai
+// verify's. A job that passes leaves the story in the state; a rebase that
+// stops or a suite that fails sends it back as flai by the state's
+// send-back transition, with the send back's thread
 // (sendback.StateJobTitle) that flai serve starts its agent on, unless the
 // story left the state or entered it again meanwhile, or the state has no
-// send-back transition, when the failure is recorded and nothing moves.
+// send-back transition, when the failure is recorded and nothing moves. A
+// cluster step that fails sends nothing back from the job: the kluster pass
+// sends the story back, once, with its own thread.
 
 const (
 	// stateEvery is how often the verify pass looks for a story that entered
@@ -55,6 +65,10 @@ const (
 	// allSuites is the name of the suite step of a state whose runs name
 	// every suite.
 	allSuites = "all"
+	// klusterPollLeast is the shortest a cluster step waits between two looks
+	// at what the kluster pass recorded; it looks as often as the verify
+	// pass looks for states, stateEvery, and no more often than this.
+	klusterPollLeast = 100 * time.Millisecond
 )
 
 // lookStates starts a state job for each story, not archived, that is in a
@@ -117,10 +131,18 @@ func (p *verifyPass) entryHadJob(story, state string, entry time.Time) bool {
 // stateStep is a step of a state job with how it runs.
 type stateStep struct {
 	closeout.StateStep
-	// run runs the step, its output to out, and answers whether it passed
-	// and why; nil for a step skipped from the start, whose Reason the plan
-	// gives.
-	run func(ctx context.Context, out io.Writer) (bool, string)
+	// run runs the step, its output to out, and answers how it ended,
+	// closeout.StepPassed, StepFailed, or StepSkipped, and why; nil for a
+	// step skipped from the start, whose Reason the plan gives.
+	run func(ctx context.Context, out io.Writer) (outcome, reason string)
+}
+
+// stepEnd is how a step that passed or failed ended, with why.
+func stepEnd(passed bool, reason string) (outcome, why string) {
+	if passed {
+		return closeout.StepPassed, reason
+	}
+	return closeout.StepFailed, reason
 }
 
 // stateJob is one state job of a story: its rebase, its steps in the order
@@ -131,6 +153,8 @@ type stateJob struct {
 	id    string
 	stamp string
 	state string
+	// entry is when the story entered the state, the entry the job runs for.
+	entry time.Time
 	// agent is the story's agent when it runs on the container harness,
 	// whose suites run in its container; nil runs them on the host.
 	agent *containerAgent
@@ -142,22 +166,23 @@ type stateJob struct {
 	said string
 }
 
-// newStateJob is the job of story's entry into state, whose runs are runs,
-// started at stamp, with its steps planned.
-func newStateJob(p *verifyPass, repo *workitem.Repo, story, state, stamp string, runs *workflow.Runs) *stateJob {
+// newStateJob is the job of story it's entry, at entry, into its state,
+// whose runs are runs, started at stamp, with its steps planned.
+func newStateJob(p *verifyPass, repo *workitem.Repo, it *workitem.Item, entry time.Time, stamp string, runs *workflow.Runs) *stateJob {
+	story := it.ID
 	j := &stateJob{
 		branchRebase: branchRebase{p: p, story: story, worktree: repo.WorktreePath(story), by: storygit.SentBackAuthor, source: closeout.SourceState},
-		id:           story + "-" + stamp, stamp: stamp, state: state, agent: p.containerAgentOf(repo, story),
+		id:           story + "-" + stamp, stamp: stamp, state: it.Status, entry: entry, agent: p.containerAgentOf(repo, story),
 	}
 	j.container = j.agent != nil
-	j.plan(runs)
+	j.plan(repo, it, runs)
 	return j
 }
 
-// plan sets the job's steps from runs: the rebase, each suite, or one for
-// every suite, then the cluster's steps; the rebase is skipped when no step
-// after it runs.
-func (j *stateJob) plan(runs *workflow.Runs) {
+// plan sets the job's steps from runs, for story it in repo: the rebase,
+// each suite, or one for every suite, then the cluster's steps; the rebase
+// is skipped when no step after it runs.
+func (j *stateJob) plan(repo *workitem.Repo, it *workitem.Item, runs *workflow.Runs) {
 	names, all := runs.SuiteNames()
 	if all {
 		names = []string{allSuites}
@@ -165,26 +190,45 @@ func (j *stateJob) plan(runs *workflow.Runs) {
 	var after []stateStep
 	for _, name := range names {
 		after = append(after, stateStep{StateStep: closeout.StateStep{Kind: closeout.StateStepSuite, Name: name},
-			run: func(ctx context.Context, out io.Writer) (bool, string) { return j.runSuite(ctx, out, name) }})
+			run: func(ctx context.Context, out io.Writer) (string, string) { return stepEnd(j.runSuite(ctx, out, name)) }})
 	}
-	after = append(after, klusterSteps(runs)...)
-	rebase := stateStep{StateStep: closeout.StateStep{Kind: closeout.StateStepRebase, Name: closeout.StepRebase}, run: j.runRebase}
+	after = append(after, j.klusterSteps(repo, it, runs)...)
+	rebase := stateStep{StateStep: closeout.StateStep{Kind: closeout.StateStepRebase, Name: closeout.StepRebase},
+		run: func(ctx context.Context, out io.Writer) (string, string) { return stepEnd(j.runRebase(ctx, out)) }}
 	if !slices.ContainsFunc(after, func(s stateStep) bool { return s.run != nil }) {
 		rebase.run, rebase.Reason = nil, "no step after it runs, so the branch is not rebased"
 	}
 	j.steps = append([]stateStep{rebase}, after...)
 }
 
-// klusterSteps are the cluster's steps runs names, in the order they run,
-// each skipped: flai serve's kluster pass, not this job, deploys a story and
-// runs its checks on entering a state of the waiting kind (ADR-0254 §5).
-func klusterSteps(runs *workflow.Runs) []stateStep {
+// klusterSteps are the cluster's steps runs names, for story it in repo, in
+// the order they run: each waits for what flai serve's kluster pass records
+// of it at the job's head (awaitKluster), or is skipped from the start with
+// why the pass runs nothing of it (klusterSkip, ADR-0312 §5). A skipped
+// deploy skips the checks.
+func (j *stateJob) klusterSteps(repo *workitem.Repo, it *workitem.Item, runs *workflow.Runs) []stateStep {
 	var out []stateStep
+	deploys, skipped := runs.RunsStep(workflow.KlusterDeploy), ""
 	for _, name := range workflow.KlusterSteps {
-		if runs.RunsStep(name) {
-			out = append(out, stateStep{StateStep: closeout.StateStep{Kind: closeout.StateStepKluster, Name: name,
-				Reason: "flai serve's kluster pass deploys the story and runs its checks on entering a state of the waiting kind, apart from this job"}})
+		if !runs.RunsStep(name) {
+			continue
 		}
+		s := stateStep{StateStep: closeout.StateStep{Kind: closeout.StateStepKluster, Name: name}}
+		why := klusterSkip(j.p.o, j.p.e.Root, repo, it, name)
+		if name == workflow.KlusterChecks && skipped != "" {
+			why = "kluster deploy is skipped before it: " + skipped
+		}
+		if why == "" {
+			s.run = func(ctx context.Context, out io.Writer) (string, string) {
+				return j.awaitKluster(ctx, out, name, deploys)
+			}
+		} else {
+			s.Reason = why
+		}
+		if name == workflow.KlusterDeploy {
+			skipped = why
+		}
+		out = append(out, s)
 	}
 	return out
 }
@@ -211,7 +255,7 @@ func (j *stateJob) records() []closeout.StateStep {
 func (p *verifyPass) startState(ctx context.Context, repo *workitem.Repo, it *workitem.Item, runs *workflow.Runs, entry time.Time) {
 	dir := p.dir()
 	started := p.o.Now().UTC()
-	j := newStateJob(p, repo, it.ID, it.Status, started.Format("20060102T150405Z"), runs)
+	j := newStateJob(p, repo, it, entry, started.Format("20060102T150405Z"), runs)
 	job := closeout.Job{ID: j.id, Story: it.ID, Kind: closeout.KindState, By: j.by, Started: started, State: j.state, Entry: entry}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		p.o.Logger.Warn("state job not started", "component", "serve", "root", p.e.Root, "story", it.ID, "state", j.state, "err", err.Error())
@@ -288,18 +332,18 @@ func (p *verifyPass) runState(ctx context.Context, dir string, j *stateJob, job 
 		s.Started = p.o.Now().UTC()
 		line(closeout.StartedLine(closeout.SourceState, story, closeout.LineStep, s.Label(), s.Started))
 		write()
-		passed, reason := s.run(jctx, out)
+		outcome, reason := s.run(jctx, out)
 		if ctx.Err() != nil {
 			p.forgetState(story)
 			p.o.Logger.Info("state job stopped with flai serve", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID)
 			return
 		}
 		if errors.Is(jctx.Err(), context.DeadlineExceeded) {
-			passed, reason = false, fmt.Sprintf("%s; stopped at the %s limit", reason, p.limit)
+			outcome, reason = closeout.StepFailed, fmt.Sprintf("%s; stopped at the %s limit", reason, p.limit)
 		}
-		s.Ended, s.Outcome, s.Reason = p.o.Now().UTC(), closeout.StepPassed, reason
-		if !passed {
-			s.Outcome, failed = closeout.StepFailed, i
+		s.Ended, s.Outcome, s.Reason = p.o.Now().UTC(), outcome, reason
+		if outcome == closeout.StepFailed {
+			failed = i
 		}
 		line(closeout.EndedLine(closeout.SourceState, story, closeout.LineStep, s.Outcome, s.Label(), s.Ended))
 		write()
@@ -360,6 +404,110 @@ func (j *stateJob) runRebase(ctx context.Context, out io.Writer) (bool, string) 
 		return false, fmt.Sprintf("the rebase of %s onto %s stopped%s, %s", branch, base, on, state)
 	}
 	return false, fmt.Sprintf("flai stream sync %s exited %d and left no rebase waiting, as when the worktree has uncommitted changes or git failed", j.story, code)
+}
+
+// klusterThreadTitle is the title of the thread the kluster pass opens on
+// story when its step, workflow.KlusterDeploy or KlusterChecks, fails.
+func klusterThreadTitle(step, story string) string {
+	if step == workflow.KlusterChecks {
+		return checksFailureTitle(story)
+	}
+	return klusterFailureTitle(story)
+}
+
+// awaitKluster is the job's cluster step step, workflow.KlusterDeploy or
+// KlusterChecks, in a state whose runs name the deploy when deploys: it
+// waits, looking as often as the verify pass looks for states, until what
+// flai serve's kluster pass recorded of the story at the head the job left
+// in its worktree says how the step ended (klusterSaid), for as long as ctx,
+// bounded by the job's limit, lets it. Checks after a deploy that was
+// skipped are skipped.
+func (j *stateJob) awaitKluster(ctx context.Context, out io.Writer, step string, deploys bool) (string, string) {
+	p := j.p
+	if step == workflow.KlusterChecks {
+		i := slices.IndexFunc(j.steps, func(s stateStep) bool { return s.Kind == closeout.StateStepKluster && s.Name == workflow.KlusterDeploy })
+		if i >= 0 && j.steps[i].Outcome == closeout.StepSkipped {
+			return closeout.StepSkipped, "kluster deploy was skipped before it: " + j.steps[i].Reason
+		}
+	}
+	head := p.head(j.worktree)
+	if head == "" {
+		return closeout.StepFailed, fmt.Sprintf("git could not say the head of %s's worktree %s, so what flai serve's kluster pass recorded cannot be judged at it: check that git can read the worktree", j.story, j.worktree)
+	}
+	fmt.Fprintf(out, "state: waiting for flai serve's kluster pass to record the %s of %s at %s\n", step, j.story, short(head))
+	poll := max(p.stateEvery, klusterPollLeast)
+	for {
+		if outcome, reason := j.klusterSaid(step, head, deploys); outcome != "" {
+			fmt.Fprintf(out, "state: kluster %s %s: %s\n", step, outcome, reason)
+			return outcome, reason
+		}
+		select {
+		case <-ctx.Done():
+			return closeout.StepFailed, fmt.Sprintf("flai serve's kluster pass recorded no %s of %s at %s", step, j.story, short(head))
+		case <-time.After(poll):
+		}
+	}
+}
+
+// klusterSaid is how the job's cluster step step ended, by what the kluster
+// pass recorded of the story at head, and why, or "" while nothing tells
+// yet. It passed when the namespace's record passed at the head, as the
+// acceptance gate judges it (kluster.AtHead), and for the checks step when
+// a checks run passed there too. It failed when the pass tried the head in
+// the job's state, in this entry or in an earlier one it sent nothing back
+// for, which it does not try again, and the deploy failed, or the checks run
+// at the head did not pass; or when the story left the entry. It is skipped
+// when the pass no longer runs the step (klusterSkip), or, for the checks of
+// a state whose runs name no deploy, when no deploy that passed is at the
+// head for them to run against. A project or a record that cannot be read
+// tells nothing yet, and is read again at the next look.
+func (j *stateJob) klusterSaid(step, head string, deploys bool) (outcome, reason string) {
+	p, story := j.p, j.story
+	repo, err := openRepo(p.o, p.e.Root)
+	if err != nil {
+		return "", ""
+	}
+	it, err := repo.Get(story)
+	if err != nil {
+		p.o.Logger.Debug("state job's story not read for its cluster step", "component", "serve", "root", p.e.Root, "story", story, "step", step, "err", err.Error())
+		return "", ""
+	}
+	root := mainCheckout(repo)
+	ns, err := kluster.StoryNamespace(story)
+	if err != nil {
+		return closeout.StepSkipped, fmt.Sprintf("flai serve's kluster pass deploys no namespace for %s: %v", story, err)
+	}
+	r, recorded, err := kluster.ReadRecord(root, ns)
+	if err != nil {
+		p.o.Logger.Debug("kluster record not read for a state job's cluster step", "component", "serve", "root", p.e.Root, "story", story, "step", step, "err", err.Error())
+		return "", ""
+	}
+	at := func(commit string) bool {
+		judged, err := kluster.AtHead(gitOf(p.o), root, repo.Manifest, commit, head)
+		return err == nil && judged.AtHead
+	}
+	t, _ := readKlusterTried(root, ns)
+	triedHere := t.Head == head && t.triedIn(j.state) && (!t.At.Before(j.entry) || t.SentBack == nil)
+	deployed := recorded && r.Outcome == kluster.OutcomePassed && at(r.Commit)
+	checks := step == workflow.KlusterChecks
+	switch {
+	case !checks && deployed:
+		return closeout.StepPassed, fmt.Sprintf("flai serve's kluster pass deployed %s into its namespace %s at %s, at the head %s", story, ns, short(r.Commit), short(head))
+	case !checks && triedHere && t.Outcome == kluster.OutcomeFailed:
+		return closeout.StepFailed, fmt.Sprintf("flai serve's kluster deploy of %s into its namespace %s at %s failed: flai kluster deployments shows its record", story, ns, short(head))
+	case checks && deployed && r.ChecksOutcome == kluster.OutcomePassed && at(r.ChecksCommit):
+		return closeout.StepPassed, fmt.Sprintf("flai serve's checks of %s against its namespace %s passed at %s, at the head %s", story, ns, short(r.ChecksCommit), short(head))
+	case checks && triedHere && r.ChecksCommit == head && r.ChecksOutcome != "" && r.ChecksOutcome != kluster.OutcomePassed:
+		return closeout.StepFailed, fmt.Sprintf("flai serve's checks of %s against its namespace %s at %s ended %s: flai checks status %s shows the run", story, ns, short(head), r.ChecksOutcome, story)
+	case checks && !deploys && !deployed:
+		return closeout.StepSkipped, fmt.Sprintf("%s's runs name no deploy, and %s's namespace %s is not deployed at its head %s with a deploy that passed, so its checks have nothing to run against", j.state, story, ns, short(head))
+	case it.Status != j.state || !it.EnteredAt().UTC().Equal(j.entry):
+		return closeout.StepFailed, fmt.Sprintf("%s left %s for %s before flai serve's kluster pass recorded its %s at %s", story, j.state, it.Status, step, short(head))
+	}
+	if why := klusterSkip(p.o, p.e.Root, repo, it, step); why != "" {
+		return closeout.StepSkipped, why
+	}
+	return "", ""
 }
 
 // verifyArgv is flai's verify of the job's story for suite, with no tier left
@@ -440,7 +588,9 @@ func outputTail(said, story string, n int) string {
 // log, recording both in job. A story that left the state, or entered it
 // again, since the entry the job ran for is left as it is, as is one in a
 // state with no send-back transition or a project that could not be opened,
-// repo nil, and job's reason says so.
+// repo nil, and job's reason says so. A cluster step that failed moves
+// nothing: the kluster pass sends the story back itself, with its own
+// thread, so that it is sent back once.
 func (j *stateJob) settle(repo *workitem.Repo, job *closeout.Job, failed int) {
 	p, story, state := j.p, j.story, j.state
 	if failed < 0 {
@@ -457,6 +607,13 @@ func (j *stateJob) settle(repo *workitem.Repo, job *closeout.Job, failed int) {
 	}
 	reason := fmt.Sprintf("state job %s on entering %s: %s: %s; its output is in %s", job.ID, state, what, s.Reason, log)
 	job.Outcome, job.Reason = closeout.OutcomeNotSentBack, reason
+	if s.Kind == closeout.StateStepKluster {
+		// the kluster pass sends the story back after its own failure, once,
+		// with its own thread, whether or not it has done so yet
+		job.Reason = fmt.Sprintf("%s; a failed cluster step is flai serve's kluster pass's to send %s back for, by %s's send-back transition with its thread %q, so the job moved nothing",
+			reason, story, state, klusterThreadTitle(s.Name, story))
+		return
+	}
 	warn := func(msg string, err error) {
 		p.o.Logger.Warn(msg, "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "err", err.Error())
 	}

@@ -1600,3 +1600,138 @@ func TestKlusterAnAskedDeployRunsInEveryActiveStateAndCountsAgainstTheLimit(t *t
 		t.Errorf("held = %d, %q of %d deployments, want %s and %s, and not %s, which awaits its acceptance", l.Live, l.Holding, len(l.Deployments), doing, inTesting, awaiting)
 	}
 }
+
+// integrationFlow is a board whose review runs nothing, whose integration
+// state runs the cluster's deploy and checks and sends a story back to
+// review, and whose staging, which the acceptance leaves from, runs every
+// suite and no cluster step (ADR-0312 §4).
+const integrationFlow = `---
+title: Board
+updated: 2026-11-18
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: integration, kind: waiting, runs: {kluster: [deploy, checks]}}
+  - {name: staging, kind: waiting, runs: {suites: all}}
+  - {name: done, kind: accepted}
+transitions:
+  - {from: backlog, to: ready}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: review}
+  - {from: review, to: integration}
+  - {from: integration, to: staging}
+  - {from: staging, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: [in-progress, review, integration, staging], to: done, types: [task]}
+  - {from: review, to: in-progress, effects: [send-back]}
+  - {from: integration, to: review, effects: [send-back]}
+---
+`
+
+// klIntegrationLab is a kluster lab whose repository and pass run
+// integrationFlow.
+func klIntegrationLab(t *testing.T) *klusterLab {
+	t.Helper()
+	lab := newKlusterLab(t, klusterBlock)
+	w, p := workflow.Parse("design/workflows/board.md", integrationFlow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	lab.repo.Workflow, lab.opts.Workflow = &w, &w
+	lab.pass = newKlusterPass(lab.opts, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+	return lab
+}
+
+// S-0810 criterion 4: the cluster deploys a story where a state's runs name
+// the deploy, integration, and on no other state: not in review, whose runs
+// name nothing, nor in staging, which the acceptance leaves from and whose
+// runs name suites alone; the story keeps its namespace there. Before
+// S-0810 the pass deployed on the state the acceptance leaves from.
+func TestKlusterDeploysWhereAStatesRunsNameTheDeployAndOnNoOtherState(t *testing.T) {
+	lab := klIntegrationLab(t)
+	story := lab.klStory("Integrated", klHeadA, "ready", "in-progress", "review")
+	lab.round()
+	if got := lab.kluster.all(); len(got) != 0 {
+		t.Fatalf("calls with the story in review, whose runs name nothing = %v, want none", got)
+	}
+	lab.move(story, "integration")
+	lab.round()
+	if got := strings.Join(lab.kluster.deploys(), ";"); got != "deploy "+story+" "+klHeadA {
+		t.Fatalf("deploys once the story is in integration = %q, want one at its head", got)
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	if tr, ok := readKlusterTried(lab.root, ns); !ok || tr.State != "integration" || tr.Head != klHeadA {
+		t.Errorf("what the pass tried = %+v, want %s tried in integration", tr, klHeadA)
+	}
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a second look at the same head ran %v", got)
+	}
+	lab.move(story, "staging")
+	lab.git.set(story, klHeadB)
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Errorf("calls with the story in staging, whose runs name no cluster step, at a new head = %v, want none and its namespace kept", got)
+	}
+}
+
+// S-0810 criteria 2 and 4: a failed deploy, and failing checks after a
+// deploy that passed, in a state whose runs name them send the story back by
+// that state's send-back transition, integration to review, once, with one
+// thread, and keep the send back with its state. Before S-0810 the pass
+// deployed only on the state the acceptance leaves from.
+func TestKlusterSendsAFailureBackByTheStatesSendBackTransition(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		check int // the check's exit code; -1 for no checks
+		fail  bool
+		title func(string) string
+	}{
+		{name: "deploy", check: -1, fail: true, title: klusterFailureTitle},
+		{name: "checks", check: 3, title: checksFailureTitle},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := klIntegrationLab(t)
+			if c.check >= 0 {
+				cfg, _ := nsCheck(t, c.check)
+				lab.withChecks(cfg)
+			}
+			story := lab.klStory("Broken", klHeadA, "ready", "in-progress", "review", "integration")
+			if c.fail {
+				lab.kluster.fail = func(string, string) error {
+					return &kluster.StepError{Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
+				}
+			}
+			lab.round()
+			it, err := lab.repo.Get(story)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sent := 0
+			for _, tr := range it.Transitions {
+				if tr.By == sendBackBy {
+					sent++
+				}
+			}
+			if it.Status != workitem.Review || sent != 1 {
+				t.Fatalf("%s is %s, sent back %d times; want it sent back to review once", story, it.Status, sent)
+			}
+			ths := lab.titled(story, c.title(story))
+			if len(ths) != 1 || !strings.Contains(ths[0].Body, "sent "+story+" back to review") {
+				t.Fatalf("the failure threads = %d, want one saying it was sent back to review", len(ths))
+			}
+			ns, _ := kluster.StoryNamespace(story)
+			if tr, ok := readKlusterTried(lab.root, ns); !ok || tr.SentBack == nil || tr.SentBack.To != workitem.Review || tr.SentBack.Thread != ths[0].ID {
+				t.Errorf("the send back kept = %+v, want one to review on %s", tr.SentBack, ths[0].ID)
+			}
+			n := len(lab.kluster.all())
+			lab.round()
+			if got := lab.kluster.since(n); len(got) != 0 {
+				t.Errorf("a look at the story sent back to review ran %v, want nothing", got)
+			}
+		})
+	}
+}
