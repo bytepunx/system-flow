@@ -544,6 +544,42 @@ func TestAWorkflowFileNamingAllGivesNoUnnamedSuite(t *testing.T) {
 	}
 }
 
+// S-0806 (TH-1289): a file that gives none of verify, runs, and verify_at,
+// as one flai upgrade added before S-0806 does, reads as the baseline's and
+// gets no workflow.suite-unnamed; one that gives any of them alone, here a
+// state's runs naming only the cluster's steps, is held to the suites again.
+func TestAWorkflowFileWithNoSuiteKeysGivesNoUnnamedSuite(t *testing.T) {
+	text := baselineText(t)
+	for _, s := range []struct{ old, repl string }{
+		{", runs: {kluster: [deploy, checks]}}", "}"},
+		{"    verify: {suites: all, severity: warn}\n", ""},
+		{", verify: all}\n", "}\n"},
+		{"verify_at: {batch: all, ci: all}\n", ""},
+	} {
+		if !strings.Contains(text, s.old) {
+			t.Fatalf("the baseline lacks %q", s.old)
+		}
+		text = strings.Replace(text, s.old, s.repl, 1)
+	}
+	got, repo := suiteFindings(t, suiteTiers, text)
+	if err := repo.FlowErr(); err != nil {
+		t.Fatalf("a file with none of the keys is refused: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("a file with none of verify, runs, and verify_at: %+v", got)
+	}
+	withRuns := strings.Replace(text, "{name: review, kind: waiting, limit: true}", "{name: review, kind: waiting, limit: true, runs: {kluster: [deploy, checks]}}", 1)
+	if withRuns == text {
+		t.Fatal("the review state is not where the test puts runs")
+	}
+	got, _ = suiteFindings(t, suiteTiers, withRuns)
+	for _, suite := range []string{"static", "behavior", "perf"} {
+		if _, ok := hasFinding(got, codeSuiteUnnamed, "suite "+suite+","); !ok {
+			t.Errorf("a file giving only runs has no workflow.suite-unnamed on %s: %+v", suite, got)
+		}
+	}
+}
+
 // S-0806 (ADR-0312 §9): the baseline names only all, so it gives neither
 // finding, as the project's file or with no file; a manifest with no test
 // tiers makes every suite the file names unknown.

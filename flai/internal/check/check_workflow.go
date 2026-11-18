@@ -86,7 +86,9 @@ func (c *checker) workflow() {
 // workflow.suite-unnamed, a warning once for the suite, on verify_at's line
 // or else the transitions', naming its tiers that are not manual: no step
 // runs it. A file that names all anywhere runs every suite and gets no
-// warning. A project without the file runs the baseline, which names only
+// warning, and neither does a file that gives none of verify, runs, and
+// verify_at, which reads as giving the baseline's keys (UsesSuiteKeys,
+// TH-1289). A project without the file runs the baseline, which names only
 // all, and workflow does not call suites for it; nor while the file is
 // refused, as the items are not judged against it, nor while the tests key
 // is wrong, which manifest.tests reports.
@@ -112,7 +114,7 @@ func (c *checker) suites(w workflow.Workflow, abs string) {
 		}
 		c.add(Error, codeSuite, abs, n.Line, "%s names suite %s, which no test tier has; %s. Name a suite a tier in system-flow.yaml's tests gives, add suite: %s to the tier it belongs to, or give all for every suite (ADR-0312 §9)", namedAt(n), n.Suite, tiersHave, n.Suite)
 	}
-	if all {
+	if all || !w.UsesSuiteKeys() {
 		return
 	}
 	line := keyLine(abs, "verify_at")

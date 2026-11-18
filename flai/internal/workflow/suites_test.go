@@ -44,6 +44,31 @@ func TestNamedSuitesOfAllSomeAndNone(t *testing.T) {
 	}
 }
 
+// S-0806 (TH-1289): a file uses ADR-0312's keys when any transition gives
+// verify, any state runs, or the file verify_at, each alone; one that gives
+// none of them does not, and reads as the baseline's.
+func TestUsesSuiteKeys(t *testing.T) {
+	if mustParse(t, minimal).UsesSuiteKeys() {
+		t.Error("a file giving none of verify, runs, and verify_at uses them")
+	}
+	for name, text := range map[string]string{
+		"verify":    strings.Replace(minimal, "to: done}", "to: done, verify: [static]}", 1),
+		"verify_at": strings.Replace(minimal, "  - {from: backlog, to: done}\n", "  - {from: backlog, to: done}\nverify_at: {publish: [smoke]}\n", 1),
+	} {
+		if !mustParse(t, text).UsesSuiteKeys() {
+			t.Errorf("a file giving %s alone does not use the keys", name)
+		}
+	}
+	w := mustParse(t, minimal)
+	w.States[0].Runs = &Runs{Kluster: []string{KlusterDeploy}}
+	if !w.UsesSuiteKeys() {
+		t.Error("a file giving a state's runs alone does not use the keys")
+	}
+	if !mustParse(t, suited).UsesSuiteKeys() {
+		t.Error("the suited file does not use the keys")
+	}
+}
+
 // S-0806: Clone copies a transition's verify, a state's runs, and verify_at,
 // so a change to the copy leaves the original as it was.
 func TestCloneCopiesVerifyRunsAndVerifyAt(t *testing.T) {

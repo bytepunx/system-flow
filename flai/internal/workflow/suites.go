@@ -365,6 +365,21 @@ func (w Workflow) NamedSuites() (named []Named, all bool) {
 	return named, all
 }
 
+// UsesSuiteKeys reports whether the file gives any of ADR-0312's keys: a
+// transition's verify, a state's runs, or verify_at. A file that gives none
+// predates them, as one flai upgrade added before S-0806 does (ADR-0307 §4),
+// and reads as giving the baseline's: verify: {suites: all, severity: warn}
+// on the move to review, verify: all on the acceptance, runs: {kluster:
+// [deploy, checks]} on review, and verify_at: {batch: all, ci: all}, so that
+// it runs what it ran before (ADR-0312 §8, TH-1289).
+func (w Workflow) UsesSuiteKeys() bool {
+	if w.VerifyAt != (VerifyAt{}) {
+		return true
+	}
+	return slices.ContainsFunc(w.Transitions, func(t Transition) bool { return t.Verify != nil }) ||
+		slices.ContainsFunc(w.States, func(s State) bool { return s.Runs != nil })
+}
+
 // cloneSuites is a copy of s that shares no list with it.
 func cloneSuites(s *Suites) *Suites {
 	if s == nil {

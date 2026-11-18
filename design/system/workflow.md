@@ -60,7 +60,9 @@ The baseline and the template's file, byte for byte, give today's behaviour (ADR
 - `workflow.suite`, an error: a suite the file names that no tier has, on the line that names it.
 - `workflow.suite-unnamed`, a warning: a suite with a tier that is not `manual` which no transition's `verify`, state's `runs`, or point of `verify_at` names, so no step runs it. A file that names `all` anywhere gets none, and neither does a suite whose tiers are all manual.
 
-Both are findings of `flai check` alone: neither refuses to open the project (ADR-0307 §2). They are reported for a project's own file once it parses without error. The baseline names only `all`, so a project without the file gets neither. A project's file kept from before S-0806 names no suite, so it gets `workflow.suite-unnamed` for each suite with a tier that is not manual until a story carries the keys over.
+Both are findings of `flai check` alone: neither refuses to open the project (ADR-0307 §2). They are reported for a project's own file once it parses without error. The baseline names only `all`, so a project without the file gets neither.
+
+A workflow file that gives none of `verify`, `runs`, and `verify_at` reads as giving the baseline's: every suite at `warn` on the move to review, every suite on the acceptance, the cluster's deploy and checks on review, and every suite at the batch and in CI (TH-1289). Such a file predates ADR-0312, as one `flai upgrade` added before S-0806 does (ADR-0307 §4), and its project edited nothing, so it runs what it ran before (ADR-0312 §8). It gets no `workflow.suite-unnamed`, since no suite stops running. A file that gives any one of the keys reads as giving exactly what it says, and a key it leaves out names nothing: such a file is held to the suites in full. Each step that reads the keys reads a file with none of them as the baseline's.
 
 Nothing reads the keys to decide a run yet. The stories after S-0806 make each step read them: the move and the close-out (S-0807), the acceptance's gates (S-0808), the batch (S-0809), a state's runs as a job (S-0810), the publish (S-0811), and `flai test --at ci` (S-0812).
 
