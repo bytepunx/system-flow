@@ -1,6 +1,6 @@
 ---
 title: "Runbook: change the board"
-updated: 2026-11-17
+updated: 2026-11-18
 status: active
 ---
 
@@ -75,6 +75,8 @@ Each rule refuses or warns by default. Set `severity` to change it for one move:
 
 A rule applies only to the item types it names, and a move's `types` narrows it further. For a rule flai lacks, ask for a story that adds it.
 
+The rule `verified` comes with a move's `verify` ([below](#name-the-suites-a-step-runs)): you need not list it. List it in `rules` to place it among the others; listed on a move with no `verify`, it needs every suite.
+
 ## Add a timer
 
 A timer reads the moves every item already records, so it covers past items too. It is the time between two points, or the sum of the time spent in some states:
@@ -141,7 +143,13 @@ transitions:
 verify_at: {batch: [static, behavior], publish: [integration, smoke], ci: all}
 ```
 
-Today nothing runs differently for these keys. flai parses and checks them, but no move, state, batch, publish, or CI run reads them to decide what it runs yet; later releases make each do so. Until then the close-out and the acceptance run as they did.
+Since S-0807 a story's move and its close-out read `verify` ([The move needs the suites passed at the head](../../users/flai.md#the-move-needs-the-suites-passed-at-the-head)):
+
+- A move by a transition with `verify` runs the rule `verified` at `verify`'s severity. It needs the story's last `flai verify` to have passed each suite `verify` lists at the head of the story's branch. On the baseline the move to review warns until every suite passed there.
+- The close-out runs the tiers its paths select of the suites the moves out of the story's state need, every suite when one of them gives `all` or none gives `verify`. With the example above it runs `static` and `behavior` alone. `flai verify S-nnnn --all` runs every suite.
+- The acceptance runs no `verified`.
+
+Nothing else reads the keys yet: the acceptance's gates, a state's `runs`, the batch, the publish, and CI run as they did; later releases make each read them.
 
 The keys need a flai that knows them. The first publish from the flai release that carries them raises `flai.minimum` in `system-flow.yaml`, and from then an older flai stops before it reads the file, naming the release to install ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)). Before that publish, an older flai refuses a file that uses them with its parse error, an unknown field.
 

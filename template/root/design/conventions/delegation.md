@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-11-07
+updated: 2026-11-18
 audience: agent
 order: 130
 status: active
@@ -34,10 +34,10 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - move a task you have just written to ready and in-progress in one command, `flai move T-nnnn ready && flai move T-nnnn in-progress`, since `flai move` refuses a task straight from `backlog` to `in-progress`
 - Before moving a story to `review`:
   - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says
-  - ask flai serve for the close-out once, with the MCP tool `verify` and the commit message, or `flai verify S-nnnn --job -m "<message>"`: it answers the job's id at once and runs the project's close-out script, which runs `flai verify S-nnnn --record-issues` and then commits (`work-management.md`), or `flai verify S-nnnn` where the project has none, in the worktree ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md))
+  - ask flai serve for the close-out once, with the MCP tool `verify` and the commit message, or `flai verify S-nnnn --job -m "<message>"`: it answers the job's id at once and runs the project's close-out script, which runs `flai verify S-nnnn --record-issues` over the suites the story's next moves need and then commits (`work-management.md`), or `flai verify S-nnnn` where the project has none, in the worktree ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md))
   - wait for it by holding `wait_for_events` until it reports `verified` for the story; never run the close-out script in a turn while flai serve runs
   - read its result with `flai verify S-nnnn --last`: the outcome, the step it stopped at, and the findings of the step that failed
-  - a verdict the request answers from the verify record is the passing run at that commit; it ran nothing
+  - a verdict the request answers from the verify record, which holds every suite the close-out would run as passed at that commit, is the passing run at that commit; it ran nothing
   - where no flai serve runs, the request says so after ten seconds: run the close-out yourself, once, in the worktree, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `scripts/close-out.sh S-nnnn -m "<message>"; echo "exit $?"`; never pipe its output, which loses the exit status, and never redirect it into a file; read its last line, which names the outcome and the step it stopped at
   - when it stops, fix what it names, commit, and ask for it again; do not finish the steps by hand, and never hand the run to a sub-agent
   - its passing run is the story's run before review; do not repeat it. `flai verify S-nnnn --last` prints it again

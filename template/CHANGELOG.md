@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0807 The close-out runs the tiers of the suites the story's next moves need, those the `verify` of each move out of its state in `design/workflows/board.md` lists, or every suite when one gives `all` or none gives `verify`, as the baseline's move to review does, so on the baseline it runs every tier its paths select as before; `work-management.md` and `delegation.md` say so and that the move to review runs the rule `verified`, and `scripts/close-out.sh`'s comments say what `--all` and the tiers now cover (patch, ADR-0312).
+
 ## 1.1.46 - 2026-11-18
 
 - S-0806 The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour (patch).

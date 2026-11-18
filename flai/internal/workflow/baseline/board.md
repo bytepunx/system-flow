@@ -37,6 +37,6 @@ timers:
 
 This is the baseline workflow flai carries in its binary: today's board, with its six states, the transitions between them, the rules each move passes, and the timers flai measures over every item's history, as ADR-0301 states it. A project with no `design/workflows/board.md` of its own runs it.
 
-`verify` on a transition names the test suites a move by it needs its last `flai verify` to have passed, `all` for every suite, and `warn` lets the move go with a warning; `runs` on a state names what flai runs when a story enters it, suites and the cluster's deploy and checks; `verify_at` names the suites the merge queue's batch, the publish, and CI run. The values here are today's behaviour, as ADR-0312 §8 states it, and nothing reads them to decide a run yet.
+`verify` on a transition names the test suites a move by it needs its last `flai verify` to have passed, `all` for every suite, and `warn` lets the move go with a warning; `runs` on a state names what flai runs when a story enters it, suites and the cluster's deploy and checks; `verify_at` names the suites the merge queue's batch, the publish, and CI run. The values here are today's behaviour, as ADR-0312 §8 states it. A move by a transition with `verify` needs those suites passed at the story's head, and the close-out runs the suites the moves out of the story's state need; nothing else reads them to decide a run yet.
 
 flai reads only the front matter. This body is prose for the operator: why the board is shaped as it is, and what changing it means.

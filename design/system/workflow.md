@@ -64,9 +64,21 @@ Both are findings of `flai check` alone: neither refuses to open the project (AD
 
 A workflow file that gives none of `verify`, `runs`, and `verify_at` reads as giving the baseline's: every suite at `warn` on the move to review, every suite on the acceptance, the cluster's deploy and checks on review, and every suite at the batch and in CI (TH-1289). Such a file predates ADR-0312, as one `flai upgrade` added before S-0806 does (ADR-0307 §4), and its project edited nothing, so it runs what it ran before (ADR-0312 §8). It gets no `workflow.suite-unnamed`, since no suite stops running. A file that gives any one of the keys reads as giving exactly what it says, and a key it leaves out names nothing: such a file is held to the suites in full. Each step that reads the keys reads a file with none of them as the baseline's.
 
-Nothing reads the keys to decide a run yet. The stories after S-0806 make each step read them: the move and the close-out (S-0807), the acceptance's gates (S-0808), the batch (S-0809), a state's runs as a job (S-0810), the publish (S-0811), and `flai test --at ci` (S-0812).
+Since S-0807 a story's move and its close-out read `verify` ([below](#what-the-move-and-the-close-out-read-s-0807)). Nothing else reads the keys to decide a run yet. The stories after it make each other step read them: the acceptance's gates (S-0808), the batch (S-0809), a state's runs as a job (S-0810), the publish (S-0811), and `flai test --at ci` (S-0812).
 
 The keys are listed in the fields file ([Fields an older flai does not know](work-hierarchy.md#fields-an-older-flai-does-not-know)), so the first publish from the flai release that carries them raises `flai.minimum`, and an older flai stops on the manifest, naming the release, before it reads the file. Until that publish, an older flai refuses a file that uses them with its parse error, an unknown field. `flai upgrade` keeps a project's own file as it is (ADR-0307 §4): the template's keys reach it only through a story that carries them over.
+
+#### What the move and the close-out read (S-0807)
+
+**The move.** A move by a transition with `verify` runs the rule `verified` at `verify`'s severity: after the rules the transition lists, or where its `rules` list `verified`. A transition that lists `verified` and gives no `verify` needs every suite. The rule reads the verify record at the head of the story's branch, its worktree's `HEAD`. It passes when the record holds each suite `verify` lists as passed there in a clean run: each of the suite's tiers passed, was reused, was skipped for a tier that did, or was left to the merge queue ([ADR-0174](../adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md)). `all` is every suite the record holds at the head. A listed suite the record holds no entry for passes when the record's run passed clean at the head, since `flai verify` records every suite whose tiers it selects. No worktree, a head git cannot read, and no record at the head fail the rule. A repository with no git skips it. The transition with the `accept` effect runs no `verified`, listed or not: what the acceptance needs of the record is its gates' (S-0808, ADR-0312 §3). On the baseline the move to review now warns, and refuses nothing, until every suite the story's run selected passed at its head:
+
+```text
+moving S-nnnn to review needs its last flai verify to have passed every suite at its branch's head, but <why>; run flai verify S-nnnn, then move it again
+```
+
+**The close-out.** `flai verify S-nnnn`, and so the close-out and the close-out job, runs the tiers the story's paths select of the suites its next transitions need: the union of the `verify` suites of each transition the workflow lets a story take out of the state it is in. `all` on any of them, or none of them giving `verify`, is every suite. On the baseline the move to review gives `all`, so the close-out runs every tier its paths select, as before. `--all` runs every suite's tiers, and those it would leave to the merge queue. When the suites are not every suite, the text names them on a line before the outcome, `suites <suite>, ...: those the moves out of the story's state need`, and `--json` gives them as `suites`. A tier's `queue` and `when` keep their meaning until S-0813 retires them.
+
+**The record.** The verify report, and the verdict kept at each commit, holds `suite_runs`: for each suite the run selected tiers of, those tiers in list order, how each ended, whether the suite passed, and the head, base, merge base, patch id, and fingerprint it ran at. A run of fewer suites at a commit merges into that commit's verdict and erases no suite another run recorded there. Reuse across a clean rebase is judged suite by suite under [ADR-0156](../adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md)'s gates: the same patch id, the same fingerprint of the project's tiers and the suite's selected ones, and the same tiers in order; a tier the main branch's new paths select runs again with every tier after it. The close-out job answers from the record only when it holds, at the head, a passing verdict for every suite the job would run ([flai-cli.md](flai-cli.md#the-close-out-job)). A report written before S-0807 is read with its tiers grouped by the suite the manifest gives each, a tier the manifest lacks as a suite of its own, and is reused by nothing.
 
 ## Pull policy
 
@@ -121,7 +133,7 @@ The checks behind the required actions are named rules from the vocabulary flai 
 |------------|-------|-----------------|
 | backlog to ready, in-progress to ready | all | `criteria-present`, `not-draft`, `after-done` |
 | ready to in-progress | all | `not-blocked`, `not-held`, `task-after` |
-| in-progress to review | all | `has-task`, `no-open-question`, `clean-worktree`, `criteria-ticked` (warn), `kluster-verified` |
+| in-progress to review | all | `has-task`, `no-open-question`, `clean-worktree`, `criteria-ticked` (warn), `kluster-verified`, `verified` (warn, from its `verify`) |
 | review to done | epic, story | `children-closed`, `criteria-ticked` |
 | review to done, in-progress to done | task | `children-closed` |
 | review to in-progress | all | `reason-given`, `not-blocked`, `task-after` |
@@ -138,6 +150,7 @@ The checks behind the required actions are named rules from the vocabulary flai 
 | `clean-worktree` | Nothing is uncommitted in the story's worktree; a worktree git cannot read warns (I-0017) | story | refuse |
 | `criteria-ticked` | Every acceptance criterion is ticked | story | refuse |
 | `kluster-verified` | The story's kluster namespace is deployed at its branch's head and its checks passed there, where the manifest's `kluster:` block names a deploy and the `kluster` host action is on (ADR-0292); `flai move` and `item_move` check it, since they read the namespace's record, and `Repo.Move` passes it by | story | warn |
+| `verified` | The story's last `flai verify` passed, at its branch's head, the suites the transition's `verify` lists ([below](#what-the-move-and-the-close-out-read-s-0807)); a transition with `verify` runs it at `verify`'s severity, last unless its `rules` place it, and the one with the `accept` effect never runs it (ADR-0312 §2, §3) | story | refuse |
 | `children-closed` | Every child is done or cancelled | epic, story | refuse |
 | `reason-given` | The move gives a reason; a cascade gives its parent's | all | refuse |
 | `parent-open` | The item's parent is not cancelled | all | refuse |
