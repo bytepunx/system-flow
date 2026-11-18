@@ -532,7 +532,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	flow := repo.Flow()
 	events := []Event{}
 	next := cursor{Seen: now.Format(workitem.TimeFormat), Keys: map[string]bool{}, Order: board.Order}
-	for _, c := range workitem.Changes(items, cur.since(now), agent, cur.Keys) {
+	for _, c := range workitem.ChangesIn(flow, items, cur.since(now), agent, cur.Keys) {
 		// the cursor passes every change, reported or not
 		if c.At == next.Seen {
 			next.Keys[c.Key()] = true

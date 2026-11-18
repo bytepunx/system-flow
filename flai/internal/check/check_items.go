@@ -258,7 +258,7 @@ func (c *checker) history(it *workitem.Item) {
 		// item out of review on the baseline, and nothing else does (ADR-0028).
 		t, found := flow.Find(it.Type, prevState, tr.To)
 		follows := found && !slices.Equal(t.By, []string{workflow.ByCascade})
-		cascaded := found && t.Allows(workflow.ByCascade) && workitem.CancelledWith(c.byID, it, tr.At) != ""
+		cascaded := found && t.Allows(workflow.ByCascade) && workitem.CancelledWithIn(flow, c.byID, it, tr.At) != ""
 		if !follows && via != "" && flow.Kind(tr.To) == workflow.KindAccepted && flow.Kind(prevState) == workflow.KindActive {
 			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: a %s must go through %s before %s", i, it.Type, via, tr.To)
 		} else if !follows && !cascaded {
@@ -349,7 +349,7 @@ func (c *checker) epicLags() {
 		if it.Type != workitem.Epic || it.Archived || it.Closed() {
 			continue
 		}
-		follows, ok := workitem.EpicFollows(c.items, it.ID)
+		follows, ok := workitem.EpicFollowsIn(flow, c.items, it.ID)
 		target, known := flow.State(follows)
 		if !ok || !known || rank[target.Name] <= rank[it.Status] {
 			continue

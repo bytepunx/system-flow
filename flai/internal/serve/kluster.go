@@ -570,7 +570,7 @@ func (p *klusterPass) look(ctx context.Context) {
 		return
 	}
 	var changes []workitem.Change
-	changes, _, p.since, p.seen = news(items, nil, p.since, p.seen, now)
+	changes, _, p.since, p.seen = news(repo.Flow(), items, nil, p.since, p.seen, now)
 	root, flow := mainCheckout(repo), repo.Flow()
 	deployable := klusterDeployable(repo.Manifest)
 	var queued []string

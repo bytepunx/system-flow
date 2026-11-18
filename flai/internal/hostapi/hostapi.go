@@ -657,7 +657,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			one := relative(repo.MainRoot, []*workitem.Item{it}, true)[0]
 			out := ItemWithChildren{Item: one, Children: relative(repo.MainRoot, children, true)}
 			if it.Type == workitem.Story {
-				out.Plan = workitem.PlanOf(children, it.ID)
+				out.Plan = workitem.PlanOfIn(repo.Flow(), children, it.ID)
 			}
 			if it.Type == workitem.Story && !it.Archived && mayUndo(repo.Flow(), it.Status) {
 				done = perf.Track(ctx, "undone.read")

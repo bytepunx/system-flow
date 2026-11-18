@@ -455,3 +455,31 @@ func TestOverlapReadsTasksUnderTheWorkflow(t *testing.T) {
 		t.Errorf("a shipped task's touch outside its story's overlaps flai/internal/serve/b.go: %+v", got)
 	}
 }
+
+// I-0379: epic.lags-stories reads an epic's stories under the repository's
+// workflow, so that an epic in progress whose stories are all shipped, the
+// board's name for done, is told to be accepted; read by the baseline's
+// names, shipped was no state at all and the epic lagged nothing.
+func TestEpicLagsReadsStoriesUnderTheWorkflow(t *testing.T) {
+	repo := overlapProject(t)
+	repo.Workflow = renamedFlow(workitem.Done, "shipped")
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	a := mustItem(t, repo, workitem.Story, "A", e.ID)
+	b := mustItem(t, repo, workitem.Story, "B", e.ID)
+	e.Status, a.Status, b.Status = workitem.InProgress, "shipped", "shipped"
+	for _, it := range []*workitem.Item{e, a, b} {
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &checker{repo: repo, now: now, items: items, byID: map[string]*workitem.Item{}, res: &Result{}}
+	c.epicLags()
+	want := e.ID + " is in-progress but its stories are all shipped; accept it with flai accept " + e.ID + ", which moves it to shipped and archives it (an epic follows its stories since S-0200, and this one was moved before that, or by hand)"
+	if len(c.res.Findings) != 1 || c.res.Findings[0].Rule != "epic.lags-stories" || c.res.Findings[0].Message != want {
+		t.Errorf("got %+v, want one epic.lags-stories saying %q", c.res.Findings, want)
+	}
+}

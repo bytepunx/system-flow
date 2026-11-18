@@ -136,7 +136,7 @@ func (s *curateScheduler) look(ctx context.Context) {
 		return
 	}
 	var changes []workitem.Change
-	changes, _, s.since, s.seen = news(items, nil, s.since, s.seen, now)
+	changes, _, s.since, s.seen = news(repo.Flow(), items, nil, s.since, s.seen, now)
 	curator, _, err := roles.Builtin(repo.Root, repo.Manifest.Layout["design"], workitem.ActivityCurator)
 	if err != nil {
 		s.warnOnce("curator role file not read", err) // no entry starts the curator

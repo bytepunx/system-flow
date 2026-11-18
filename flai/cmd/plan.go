@@ -150,7 +150,7 @@ func (a *app) planCandidatesOf(repo *workitem.Repo) (workitem.PlanCandidates, er
 	if err != nil {
 		return workitem.PlanCandidates{}, err
 	}
-	return workitem.PlanCandidatesOf(items, planHeld(repo, items, st, asked), asked), nil
+	return workitem.PlanCandidatesIn(repo.Flow(), items, planHeld(repo, items, st, asked), asked), nil
 }
 
 // planHeld is why each epic and story st's planner runs keep from being a

@@ -745,7 +745,7 @@ func (s *server) itemOut(ctx context.Context, it *workitem.Item) (ItemOut, error
 		out.Children = append(out.Children, brief(c))
 	}
 	if it.Type == workitem.Story {
-		out.Plan = workitem.PlanOf(children, it.ID)
+		out.Plan = workitem.PlanOfIn(s.repo.Flow(), children, it.ID)
 		out.PullRequest, out.PullRequestError = s.keptPullRequest(it.ID)
 		out.Kluster, out.KlusterError = s.klusterEvidence(it.ID)
 	}

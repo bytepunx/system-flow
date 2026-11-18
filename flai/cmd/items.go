@@ -258,7 +258,7 @@ pull_request: {"story", "pull_request", "url", "head_sha", "read_at",
 			// a story's task plan (S-0176)
 			var plan *workitem.Plan
 			if it.Type == workitem.Story {
-				plan = workitem.PlanOf(children, it.ID)
+				plan = workitem.PlanOfIn(repo.Flow(), children, it.ID)
 			}
 			// a story's pull request as flai serve last read it (ADR-0167);
 			// a cache file that cannot be read does not hide the item

@@ -120,20 +120,20 @@ func TestChangesAndEditsAreNewsOnce(t *testing.T) {
 		{To: workitem.Review, By: "agent", At: stamp(5 * time.Second)},
 	}}}
 	notices := []itemedit.Notice{{At: stamp(-time.Second), By: "alex", ID: "S-0001", Changed: []string{"goal"}}, {At: stamp(5 * time.Second), By: "alex", ID: "S-0001", Changed: []string{"touches"}}}
-	changes, edits, since, seen := news(items, notices, start, map[string]time.Time{}, start.Add(5*time.Second+300*time.Millisecond))
+	changes, edits, since, seen := news(workflow.Baseline(), items, notices, start, map[string]time.Time{}, start.Add(5*time.Second+300*time.Millisecond))
 	if len(changes) != 2 || changes[0].To != workitem.InProgress || changes[1].To != workitem.Review || len(edits) != 1 || edits[0].Changed[0] != "touches" {
 		t.Fatalf("first look: %+v %+v", changes, edits)
 	}
 	// the same second again: nothing new, until a move stamped in it appears
-	if changes, edits, _, _ := news(items, notices, since, seen, start.Add(5*time.Second+600*time.Millisecond)); len(changes) != 0 || len(edits) != 0 {
+	if changes, edits, _, _ := news(workflow.Baseline(), items, notices, since, seen, start.Add(5*time.Second+600*time.Millisecond)); len(changes) != 0 || len(edits) != 0 {
 		t.Errorf("seen again: %+v %+v", changes, edits)
 	}
 	items[0].Transitions = append(items[0].Transitions, workitem.Transition{To: workitem.Done, By: "alex", At: stamp(5 * time.Second)})
-	changes, _, since, seen = news(items, notices, since, seen, start.Add(6*time.Second))
+	changes, _, since, seen = news(workflow.Baseline(), items, notices, since, seen, start.Add(6*time.Second))
 	if len(changes) != 1 || changes[0].To != workitem.Done {
 		t.Fatalf("a move in the last look's second: %+v", changes)
 	}
-	if changes, edits, _, _ := news(items, notices, since, seen, start.Add(time.Minute)); len(changes) != 0 || len(edits) != 0 {
+	if changes, edits, _, _ := news(workflow.Baseline(), items, notices, since, seen, start.Add(time.Minute)); len(changes) != 0 || len(edits) != 0 {
 		t.Errorf("a later look: %+v %+v", changes, edits)
 	}
 }

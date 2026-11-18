@@ -74,7 +74,7 @@ func ReadStarved(repo *workitem.Repo, items []*workitem.Item, r Reader) (Starved
 	if err != nil {
 		return Starved{}, fmt.Errorf("read the board's pull order to list the backlog's decisions: %w", err)
 	}
-	c, err := workitem.PromotionCandidates(items, board.Order, repo.Holds(items), repo.Manifest.Orchestration.PolicyOrDefault(), 0)
+	c, err := workitem.PromotionCandidatesIn(repo.Flow(), items, board.Order, repo.Holds(items), repo.Manifest.Orchestration.PolicyOrDefault(), 0)
 	if err != nil {
 		return Starved{}, fmt.Errorf("judge the backlog's promotion candidates: %w; check orchestration.policy in system-flow.yaml", err)
 	}

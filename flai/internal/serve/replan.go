@@ -159,7 +159,7 @@ func (r *replanner) look(ctx context.Context) {
 	}
 	var changes []workitem.Change
 	var edits []itemedit.Notice
-	changes, edits, r.since, r.seen = news(items, itemedit.Notices(repo), r.since, r.seen, now)
+	changes, edits, r.since, r.seen = news(repo.Flow(), items, itemedit.Notices(repo), r.since, r.seen, now)
 	reordered := workitem.Reordered(r.order, board.Order)
 	r.order = slices.Clone(board.Order)
 	scheds := r.schedules(planner, repo.Manifest, now)
@@ -396,12 +396,12 @@ func (r *replanner) warnOnce(msg string, err error) {
 	}
 }
 
-// news are the changes in items and the edit notices that are new to a
-// watermark at since that has seen seen, oldest first, and the watermark
-// past them at now. A change or notice is new when it is stamped in since's
+// news are the changes in items, read under flow (I-0379), and the edit
+// notices that are new to a watermark at since that has seen seen, oldest
+// first, and the watermark past them at now. A change or notice is new when it is stamped in since's
 // second or later and has not been seen; the keys seen are kept while they
 // are stamped in now's second or later.
-func news(items []*workitem.Item, notices []itemedit.Notice, since time.Time, seen map[string]time.Time, now time.Time) ([]workitem.Change, []itemedit.Notice, time.Time, map[string]time.Time) {
+func news(flow workflow.Workflow, items []*workitem.Item, notices []itemedit.Notice, since time.Time, seen map[string]time.Time, now time.Time) ([]workitem.Change, []itemedit.Notice, time.Time, map[string]time.Time) {
 	next := now.UTC().Truncate(time.Second)
 	nextSeen := map[string]time.Time{}
 	for k, at := range seen {
@@ -423,7 +423,7 @@ func news(items []*workitem.Item, notices []itemedit.Notice, since time.Time, se
 		return true
 	}
 	var changes []workitem.Change
-	for _, c := range workitem.Changes(items, since, "", nil) {
+	for _, c := range workitem.ChangesIn(flow, items, since, "", nil) {
 		if fresh(c.Key(), c.At) {
 			changes = append(changes, c)
 		}
