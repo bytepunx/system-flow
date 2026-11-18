@@ -182,6 +182,22 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 			t.Errorf("missing %s", p)
 		}
 	}
+	// The CI workflow runs the suites through flai, with no lint or test
+	// command of its own (S-0812, ADR-0312 §6).
+	if ci, err := os.ReadFile(filepath.Join(dest, ".github/workflows/system-flow-check.yml")); err != nil {
+		t.Error(err)
+	} else {
+		for _, want := range []string{"install.sh", "flai check --strict", "flai test --at ci"} {
+			if !strings.Contains(string(ci), want) {
+				t.Errorf("system-flow-check.yml does not run %q:\n%s", want, ci)
+			}
+		}
+		for _, gone := range []string{"markdownlint", "go install", "scripts/"} {
+			if strings.Contains(string(ci), gone) {
+				t.Errorf("system-flow-check.yml still runs %q:\n%s", gone, ci)
+			}
+		}
+	}
 	// The lock records the template's topics on each convention (S-0134).
 	if lk, err := lock.Load(dest); err != nil || lk == nil || strings.Join(lk.Topics["design/conventions/git.md"], ",") != "all" {
 		t.Errorf("lock topics: %+v %v", lk, err)

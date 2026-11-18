@@ -1,6 +1,6 @@
 ---
 title: Template repository
-updated: 2026-11-15
+updated: 2026-11-18
 status: active
 topics: [template]
 ---
@@ -26,7 +26,7 @@ Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. 
 │   ├── .gitattributes
 │   ├── .markdownlint.yaml
 │   ├── Makefile
-│   ├── .github/workflows/system-flow-check.yml
+│   ├── .github/workflows/system-flow-check.yml # CI: installs flai, runs flai check --strict and flai test --at ci
 │   ├── design/ ...         # includes conventions/, the baseline agent norms, see conventions.md
 │   │   └── workflows/board.md # the baseline workflow, byte for byte the one flai carries (ADR-0301)
 │   ├── docs/ ...
@@ -145,4 +145,6 @@ A template developed inside another repository, as `./template` is here, is publ
 
 ## Testing the template
 
-The monorepo's CI (`make smoke`, `scripts/template-test.sh`) renders the template into a temporary directory with `flai new --template ./template` and runs `flai check` on the result. This is the sample repo used by dashboard fixture tests.
+The monorepo's CI (`make smoke`, `scripts/template-test.sh`) renders the template into a temporary directory with `flai new --template ./template` and runs `flai check` on the result, then `flai test --at ci` in it. This is the sample repo used by dashboard fixture tests.
+
+A project made from the template runs the same in its own CI. Its `.github/workflows/system-flow-check.yml` installs the newest flai release with `install.sh`, then runs `flai check --strict` and `flai test --at ci`, and no lint or test command of its own ([ADR-0312](../adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md) §6). `flai test --at ci` runs the suites the workflow file's `verify_at` names for ci, which the baseline gives as `all`: every tier in `system-flow.yaml`'s `tests` but the manual ones, the markdown lint among them. A project adds a check to its CI as a tier, not as a step.

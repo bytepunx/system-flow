@@ -13,15 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Lint markdown
-        uses: DavidAnson/markdownlint-cli2-action@v20
-        with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
-            !**/testdata/**
-            !bin/**
+      # install.sh installs the newest flai release, its signature and
+      # checksum verified, into ~/.flai/bin. It calls GitHub's API with
+      # GITHUB_TOKEN, which lifts the rate limit on anonymous calls.
       - name: Install flai
-        run: go install github.com/bytepunx/system-flow/flai@latest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
+          echo "$HOME/.flai/bin" >> "$GITHUB_PATH"
       - name: Check standard conformance
         run: flai check --strict
+      # The suites design/workflows/board.md's verify_at names for ci, from
+      # the tiers in system-flow.yaml's tests. Add a check as a tier there,
+      # not as a step here.
+      - name: Run the test suites
+        run: flai test --at ci
