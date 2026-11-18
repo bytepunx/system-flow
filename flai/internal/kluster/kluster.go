@@ -156,15 +156,37 @@ func (c Cluster) run(ctx context.Context, out io.Writer, what string, args []str
 	return nil
 }
 
-// Up brings the cluster up with kluster up, its output streamed to out, and
-// then writes its kubeconfig to KubeconfigPath.
+// Up brings the cluster up and writes its kubeconfig to KubeconfigPath,
+// kluster's output streamed to out. It reads kluster status first, since
+// kluster up refuses a cluster that exists (I-0367): a cluster status does
+// not list is brought up with kluster up; one that runs is not, and only its
+// kubeconfig is written again, which is how a stale one is refreshed; one
+// that is listed but stopped is refused, and nothing runs.
 func (c Cluster) Up(ctx context.Context, out io.Writer) error {
 	if err := c.installed(); err != nil {
 		return err
 	}
-	if err := c.run(ctx, out, "up", c.UpArgs()); err != nil {
+	s, err := c.Status(ctx)
+	if err != nil {
 		return err
 	}
+	switch {
+	case s.Exists && !s.Running:
+		// kluster has no start command, so the refusal names the two ways back.
+		return fmt.Errorf("the cluster %s, from %s in %s, exists but is stopped, so flai neither brings it up nor writes its kubeconfig; start its k3d node containers, which docker ps -a --filter name=k3d-%s lists, with docker start and run flai kluster up again, or run flai kluster down and then flai kluster up to make it anew", c.Name, c.Config, c.Root, c.Name)
+	case s.Exists:
+		fmt.Fprintf(out, "the cluster %s is up already: flai runs no kluster up and writes its kubeconfig again\n", c.Name)
+	default:
+		if err := c.run(ctx, out, "up", c.UpArgs()); err != nil {
+			return err
+		}
+	}
+	return c.writeKubeconfig(ctx, out)
+}
+
+// writeKubeconfig writes the cluster's kubeconfig to KubeconfigPath with
+// kluster kubeconfig, its output streamed to out.
+func (c Cluster) writeKubeconfig(ctx context.Context, out io.Writer) error {
 	if err := os.MkdirAll(filepath.Dir(KubeconfigPath(c.Root)), 0o755); err != nil {
 		return fmt.Errorf("make the folder for the kubeconfig of the cluster %s: %w", c.Name, err)
 	}

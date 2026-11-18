@@ -16,22 +16,30 @@ import (
 
 // fakeKluster is a kluster on PATH that logs its working directory and
 // arguments, one call a line, to $FAKE_LOG; prints $FAKE_STATUS's file for
-// status; writes a kubeconfig where kubeconfig --output names; and exits
-// $FAKE_EXIT for the subcommand $FAKE_FAIL.
+// status, or kluster's line for no clusters when there is none; refuses up,
+// as kluster v1.3.1 does, for a cluster that file lists by its config's name;
+// writes a kubeconfig where kubeconfig --output names; and exits 3 for the
+// subcommand $FAKE_FAIL.
 const fakeKluster = `#!/bin/sh
 echo "$(pwd) $*" >> "$FAKE_LOG"
 sub=""
 out=""
+cfg=""
 prev=""
 for a in "$@"; do
-  case "$prev" in --config|--provider|--name) prev=""; continue ;; --output) out="$a"; prev=""; continue ;; esac
+  case "$prev" in --provider|--name) prev=""; continue ;; --config) cfg="$a"; prev=""; continue ;; --output) out="$a"; prev=""; continue ;; esac
   case "$a" in --config|--provider|--name|--output) prev="$a" ;; --*) ;; *) [ -z "$sub" ] && sub="$a" ;; esac
 done
 if [ "$sub" = "$FAKE_FAIL" ]; then echo "kluster: $sub broke" >&2; exit 3; fi
+name=$(sed -n 's/^name: *//p' "$cfg")
 case "$sub" in
-  up) echo "creating cluster"; echo "cluster ready" ;;
+  up)
+    if [ -f "$FAKE_STATUS" ] && awk -v n="$name" '$1 == n { found = 1 } END { exit !found }' "$FAKE_STATUS"; then
+      echo "Error: create cluster: cluster \"$name\" already exists" >&2; exit 1
+    fi
+    echo "creating cluster"; echo "cluster ready" ;;
   down) echo "deleted" ;;
-  status) cat "$FAKE_STATUS" ;;
+  status) if [ -f "$FAKE_STATUS" ]; then cat "$FAKE_STATUS"; else echo "No clusters found."; fi ;;
   kubeconfig) echo "apiVersion: v1" > "$out" ;;
 esac
 `
@@ -134,14 +142,84 @@ func TestUpStreamsAndWritesTheKubeconfig(t *testing.T) {
 	}
 	calls := f.calls(t)
 	want := []string{
+		f.root + " --config integration/kluster.yaml --provider k3d status",
 		f.root + " --config integration/kluster.yaml --provider k3d up",
 		f.root + " --config integration/kluster.yaml --provider k3d kubeconfig --name authstar-integration --output " + KubeconfigPath(f.root),
 	}
 	if !slices.Equal(calls, want) {
-		t.Errorf("up runs kluster up then kubeconfig, in the root:\n got %q\nwant %q", calls, want)
+		t.Errorf("up of a cluster status does not list runs status, kluster up, then kubeconfig, in the root:\n got %q\nwant %q", calls, want)
 	}
 	if data, err := os.ReadFile(KubeconfigPath(f.root)); err != nil || !strings.Contains(string(data), "apiVersion") {
 		t.Errorf("the kubeconfig is kept under .flai-cache/kluster: %v %q", err, data)
+	}
+}
+
+// TestUpOfARunningClusterWritesItsKubeconfigAgain reproduces I-0367: the
+// cluster's k3d containers restarted and its API port moved, so the kept
+// kubeconfig named the old one, and flai kluster up, which ran kluster up
+// first, failed on kluster's "already exists" and never wrote it again.
+func TestUpOfARunningClusterWritesItsKubeconfigAgain(t *testing.T) {
+	f := setup(t, authstarConfig)
+	if err := os.WriteFile(f.status, []byte("NAME                  RUNNING  AGE\nauthstar-integration  yes      3d2h\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(KubeconfigPath(f.root)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(KubeconfigPath(f.root), []byte("server: https://127.0.0.1:41600\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := f.c.Up(context.Background(), &out); err != nil {
+		t.Fatalf("up of a running cluster writes its kubeconfig again rather than failing on kluster up: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "the cluster authstar-integration is up already") || !strings.Contains(out.String(), "writes its kubeconfig again") {
+		t.Errorf("up says the cluster was up already and its kubeconfig is written again: %q", out.String())
+	}
+	want := []string{
+		f.root + " --config integration/kluster.yaml --provider k3d status",
+		f.root + " --config integration/kluster.yaml --provider k3d kubeconfig --name authstar-integration --output " + KubeconfigPath(f.root),
+	}
+	if calls := f.calls(t); !slices.Equal(calls, want) {
+		t.Errorf("up of a running cluster runs status and kubeconfig, and no kluster up:\n got %q\nwant %q", calls, want)
+	}
+	if data, err := os.ReadFile(KubeconfigPath(f.root)); err != nil || strings.Contains(string(data), "41600") || !strings.Contains(string(data), "apiVersion") {
+		t.Errorf("the stale kubeconfig is written again: %v %q", err, data)
+	}
+}
+
+func TestUpOfAStoppedClusterIsRefused(t *testing.T) {
+	f := setup(t, authstarConfig)
+	if err := os.WriteFile(f.status, []byte("NAME                  RUNNING  AGE\nauthstar-integration  no       3d2h\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	err := f.c.Up(context.Background(), &out)
+	if err == nil {
+		t.Fatal("up of a stopped cluster is refused")
+	}
+	for _, w := range []string{"authstar-integration", "stopped", "docker ps -a --filter name=k3d-authstar-integration", "docker start", "flai kluster up", "flai kluster down"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("the refusal names %q: %v", w, err)
+		}
+	}
+	if calls := f.calls(t); len(calls) != 1 || !strings.HasSuffix(calls[0], " status") {
+		t.Errorf("only status runs for a stopped cluster: %q", calls)
+	}
+	if _, err := os.Stat(KubeconfigPath(f.root)); err == nil {
+		t.Error("a stopped cluster's kubeconfig is not written")
+	}
+}
+
+func TestUpWhoseStatusFailsRunsNothingMore(t *testing.T) {
+	f := setup(t, authstarConfig)
+	t.Setenv("FAKE_FAIL", "status")
+	var out bytes.Buffer
+	if err := f.c.Up(context.Background(), &out); err == nil || !strings.Contains(err.Error(), "kluster status") {
+		t.Errorf("a failed status stops up and says so: %v", err)
+	}
+	if calls := f.calls(t); len(calls) != 1 {
+		t.Errorf("nothing runs after a failed status: %q", calls)
 	}
 }
 
@@ -153,8 +231,8 @@ func TestUpThatFailsWritesNoKubeconfig(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "kluster up of the cluster authstar-integration") || !strings.Contains(out.String(), "up broke") {
 		t.Errorf("a failed up says what failed, and kluster's own words reach out: %v %q", err, out.String())
 	}
-	if len(f.calls(t)) != 1 {
-		t.Errorf("nothing runs after a failed up: %q", f.calls(t))
+	if calls := f.calls(t); len(calls) != 2 || !strings.HasSuffix(calls[1], " up") {
+		t.Errorf("nothing runs after a failed up: %q", calls)
 	}
 	if _, err := os.Stat(KubeconfigPath(f.root)); err == nil {
 		t.Error("a failed up writes no kubeconfig")
