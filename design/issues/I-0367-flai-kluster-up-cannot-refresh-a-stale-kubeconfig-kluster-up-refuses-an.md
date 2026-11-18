@@ -2,12 +2,12 @@
 id: I-0367
 title: "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it"
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 30m
 first_reported: 2026-11-13T20:28:29Z
 last_reported: 2026-11-13T20:28:29Z
-updated: 2026-11-17T08:32:51Z
+updated: 2026-11-18T08:01:38Z
 ---
 
 # I-0367 flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an existing cluster before flai writes it
@@ -23,3 +23,4 @@ Found in bytepunx/authstar on 2026-11-13 with flai 1.95.0 (9b63bacf3). The k3d c
 ## Remediation
 
 Story S-0840 remediates this issue, created from it at 2026-11-17T08:32:51Z.
+Closed 2026-11-18T08:01:38Z: S-0840 fixed it, as the operator decided on TH-1305. Cluster.Up reads kluster status first. For a cluster that runs, it runs no kluster up (which refused a cluster that exists) and writes the kubeconfig again with kluster kubeconfig. For a stopped cluster it refuses and names the fixes. For an absent cluster it brings it up as before. flai kluster up, the dashboard's Up job, and flai serve's bring-up all get the fix. TestUpOfARunningClusterWritesItsKubeconfigAgain in flai/internal/kluster reproduces the instance.
