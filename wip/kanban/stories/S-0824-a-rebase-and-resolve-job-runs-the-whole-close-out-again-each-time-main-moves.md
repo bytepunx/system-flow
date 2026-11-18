@@ -6,7 +6,7 @@ title: A rebase and resolve job runs the whole close-out again each time main mo
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:20Z
-updated: 2026-11-17T13:23:37Z
+updated: 2026-11-18T07:32:43Z
 transitions: []
 tags: [flai, flaiover]
 topics: [verify, acceptance, serve, dashboard, template]
@@ -52,10 +52,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:55Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-17T22:26:00Z
-  basis: "Its own forecast of 2h30m; 13th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0840, S-0811, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815 and S-0822."
+  delivery: 2026-11-18T15:51:00Z
+  basis: "Its own forecast of 2h30m; 12th in the pull order with an in-progress limit of 3, behind S-0834, S-0840, S-0842, S-0811, S-0809, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815 and S-0822."
   by: flai
-  at: 2026-11-17T13:23:37Z
+  at: 2026-11-18T07:32:43Z
 ---
 # S-0824 A rebase and resolve job runs the whole close-out again each time main moves under it, so one took three rounds and 33 minutes while other stories were accepted
 

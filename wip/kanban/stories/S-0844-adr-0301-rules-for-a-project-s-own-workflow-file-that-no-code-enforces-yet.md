@@ -6,7 +6,7 @@ title: "ADR-0301 rules for a project's own workflow file that no code enforces y
 status: backlog
 owner: alex
 created: 2026-11-17T08:32:55Z
-updated: 2026-11-17T13:23:37Z
+updated: 2026-11-18T07:32:43Z
 transitions: []
 tags: [flai]
 topics: [workflow, acceptance, orchestration, dashboard]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T12:37:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T23:16:00Z
-  basis: "Its own forecast of 1h30m; 18th in the pull order with an in-progress limit of 3, behind S-0806, S-0834, S-0840, S-0811, S-0809, S-0842, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839 and S-0843."
+  delivery: 2026-11-18T16:45:00Z
+  basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 3, behind S-0834, S-0840, S-0842, S-0811, S-0809, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822, S-0824, S-0835, S-0837, S-0839 and S-0843."
   by: flai
-  at: 2026-11-17T13:23:37Z
+  at: 2026-11-18T07:32:43Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:08Z
