@@ -51,16 +51,16 @@ type OrderPoint struct {
 	Incurred float64 `json:"incurred"`
 }
 
-// newPuller builds the forecaster costOrder plays its three orders out on; a
-// test replaces it to count the builds.
-var newPuller = planning.NewPuller
+// newPuller builds the forecaster costOrder plays its three orders out on,
+// under the report's workflow; a test replaces it to count the builds.
+var newPuller = planning.NewPullerIn
 
 // costOrder projects the cost of delay of the ready stories in all, those in
 // the state the commit moves a story to, that have a value and a forecast
 // duration, played out on the board's lanes from the report's now under each
-// order.
+// order, after the stories in the workflow's active states (I-0379).
 func costOrder(all []*workitem.Item, opt Options) CostOrder {
-	at := opt.Now.Truncate(time.Second)
+	at, flow := opt.Now.Truncate(time.Second), opt.flow()
 	byID := map[string]*workitem.Item{}
 	for _, it := range all {
 		if !it.Archived {
@@ -69,7 +69,7 @@ func costOrder(all []*workitem.Item, opt Options) CostOrder {
 	}
 	var placed []*workitem.Item
 	out := CostOrder{At: at.Format(workitem.TimeFormat), LeftOut: []string{}}
-	for _, id := range workitem.PullSequence(opt.Order, all, entered(opt.flow(), workflow.EffectCommit)) {
+	for _, id := range workitem.PullSequence(opt.Order, all, entered(flow, workflow.EffectCommit)) {
 		if it := byID[id]; costValue(it) != nil && hasForecastDuration(it) {
 			placed = append(placed, it)
 		} else {
@@ -81,7 +81,7 @@ func costOrder(all []*workitem.Item, opt Options) CostOrder {
 		fallback = manifest.DefaultDuration
 	}
 	horizon := at
-	puller := newPuller(all, opt.Order, opt.WIPLimit, fallback, at)
+	puller := newPuller(flow, all, opt.Order, opt.WIPLimit, fallback, at)
 	for _, by := range []string{OrderCurrent, OrderCOD, OrderWSJF} {
 		seq := orderedBy(placed, by)
 		s, last := projectSeries(by, seq, puller.PullTimes(seq), at)

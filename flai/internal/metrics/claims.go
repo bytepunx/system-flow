@@ -338,7 +338,7 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 	sort.SliceStable(events, func(a, b int) bool { return events[a].at.Before(events[b].at) })
 	// What a hold reads, kept as the events apply: the stories created, in
 	// creation order and by ID, the last created of each; the tasks created, by
-	// parent as written, as NewHolds keys them; and how many stories of each ID
+	// parent as written, as NewHoldsIn keys them; and how many stories of each ID
 	// are in ready or in progress: committed, or in a state of the active
 	// kind.
 	var stories []*workitem.Item
@@ -349,8 +349,8 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 		return sameState(flow, status, committed) || flow.Kind(status) == workflow.KindActive
 	}
 	// A story's move changes a hold only into or out of a state a hold reads,
-	// and a task's only into or out of done or cancelled, the closed states
-	// Claim and NewHolds read.
+	// and a task's only into or out of a closed state, of the accepted or the
+	// cancelled kind, as Claim and NewHoldsIn read them.
 	reads := func(status string) bool { return isActive(status) || flow.Kind(status) == workflow.KindAccepted }
 	closing := func(status string) string {
 		if closed(flow, status) {
@@ -362,8 +362,8 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 	var held []heldEntry
 	// memo keeps what the holds work out, claims and how one holds another,
 	// from one judgement to the next. A story's claim is forgotten when a task
-	// of it is created or enters or leaves done or cancelled: all Claim reads
-	// of them.
+	// of it is created or enters or leaves a closed state: all Claim reads of
+	// them.
 	memo := workitem.NewHoldsMemo()
 	k := 0
 	for k < len(events) && !events[k].at.After(now) {
@@ -434,7 +434,7 @@ func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimel
 					}
 				}
 			}
-			h := memo.NewHolds(in, opt.Projects).WithShared(opt.Shared)
+			h := memo.NewHoldsIn(flow, in, opt.Projects).WithShared(opt.Shared)
 			out.judged++
 			for _, s := range ready {
 				if hold := h.Of(s); hold != nil {

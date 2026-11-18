@@ -51,6 +51,31 @@ func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
 	}
 }
 
+// I-0379: under a workflow that renames done shipped, a task's touches hold
+// only while the task is open: T-0001 is shipped at 10:00, so S-0002, which
+// overlaps only its touches, is held from 00:00 to then. Read by the
+// baseline's closed states, shipped is open and S-0002 is held 24 hours.
+func TestHeldSecondsLeaveOutATaskClosedUnderTheWorkflow(t *testing.T) {
+	const day = "2026-08-29T00:00:00Z"
+	tk := claimItem("T-0001", workitem.Task, day, []string{"b"}, workitem.InProgress, "2026-08-30T01:00:00Z", "shipped", "2026-08-30T10:00:00Z")
+	tk.Parent = "S-0001"
+	items := []*workitem.Item{
+		claimItem("S-0001", workitem.Story, day, []string{"a"}, workitem.InProgress, "2026-08-30T00:00:00Z", "shipped", "2026-08-31T00:00:00Z"),
+		tk,
+		claimItem("S-0002", workitem.Story, day, []string{"b"}, workitem.Ready, "2026-08-30T00:00:00Z", workitem.InProgress, "2026-08-31T00:00:00Z"),
+	}
+	rep := Compute(items, Options{Now: now, Workflow: renamedFlow(t)})
+	var held *float64
+	for _, m := range rep.Items {
+		if m.ID == "S-0002" {
+			held = m.HeldSeconds
+		}
+	}
+	if held == nil || *held != 10*3600 {
+		t.Errorf("S-0002 held = %v, want %d: until its overlapping task is shipped", deref(held), 10*3600)
+	}
+}
+
 // I-0155: the replay that judges the holds only when they can change gives
 // what the reference, which judges them at every event time, gives.
 func TestReplayHoldsMatchesTheReferenceOnTheHoldRules(t *testing.T) {

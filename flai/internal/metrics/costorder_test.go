@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -180,9 +181,9 @@ func TestCostOrderBuildsItsForecasterOnce(t *testing.T) {
 	builds := 0
 	was := newPuller
 	t.Cleanup(func() { newPuller = was })
-	newPuller = func(items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *planning.Puller {
+	newPuller = func(flow workflow.Workflow, items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *planning.Puller {
 		builds++
-		return planning.NewPuller(items, order, limit, fallback, now)
+		return planning.NewPullerIn(flow, items, order, limit, fallback, now)
 	}
 	got := costOrder(orderItems(), orderOptions(2))
 	if builds != 1 {
@@ -190,5 +191,59 @@ func TestCostOrderBuildsItsForecasterOnce(t *testing.T) {
 	}
 	if len(got.Series) != 3 || got.Saving != 23.81 || got.Cheaper != OrderWSJF {
 		t.Errorf("%d series, saving %v, cheaper %s; want 3, 23.81, wsjf", len(got.Series), got.Saving, got.Cheaper)
+	}
+}
+
+// renamedWorkflow is a board with done renamed shipped, cancelled renamed
+// dropped, and testing, of the active kind, added between in-progress and
+// review.
+const renamedWorkflow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: shipped, kind: accepted}
+  - {name: dropped, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: review}
+  - {from: review, to: shipped, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: review, to: shipped, types: [task]}
+  - {from: review, to: in-progress, effects: [send-back]}
+  - {from: [backlog, ready, in-progress, testing], to: dropped, effects: [cancel]}
+  - {from: review, to: dropped, by: [cascade], effects: [cancel]}
+  - {from: dropped, to: backlog, effects: [reopen]}
+---
+`
+
+// renamedFlow is renamedWorkflow parsed.
+func renamedFlow(t *testing.T) *workflow.Workflow {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", renamedWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %v", p)
+	}
+	return &w
+}
+
+// I-0379: under a workflow with testing added, a story in testing holds a
+// lane: S-0010, started in testing at T0-1h with 2h and no history, holds the
+// only lane until T0+1h, so S-0040 is pulled then, 700×3600/604800 = 4.17.
+// Read by the baseline's active states, testing holds none and S-0040 is
+// pulled at T0 for nothing.
+func TestCostOrderWaitsForTheStoriesInTheWorkflowsActiveStates(t *testing.T) {
+	inTesting := orderStory("S-0010", "testing", nil, "2h")
+	inTesting.Transitions = []workitem.Transition{{To: "testing", At: orderAt.Add(-time.Hour).Format(workitem.TimeFormat)}}
+	items := []*workitem.Item{inTesting, orderStory("S-0040", workitem.Ready, val(700), "1h")}
+	got := Compute(items, Options{Now: orderAt, WIPLimit: 1, Order: []string{"S-0040"}, Workflow: renamedFlow(t)}).CostOfDelay.Order
+	if s := got.Series[0]; len(s.Points) != 2 || s.Points[1].At != "2026-10-05T13:00:00Z" || s.Total != 4.17 {
+		t.Errorf("current = %+v, want S-0040 pulled at 13:00, when the story in testing frees the lane, for 4.17", s)
 	}
 }
