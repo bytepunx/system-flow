@@ -834,8 +834,10 @@ const deleteS0578 = "kubectl --context k3d-authstar-integration delete namespace
 func TestATeardownRunsTheTeardownCommandThenDeletesTheNamespace(t *testing.T) {
 	f := teardownSetup(t)
 	f.deployed(t, "S-0578")
-	if _, err := os.Stat(AgentKubeconfigPath(f.root, "S-0578")); err != nil {
-		t.Fatalf("the deploy wrote the namespace's kubeconfig: %v", err)
+	for _, p := range []string{AgentKubeconfigPath(f.root, "S-0578"), AgentCopyDir(f.root, "S-0578")} {
+		if _, err := os.Stat(p); err != nil {
+			t.Fatalf("the deploy wrote %s: %v", p, err)
+		}
 	}
 	f.reset(t)
 	f.m.Kluster.Teardown = []string{"scripts/teardown.sh", "--purge"}
@@ -854,7 +856,7 @@ func TestATeardownRunsTheTeardownCommandThenDeletesTheNamespace(t *testing.T) {
 	if r.Namespace != "s-0578" || r.Commit != commitA {
 		t.Errorf("the record torn down is returned: %+v", r)
 	}
-	for _, p := range []string{RecordPath(f.root, "s-0578"), StatePath(f.root, "s-0578"), LogDir(f.root, "s-0578"), AgentKubeconfigPath(f.root, "S-0578")} {
+	for _, p := range []string{RecordPath(f.root, "s-0578"), StatePath(f.root, "s-0578"), LogDir(f.root, "s-0578"), AgentKubeconfigPath(f.root, "S-0578"), AgentCopyDir(f.root, "S-0578")} {
 		if _, err := os.Stat(p); !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("%s is removed once the namespace is torn down: %v", p, err)
 		}
@@ -929,6 +931,9 @@ func TestATeardownThatFailsKeepsTheRecord(t *testing.T) {
 			}
 			if _, err := os.Stat(AgentKubeconfigPath(f.root, "S-0578")); err != nil {
 				t.Errorf("the namespace's kubeconfig stays: %v", err)
+			}
+			if r, ok, err := Folder(AgentCopyDir(f.root, "S-0578")).ReadRecord("s-0578"); err != nil || !ok || r.FailedStep != StepTeardown {
+				t.Errorf("the copy in the story's agent cache folder stays, its record the failed teardown's: %+v %v %v", r, ok, err)
 			}
 		})
 	}

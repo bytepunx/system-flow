@@ -84,23 +84,40 @@ const (
 // Dir is where flai keeps what it knows of the cluster run from root.
 func Dir(root string) string { return filepath.Join(root, ".flai-cache", "kluster") }
 
-// RecordPath is the file of the deployment record of namespace ns.
-func RecordPath(root, ns string) string {
-	return filepath.Join(Dir(root), "deployments", ns+".json")
+// Folder is a folder laid out as .flai-cache/kluster is: the main checkout's,
+// Dir, or the copy of a story's namespace in the story's agent cache folder,
+// AgentCopyDir (ADR-0319 §1).
+type Folder string
+
+// Record is the file of the deployment record of namespace ns.
+func (f Folder) Record(ns string) string {
+	return filepath.Join(string(f), "deployments", ns+".json")
 }
 
 // LogDir is the folder of the logs of namespace ns's last job.
-func LogDir(root, ns string) string { return filepath.Join(Dir(root), "logs", ns) }
+func (f Folder) LogDir(ns string) string { return filepath.Join(string(f), "logs", ns) }
+
+// Log is the log of one step of namespace ns's last job.
+func (f Folder) Log(ns, step string) string { return filepath.Join(f.LogDir(ns), step+".log") }
+
+// State is namespace ns's state folder, FLAI_KLUSTER_STATE.
+func (f Folder) State(ns string) string { return filepath.Join(string(f), "state", ns) }
+
+// RecordPath is the file of the deployment record of namespace ns.
+func RecordPath(root, ns string) string { return Folder(Dir(root)).Record(ns) }
+
+// LogDir is the folder of the logs of namespace ns's last job.
+func LogDir(root, ns string) string { return Folder(Dir(root)).LogDir(ns) }
 
 // LogPath is the log of one step of namespace ns's last job.
-func LogPath(root, ns, step string) string { return filepath.Join(LogDir(root, ns), step+".log") }
+func LogPath(root, ns, step string) string { return Folder(Dir(root)).Log(ns, step) }
 
 // ComponentStep is the build step of the kluster: block's component name,
 // build-<name> (ADR-0263).
 func ComponentStep(name string) string { return StepBuild + "-" + name }
 
 // StatePath is namespace ns's state folder, FLAI_KLUSTER_STATE.
-func StatePath(root, ns string) string { return filepath.Join(Dir(root), "state", ns) }
+func StatePath(root, ns string) string { return Folder(Dir(root)).State(ns) }
 
 // Target is what a job deploys or tears down: a namespace, the story it is
 // for (empty for the default namespace), and the checkout at its commit.
@@ -233,7 +250,13 @@ type Record struct {
 // ReadRecord reads namespace ns's deployment record; ok is false when there
 // is none.
 func ReadRecord(root, ns string) (r Record, ok bool, err error) {
-	data, err := os.ReadFile(RecordPath(root, ns))
+	return Folder(Dir(root)).ReadRecord(ns)
+}
+
+// ReadRecord reads namespace ns's deployment record kept in f; ok is false
+// when there is none.
+func (f Folder) ReadRecord(ns string) (r Record, ok bool, err error) {
+	data, err := os.ReadFile(f.Record(ns))
 	if errors.Is(err, os.ErrNotExist) {
 		return Record{}, false, nil
 	}
@@ -241,7 +264,7 @@ func ReadRecord(root, ns string) (r Record, ok bool, err error) {
 		return Record{}, false, fmt.Errorf("read the deployment record of %s: %w", ns, err)
 	}
 	if err := json.Unmarshal(data, &r); err != nil {
-		return Record{}, false, fmt.Errorf("read the deployment record %s: %w; delete it, and deploy %s again", RecordPath(root, ns), err, ns)
+		return Record{}, false, fmt.Errorf("read the deployment record %s: %w; delete it, and deploy %s again", f.Record(ns), err, ns)
 	}
 	return r, true, nil
 }
@@ -264,14 +287,23 @@ func lockRecords(root string) (unlock func(), err error) {
 }
 
 // writeRecord writes r as its namespace's record, whole or not at all, under
-// the records' lock.
-func writeRecord(root string, r Record) error {
+// the records' lock, and then, for a story's namespace, the copy of it in the
+// story's agent cache folder (ADR-0319 §1), whose failure fails nothing.
+func writeRecord(root string, r Record) error { return writeStepRecord(root, r, "") }
+
+// writeStepRecord writes r as writeRecord does, a failure to write the copy
+// noted in the step log at log, when one is given.
+func writeStepRecord(root string, r Record, log string) error {
 	unlock, err := lockRecords(root)
 	if err != nil {
 		return err
 	}
 	defer unlock()
-	return putRecord(root, r)
+	if err := putRecord(root, r); err != nil {
+		return err
+	}
+	copyForAgent(root, r, log)
+	return nil
 }
 
 // putRecord writes r as its namespace's record, whole or not at all; the
@@ -293,9 +325,10 @@ func putRecord(root string, r Record) error {
 
 // RecordChecks keeps in namespace ns's record the outcome of a checks run
 // against it at commit, which ended outcome, its log, and by, who asked for
-// it. It refuses a namespace with no record, and one deployed again at
-// another commit since the run started, whose record the outcome does not
-// describe.
+// it, and in the copy of a story's namespace in its agent cache folder,
+// whose failure fails nothing (ADR-0319 §1). It refuses a namespace with no
+// record, and one deployed again at another commit since the run started,
+// whose record the outcome does not describe.
 func RecordChecks(root, ns, commit, outcome, log, by string) error {
 	unlock, err := lockRecords(root)
 	if err != nil {
@@ -313,7 +346,11 @@ func RecordChecks(root, ns, commit, outcome, log, by string) error {
 		return fmt.Errorf("the namespace %s was deployed again, at %s, while its checks ran at %s, so their outcome %s is not kept; run its checks again at %s", ns, shortCommit(r.Commit), shortCommit(commit), outcome, shortCommit(r.Commit))
 	}
 	r.ChecksCommit, r.ChecksOutcome, r.ChecksLog, r.ChecksAskedBy = commit, outcome, log, by
-	return putRecord(root, r)
+	if err := putRecord(root, r); err != nil {
+		return err
+	}
+	copyForAgent(root, r, "")
+	return nil
 }
 
 // StoryHead is the commit at the head of story's branch, refs/heads/story/<ID>,
@@ -641,10 +678,21 @@ func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, by string, 
 		}
 	}
 	skipPending(&r)
-	if werr := writeRecord(c.Root, r); werr != nil && err == nil {
+	if werr := writeStepRecord(c.Root, r, lastStepLog(r)); werr != nil && err == nil {
 		err = werr
 	}
 	return r, err
+}
+
+// lastStepLog is the log of the last step r records that ran, empty when
+// none did.
+func lastStepLog(r Record) string {
+	for i := len(r.Steps) - 1; i >= 0; i-- {
+		if r.Steps[i].Log != "" {
+			return r.Steps[i].Log
+		}
+	}
+	return ""
 }
 
 // plan is every step a deploy by k will run, in order, each pending but a
@@ -750,7 +798,8 @@ func (c Cluster) steps(ctx context.Context, k *manifest.Kluster, t Target, r *Re
 // as running, in place of the step's pending entry when r plans it, and
 // writes r, so that a reader sees which step runs; then it records the
 // step's outcome and writes r again, so that a job cut short leaves what it
-// did.
+// did. The log is opened to append, so that a failure to write the agent's
+// copy, which writeRecord notes in it, never overwrites the step's output.
 func (c Cluster) step(ctx context.Context, r *Record, t Target, name string, out io.Writer, run func(log io.Writer) error) error {
 	path := LogPath(c.Root, t.Namespace, name)
 	at := -1
@@ -766,9 +815,9 @@ func (c Cluster) step(ctx context.Context, r *Record, t Target, name string, out
 	}
 	r.Steps[at] = Step{Name: name, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Log: path}
 	fmt.Fprintf(out, "%s: %s, log %s\n", t.Namespace, name, path)
-	f, err := os.Create(path)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0o666)
 	if err == nil {
-		err = writeRecord(c.Root, *r)
+		err = writeStepRecord(c.Root, *r, path)
 		if err != nil {
 			_ = f.Close()
 		}
@@ -792,7 +841,7 @@ func (c Cluster) step(ctx context.Context, r *Record, t Target, name string, out
 		s.Outcome, s.ExitCode = OutcomeFailed, ExitCode(err)
 		err = &StepError{Namespace: t.Namespace, Step: name, ExitCode: s.ExitCode, Log: path, Err: err}
 	}
-	if werr := writeRecord(c.Root, *r); werr != nil && err == nil {
+	if werr := writeStepRecord(c.Root, *r, path); werr != nil && err == nil {
 		err = werr
 	}
 	return err
@@ -892,8 +941,9 @@ var ErrNotDeployed = errors.New("no deployment is recorded for it, so there is n
 // already gone, both logged to the namespace's teardown log. dir is the
 // story's worktree, or the main checkout when the worktree is gone; empty
 // means the main checkout. On success the record, the state folder, the
-// logs, and the namespace's kubeconfig are removed, and the record as it was
-// is returned. A failure keeps them, the record marked failed at the teardown
+// logs, the namespace's kubeconfig, and their copy in the story's agent cache
+// folder are removed, and the record as it was is returned. A failure keeps
+// them, the record marked failed at the teardown
 // step, and is a StepError. A story with no record is ErrNotDeployed and
 // runs nothing. It runs while no other kluster job runs for the project.
 // Neither its job nor a record it keeps says who asked; TeardownBy's do.
@@ -949,12 +999,12 @@ func (c Cluster) TeardownBy(ctx context.Context, m manifest.Manifest, by, story,
 		if errors.As(err, &se) {
 			kept.FailedStep, kept.ExitCode = se.Step, se.ExitCode
 		}
-		if werr := writeRecord(c.Root, kept); werr != nil {
+		if werr := writeStepRecord(c.Root, kept, LogPath(c.Root, t.Namespace, StepTeardown)); werr != nil {
 			return kept, errors.Join(err, werr)
 		}
 		return kept, err
 	}
-	for _, p := range []string{RecordPath(c.Root, t.Namespace), StatePath(c.Root, t.Namespace), LogDir(c.Root, t.Namespace), AgentKubeconfigPath(c.Root, t.Story)} {
+	for _, p := range []string{RecordPath(c.Root, t.Namespace), StatePath(c.Root, t.Namespace), LogDir(c.Root, t.Namespace), AgentKubeconfigPath(c.Root, t.Story), AgentCopyDir(c.Root, t.Story)} {
 		if err := os.RemoveAll(p); err != nil {
 			return r, fmt.Errorf("remove %s, left by the namespace %s once it was torn down: %w; remove it by hand", p, t.Namespace, err)
 		}

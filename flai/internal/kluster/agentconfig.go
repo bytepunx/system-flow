@@ -3,6 +3,7 @@ package kluster
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -26,7 +27,43 @@ const (
 // AgentKubeconfigPath is the kubeconfig held to story's namespace, which a
 // deploy of it writes and its teardown removes.
 func AgentKubeconfigPath(root, story string) string {
-	return filepath.Join(Dir(root), "agents", strings.ToLower(story)+".kubeconfig")
+	return Folder(Dir(root)).AgentKubeconfig(strings.ToLower(story))
+}
+
+// AgentKubeconfig is the kubeconfig held to namespace ns kept in f.
+func (f Folder) AgentKubeconfig(ns string) string {
+	return filepath.Join(string(f), "agents", ns+".kubeconfig")
+}
+
+// inlineAuthority is the kubeconfig data, read from path, with the
+// certificate authority file each of its clusters names, made absolute from
+// path's folder, written into it as certificate-authority-data in place of
+// the file, so that it names no file outside it (ADR-0319 §1).
+func inlineAuthority(data []byte, path string) ([]byte, error) {
+	var kc kubeconfig
+	if err := yaml.Unmarshal(data, &kc); err != nil {
+		return nil, fmt.Errorf("read the namespace's kubeconfig %s: %w; deploy the namespace again", path, err)
+	}
+	for i := range kc.Clusters {
+		e := &kc.Clusters[i].Cluster
+		if e.CertificateAuthority == "" {
+			continue
+		}
+		ca := e.CertificateAuthority
+		if !filepath.IsAbs(ca) {
+			ca = filepath.Join(filepath.Dir(path), ca)
+		}
+		pem, err := os.ReadFile(ca)
+		if err != nil {
+			return nil, fmt.Errorf("read the certificate authority %s the kubeconfig %s names: %w; bring the cluster up again with flai kluster up, then deploy the namespace again", ca, path, err)
+		}
+		e.CertificateAuthorityData, e.CertificateAuthority = base64.StdEncoding.EncodeToString(pem), ""
+	}
+	out, err := yaml.Marshal(kc)
+	if err != nil {
+		return nil, fmt.Errorf("encode the kubeconfig %s with its certificate authority inlined: %w", path, err)
+	}
+	return out, nil
 }
 
 // AgentEnv is the environment a story's agent gets for its namespace, at the
