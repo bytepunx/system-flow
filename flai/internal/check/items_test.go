@@ -243,16 +243,22 @@ func TestBlockedClosedNamesFlaiUnblockAndUnblockClearsIt(t *testing.T) {
 // review kept among its aliases, so that items' history and the board's
 // wip_limits that name review still read.
 func kindsRenamedFlow() *workflow.Workflow {
+	return renamedFlow(workitem.Review, "waiting-on-operator")
+}
+
+// renamedFlow is the baseline with state from renamed to, from kept among its
+// aliases.
+func renamedFlow(from, to string) *workflow.Workflow {
 	w := workflow.Baseline()
 	rename := func(s string) string {
-		if s == workitem.Review {
-			return "waiting-on-operator"
+		if s == from {
+			return to
 		}
 		return s
 	}
 	for i := range w.States {
-		if w.States[i].Name == workitem.Review {
-			w.States[i].Name, w.States[i].Aliases = "waiting-on-operator", []string{workitem.Review}
+		if w.States[i].Name == from {
+			w.States[i].Name, w.States[i].Aliases = to, []string{from}
 		}
 	}
 	for i := range w.Transitions {
@@ -419,5 +425,33 @@ func TestItemRulesReadKindsNotNames(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// I-0379: wip.overlap reads each story's claim under the repository's
+// workflow, so that the touch of a task in shipped, the board's name for
+// done, only narrows its story's touches and claims nothing outside them;
+// read by the baseline's names, shipped was an open state and its touch an
+// overlap.
+func TestOverlapReadsTasksUnderTheWorkflow(t *testing.T) {
+	repo := overlapProject(t)
+	repo.Workflow = renamedFlow(workitem.Done, "shipped")
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	a := mustItem(t, repo, workitem.Story, "A", e.ID)
+	b := mustItem(t, repo, workitem.Story, "B", e.ID)
+	task := mustItem(t, repo, workitem.Task, "Serve b", a.ID)
+	a.Touches, b.Touches, task.Touches = []string{"flai/internal/serve/a.go"}, []string{"flai/internal/serve/b.go"}, []string{"flai/internal/serve/b.go"}
+	a.Status, b.Status, task.Status = workitem.InProgress, workitem.InProgress, "shipped"
+	for _, it := range []*workitem.Item{a, b, task} {
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := overlapFindings(res); len(got) != 0 {
+		t.Errorf("a shipped task's touch outside its story's overlaps flai/internal/serve/b.go: %+v", got)
 	}
 }

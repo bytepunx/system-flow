@@ -125,7 +125,7 @@ func (s *server) storyClaim(id string, components []manifest.Project) ([]string,
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read the tasks of %s: %w; run flai check to see what is wrong", story.ID, err)
 	}
-	return workitem.NewHolds(items, components).Claim(story), story.ID, nil
+	return workitem.NewHoldsIn(s.repo.Flow(), items, components).Claim(story), story.ID, nil
 }
 
 // manifestFile is the project's system-flow.yaml, in the checkout the

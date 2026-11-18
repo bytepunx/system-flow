@@ -1305,7 +1305,7 @@ func branchChanges(r execx.Runner, root, base, branch string) ([]string, error) 
 // tasks', a component as its path) covers. The wip folder is flai's and is
 // left out.
 func outsideClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item, changed []string) []string {
-	claim := workitem.NewHolds(items, repo.Manifest.Projects).Claim(story)
+	claim := workitem.NewHoldsIn(repo.Flow(), items, repo.Manifest.Projects).Claim(story)
 	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/")
 	if wip == "" {
 		wip = "wip"

@@ -435,3 +435,37 @@ func TestAskAndShareUnderAnotherWorkflow(t *testing.T) {
 		}
 	}
 }
+
+// I-0379: a share reads the two claims under the repository's workflow, so
+// that a task of the holder in dropped, the board's cancelled state, claims
+// nothing, and a path only it touched lies outside the overlap; read by the
+// baseline's names, dropped was an open state and its touch was claimed.
+func TestShareReadsTheClaimsUnderTheWorkflow(t *testing.T) {
+	r := otherProject(t)
+	for id, touches := range map[string][]string{"S-0002": {"flai/internal/workitem"}, "S-0005": {"flai/internal/workitem/hold.go", "docs/guide.md"}} {
+		it, err := r.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Touches = touches
+		if err := r.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	task, err := r.Create(workitem.NewOptions{Type: workitem.Task, Title: "Guide", Parent: "S-0002", Owner: "a", Touches: []string{"docs/guide.md"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	setStatus(t, r, task.ID, "dropped")
+	c, _, err := AskHold(r, AskOptions{Held: "S-0005", Holder: "S-0002", Paths: []string{"flai/internal/workitem/hold.go"}, Now: t0.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Share(r, ShareOptions{ID: c.ID, Story: "S-0002", Author: "agent-S-0002", Paths: []string{"docs/guide.md"}, Split: "Apart.", Now: t0.Add(2 * time.Hour)})
+	if want := "--paths docs/guide.md lies outside the overlap of S-0005's and S-0002's claims, which is `flai/internal/workitem/hold.go`"; err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("a share of what only a dropped task touched: got %v, want %q", err, want)
+	}
+	if len(r.Shares()) != 0 {
+		t.Errorf("no share was recorded: %+v", r.Shares())
+	}
+}

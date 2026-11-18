@@ -392,7 +392,7 @@ func storyBranchExists(mainRoot, id string) bool {
 // lower ID, naming each overlapping entry of both claims, with both IDs in
 // Stories (ADR-0115).
 func (c *checker) overlap() {
-	holds := workitem.NewHolds(c.items, c.repo.Manifest.Projects).WithShared(c.repo.SharedClaims())
+	holds := workitem.NewHoldsIn(c.repo.Flow(), c.items, c.repo.Manifest.Projects).WithShared(c.repo.SharedClaims())
 	type open struct {
 		it    *workitem.Item
 		claim []string
@@ -453,7 +453,7 @@ func (c *checker) componentTag() {
 	if len(projects) < 2 {
 		return
 	}
-	holds := workitem.NewHolds(c.items, projects)
+	holds := workitem.NewHoldsIn(c.repo.Flow(), c.items, projects)
 	for _, it := range c.items {
 		if it.Archived || it.Type != workitem.Story || it.Closed() || it.Nature == "research" || it.Nature == "experiment" {
 			continue

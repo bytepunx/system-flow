@@ -259,7 +259,7 @@ func insideOverlap(r *workitem.Repo, held, holder *workitem.Item, paths []string
 	if err != nil {
 		return fmt.Errorf("read the work items for the claims of %s and %s: %w; run flai check to see what is wrong", holder.ID, held.ID, err)
 	}
-	h := workitem.NewHolds(items, r.Manifest.Projects)
+	h := workitem.NewHoldsIn(r.Flow(), items, r.Manifest.Projects)
 	heldClaim, holderClaim := h.Claim(held), h.Claim(holder)
 	var overlap []string
 	for _, a := range heldClaim {

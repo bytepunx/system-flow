@@ -692,7 +692,7 @@ func (v *storyRun) claim() []string {
 	}
 	for _, it := range items {
 		if it.Type == workitem.Story && it.ID == v.story {
-			return workitem.NewHolds(items, v.opts.Project.Manifest.Projects).Claim(it)
+			return workitem.NewHoldsIn(v.opts.Project.Flow(), items, v.opts.Project.Manifest.Projects).Claim(it)
 		}
 	}
 	return nil
