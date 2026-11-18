@@ -2313,13 +2313,37 @@ A tier belongs to a suite: its `suite`, a kebab-case label, or, when it gives no
 | `integration` | `integration` |
 | `smoke` | `smoke` |
 
-This repository puts its formatters and linters in `static`, its unit and render tests in `behavior`, `integration` and `race` in `integration`, and `smoke` and `gateway` in `smoke`. The workflow file names the suites each step needs and runs, in `verify`, `runs`, and `verify_at` ([change the board](../operators/runbooks/change-the-board.md#name-the-suites-a-step-runs)), and `flai check` holds those names against the tiers. Since S-0807 the close-out runs the suites the story's next moves need ([Verify a story before review](#verify-a-story-before-review)); otherwise `--suite` is the way to run one suite, with `flai test` or `flai verify`. Since S-0810 a state's `runs` decides what flai serve runs when a story enters it.
+This repository puts its formatters and linters in `static`, its unit and render tests in `behavior`, `integration` and `race` in `integration`, and `smoke` and `gateway` in `smoke`. The workflow file names the suites each step needs and runs, in `verify`, `runs`, and `verify_at` ([change the board](../operators/runbooks/change-the-board.md#name-the-suites-a-step-runs)), and `flai check` holds those names against the tiers. Since S-0807 the close-out runs the suites the story's next moves need ([Verify a story before review](#verify-a-story-before-review)); otherwise `--suite` is the way to run one suite, with `flai test` or `flai verify`. Since S-0810 a state's `runs` decides what flai serve runs when a story enters it. `flai test --at` runs the suites `verify_at` names for a point ([Run a project's suites in CI](#run-a-projects-suites-in-ci)).
 
 With `--json` the answer is `{"passed": ..., "paths": [...], "tiers": [...]}`, each tier with its `name`, `command`, `state` (`passed`, `failed`, `not-reached`, or `skipped`), `exit_code`, `duration_ms`, and `findings`, each a `name`, `path`, `line`, and `message`, with `omitted` counting those left out. A skipped tier has `covered_by`, the tier that runs in its place.
 
-The exit status is 0 on pass and 1 when a tier failed. It is 2 when `flai test` could not answer: an argument outside the checkout, one that is neither a tier nor a file or folder, a tier's name given with other arguments, `--all`, or `--suite`, a suite no tier is in, a manifest whose `tests` are not valid (`flai check` names what is wrong), a main branch it cannot find with no paths given, or a run stopped before it finished.
+The exit status is 0 on pass and 1 when a tier failed. It is 2 when `flai test` could not answer: an argument outside the checkout, one that is neither a tier nor a file or folder, a tier's name given with other arguments, `--all`, or `--suite`, a suite no tier is in, a refused `--at` ([Run a project's suites in CI](#run-a-projects-suites-in-ci)), a manifest whose `tests` are not valid (`flai check` names what is wrong), a main branch it cannot find with no paths given, or a run stopped before it finished.
 
 A story's agent runs it between tasks, on the paths the task changed, instead of running `go test`, vitest, golangci-lint, or gofmt itself and reading their logs, and instead of handing that run to a sub-agent ([Sub-agents](#sub-agents)). The whole suite, the whole lint, and `flai check` are left to the close-out, which runs `flai verify` ([Verify a story before review](#verify-a-story-before-review)). Sub-agents may run `flai test`: `flai guard` lets them. Over MCP, the tool `test` takes `story` (the tiers run in its worktree; without it, in the main checkout), `paths`, `all`, `suite`, and `max`, and answers what `flai test --json` prints, cut to fit Claude Code's tool-result limit: only the tier that failed lists its `command`, every other tier gives `args`, the number of arguments its command ran with, and the whole answer fits 40,000 bytes of JSON, with `paths`, then the failed command, cut to their first entries and `paths_omitted` and `command_omitted` counting the rest ([ADR-0288](../../design/adrs/0288-the-mcp-tool-test-answers-a-tier-s-command-only-for-the-tier-that-failed-gives.md)). Run `flai test --json` for every command and path whole. A failing tier is an answer, not an error. A dashboard runs it through the host method `test.run` while you have the `checks` host action on ([The checks host action](../operators/index.md#the-checks-host-action-s-0082)).
+
+### Run a project's suites in CI
+
+`flai test --at <point>` runs the suites the workflow file's `verify_at` names for a point: `ci`, `batch`, or `publish` (S-0812, [ADR-0312](../../design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md) §6). It runs every tier of those suites over all paths, as `--all` does: `all_only` tiers too, but never a `manual` one. A point given `all` runs every tier but the manual ones. A workflow file that gives none of `verify`, `runs`, and `verify_at` reads as the baseline's, which gives `batch` and `ci` `all` and `publish` nothing. So in a project that never changed its file, `flai test --at ci` runs what `flai test --all` runs.
+
+```bash
+flai test --at ci                  # the suites verify_at names for ci
+flai test --at ci --suite static   # only the static suite of them
+flai test --at batch --json        # the batch's suites, as JSON
+```
+
+The template's CI workflow, `.github/workflows/system-flow-check.yml`, installs flai and runs `flai test --at ci`. A project made from the template runs its suites in CI with no command of its own. To change what CI runs, change `ci` in `verify_at` in `design/workflows/board.md`, in a story ([change the board](../operators/runbooks/change-the-board.md#name-the-suites-a-step-runs)). For example, `verify_at: {batch: all, ci: [static, behavior]}` keeps CI to the fast suites.
+
+`--suite` splits a point across jobs. `flai test --at ci --suite static` runs only the `static` tiers, and only when `ci` names `static` or `all`. Give each CI job one suite of the point to run the suites side by side.
+
+The answer is `flai test`'s, after a first line that names the point and the suites that ran: `at ci: suites static, behavior`, or `at ci: suites all`. With `--json` it adds `at`, the point, and `suites`, the suites that ran, or `["all"]`. The exit status is 0 on pass and 1 when a tier failed. It is 2, and no tier runs, for each of these:
+
+- a point that is not `ci`, `batch`, or `publish`;
+- a point the workflow gives no suites, such as the baseline's `publish`;
+- a suite the point names that no tier is in;
+- a `--suite` the point does not name;
+- `--at` with paths, with `--all`, or with a tier's name, since it runs over all paths already.
+
+Run `flai test --at batch` and `flai test --at publish` by hand the same way, to run the suites the workflow names for the merge queue's batch or the release's publish.
 
 ## Verify a story before review
 
