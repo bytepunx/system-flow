@@ -6,7 +6,7 @@ title: "flai serve's review pass deploys again a story in review whose deploy pa
 status: backlog
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-18T08:13:57Z
+updated: 2026-11-18T08:31:07Z
 transitions: []
 tags: [flai]
 topics: [kluster, deployment]
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:07Z
 forecast:
   duration: 50m
-  delivery: 2026-11-18T14:08:00Z
-  basis: "Its own forecast of 50m; 12th in the pull order with an in-progress limit of 3, behind S-0811, S-0834, S-0842, S-0809, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
+  delivery: 2026-11-18T14:22:00Z
+  basis: "Its own forecast of 50m; 10th in the pull order with an in-progress limit of 3, behind S-0809, S-0811, S-0812, S-0808, S-0807, S-0810, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
   by: flai
-  at: 2026-11-18T08:13:57Z
+  at: 2026-11-18T08:31:07Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z
