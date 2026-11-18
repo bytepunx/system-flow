@@ -2,6 +2,7 @@ package itemedit
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -120,5 +121,35 @@ func TestCoveringInReachesTheStoriesOpenByTheWorkflowsKinds(t *testing.T) {
 	// the baseline has no testing or acceptance-review: neither is open there
 	if got := Covering(items, nil, "S-0001", changed); got != nil {
 		t.Errorf("the baseline reached %+v", got)
+	}
+}
+
+// shippedWorkflow is editOtherWorkflow with done, its accepted state, renamed
+// shipped: a closed task's state the baseline does not know.
+func shippedWorkflow(t *testing.T) workflow.Workflow {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", strings.ReplaceAll(editOtherWorkflow, "done", "shipped"))
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	return w
+}
+
+// I-0379: a task's touch outside its story's touches counts in the claim only
+// while the task is open, read by the kind of its state in the workflow: a
+// story whose only touch on the changed path is a task's in shipped, of kind
+// accepted, is not reached, and one whose task is in progress is.
+func TestCoveringInLeavesOutATaskClosedUnderTheWorkflow(t *testing.T) {
+	items := []*workitem.Item{
+		{ID: "S-0001", Type: workitem.Story, Status: "in-progress", Title: "title S-0001", Touches: []string{"flai/cmd"}},
+		{ID: "S-0002", Type: workitem.Story, Status: "in-progress", Title: "title S-0002", Touches: []string{"flaiover"}},
+		{ID: "S-0003", Type: workitem.Story, Status: "in-progress", Title: "title S-0003", Touches: []string{"flaiover"}},
+		{ID: "T-0001", Type: workitem.Task, Status: "shipped", Parent: "S-0002", Touches: []string{"flai/cmd"}},
+		{ID: "T-0002", Type: workitem.Task, Status: "in-progress", Parent: "S-0003", Touches: []string{"flai/cmd"}},
+	}
+	changed := []string{"flai/cmd/accept.go"}
+	got := CoveringIn(shippedWorkflow(t), items, nil, "S-0001", changed)
+	if want := []Covered{{ID: "S-0003", Title: "title S-0003", Paths: changed}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("covering:\n got %+v\nwant %+v", got, want)
 	}
 }

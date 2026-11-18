@@ -133,6 +133,44 @@ func TestGrownReachesStoriesInProgressByTheWorkflowsKind(t *testing.T) {
 	}
 }
 
+// I-0379: the claim before a write is read under the repository's workflow,
+// as the claim after it is. A task in shipped, of kind accepted on a board
+// that renames done, no longer claims its touch outside the story's, so an
+// open task that names the same path afterwards grows the claim, and the
+// growth reaches the other story in progress and messages it.
+func TestGrownCountsAPathOnlyATaskClosedUnderTheWorkflowClaimed(t *testing.T) {
+	at := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	repo, story := claimRepo(t, at)
+	w := shippedWorkflow(t)
+	repo.Workflow = &w
+	mine := story("Mine", workitem.InProgress, "design")
+	theirs := story("Theirs", workitem.InProgress, "cli")
+	closed, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Closed", Parent: mine.ID, Owner: "alex", Touches: []string{"design", "flai/cmd/x.go"}, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{workitem.Ready, workitem.InProgress, "shipped"} {
+		if _, err := repo.Transition(closed, to, "alex", "", at); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	watch := WatchClaim(repo, mine.ID)
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Open", Parent: mine.ID, Owner: "alex", Touches: []string{"design", "flai/cmd/x.go"}, Now: at}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := watch.Grown("claude", at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Overlapping{{Story: theirs.ID, Title: "Theirs", Paths: []string{"flai/cmd/x.go"}}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("reached:\n got %+v\nwant %+v", got, want)
+	}
+	if all, err := messages.List(repo); err != nil || len(all) != 1 || all[0].To != theirs.ID {
+		t.Errorf("one message to %s: %+v %v", theirs.ID, all, err)
+	}
+}
+
 // ADR-0096: a gained path whose overlap with another story in progress lies
 // wholly inside a shared path tells nobody, the narrower entry deciding: the
 // gained folder docs/users meets docs/users/flai.md, which is shared. One

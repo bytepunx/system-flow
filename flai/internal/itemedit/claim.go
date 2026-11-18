@@ -45,7 +45,9 @@ type ClaimWatch struct {
 // belongs to, before a write to its touches. An epic has no claim: its watch
 // reports nothing. A claim that cannot be read is Grown's error, returned
 // only once the write has succeeded: a write that names no item fails on its
-// own.
+// own. The claim is read under the repository's workflow, as Grown reads it
+// after the write, so that a task closed under a renamed state claims in
+// neither (I-0379).
 func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 	w := &ClaimWatch{repo: repo, before: map[string]bool{}}
 	it, err := repo.Get(id)
@@ -66,7 +68,7 @@ func WatchClaim(repo *workitem.Repo, id string) *ClaimWatch {
 		w.err = fmt.Errorf("read the items to watch the claim of %s: %w", w.story, err)
 		return w
 	}
-	holds := workitem.NewHolds(items, repo.Manifest.Projects)
+	holds := workitem.NewHoldsIn(repo.Flow(), items, repo.Manifest.Projects)
 	for _, it := range items {
 		if it.ID == w.story {
 			for _, p := range holds.Claim(it) {

@@ -27,13 +27,14 @@ func Covering(items []*workitem.Item, projects []manifest.Project, changer strin
 // exception: they keep two claims from holding each other, not a change from
 // being told. A story whose claim is empty may change anything, so every
 // changed path is its business. Stories whose claim covers none of the paths
-// are left out.
+// are left out. A claim reads its tasks' states by their kind in flow too, so
+// a task closed under a state the board renames no longer claims (I-0379).
 func CoveringIn(flow workflow.Workflow, items []*workitem.Item, projects []manifest.Project, changer string, changed []string) []Covered {
 	if len(changed) == 0 {
 		return nil
 	}
 	changer = workitem.CanonicalID(changer)
-	holds := workitem.NewHolds(items, projects)
+	holds := workitem.NewHoldsIn(flow, items, projects)
 	var out []Covered
 	for _, it := range items {
 		if it.Archived || it.Type != workitem.Story || it.ID == changer || !underWay(flow, it.Status) {
