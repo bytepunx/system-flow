@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -130,11 +131,12 @@ type Report struct {
 	// Fingerprint hashes what selects and runs the tiers: the project's
 	// tiers and the selected ones' commands, those run and those left to the
 	// merge queue alike, so that a run that leaves tiers to the queue and one
-	// that runs them have the same (ADR-0174, I-0203). A later run with the
-	// same Fingerprint reuses the tiers this one passed when it is at the same
-	// Commit and BaseCommit (S-0341), or, rebased, has the same Patch, but
-	// for the tiers that what Base changed between the two MergeBases sends
-	// back (ADR-0156).
+	// that runs them have the same (ADR-0174, I-0203). Each of Suites has
+	// the fingerprint of the project's tiers and its own selected ones: a
+	// later run with the same reuses the tiers of that suite this one passed
+	// when it is at the same Commit and BaseCommit (S-0341), or, rebased, has
+	// the same Patch, but for the tiers that what Base changed between the
+	// two MergeBases sends back (ADR-0156, ADR-0312 §7).
 	Fingerprint string    `json:"fingerprint,omitempty"`
 	RanAt       time.Time `json:"ran_at"`
 	// DurationMS and Duration are how long the whole run took.
@@ -147,6 +149,12 @@ type Report struct {
 	// which the tiers were selected for.
 	Paths []string `json:"paths,omitempty"`
 	Steps []Step   `json:"steps"`
+	// Suites are what the run recorded of each suite whose tiers it
+	// selected: its tiers, how each ended, and the head and base they passed
+	// at (ADR-0312 §7). The story's last report, and its verdict at a commit,
+	// keep too the suites an earlier run recorded that a later one did not
+	// run (SaveReport, KeepAt). None in a report stored before suites were.
+	Suites []verifyrecord.Suite `json:"suites,omitempty"`
 	// Notes are the check's findings outside the story, which do not fail
 	// it (S-0249); flai verify --record-issues records them.
 	Notes []Note `json:"notes,omitempty"`
@@ -259,17 +267,19 @@ type Note struct {
 // the project, or a path its branch changed, which run with the rest, their
 // steps saying why in RanFor (ADR-0233); a claim the project cannot give is
 // taken as empty. When the story's
-// last report has the same head, base commit, and fingerprint, and Fresh is
-// not set, the tiers before the first it shows failed, not reached, or left
-// to the merge queue are not run again but reported Reused, with the time of
-// the run that ran them; the steps before the tiers always run (S-0341).
+// last report records a tier's suite at the same head and base commit, with
+// the same fingerprint and tiers, and Fresh is not set, the tiers before the
+// first it shows failed, not reached, or left to the merge queue are not run
+// again but reported Reused, with the time of the run that ran them; the
+// steps before the tiers always run (S-0341, ADR-0312 §7).
 // LeaveToQueue does not change the fingerprint, so a run without it reuses
 // the tiers a run with it passed and runs those it left to the queue, and
 // the other way round (I-0203). When the head or base commit
 // differ, as after a clean rebase, they are reused only when the branch's own
 // change has the same patch id, and only up to the first tier that the paths
 // the main branch brought in select, which runs again with every tier after
-// it (ADR-0156). It commits nothing and records
+// it (ADR-0156). The report's Suites record what the run did of each suite.
+// It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not, and, when the worktree was clean as it began and
 // ctx did not end, kept in the record as the verdict at its head (KeepAt).
@@ -495,13 +505,14 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	}
 	v.runSteps(&rep, steps)
 	selected, queued, fp := v.selection()
+	listed := inListOrder(v.opts.Tiers, selected, queued)
 	if !v.opts.LeaveToQueue {
 		rep.QueueOff = queueOffText(selected, v.opts.QueueOff)
 	}
 	rep.Fingerprint = fp
 	var runErr error
 	if rep.Passed {
-		reused, sentBack := v.reusable(rep.Fingerprint, selected)
+		reused, sentBack := v.reusable(selected, listed)
 		for i := range reused {
 			// why this run, not the last, did not leave a queue tier out
 			reused[i].RanFor = ""
@@ -553,8 +564,83 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		rep.Steps = append(rep.Steps, step)
 		v.ended(step)
 	}
+	rep.Suites = v.suiteRecords(rep, listed)
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr
+}
+
+// suiteRecords are what the run rep recorded of each suite of the tiers it
+// listed, run and left to the merge queue alike, as verifyrecord.Group groups
+// its tier steps, each with the fingerprint of the project's tiers and the
+// suite's listed ones (ADR-0312 §7).
+func (v *storyRun) suiteRecords(rep Report, listed []Selected) []verifyrecord.Suite {
+	suites := verifyrecord.Group(rep.record(), suiteOf(v.opts.Tiers))
+	for i := range suites {
+		suites[i].Fingerprint = fingerprint(v.opts.Tiers, ofSuite(listed, suites[i].Name))
+	}
+	return suites
+}
+
+// record is what verifyrecord reads of the report, as it reads it stored.
+func (r Report) record() verifyrecord.Record {
+	rec := verifyrecord.Record{Story: r.Story, Commit: r.Commit, Base: r.Base, BaseCommit: r.BaseCommit, MergeBase: r.MergeBase,
+		Patch: r.Patch, RanAt: r.RanAt, Passed: r.Passed, Clean: r.Clean, Steps: make([]verifyrecord.Step, 0, len(r.Steps)), Suites: r.Suites}
+	for _, s := range r.Steps {
+		rec.Steps = append(rec.Steps, verifyrecord.Step{Name: s.Name, Tier: s.Tier, State: verifyrecord.State(s.State), CoveredBy: s.CoveredBy, ReusedFrom: s.ReusedFrom})
+	}
+	return rec
+}
+
+// PassedSuites says whether the report holds, for every suite of names, an
+// entry at commit that passed: what a verdict answered from the record
+// covers (ADR-0312 §7). No names is true.
+func (r Report) PassedSuites(commit string, names []string) bool {
+	return verifyrecord.AllPassed(r.Suites, commit, names)
+}
+
+// suiteOf gives each of tiers' suite by its name, SuiteOrName; "" for a
+// name none of them has.
+func suiteOf(tiers []Tier) func(string) string {
+	return func(name string) string {
+		for _, t := range tiers {
+			if t.Name == name {
+				return t.SuiteOrName()
+			}
+		}
+		return ""
+	}
+}
+
+// ofSuite are the tiers of selection in the suite, in its order.
+func ofSuite(selection []Selected, suite string) []Selected {
+	var out []Selected
+	for _, s := range selection {
+		if s.Tier.SuiteOrName() == suite {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// suiteNames are the suites of selection's tiers, each once, in the order of
+// the first tier of each.
+func suiteNames(selection []Selected) []string {
+	var out []string
+	for _, s := range selection {
+		if name := s.Tier.SuiteOrName(); !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// tierNames are the names of selection's tiers, in its order.
+func tierNames(selection []Selected) []string {
+	names := make([]string, 0, len(selection))
+	for _, s := range selection {
+		names = append(names, s.Tier.Name)
+	}
+	return names
 }
 
 // selection is the tiers the branch's paths select: those the run runs, and,
@@ -1033,93 +1119,144 @@ func tierStep(tr TierResult) Step {
 
 // reusable is the steps of the selected tiers that the story's last report
 // lets this run reuse, in order, always the first of selected: each tier is
-// paired with the report's step of its name, and those before the first it
-// shows failed, not reached, or left Queued to the merge queue are each
-// Reused with the time of the run that ran it, but for a tier another
-// selected tier covers, which stays Skipped. Pairing by name lets a run that
-// leaves tiers to the queue reuse what one that ran them passed, and the
-// other way round, since the fingerprint is the same (ADR-0174, I-0203). It
-// is none with Fresh, with no last report, or when the report's fingerprint
-// differs from this run's; every tier, when it passed them all. At the
-// report's head and base commit that is all (S-0341). At another, it reuses
-// only when the branch's own change, its patch id, is the same, and stops
-// at the first tier that the paths the main branch brought in between the
-// two merge bases select, but for wip paths the branch does not change
-// (ADR-0135), as the branch's own select its tiers, or that
-// covers one they select; then it answers, as the note for that tier, why
-// it runs again, and the first tier it reuses says it was reused across the
-// main branch's new commits (ADR-0156).
-func (v *storyRun) reusable(fp string, selected []Selected) (steps []Step, sentBackNote string) {
-	if v.opts.Fresh || v.baseCommit == "" || fp == "" {
+// paired with its entry in the report's record of its suite, and those
+// before the first it shows failed, not reached, or left Queued to the merge
+// queue are each Reused with the time of the run that ran it, but for a tier
+// another selected tier covers, which stays Skipped. Pairing by name lets a
+// run that leaves tiers to the queue reuse what one that ran them passed, and
+// the other way round, since the fingerprint is the same (ADR-0174, I-0203).
+// listed is the run's tiers, run and left to the queue, as the fingerprint
+// hashes them. It is none with Fresh or with no last report; every tier, when
+// it passed them all. It stops at the first tier whose suite the report
+// holds no entry of, or an entry with another fingerprint or other tiers in
+// another order. At the head and base commit of the suite's entry that is all
+// (S-0341). At another, it reuses the suite only when the branch's own
+// change, its patch id, is the same, and stops at the first tier that the
+// paths the main branch brought in between the two merge bases select, but
+// for wip paths the branch does not change (ADR-0135), as the branch's own
+// select its tiers, or that covers one they select; then it answers, as the
+// note for that tier, why it runs again, and the first tier it reuses across
+// the main branch's new commits says so (ADR-0156, ADR-0312 §7).
+func (v *storyRun) reusable(selected, listed []Selected) (steps []Step, sentBackNote string) {
+	if v.opts.Fresh || v.baseCommit == "" {
 		return nil, ""
 	}
 	last, ok, err := LastReport(v.opts.Project, v.story)
-	if err != nil || !ok || last.Fingerprint != fp {
+	if err != nil || !ok {
 		return nil, ""
 	}
-	moved := last.Commit != v.commit || last.BaseCommit != v.baseCommit
-	var mainPaths []string
-	sentBack := map[string]bool{}
-	if moved {
-		if v.patch == "" || last.Patch != v.patch || v.mergeBase == "" || last.MergeBase == "" {
-			return nil, ""
-		}
-		if last.MergeBase != v.mergeBase {
-			// what main brought in cannot be told, so nothing is reused
-			if mainPaths, err = BetweenPaths(v.opts.Git, v.worktree, last.MergeBase, v.mergeBase); err != nil {
-				return nil, ""
-			}
-			if mainPaths, err = v.outsideWip(mainPaths); err != nil {
-				return nil, ""
-			}
-		}
-		sentBack = v.sentBack(selected, mainPaths)
-	}
-	// the last run's tier steps by name, those it left to the merge queue,
-	// which ran nothing and so stop the reuse, among them (I-0203)
+	// the last run's tier steps by name, whose command, duration, and log a
+	// tier it ran or reused keeps when reused again
 	ran := map[string]Step{}
 	for _, s := range last.Steps {
 		if _, seen := ran[s.Name]; s.Tier && !seen {
 			ran[s.Name] = s
 		}
 	}
+	gates := map[string]suiteGate{}
 	var out []Step
-	for i := range selected {
-		s, ok := ran[selected[i].Tier.Name]
+	noted := false
+	for i, sel := range selected {
+		name := sel.Tier.SuiteOrName()
+		g, seen := gates[name]
+		if !seen {
+			g = v.gate(last.Suites, name, selected, listed)
+			gates[name] = g
+		}
+		if !g.ok {
+			break
+		}
+		t, ok := g.suite.Tier(sel.Tier.Name)
 		if !ok {
 			break
 		}
-		s.Note = ""
-		if sentBack[s.Name] {
-			sentBackNote = v.sentBackNote(selected[i:], sentBack, mainPaths)
+		if g.sentBack[t.Name] {
+			sentBackNote = v.sentBackNote(selected[i:], g.sentBack, g.mainPaths)
 			break
 		}
+		s, lastRan := reusedStep(ran, sel)
 		// A tier another selected tier covers ran nothing, so it neither
 		// stops the reuse nor is reused: it stays Skipped (S-0342).
-		if s.State == Skipped && selected[i].CoveredBy != "" {
-			s.CoveredBy = selected[i].CoveredBy
+		if t.State == verifyrecord.Skipped && sel.CoveredBy != "" {
+			s.State, s.CoveredBy, s.ReusedFrom = Skipped, sel.CoveredBy, nil
 			out = append(out, s)
 			continue
 		}
-		if s.State != Passed && s.State != Reused {
+		if t.State != verifyrecord.Passed && t.State != verifyrecord.Reused {
 			break
 		}
-		from := last.RanAt.UTC()
-		if s.State == Reused && s.ReusedFrom != nil {
-			from = s.ReusedFrom.UTC()
+		from := g.suite.RanAt.UTC()
+		if lastRan {
+			from = last.RanAt.UTC()
+		}
+		if t.State == verifyrecord.Reused && t.ReusedFrom != nil {
+			from = t.ReusedFrom.UTC()
 		}
 		s.State, s.ReusedFrom = Reused, &from
+		if g.moved && !noted {
+			s.Note, noted = v.reusedNote(g.suite, g.mainPaths), true
+		}
 		out = append(out, s)
 	}
-	if moved {
-		for i := range out {
-			if out[i].State == Reused {
-				out[i].Note = v.reusedNote(last, mainPaths)
-				break
-			}
+	return out, sentBackNote
+}
+
+// suiteGate is what a suite's entry in the last report lets a run reuse: ok
+// when its tiers may be reused at all, moved when the entry is at another
+// head or base commit, the paths the main branch brought in since its merge
+// base, and the tiers they send back.
+type suiteGate struct {
+	ok, moved bool
+	suite     verifyrecord.Suite
+	mainPaths []string
+	sentBack  map[string]bool
+}
+
+// gate is the suiteGate of the suite name among the last report's suites:
+// not ok when none is recorded, its fingerprint or its tiers and their order
+// differ from this run's listed ones of it, or, at another head or base
+// commit, the branch's own change may differ or what main brought in since
+// cannot be told (ADR-0156).
+func (v *storyRun) gate(suites []verifyrecord.Suite, name string, selected, listed []Selected) suiteGate {
+	i := slices.IndexFunc(suites, func(s verifyrecord.Suite) bool { return s.Name == name })
+	if i < 0 {
+		return suiteGate{}
+	}
+	rec, of := suites[i], ofSuite(listed, name)
+	if rec.Fingerprint == "" || rec.Fingerprint != fingerprint(v.opts.Tiers, of) || !slices.Equal(rec.TierNames(), tierNames(of)) {
+		return suiteGate{}
+	}
+	g := suiteGate{ok: true, suite: rec, moved: rec.Commit != v.commit || rec.BaseCommit != v.baseCommit}
+	if !g.moved {
+		return g
+	}
+	if v.patch == "" || rec.Patch != v.patch || v.mergeBase == "" || rec.MergeBase == "" {
+		return suiteGate{}
+	}
+	if rec.MergeBase != v.mergeBase {
+		// what main brought in cannot be told, so nothing is reused
+		paths, err := BetweenPaths(v.opts.Git, v.worktree, rec.MergeBase, v.mergeBase)
+		if err != nil {
+			return suiteGate{}
+		}
+		if g.mainPaths, err = v.outsideWip(paths); err != nil {
+			return suiteGate{}
 		}
 	}
-	return out, sentBackNote
+	g.sentBack = v.sentBack(selected, g.mainPaths)
+	return g
+}
+
+// reusedStep is the step a reused tier begins from: the last run's of its
+// name, with no note, and lastRan true, when that run ran, reused, or skipped
+// it; else one with the selected tier's command, since the entry of its
+// suite is an earlier run's.
+func reusedStep(ran map[string]Step, sel Selected) (step Step, lastRan bool) {
+	if s, ok := ran[sel.Tier.Name]; ok && (s.State == Passed || s.State == Reused || s.State == Skipped) {
+		s.Note = ""
+		return s, true
+	}
+	return Step{Name: sel.Tier.Name, Tier: true, Command: sel.Argv, Dir: sel.Tier.Dir}, false
 }
 
 // outsideWip leaves out of paths the main branch brought in those under the
@@ -1173,8 +1310,8 @@ func (v *storyRun) sentBackNote(rest []Selected, sentBack map[string]bool, mainP
 }
 
 // reusedNote says that a tier was reused across the main branch's new
-// commits, and why it could be.
-func (v *storyRun) reusedNote(last Report, mainPaths []string) string {
+// commits since its suite's entry last, and why it could be.
+func (v *storyRun) reusedNote(last verifyrecord.Suite, mainPaths []string) string {
 	if last.MergeBase == v.mergeBase {
 		return fmt.Sprintf("reused though %s moved on: the branch's own change is the same as at %s, and it was not rebased", v.base, shortHash(last.Commit))
 	}
@@ -1300,15 +1437,21 @@ func mainRoot(repo *workitem.Repo) string {
 // ReportPath is where a story's last report is stored: in the project's
 // cache, .flai-cache/verify/<story>.json.
 func ReportPath(project *workitem.Repo, story string) string {
-	return filepath.Join(project.CacheDir(), "verify", story+".json")
+	return verifyrecord.ReportPath(project.CacheDir(), story)
 }
 
 // SaveReport stores rep as its story's last report, replacing the one
 // before it in one step, so that a reader sees one whole report or the
-// other.
+// other. Its Suites keep those of the report before it that rep did not run,
+// as verifyrecord.Merge merges them, so that the last report holds the last
+// run of each suite (ADR-0312 §7); a report before it that does not read
+// keeps none.
 func SaveReport(project *workitem.Repo, rep Report) error {
 	// what LastReportAt reads against the head is not the run's to store
 	rep.Moved, rep.Running = false, nil
+	if before, ok, err := LastReport(project, rep.Story); err == nil && ok {
+		rep.Suites, _ = verifyrecord.Merge(before.Suites, rep.Suites)
+	}
 	path := ReportPath(project, rep.Story)
 	data, err := json.MarshalIndent(rep, "", "  ")
 	if err != nil {

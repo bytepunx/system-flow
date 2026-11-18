@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -19,13 +20,14 @@ import (
 // project's cache, .flai-cache/verify/<story>/<commit>.json, beside the
 // story's last report (ADR-0229).
 func RecordPath(project *workitem.Repo, story, commit string) string {
-	return filepath.Join(project.CacheDir(), "verify", story, commit+".json")
+	return verifyrecord.CommitPath(project.CacheDir(), story, commit)
 }
 
 // Recorded answers the verdict the record holds for the story's worktree at
 // its head commit, when the worktree is clean and the main branch is at the
 // record's base commit or ahead of it only by commits the sync step passes
-// over (ADR-0135); ok is false, with no error, otherwise.
+// over (ADR-0135); ok is false, with no error, otherwise. Its Suites are the
+// suites the verdict covers (ADR-0312 §7).
 func Recorded(o StoryOptions) (rep Report, ok bool, err error) {
 	v, err := newStoryRun(o)
 	if err != nil {
@@ -36,12 +38,26 @@ func Recorded(o StoryOptions) (rep Report, ok bool, err error) {
 
 // KeepAt keeps rep in the record as the story's verdict at commit as well,
 // as a close-out job does for the commit its close-out made after a passing
-// run.
+// run: the suites rep's own run recorded are kept as verified at exactly
+// commit, and those a last report keeps from earlier runs are left out. A
+// verdict the record held at commit before keeps the suites rep did not run,
+// with their tier steps, so that a run of fewer suites erases none another
+// run recorded there (ADR-0312 §7); one that does not read is replaced.
 func KeepAt(project *workitem.Repo, commit string, rep Report) error {
 	if project == nil || rep.Story == "" || commit == "" {
 		return fmt.Errorf("keep the verify verdict of %q at %q: name a project, a report's story, and a commit", rep.Story, commit)
 	}
-	rep.Commit, rep.FromRecord = commit, false
+	var own []verifyrecord.Suite
+	for _, s := range rep.Suites {
+		if s.Commit == rep.Commit && s.RanAt.Equal(rep.RanAt) {
+			s.Commit, s.Clean = commit, true
+			own = append(own, s)
+		}
+	}
+	rep.Commit, rep.FromRecord, rep.Suites = commit, false, own
+	if before, ok, err := readRecord(project, rep.Story, commit); err == nil && ok {
+		rep = mergedRecord(before, rep)
+	}
 	path := RecordPath(project, rep.Story, commit)
 	data, err := json.MarshalIndent(rep, "", "  ")
 	if err != nil {
@@ -54,6 +70,47 @@ func KeepAt(project *workitem.Repo, commit string, rep Report) error {
 		return fmt.Errorf("keep the verify verdict of %s at %s in %s: %w; check that the project's .flai-cache is writable", rep.Story, shortHash(commit), path, err)
 	}
 	return nil
+}
+
+// mergedRecord is rep kept over before, the verdict the record held at the
+// same commit: the suites before recorded that rep did not run keep their
+// entries, as verifyrecord.Merge keeps them, and their tier steps, in place
+// of rep's step of the same tier or after rep's steps. The steps before the
+// tiers are rep's. It passed when rep did and every suite kept passed; a
+// kept suite that did not pass stops it at the first kept step that failed,
+// else where before stopped.
+func mergedRecord(before, rep Report) Report {
+	suites, kept := verifyrecord.Merge(before.Suites, rep.Suites)
+	rep.Suites = suites
+	keptTier, keptPassed := map[string]bool{}, true
+	for _, s := range suites {
+		if !slices.Contains(kept, s.Name) {
+			continue
+		}
+		keptPassed = keptPassed && s.Passed
+		for _, t := range s.Tiers {
+			keptTier[t.Name] = true
+		}
+	}
+	stoppedAt, failed := before.StoppedAt, false
+	rep.Steps = slices.Clone(rep.Steps)
+	for _, o := range before.Steps {
+		if !o.Tier || !keptTier[o.Name] {
+			continue
+		}
+		if o.State == Failed && !failed {
+			stoppedAt, failed = o.Name, true
+		}
+		if i := slices.IndexFunc(rep.Steps, func(s Step) bool { return s.Tier && s.Name == o.Name }); i >= 0 {
+			rep.Steps[i] = o
+			continue
+		}
+		rep.Steps = append(rep.Steps, o)
+	}
+	if rep.Passed && !keptPassed {
+		rep.Passed, rep.StoppedAt = false, stoppedAt
+	}
+	return rep
 }
 
 // RecordText says that a report came from the record, when its run was, and
@@ -86,12 +143,13 @@ func readRecord(project *workitem.Repo, story, commit string) (Report, bool, err
 
 // recorded is Recorded for the run's resolved options: the record's passing
 // verdict at the worktree's head, marked FromRecord, when the worktree is
-// clean, the record verified the same paths with the same tiers against the
-// same main branch, ran every tier this run would not leave to the merge
-// queue, and the main branch is at its base commit or ahead of it by commits
-// the rebase and sync steps pass now. A verdict that did not pass is not
-// answered: what it stopped at may lie outside the commit, as the narrative
-// does, or be a flake, and a run again resumes at it (S-0341).
+// clean, the record verified the same paths against the same main branch,
+// every step it ran before the tiers passed, and the record covers every
+// suite of the tiers this run selects (covers). A verdict whose step before
+// the tiers did not pass is not answered: what it stopped at may lie outside
+// the commit, as the narrative does, and a run again resumes at it (S-0341).
+// The answer holds only the suites this run selects and their tier steps,
+// which all passed.
 func (v *storyRun) recorded() (Report, bool, error) {
 	if !v.clean || v.baseCommit == "" {
 		return Report{}, false, nil
@@ -100,16 +158,14 @@ func (v *storyRun) recorded() (Report, bool, error) {
 	if err != nil || !ok {
 		return Report{}, false, err
 	}
-	if !rec.Passed || rec.Commit != v.commit || rec.Base != v.base || rec.BaseCommit == "" || !slices.Equal(rec.Paths, v.paths) {
+	if rec.Commit != v.commit || rec.Base != v.base || !slices.Equal(rec.Paths, v.paths) ||
+		slices.ContainsFunc(rec.Steps, func(s Step) bool { return !s.Tier && s.State != Passed }) {
 		return Report{}, false, nil
 	}
-	if _, _, fp := v.selection(); fp == "" || rec.Fingerprint != fp {
-		return Report{}, false, nil
-	}
-	if !v.opts.LeaveToQueue && slices.ContainsFunc(rec.Steps, func(s Step) bool { return s.State == Queued }) {
-		return Report{}, false, nil
-	}
-	if rec.BaseCommit != v.baseCommit && !v.baseAhead(rec.BaseCommit) {
+	selected, queued, _ := v.selection()
+	listed := inListOrder(v.opts.Tiers, selected, queued)
+	need := suiteNames(listed)
+	if !v.covers(rec.Suites, need, listed) {
 		return Report{}, false, nil
 	}
 	now := v.newReport(v.opts.Now())
@@ -117,8 +173,68 @@ func (v *storyRun) recorded() (Report, bool, error) {
 	if !now.Passed {
 		return Report{}, false, nil
 	}
+	rec = rec.ofSuites(need)
 	rec.FromRecord = true
 	return rec, true, nil
+}
+
+// covers says the record's suites hold, for each suite of need, an entry
+// that passed at the run's head against the same main branch, with the
+// fingerprint of the run's listed tiers of it, the same tiers in the same
+// order, none left to the merge queue unless the run leaves them too, and a
+// base commit the main branch is at or ahead of by commits the sync step
+// passes over. A report stored before suites were recorded holds none.
+func (v *storyRun) covers(suites []verifyrecord.Suite, need []string, listed []Selected) bool {
+	ahead := map[string]bool{}
+	for _, name := range need {
+		i := slices.IndexFunc(suites, func(s verifyrecord.Suite) bool { return s.Name == name })
+		if i < 0 {
+			return false
+		}
+		s, of := suites[i], ofSuite(listed, name)
+		if !s.Passed || s.Commit != v.commit || s.Base != v.base || s.BaseCommit == "" || s.Fingerprint == "" ||
+			s.Fingerprint != fingerprint(v.opts.Tiers, of) || !slices.Equal(s.TierNames(), tierNames(of)) {
+			return false
+		}
+		if !v.opts.LeaveToQueue && slices.ContainsFunc(s.Tiers, func(t verifyrecord.Tier) bool { return t.State == verifyrecord.Queued }) {
+			return false
+		}
+		if s.BaseCommit == v.baseCommit {
+			continue
+		}
+		if _, asked := ahead[s.BaseCommit]; !asked {
+			ahead[s.BaseCommit] = v.baseAhead(s.BaseCommit)
+		}
+		if !ahead[s.BaseCommit] {
+			return false
+		}
+	}
+	return true
+}
+
+// ofSuites is the report with only the suites named and their tier steps,
+// and the steps before the tiers, as passed: what a verdict covering those
+// suites answers.
+func (r Report) ofSuites(names []string) Report {
+	tiers := map[string]bool{}
+	suites := make([]verifyrecord.Suite, 0, len(names))
+	for _, s := range r.Suites {
+		if !slices.Contains(names, s.Name) {
+			continue
+		}
+		suites = append(suites, s)
+		for _, t := range s.Tiers {
+			tiers[t.Name] = true
+		}
+	}
+	steps := make([]Step, 0, len(r.Steps))
+	for _, s := range r.Steps {
+		if !s.Tier || tiers[s.Name] {
+			steps = append(steps, s)
+		}
+	}
+	r.Steps, r.Suites, r.Passed, r.StoppedAt = steps, suites, true, ""
+	return r
 }
 
 // baseAhead says whether the main branch's commit has from among its

@@ -2,6 +2,7 @@ package verify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1002,9 +1004,6 @@ func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {
 			f.git.out["rev-parse --verify --quiet main^{commit}"] = "9abcdef\n"
 		}},
 		{"a base git cannot read", func(_ *testing.T, f *verifyFixture) { delete(f.git.out, "rev-parse --verify --quiet main^{commit}") }},
-		{"other tiers selected", func(_ *testing.T, f *verifyFixture) {
-			f.git.out["diff --name-only --diff-filter=d main...HEAD"] = "flai/internal/x/x.go\ndocs/a.md"
-		}},
 		{"a new tier in the manifest", func(_ *testing.T, f *verifyFixture) {
 			f.opts.Tiers = append(slices.Clone(storyTiers), Tier{Name: "vitest", Paths: []string{"flaiover/**"}, Command: []string{"vitest"}})
 		}},
@@ -1012,13 +1011,30 @@ func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {
 			f.opts.Tiers = slices.Clone(storyTiers)
 			f.opts.Tiers[0].Command = []string{"go", "test", "-race", "{packages}"}
 		}},
-		{"a report without a fingerprint", func(t *testing.T, f *verifyFixture) {
+		{"a report without fingerprints", func(t *testing.T, f *verifyFixture) {
 			last, _, err := LastReport(f.opts.Project, "S-004")
 			if err != nil {
 				t.Fatal(err)
 			}
 			last.Fingerprint = ""
+			for i := range last.Suites {
+				last.Suites[i].Fingerprint = ""
+			}
 			if err := SaveReport(f.opts.Project, last); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"a report from before suites were recorded", func(t *testing.T, f *verifyFixture) {
+			last, _, err := LastReport(f.opts.Project, "S-004")
+			if err != nil {
+				t.Fatal(err)
+			}
+			last.Suites = nil
+			data, err := json.Marshal(last)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(ReportPath(f.opts.Project, "S-004"), data, 0o644); err != nil {
 				t.Fatal(err)
 			}
 		}},
@@ -1519,6 +1535,93 @@ func TestVerifyRecordsNoPatchWithAnUncommittedChange(t *testing.T) {
 	}
 	if n, _ := rep.Reused(); n != 0 || len(f.proc.ran) != 3 {
 		t.Errorf("reused %d, ran %q; want every tier run", n, f.proc.ran)
+	}
+}
+
+// ADR-0312 §7: a run reuses the tiers of a suite whose entry has the same
+// fingerprint and tiers, though the paths now select a tier of another suite
+// that the last run did not select; that tier runs, and every tier after it.
+func TestVerifyReusesASuiteThoughAnotherSuiteGainsATier(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.proc.steps["smoke.sh"] = step{exit: 1}
+	if first, err := Verify(context.Background(), f.opts); err != nil || first.StoppedAt != "smoke" {
+		t.Fatalf("first run %+v, %v", first, err)
+	}
+	f.proc.steps["smoke.sh"] = step{}
+	f.git.out["diff --name-only --diff-filter=d main...HEAD"] = "flai/internal/x/x.go\ndocs/a.md"
+	rep := f.verifyAgain(t)
+	want := []string{"go-test:reused", "markdown:passed", "integration:passed", "smoke:passed"}
+	if !rep.Passed || !reflect.DeepEqual(tierStates(rep), want) || len(f.proc.ran) != 3 || f.proc.ran[0] != "lint-md docs/a.md" {
+		t.Fatalf("tiers %v, ran %q; want %v and go-test alone reused", tierStates(rep), f.proc.ran, want)
+	}
+}
+
+// labelled are rebaseTiers in two suites: unit and docs are static, and
+// integration and smoke behavior.
+func labelled() []Tier {
+	tiers := slices.Clone(rebaseTiers)
+	for i, suite := range []string{"static", "static", "behavior", "behavior"} {
+		tiers[i].Suite = suite
+	}
+	return tiers
+}
+
+// suiteNamed is the report's entry of the suite, failing the test without
+// one.
+func suiteNamed(t *testing.T, rep Report, name string) verifyrecord.Suite {
+	t.Helper()
+	for _, s := range rep.Suites {
+		if s.Name == name {
+			return s
+		}
+	}
+	t.Fatalf("the report records no suite %s: %+v", name, rep.Suites)
+	return verifyrecord.Suite{}
+}
+
+// ADR-0312 §7, ADR-0156: the report records each suite's tiers and the head
+// and base they passed at; after a clean rebase a suite whose tiers main's
+// new paths do not select is reused, and one whose tiers they select runs
+// again, recorded at the new head.
+func TestVerifyReusesASuiteAcrossACleanRebaseUntilMainsNewPathsSelectItsTiers(t *testing.T) {
+	for _, tc := range []struct {
+		name, path string
+		want, ran  []string
+	}{
+		{name: "main's paths select no tier", path: "other/notes.txt",
+			want: []string{"unit:reused", "integration:reused", "smoke:reused"}},
+		{name: "main's paths select a behavior tier", path: "lib/y.txt",
+			want: []string{"unit:reused", "integration:passed", "smoke:passed"}, ran: []string{"integration", "smoke"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRebaseFixture(t)
+			f.opts.Tiers = labelled()
+			first := f.verify(t)
+			if !first.Passed || len(first.Suites) != 2 {
+				t.Fatalf("first run %v, suites %+v", states(first), first.Suites)
+			}
+			for name, tiers := range map[string][]string{"static": {"unit"}, "behavior": {"integration", "smoke"}} {
+				s := suiteNamed(t, first, name)
+				if !s.Passed || !s.Clean || s.Commit != first.Commit || s.Base != "main" || s.BaseCommit != first.BaseCommit ||
+					s.MergeBase != first.MergeBase || s.Patch != first.Patch || s.Fingerprint == "" || !s.RanAt.Equal(first.RanAt) ||
+					!reflect.DeepEqual(s.TierNames(), tiers) {
+					t.Errorf("suite %s %+v; want %v passed at the first run's head and base", name, s, tiers)
+				}
+			}
+			f.commitOnMain(t, tc.path)
+			f.rebase(t)
+			rep := f.verify(t)
+			if !rep.Passed || !reflect.DeepEqual(tierStates(rep), tc.want) || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Fatalf("tiers %v, ran %q; want %v, %q", tierStates(rep), f.proc.ran, tc.want, tc.ran)
+			}
+			static := suiteNamed(t, rep, "static")
+			if tier, _ := static.Tier("unit"); static.Commit != rep.Commit || !static.Passed || tier.State != verifyrecord.Reused || !tier.ReusedFrom.Equal(first.RanAt) {
+				t.Errorf("static after the rebase %+v; want unit reused from the first run at the new head", static)
+			}
+			if behavior := suiteNamed(t, rep, "behavior"); behavior.Commit != rep.Commit || !behavior.Passed || behavior.MergeBase != rep.MergeBase {
+				t.Errorf("behavior after the rebase %+v; want it passed at the new head", behavior)
+			}
+		})
 	}
 }
 
