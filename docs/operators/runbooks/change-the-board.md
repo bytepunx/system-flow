@@ -149,9 +149,40 @@ Since S-0807 a story's move and its close-out read `verify` ([The move needs the
 - The close-out runs the tiers its paths select of the suites the moves out of the story's state need, every suite when one of them gives `all` or none gives `verify`. With the example above it runs `static` and `behavior` alone. `flai verify S-nnnn --all` runs every suite.
 - The acceptance runs no `verified`.
 
-Nothing else reads the keys yet: the acceptance's gates, a state's `runs`, the batch, the publish, and CI run as they did; later releases make each read them.
+Since S-0810 a state's `runs` decides what `flai serve` runs when a story enters the state, as [run suites and the cluster in a state](#run-suites-and-the-cluster-in-a-state) says.
+
+Nothing else reads the keys yet: the acceptance's gates, the batch, the publish, and CI run as they did; later releases make each read them.
 
 The keys need a flai that knows them. The first publish from the flai release that carries them raises `flai.minimum` in `system-flow.yaml`, and from then an older flai stops before it reads the file, naming the release to install ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)). Before that publish, an older flai refuses a file that uses them with its parse error, an unknown field.
+
+## Run suites and the cluster in a state
+
+A state's `runs` is what `flai serve` runs each time a story enters the state, with no agent ([what a state's runs starts](../../../design/system/workflow.md#what-a-states-runs-starts-s-0810)). It runs one job per entry. The job rebases the story's branch onto main, runs each suite the state names, then the cluster's steps it names. A story entering a state whose `runs` names `deploy` is deployed there into its kluster namespace, and its checks run there when `runs` names `checks` ([kluster.md](../../../design/system/kluster.md#what-happens-when)). No other state deploys it. The baseline names the cluster's steps on review alone, so on the baseline a story is deployed when it enters review.
+
+An `integration` state between `review` and `done`, which runs the `integration` suite and deploys and checks the story on the cluster before you accept it:
+
+```yaml
+states:
+  # ... backlog, ready, and in-progress as in the baseline
+  - {name: review, kind: waiting, limit: true}
+  - {name: integration, kind: waiting, runs: {suites: [integration], kluster: [deploy, checks]}}
+  # ... done and cancelled as in the baseline
+transitions:
+  # ... the baseline's other moves, less its review -> done for epics and stories
+  - {from: review, to: integration}
+  - {from: integration, to: done, types: [epic, story], by: [acceptance], effects: [accept], rules: [children-closed, criteria-ticked], verify: all}
+  - {from: integration, to: in-progress, effects: [send-back], rules: [reason-given, not-blocked, task-after]}
+  - {from: integration, to: cancelled, by: [cascade], effects: [cancel], rules: [reason-given]}
+```
+
+Here `review` gives no `runs`, so a story entering it runs nothing and is not deployed. The acceptance now leaves from `integration`, so the acceptance and the merge queue take stories from there.
+
+- **A pass** leaves the story in the state.
+- **A failure** sends the story back by the move with the `send-back` effect out of the state, here `integration` to `in-progress`. A rebase that stops on conflicts or a suite that fails opens a thread `Acceptance sent back: S-nnnn's job on entering integration: ...`. A failed deploy or checks run opens the kluster's own thread. `flai serve` starts the story's agent on the thread, and runs the job again when the story is back in the state. A state with no `send-back` move out of it keeps the story where it is, and the job records why.
+- **A cluster step that cannot run** is skipped, and the job records why: no `kluster:` block, no `deploy`, the `kluster` host action off, or, in a state of the `active` kind, no agent namespace free. A skip never holds the story.
+- **The `kluster-verified` rule** is checked by the move whose transition names it, at the severity it gives. The baseline names it at `warn` on `in-progress` to `review`. Give it `{rule: kluster-verified, severity: refuse}` to stop a move whose namespace is not deployed and checked at the head ([Add a rule to a move](#add-a-rule-to-a-move)).
+
+`flai serve` keeps the job's record and log under `.flai-cache/verify/jobs/`, as `S-nnnn.state.json` and `S-nnnn.state.log` ([the close-out job](../../../design/system/flai-cli.md#the-close-out-job)).
 
 ## Before the story is accepted
 
@@ -183,4 +214,4 @@ the template's baseline design/workflows/board.md changed: the project's file is
 
 Compare the template's file with yours, and carry over what you want in a story, as above.
 
-The template's file gained `verify`, `runs`, and `verify_at` in S-0806. A file you kept from before gives none of them, and flai reads it as giving the baseline's: every suite at `warn` on the move to review, every suite on the acceptance, the cluster's deploy and checks on review, and every suite at the batch and in CI. It runs what it ran before, and `flai check` warns about no suite. Once you give any one of the keys, flai reads the file as it is written, and a key you leave out names nothing, so carry all three over together ([Name the suites a step runs](#name-the-suites-a-step-runs)).
+The template's file gained `verify`, `runs`, and `verify_at` in S-0806. A file you kept from before gives none of them, and flai reads it as giving the baseline's: every suite at `warn` on the move to review, every suite on the acceptance, the cluster's deploy and checks on each state an acceptance leaves from, which is review in the baseline, and every suite at the batch and in CI. It runs what it ran before, and `flai check` warns about no suite. Once you give any one of the keys, flai reads the file as it is written, and a key you leave out names nothing, so carry all three over together ([Name the suites a step runs](#name-the-suites-a-step-runs)).

@@ -2159,11 +2159,11 @@ kluster: the story's namespace is s-0662
 
 and a line saying to deploy and check before review. It comes from the manifest alone; the `kluster` host action still gates the requests.
 
-**The move to review.** While the `kluster` host action is on, `flai move S-nnnn review` and the MCP `item_move` read the record after the move:
+**The move to review.** `flai move` and the MCP `item_move` read the record on a move whose transition names the rule `kluster-verified`, at the severity the transition gives it ([Transitions and who makes them](../../design/system/workflow.md#transitions-and-who-makes-them)). The baseline names it at `warn` on in-progress to review. The rule says nothing when the block names no `deploy`, the `kluster` host action is off, or `kluster.agent_namespaces` is 0. Otherwise:
 
-- When the namespace is not deployed at the head, or its checks did not pass there while `checks` is on, they warn, saying what stands and naming `flai kluster deploy S-nnnn --job` and `kluster_deploy`, and `flai checks run S-nnnn --job` and `kluster_checks` with `checks` on. The move is made all the same: the review deploys what has not passed at the head.
+- When the namespace is not deployed at the head, or its checks did not pass there while `checks` is on, the move warns, saying what stands and naming `flai kluster deploy S-nnnn --job` and `kluster_deploy`, and `flai checks run S-nnnn --job` and `kluster_checks` with `checks` on. The move is made all the same: the review deploys what has not passed at the head. A workflow file that sets the rule to `refuse` refuses the move instead, with the same words and `then move it again`.
 - The warning of unticked acceptance criteria adds whether the namespace was deployed and checked at the head.
-- A record or host configuration flai cannot read is a warning too.
+- A record or host configuration flai cannot read is a warning, whatever the rule's severity.
 
 **The close-out.** `flai verify` runs a step `kluster` after `check`, in a project with a `kluster:` block. It runs nothing on the cluster:
 
@@ -2189,15 +2189,17 @@ A deploy line names its exit code and the failed step's log when it failed, and 
 
 ### When a story's deploy or its checks fail
 
-While the `kluster` host action is on and the block names a `deploy`, `flai serve` deploys each story that enters review into its namespace, and deploys it again in place at each new head. With the `checks` host action on, it then runs the checks against that namespace ([kluster.md](../../design/system/kluster.md#what-happens-when)).
+While the `kluster` host action is on and the block names a `deploy`, `flai serve` deploys each story that enters a state whose `runs:` names `deploy` into its namespace, and deploys it again in place at each new head. The baseline names it on review alone, so on the baseline a story is deployed when it enters review. With the `checks` host action on, and the state's `runs:` naming `checks`, it then runs the checks against that namespace. A state whose `runs:` names no cluster step deploys nothing ([kluster.md](../../design/system/kluster.md#what-happens-when), S-0810).
+
+The deploy and the checks are the last steps of the job flai serve runs on entering the state. The job first rebases the story's branch onto main and runs the suites the state names ([What a state's runs starts](../../design/system/workflow.md#what-a-states-runs-starts-s-0810)). So with a cluster set up, a story entering review on the baseline is rebased first. A cluster step the project cannot run is skipped, and the job's record says why: no `kluster:` block, no `deploy`, the `kluster` host action off, or, for a state of the `active` kind, no agent namespace free. The checks are skipped too when the `checks` host action is off or no checks are named. A skip never holds the story. In a project with no cluster the job runs nothing on entering review.
 
 A deploy that fails, or a checks run that does not pass, sends the story back (S-0694, [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)):
 
 - `flai serve` opens one thread on the story, `flai serve could not deploy S-nnnn into its kluster namespace` or `flai serve's checks against S-nnnn's kluster namespace failed`, naming the job, the step, the commit, and the log. A later failure adds to it.
-- It moves the story from review to in-progress as `flai`, with a reason naming the job, the step, and the commit. A story no longer in review at that commit, or one whose action you turned off meanwhile, is not moved, and the thread says why.
+- It moves the story back as `flai` by the send-back transition out of its state, review to in-progress on the baseline, with a reason naming the job, the step, and the commit. A story no longer in that state at that commit, one whose action you turned off meanwhile, or one in a state the workflow gives no send-back transition out of, is not moved, and the thread says why.
 - It keeps the story's namespace as the failure left it, so that you and the story's agent can look at what failed: `flai kluster deployments` and the Deployments page show it. Nothing tears it down while the story is in progress, as for every story in progress since S-0660.
 - With the `agent` host action on, it starts the story's agent once on the thread. The agent fixes the change, or says on the thread that the cause is outside the story, such as the cluster's shared services.
-- Once the story is back in review, at a new commit or the same one, it is deployed again in place, unless a deploy its agent asked for passed at its head, its checks too while `checks` is on. A deploy that passes resolves the deploy's thread, and a checks run that passes the checks', whether the agent or the review asked for them. Cancelling or accepting the story tears its namespace down and resolves its threads.
+- Once the story is back in the state, at a new commit or the same one, it is deployed again in place, unless a deploy its agent asked for passed at its head, its checks too while `checks` is on. A deploy that passes resolves the deploy's thread, and a checks run that passes the checks', whether the agent or the review asked for them. Cancelling or accepting the story tears its namespace down and resolves its threads.
 
 While the action is on, the story's acceptance waits for this. Every acceptance of a story, yours, the dashboard's, the orchestrator's, and the merge queue's, is refused with the blocker `kluster` until its namespace was deployed at its branch's head and, while `checks` is on, the checks run against it passed there, at its head as [What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review) says. The blocker names the namespace's last job, its commit, and its outcome. `flai accept --dry-run` lists it, and with `--json` it is in `kluster_blocker`, with `kluster_why`. The merge queue lists such a story as not eligible, with the reason `kluster`, and does not batch it; the orchestrator may still enqueue it, and the queue waits for the deploy.
 
@@ -2311,7 +2313,7 @@ A tier belongs to a suite: its `suite`, a kebab-case label, or, when it gives no
 | `integration` | `integration` |
 | `smoke` | `smoke` |
 
-This repository puts its formatters and linters in `static`, its unit and render tests in `behavior`, `integration` and `race` in `integration`, and `smoke` and `gateway` in `smoke`. The workflow file names the suites each step needs and runs, in `verify`, `runs`, and `verify_at` ([change the board](../operators/runbooks/change-the-board.md#name-the-suites-a-step-runs)), and `flai check` holds those names against the tiers. Since S-0807 the close-out runs the suites the story's next moves need ([Verify a story before review](#verify-a-story-before-review)); otherwise `--suite` is the way to run one suite.
+This repository puts its formatters and linters in `static`, its unit and render tests in `behavior`, `integration` and `race` in `integration`, and `smoke` and `gateway` in `smoke`. The workflow file names the suites each step needs and runs, in `verify`, `runs`, and `verify_at` ([change the board](../operators/runbooks/change-the-board.md#name-the-suites-a-step-runs)), and `flai check` holds those names against the tiers. Since S-0807 the close-out runs the suites the story's next moves need ([Verify a story before review](#verify-a-story-before-review)). Since S-0810 a state's `runs` decides what flai serve runs when a story enters it. `flai test --suite` and `flai verify --suite` run one suite by hand.
 
 With `--json` the answer is `{"passed": ..., "paths": [...], "tiers": [...]}`, each tier with its `name`, `command`, `state` (`passed`, `failed`, `not-reached`, or `skipped`), `exit_code`, `duration_ms`, and `findings`, each a `name`, `path`, `line`, and `message`, with `omitted` counting those left out. A skipped tier has `covered_by`, the tier that runs in its place.
 
@@ -2331,6 +2333,7 @@ flai verify S-0037 --record-issues   # also record the notes outside the story a
 flai verify S-0037 --fresh           # run every tier, reusing none from the last run
 flai verify S-0037 --all             # run every suite, and leave no tier to the merge queue
 flai verify S-0037 --sync-only       # only the rebase and sync steps; stores nothing
+flai verify S-0037 --suite behavior --suite smoke   # only those suites' tiers; stores nothing
 flai verify S-0037 --job -m "feat: [S-0037] what it did"   # ask flai serve for the close-out job; prints its id
 ```
 
@@ -2377,6 +2380,8 @@ With `--json` the answer is the report: `story`, the `commit` and `base` it veri
 Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. It reads the report against the head of the story's branch. After the verdict, a line `from before the head moved: this report is at <commit>, the head of story/S-nnnn is <commit>` says the report is not at the head, and a line `close-out running: job <id> at <commit>, at its step <step>, since <time>` names a close-out job running at another commit ([The close-out job](#the-close-out-job)). `--json` carries them as `moved` and `running`. With no report but a job running, it prints `verify: S-nnnn has no stored result yet` and the close-out line, and `--json` gives `story` and `running` alone. In a project with a kluster, `--last` ends with what the `kluster` step read of the story's namespace, and `--json` carries it as `kluster`. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
 
 `--sync-only` runs the `rebase` and `sync` steps and nothing else. It prints them and exits as a full run does, and it stores no report, so the stored one stays the last full run's. The close-out's last check, after its commit, is `flai verify S-0037 --sync-only`, so the close-out and `flai verify` agree on whether the branch contains the main branch. `--sync-only` is refused with `--last`, which runs nothing, and with `--record-issues`, since it runs no check.
+
+`--suite <suite>` runs only the tiers of that suite that the branch's changes select, after the same steps before the tiers (S-0810). Give it more than once for more suites. A tier's suite is its `suite`, or its name when it gives none ([Run the tests for what changed](#run-the-tests-for-what-changed)). A tier of a named suite that only a tier of another suite covers runs itself, and no tier is left to the merge queue. `--suite all` runs every suite, as no `--suite` does. A suite no tier is in is refused, naming the suites there are. A run of some suites stores no report and no record, so it never stands for a whole close-out, and `--last` still prints the last run of every suite. `--suite` is refused with `--job`, `--last`, and `--sync-only`. flai serve's job for a state whose `runs:` names suites runs `flai verify S-nnnn --all --suite <suite>` once per suite ([What a state's runs starts](../../design/system/workflow.md#what-a-states-runs-starts-s-0810)).
 
 A run resumes from the stored report when nothing that decides the tiers has changed since (S-0341). It needs all three of these to match the run before:
 

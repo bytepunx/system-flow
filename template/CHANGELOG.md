@@ -6,6 +6,7 @@
 
 - S-0807 A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need (patch).
 - S-0807 The close-out runs the tiers of the suites the story's next moves need, those the `verify` of each move out of its state in `design/workflows/board.md` lists, or every suite when one gives `all` or none gives `verify`, as the baseline's move to review does, so on the baseline it runs every tier its paths select as before; `work-management.md` and `delegation.md` say so and that the move to review runs the rule `verified`, and `scripts/close-out.sh`'s comments say what `--all` and the tiers now cover (patch, ADR-0312).
+- S-0810 The board's workflow file says that a state's `runs` starts flai serve's state job when a story enters the state, which runs its suites and the cluster's steps and sends the story back when one fails (patch, ADR-0312).
 
 ## 1.1.46 - 2026-11-18
 

@@ -613,13 +613,16 @@ The project's build, deploy, and teardown scripts are the project's code. The Kl
 
 | When | What it runs | From |
 |------|--------------|------|
-| A story enters review | A deploy into the story's namespace, such as `s-0579`: `build`, the image load, `deploy` | The story's worktree, at its branch's head |
-| A story in review gets a new head | A deploy again, in place | The worktree, at the new head |
-| A story leaves review, back to in-progress, cancelled, or any other column | A teardown: `teardown`, then the namespace deleted | The worktree, or the main checkout when it is gone |
+| A story enters a state whose `runs:` names `deploy`, review on the baseline | A deploy into the story's namespace, such as `s-0579`: `build`, the image load, `deploy`, then the checks when the state names them | The story's worktree, at the head the state's job left after it rebased the branch onto main |
+| A story in such a state gets a new head | A deploy again, in place | The worktree, at the new head |
+| A story enters a state whose `runs:` names `checks` and no `deploy` | A checks run against its namespace, when the namespace is deployed at the head | The worktree |
+| A story is cancelled, or moved back to ready or backlog | A teardown: `teardown`, then the namespace deleted | The worktree, or the main checkout when it is gone |
 | A story is accepted | A teardown of its namespace, then a promotion of main's head into the default namespace | The teardown as above; the promotion in `.flai-cache/kluster/main` |
 | A deploy finds the cluster absent | `kluster up` first, its output to `.flai-cache/kluster/up.log` | The main checkout |
 
-- A head is deployed once. A deploy that failed at a head is not tried again until the story's head changes.
+- The cluster runs only in a state whose `runs:` names its steps, as `runs: {kluster: [deploy, checks]}`, and in no other (S-0810). The baseline names them on review alone, so on the baseline a story is deployed on entering review, as before. The deploy and the checks are the last steps of the job `flai serve` runs on entering the state, which rebases the branch onto main and runs the state's suites first ([kluster.md](../../design/system/kluster.md#what-happens-when)). A state of your own gets them only when your workflow file names them there ([Change the board](runbooks/change-the-board.md#name-the-suites-a-step-runs)).
+- The job skips a cluster step it cannot run, and records why: no `kluster:` block, no `deploy`, this action off, or no agent namespace free for a story in a state of the `active` kind; for the checks, also the `checks` action off or no checks named. A skip never holds the story. So turning the action off, or a project with no cluster, holds no story on entering review.
+- A head is deployed once in a state. A deploy that failed at a head is not tried again in that state until the story's head changes, or the story comes back to the state after a send-back.
 - A story never deployed is not torn down. Acceptances seen at one look promote once. An acceptance made while `flai serve` was stopped, or while the action was off, promotes nothing; run `flai kluster promote` then.
 - A job that finds another holding kluster's lock, such as `flai kluster deploy` in your shell, waits for the next look.
 - The host journal records each job's start and its end, done or failed, under the action `kluster`, with the story, the namespace, the commit, and the step that failed.
@@ -627,7 +630,7 @@ The project's build, deploy, and teardown scripts are the project's code. The Kl
 
 **Checks against the namespace.** A checks run for a story whose namespace was deployed and passed at the story's head gets the namespace's variables in each check's environment: `KUBECONFIG`, `FLAI_KLUSTER_CONTEXT`, `FLAI_KLUSTER_NAMESPACE`, and the rest that [kluster.md](../../design/system/kluster.md#the-steps-and-their-variables) lists. This holds whether `flai checks run`, the review page, or `flai serve` starts the run. `flai checks run` then says so on standard error, and the run's log starts with the namespace. With the `checks` host action on and checks named, `flai serve` runs the story's checks itself after each deploy that passes, in the same job. A story's agent may also ask for its own story's checks run alone while the story is in progress, with `flai checks run S-nnnn --job` or the MCP tool `kluster_checks`: `flai serve` runs it in the same queue, after the jobs ahead of it, records who asked in the checks status, and opens no thread when it fails ([kluster.md](../../design/system/kluster.md#the-requests-s-0660-s-0661)). Any other run gets no variables and runs as before.
 
-**When something fails.** Nothing is moved: the story stays where it is. `flai serve` opens one thread, written by `flai serve`, and adds an entry to it when the next attempt fails too:
+**When something fails.** A failed deploy or checks run sends the story back by the send-back transition out of its state, review to in-progress on the baseline, and starts its agent with the `agent` action on ([When a story's deploy or its checks fail](../users/flai.md#when-a-storys-deploy-or-its-checks-fail)). A failed teardown or promotion moves nothing. `flai serve` opens one thread, written by `flai serve`, and adds an entry to it when the next attempt fails too:
 
 | What failed | The thread is on | It names | It is resolved when |
 |-------------|------------------|----------|---------------------|
