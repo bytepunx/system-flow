@@ -30,7 +30,9 @@
 #                   prints it: the project's layer image when system-flow.yaml names
 #                   agent.image.layer, else flai-agent-claude-code:local); a run refuses an image
 #                   not built. scripts/agent-container.sh --image prints it and runs nothing.
-# FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host
+# FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host; on bridge
+#                     the container is given FLAI_KLUSTER_API_HOST=host.docker.internal, the host
+#                     name flai kluster env and exec put in its kubeconfig (ADR-0319), and on host none
 # FLAI_AGENT_MODEL    the agent's model, such as haiku (default: claude's own)
 # FLAI_AGENT_MAX_BUDGET_USD  the agent's max_budget_usd, such as 0.05, for a trial run
 # FLAI_AGENT_SESSION  the session; a second run with the same one resumes it (default: a new one);
@@ -97,8 +99,9 @@ HOST_HEADER="$(echo "$URL" | sed 's|^https\{0,1\}://\([^/]*\).*|\1|')"
 NETWORK="${FLAI_AGENT_NETWORK:-bridge}"
 case "$NETWORK" in
   # Docker Desktop's host-gateway forwards to the WSL host's loopback, where the server listens;
-  # its host network is its VM's, where nothing listens.
-  bridge) NET_ARGS="--add-host host.docker.internal:host-gateway"
+  # its host network is its VM's, where nothing listens. Off the host network the kluster's API
+  # server is reached by the same name (ADR-0319).
+  bridge) NET_ARGS="--add-host host.docker.internal:host-gateway -e FLAI_KLUSTER_API_HOST=host.docker.internal"
           URL="$(echo "$URL" | sed 's|^\(https\{0,1\}://\)[^/:]*|\1host.docker.internal|')" ;;
   host) NET_ARGS="--network host" ;;
   *) echo "FLAI_AGENT_NETWORK is bridge or host, not $NETWORK" >&2; exit 2 ;;

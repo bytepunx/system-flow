@@ -145,7 +145,7 @@ func TestTheContainerRunsDockerWithNineMountsSixOfTheMainCheckoutsAndVariablesBy
 		"-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_STORY", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
 		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GIT_CONFIG_COUNT", "-e", "GIT_CONFIG_KEY_0", "-e", "GIT_CONFIG_VALUE_0",
-		"-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
+		"-e", "FLAI_KLUSTER_API_HOST", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
 	if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
 		t.Fatalf("harness %q argv\n%q\nwant\n%q", st.Harness, st.Argv, want)
 	}
@@ -191,7 +191,8 @@ func TestTheContainerRunsDockerWithNineMountsSixOfTheMainCheckoutsAndVariablesBy
 	// Docker makes the main checkout's folder as root, as its mounts'
 	// parent, so git is told it is safe there, by command-line configuration.
 	wantEnv := []string{"FLAI_CONFIG=" + cache + "/flai/config.json", "FLAI_CACHE_DIR=" + cache + "/flai/cache",
-		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=safe.directory", "GIT_CONFIG_VALUE_0=" + r.Root}
+		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=safe.directory", "GIT_CONFIG_VALUE_0=" + r.Root,
+		"FLAI_KLUSTER_API_HOST=host.docker.internal"}
 	if !slices.Equal(st.Env, wantEnv) {
 		t.Errorf("env %q, want %q", st.Env, wantEnv)
 	}
@@ -353,6 +354,42 @@ func TestTheContainersImageNetworkAndProgramAreTheHosts(t *testing.T) {
 	}
 	if got := harness.Adapters[harness.Container].DefaultHost(); got.Program != "docker" || got.Args != nil {
 		t.Errorf("default host %+v", got)
+	}
+}
+
+// I-0361, ADR-0319 §3: a story's container is told the host name by which it
+// reaches the kluster's API server, host.docker.internal, on every network but
+// the host's, by name in its argv and by value in the docker client's
+// environment; on the host's network it is told none, since the kubeconfig's
+// own host is reached there as it is.
+func TestTheStorysContainerIsToldTheKlustersAPIHostOffTheHostsNetwork(t *testing.T) {
+	const name, want = "FLAI_KLUSTER_API_HOST", "FLAI_KLUSTER_API_HOST=host.docker.internal"
+	for _, c := range []struct {
+		network string
+		told    bool
+	}{{"", true}, {"bridge", true}, {"flai-net", true}, {"host", false}} {
+		r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+		host.Network = c.network
+		st, err := harness.Adapters[harness.Container].Start(r, host)
+		if err != nil {
+			t.Fatalf("network %q: %v", c.network, err)
+		}
+		named := slices.Contains(st.Argv, name)
+		var values []string
+		for _, kv := range st.Env {
+			if strings.HasPrefix(kv, name+"=") {
+				values = append(values, kv)
+			}
+		}
+		switch {
+		case c.told && (!named || !slices.Equal(values, []string{want})):
+			t.Errorf("network %q: argv names it %v, env %q: want -e %s in the argv and %s alone in the env", c.network, named, values, name, want)
+		case !c.told && (named || len(values) > 0):
+			t.Errorf("network %q: argv names it %v, env %q: want neither on the host's network", c.network, named, values)
+		}
+		if i := slices.Index(st.Argv, name); named && (i == 0 || st.Argv[i-1] != "-e") {
+			t.Errorf("network %q: %s is not passed by -e in %q", c.network, name, st.Argv)
+		}
 	}
 }
 

@@ -45,6 +45,14 @@ const (
 	containerCacheDir = "FLAI_CACHE_DIR"
 )
 
+// containerHostName is the name by which a container reaches the host.
+const containerHostName = "host.docker.internal"
+
+// containerKlusterAPIHost is the variable that tells a story's container the
+// host name by which it reaches the kluster's API server, which flai kluster
+// env and exec give in the kubeconfig they write there (ADR-0319 §3).
+const containerKlusterAPIHost = "FLAI_KLUSTER_API_HOST"
+
 // containerEnv are the variables a story's container is passed by name, in
 // order, before the provider's key.
 var containerEnv = []string{"FLAI_AGENT", "FLAI_SESSION", "FLAI_STORY", "FLAI_STARTED_BY", containerURLEnv, containerTokenEnv, containerConfig, containerCacheDir}
@@ -153,8 +161,10 @@ func ContainerCache(root, subject string) string {
 // folder; the operator's outside folders read-write, each at its own path
 // (outsideArgs, ADR-0289); and the operator's login read-only, mounted in that
 // order and nothing else; the variables of
-// containerEnv and the provider's key passed by name alone, the values in the
-// docker client's environment; and pilot's start request on standard input,
+// containerEnv, git's safe.directory for the main checkout (safeMain), the
+// kluster's API host off the host's network (klusterAPIHost), and the
+// provider's key passed by name alone, the values in the docker client's
+// environment; and pilot's start request on standard input,
 // which names the inner harness, the cache, and the MCP server's variables,
 // never a value. A strategic agent's start, a built-in role's or one the
 // project defines, mounts the main checkout instead (roleStart). It refuses a
@@ -234,7 +244,19 @@ func (container) Start(r Request, host Host) (Start, error) {
 	argv = append(argv, mainArgs...)
 	argv = append(argv, "-v", cache+":"+cache)
 	argv = append(argv, outArgs...)
-	return containerStart(argv, containerEnv, safeMain(mainMounts), r, host, image, cache, stdin)
+	extra := append(safeMain(mainMounts), klusterAPIHost(host)...)
+	return containerStart(argv, containerEnv, extra, r, host, image, cache, stdin)
+}
+
+// klusterAPIHost is the variable, NAME=value, that names the host to a story's
+// container as the kluster's API server's host (ADR-0319 §3): on every network
+// but the host's, where the kubeconfig's own host is reached as it is and none
+// is given.
+func klusterAPIHost(host Host) []string {
+	if host.Network == "host" {
+		return nil
+	}
+	return []string{containerKlusterAPIHost + "=" + containerHostName}
 }
 
 // safeMain is git's safe.directory for the main checkout of a story's
@@ -437,7 +459,7 @@ func dockerRun(host Host, name string) []string {
 // host.docker.internal.
 func dockerUser(host Host) (program string, args []string) {
 	program, args = dockerAs(host)
-	return program, append(args, "--add-host", "host.docker.internal:host-gateway")
+	return program, append(args, "--add-host", containerHostName+":host-gateway")
 }
 
 // dockerAs is dockerUser without the host's name: the host's container
