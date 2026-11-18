@@ -614,6 +614,13 @@ agent:
       GO_VERSION: "1.26.0"   # quote a value YAML would read as a number
 ```
 
+`flai manifest set` writes both keys, quoting a value YAML would read as a number, and `--unset` removes them (S-0839). Removing the layer is refused while `args` remain. An unset that leaves `args` or `image` empty removes it too:
+
+```bash
+flai manifest set agent.image.layer=flai/images/system-flow/Dockerfile agent.image.args.GO_VERSION=1.26.0
+flai manifest set --unset agent.image.args.GO_VERSION
+```
+
 An argument you do not name keeps its default. flai sets `BASE` itself, to the harness image, so `args` refuses it, as it refuses a name that is not an `ARG` name, a value over lines, and `args` with no `layer`. The layer image is labelled with its recipe, over the Dockerfile and the arguments, and with the ID of the harness image under it, so `flai image status` says it is stale when you change the Dockerfile or an argument, or the harness image under it changes. In system-flow's repository, its build command, `scripts/agent-image.sh`, builds it with the same `agent.image.args`, and `make agent-images` runs that by hand ([the container runbook](../operators/runbooks/agent-container.md#in-this-repository)). For your project's story agents on the `container` harness, that image wins over the one `--image` names. The key stays in the manifest: it is never copied into a story's agent, and naming one under the planner's, the orchestrator's, the analyzer's, the curator's, or a role's agent is refused. This repository's layer, `flai/images/system-flow/Dockerfile`, carries Go, golangci-lint, ShellCheck, pnpm, and, for the smoke tier's install test, curl, openssl, GoReleaser, and procps-ng's `ps` ([docker.md](../../design/tech/docker.md)); `scripts/agent-image.sh --check` fails on a build of it that lacks one, and then runs the smoke tier inside it (S-0672). The layer is yours: flai builds it on your machine only, and does not stamp or sign it ([ADR-0203](../../design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md)).
 
 `flai check` reports `agent.image` on the manifest's `layer` line ([Check the repository](#check-the-repository)):
@@ -3040,7 +3047,7 @@ When it ends, `flai serve` records how: `failed` when it ended on the usage limi
 
 #### Changing the strategic agents' settings
 
-`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, the analyzer's formula, and the curator's agent, schedule, and compaction window (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
+`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, the analyzer's formula, and the curator's agent, schedule, and compaction window (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392), and the project's agent image, `agent.image.layer` and `agent.image.args.<NAME>` (S-0839). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
 
 ```bash
 flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
@@ -3068,6 +3075,7 @@ flai manifest set analysis.schedule=daily --autocommit --json
 | `acceptance.mode` | `local` or `pull-request`; `local` by default ([Accepting through a pull request](#accepting-through-a-pull-request)) |
 | `acceptance.forge` | `github`, the default and only forge |
 | `acceptance.merge_method` | `merge`, `squash`, or `rebase`; `merge` by default |
+| `agent.image.layer`, `agent.image.args.<NAME>` | The project's layer, a clean path from the repository root to its Dockerfile, and a build argument's value, one literal line ([In a container](#in-a-container-the-container-harness)); none by default |
 
 `flai manifest set --help` lists the keys with their kinds, and [project-manifest.md](../../design/system/project-manifest.md) says what each does. `--unset <key>` removes a key, so that its default applies. Everything else in the file, its order, and its comments are kept. `planning.currency` is not among the keys: changing it would re-denominate every amount on the items, which flai does not convert, so you edit it by hand. Neither is `orchestration.agent`.
 
