@@ -151,7 +151,9 @@ Since S-0807 a story's move and its close-out read `verify` ([The move needs the
 
 Since S-0810 a state's `runs` decides what `flai serve` runs when a story enters the state, as [run suites and the cluster in a state](#run-suites-and-the-cluster-in-a-state) says.
 
-Nothing else reads the keys yet but a state's `runs` since S-0810, the batch, which reads `verify_at.batch` since S-0809, and `flai test --at`'s `verify_at` since S-0812, for a project's CI or by hand ([Run a project's suites in CI](../../users/flai.md#run-a-projects-suites-in-ci)): the acceptance's gates and the publish run as they did; later releases make each read them.
+Since S-0811 the publish runs the suites `verify_at.publish` names, as [run suites before a publish](#run-suites-before-a-publish) says.
+
+Nothing else reads the keys yet but a state's `runs` since S-0810, the batch, which reads `verify_at.batch` since S-0809, `flai test --at`'s `verify_at` since S-0812, for a project's CI or by hand ([Run a project's suites in CI](../../users/flai.md#run-a-projects-suites-in-ci)), and the publish's `verify_at.publish` since S-0811: the acceptance's gates run as they did; a later release makes them read the keys.
 
 The keys need a flai that knows them. The first publish from the flai release that carries them raises `flai.minimum` in `system-flow.yaml`, and from then an older flai stops before it reads the file, naming the release to install ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)). Before that publish, an older flai refuses a file that uses them with its parse error, an unknown field.
 
@@ -183,6 +185,35 @@ Here `review` gives no `runs`, so a story entering it runs nothing and is not de
 - **The `kluster-verified` rule** is checked by the move whose transition names it, at the severity it gives. The baseline names it at `warn` on `in-progress` to `review`. Give it `{rule: kluster-verified, severity: refuse}` to stop a move whose namespace is not deployed and checked at the head ([Add a rule to a move](#add-a-rule-to-a-move)).
 
 `flai serve` keeps the job's record and log under `.flai-cache/verify/jobs/`, as `S-nnnn.state.json` and `S-nnnn.state.log` ([the close-out job](../../../design/system/flai-cli.md#the-close-out-job)).
+
+## Run suites before a publish
+
+Since S-0811 a publish runs the suites `verify_at.publish` names before it tags anything ([ADR-0312](../../../design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md) §6). The baseline names none, so a publish runs no tier until you add the key.
+
+1. In the story's worktree, add `publish` to `verify_at` in the front matter of `design/workflows/board.md`. Keep `batch` and `ci`: a key you leave out names nothing.
+
+   ```yaml
+   verify_at: {batch: all, publish: [integration, smoke], ci: all}
+   ```
+
+   `publish: all` runs every suite. A suite no tier has is `workflow.suite` in `flai check`.
+2. See what a publish would run: `flai release --pending --dry-run` names the suites and their tiers and runs none.
+
+From then on `flai release --pending`, the board's Publish, and the orchestrator's `release_publish` run those suites at the main branch's head once something is pending and the remote's check passes. Each suite runs every tier of it but manual ones, as `flai test --suite <suite> --all` does, in the order you named them. Each tier's whole output is kept in `.flai-cache/publish/<UTC time>/<tier>.log`. `flai push --pending` does not run them.
+
+When a tier fails, nothing is applied, committed, tagged, or pushed, and `flai release --pending` exits 5. Its last line names the tier, its suite, the head, and the log:
+
+```text
+publish refused: tier smoke of suite smoke failed at 1a2b3c4, which verify_at.publish in design/workflows/board.md runs before a release, so nothing was applied, committed, tagged, or pushed; its whole output is in /home/me/project/.flai-cache/publish/20261118T091500Z/smoke.log: fix it on the main branch, then run flai release --pending again
+```
+
+The board's Publish shows the same message as a refusal, and the host journal records the publish as `refused`. A suite that cannot be run, such as one no tier has, is refused the same way with exit 5.
+
+To recover:
+
+1. Read the log the message names.
+2. Fix the cause on the main branch, through a story as for any change, or fix the tier itself if it is what broke.
+3. Run `flai release --pending` again, or Publish from the board. It runs the suites again at the new head.
 
 ## Before the story is accepted
 
