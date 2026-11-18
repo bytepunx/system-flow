@@ -46,7 +46,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
 | [kluster](#flai-kluster) | Run the project's kluster and deploy stories and main into it |
 | [license](#flai-license) | Print the license flai is distributed under |
-| [manifest](#flai-manifest) | Change the strategic agents' settings in system-flow.yaml |
+| [manifest](#flai-manifest) | Change the strategic agents' settings and the agent image in system-flow.yaml |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
 | [message](#flai-message) | Conversations between the agents of two open stories, apart from the operator's threads (wip/messages) |
 | [migrate](#flai-migrate) | One-off migrations of a repository to the current standard |
@@ -131,7 +131,7 @@ Subcommands:
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
 - [kluster](#flai-kluster): Run the project's kluster and deploy stories and main into it
 - [license](#flai-license): Print the license flai is distributed under
-- [manifest](#flai-manifest): Change the strategic agents' settings in system-flow.yaml
+- [manifest](#flai-manifest): Change the strategic agents' settings and the agent image in system-flow.yaml
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
 - [message](#flai-message): Conversations between the agents of two open stories, apart from the operator's threads (wip/messages)
 - [migrate](#flai-migrate): One-off migrations of a repository to the current standard
@@ -3088,24 +3088,25 @@ flai license --json
 
 ### flai manifest
 
-Change the strategic agents' settings in system-flow.yaml.
+Change the strategic agents' settings and the agent image in system-flow.yaml.
 
-The strategic agents' settings live in system-flow.yaml: what the orchestrator may do (orchestration.permissions), how it orders the ready column and when a release is due (orchestration.policy, orchestration.release), and the planner's and the analyzer's agents and schedules (planning, analysis). flai manifest set writes them, checked as flai check checks them; the dashboard's settings panels run it.
+The strategic agents' settings live in system-flow.yaml: what the orchestrator may do (orchestration.permissions), how it orders the ready column and when a release is due (orchestration.policy, orchestration.release), and the planner's and the analyzer's agents and schedules (planning, analysis). The project's agent image lives there too: the Dockerfile flai builds over the harness's image (agent.image.layer) and its build arguments (agent.image.args). flai manifest set writes them, checked as flai check checks them; the dashboard's settings panels run it.
 
 Examples:
 
 ```bash
 flai manifest set orchestration.permissions.promote_to_ready=true
 flai manifest set planning.replan=agent planning.schedule='0 6 * * 1-5'
+flai manifest set agent.image.args.GO_VERSION=1.26.0
 ```
 
 Subcommands:
 
-- [set](#flai-manifest-set): Write the strategic agents' settings, each checked, or refuse with the field and the reason
+- [set](#flai-manifest-set): Write the strategic agents' settings and the agent image's layer and build arguments, each checked, or refuse with the field and the reason
 
 #### flai manifest set
 
-Write the strategic agents' settings, each checked, or refuse with the field and the reason.
+Write the strategic agents' settings and the agent image's layer and build arguments, each checked, or refuse with the field and the reason.
 
 ```text
 flai manifest set <key>=<value>... [flags]
@@ -3163,9 +3164,11 @@ kluster.teardown (command)
 kluster.timeout (duration; default 30m)
 kluster.agent_namespaces (number, whole; default 2)
 tests (tests)
+agent.image.layer (text: a Dockerfile's path, such as images/agent/Dockerfile)
+agent.image.args.<NAME> (text: the layer's ARG <NAME>, such as GO_VERSION; not BASE)
 ```
 
-A boolean is true or false; a number is written as digits, a count a whole one; a duration is a Go duration such as 168h; a cron expression has five fields in UTC, or is daily; an agent is JSON, such as {"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}, and {} unsets it. planning.currency is not among them: changing it re-denominates every amount on the items, so it is edited by hand.
+A boolean is true or false; a number is written as digits, a count a whole one; a duration is a Go duration such as 168h; a cron expression has five fields in UTC, or is daily; an agent is JSON, such as {"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}, and {} unsets it. agent.image.layer is the path of a Dockerfile from the repository root, and agent.image.args.&lt;NAME&gt; the value of its ARG &lt;NAME&gt;, one literal line, written as text even when it reads as a number, such as 1.20. An argument named BASE is refused, since flai sets BASE to the harness's image, and an argument needs the layer. Unsetting the last argument removes args, and unsetting the layer with no argument left removes image. planning.currency is not among them: changing it re-denominates every amount on the items, so it is edited by hand.
 
 The manifest is checked whole, as it would be after the change, as flai check checks it. A key outside the list, a value not of its key's kind, or a problem the result would have is refused with the field and the reason, such as orchestration.release.value: -1 is not an amount of zero or more, and nothing is written; the exit status is 1, as for a workflow rule's refusal. With --json a refusal is {"refused": [{"field": ..., "reason": ...}]} on standard output, and a change {"set": [{"key": ..., "value": ...}], "unset": [...]}, with "commit" when it was committed.
 
@@ -3178,6 +3181,8 @@ flai manifest set orchestration.permissions.promote_to_ready=true orchestration.
 flai manifest set orchestration.release.policy=threshold orchestration.release.value=500
 flai manifest set planning.agent='{"model":"claude-sonnet-5"}' --unset planning.schedule
 flai manifest set analysis.schedule=daily --autocommit --json
+flai manifest set agent.image.layer=images/agent/Dockerfile agent.image.args.GO_VERSION=1.26.0
+flai manifest set --unset agent.image.args.PNPM_VERSION
 ```
 
 Flags:

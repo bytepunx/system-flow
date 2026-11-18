@@ -13,19 +13,23 @@ import (
 )
 
 // newManifestCmd groups the commands that change system-flow.yaml's
-// strategic agents' settings (S-0229, ADR-0039).
+// strategic agents' settings (S-0229, ADR-0039) and the project's agent
+// image's layer and build arguments (S-0839).
 func newManifestCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "manifest",
-		Short: "Change the strategic agents' settings in system-flow.yaml",
+		Short: "Change the strategic agents' settings and the agent image in system-flow.yaml",
 		Long: `The strategic agents' settings live in system-flow.yaml: what the orchestrator
 may do (orchestration.permissions), how it orders the ready column and when a
 release is due (orchestration.policy, orchestration.release), and the planner's
-and the analyzer's agents and schedules (planning, analysis). flai manifest set
-writes them, checked as flai check checks them; the dashboard's settings panels
-run it.`,
+and the analyzer's agents and schedules (planning, analysis). The project's
+agent image lives there too: the Dockerfile flai builds over the harness's
+image (agent.image.layer) and its build arguments (agent.image.args). flai
+manifest set writes them, checked as flai check checks them; the dashboard's
+settings panels run it.`,
 		Example: `  flai manifest set orchestration.permissions.promote_to_ready=true
-  flai manifest set planning.replan=agent planning.schedule='0 6 * * 1-5'`,
+  flai manifest set planning.replan=agent planning.schedule='0 6 * * 1-5'
+  flai manifest set agent.image.args.GO_VERSION=1.26.0`,
 	}
 	c.AddCommand(newManifestSetCmd(a))
 	return c
@@ -36,7 +40,7 @@ func newManifestSetCmd(a *app) *cobra.Command {
 	var autocommit bool
 	c := &cobra.Command{
 		Use:   "set <key>=<value>...",
-		Short: "Write the strategic agents' settings, each checked, or refuse with the field and the reason",
+		Short: "Write the strategic agents' settings and the agent image's layer and build arguments, each checked, or refuse with the field and the reason",
 		Long: `Write each key=value into its block of system-flow.yaml, and remove each
 --unset key so that its default applies, keeping every other key, the order,
 and the comments. The keys:
@@ -47,8 +51,14 @@ A boolean is true or false; a number is written as digits, a count a whole
 one; a duration is a Go duration such as 168h; a cron expression has five
 fields in UTC, or is daily; an agent is JSON, such as
 {"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}},
-and {} unsets it. planning.currency is not among them: changing it
-re-denominates every amount on the items, so it is edited by hand.
+and {} unsets it. agent.image.layer is the path of a Dockerfile from the
+repository root, and agent.image.args.<NAME> the value of its ARG <NAME>, one
+literal line, written as text even when it reads as a number, such as 1.20.
+An argument named BASE is refused, since flai sets BASE to the harness's
+image, and an argument needs the layer. Unsetting the last argument removes
+args, and unsetting the layer with no argument left removes image.
+planning.currency is not among them: changing it re-denominates every amount
+on the items, so it is edited by hand.
 
 The manifest is checked whole, as it would be after the change, as flai check
 checks it. A key outside the list, a value not of its key's kind, or a problem
@@ -64,7 +74,9 @@ unless the project sets dashboard.autocommit: false.`,
 		Example: `  flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
   flai manifest set orchestration.release.policy=threshold orchestration.release.value=500
   flai manifest set planning.agent='{"model":"claude-sonnet-5"}' --unset planning.schedule
-  flai manifest set analysis.schedule=daily --autocommit --json`,
+  flai manifest set analysis.schedule=daily --autocommit --json
+  flai manifest set agent.image.layer=images/agent/Dockerfile agent.image.args.GO_VERSION=1.26.0
+  flai manifest set --unset agent.image.args.PNPM_VERSION`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 && len(unset) == 0 {
 				return fmt.Errorf("nothing to change: give key=value to set, or --unset key, such as flai manifest set planning.replan=agent")
@@ -140,8 +152,8 @@ func analysisFormulaProblems(root, design string, set []manifest.Assignment) ([]
 	return out, nil
 }
 
-// settingsHelp lists the catalog's keys for the command's help: each with
-// its kind, its values, and its default.
+// settingsHelp lists the catalog's keys for the command's help, each with
+// its kind, its values, and its default, then the agent image's keys.
 func settingsHelp() string {
 	var b strings.Builder
 	for i, s := range manifest.Settings() {
@@ -160,6 +172,8 @@ func settingsHelp() string {
 		}
 		b.WriteString(")")
 	}
+	b.WriteString("\n  agent.image.layer (text: a Dockerfile's path, such as images/agent/Dockerfile)")
+	b.WriteString("\n  agent.image.args.<NAME> (text: the layer's ARG <NAME>, such as GO_VERSION; not BASE)")
 	return b.String()
 }
 

@@ -204,3 +204,73 @@ func TestManifestSetAutocommitsTheManifestAlone(t *testing.T) {
 		t.Errorf("the commit holds the manifest alone: %q", files)
 	}
 }
+
+// S-0839 (I-0364): from a manifest whose agent image names a layer and no
+// args, as S-0760 found this repository's, flai manifest set writes build
+// arguments under agent.image.args, keeping the comments, and the manifest
+// then has no manifest.agent problem; --unset removes one argument; BASE is
+// refused with the field and the reason, writing nothing; and the help names
+// both keys.
+func TestManifestSetWritesAgentImageArgs(t *testing.T) {
+	t.Parallel()
+	root, _ := manifestProject(t)
+	file := filepath.Join(root, manifest.File)
+	before := readManifest(t, root) + "agent:\n  harness: claude-code\n  image:\n    layer: images/agent/Dockerfile   # the project's tools\n"
+	if err := os.WriteFile(file, []byte(before), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	load := func() *manifest.AgentImage {
+		t.Helper()
+		m, err := manifest.Load(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m.Agent.Validate(); err != nil {
+			t.Errorf("manifest.agent: %v\n%s", err, readManifest(t, root))
+		}
+		if m.Agent == nil || m.Agent.Image == nil {
+			t.Fatalf("no agent image read back:\n%s", readManifest(t, root))
+		}
+		return m.Agent.Image
+	}
+
+	out, errOut, code := runIn(t, root, "manifest", "set", "agent.image.args.GO_VERSION=1.26.0", "agent.image.args.PNPM_VERSION=10.34.5", "--json")
+	var got struct {
+		Set   []manifest.Assignment `json:"set"`
+		Unset []string              `json:"unset"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+		t.Fatalf("exit %d: %s %s", code, out, errOut)
+	}
+	if len(got.Set) != 2 || got.Set[0].Key != "agent.image.args.GO_VERSION" || got.Set[1].Key != "agent.image.args.PNPM_VERSION" || len(got.Unset) != 0 {
+		t.Errorf("--json lists the keys set: %s", out)
+	}
+	image := load()
+	if image.Layer != "images/agent/Dockerfile" || len(image.Args) != 2 || image.Args["GO_VERSION"] != "1.26.0" || image.Args["PNPM_VERSION"] != "10.34.5" {
+		t.Errorf("image read back: %+v", image)
+	}
+	if after := readManifest(t, root); !strings.Contains(after, "# the project's tools") || !strings.Contains(after, "# what the orchestrator may do") {
+		t.Errorf("the comments are gone:\n%s", after)
+	}
+
+	if out, errOut, code := runIn(t, root, "manifest", "set", "--unset", "agent.image.args.GO_VERSION"); code != 0 || !strings.Contains(out, "unset agent.image.args.GO_VERSION\n") {
+		t.Fatalf("--unset: %d %s %s", code, out, errOut)
+	}
+	if image := load(); len(image.Args) != 1 || image.Args["PNPM_VERSION"] != "10.34.5" || strings.Contains(readManifest(t, root), "GO_VERSION") {
+		t.Errorf("--unset removes the one argument: %+v\n%s", image, readManifest(t, root))
+	}
+
+	kept := readManifest(t, root)
+	out, errOut, code = runIn(t, root, "manifest", "set", "agent.image.args.BASE=x")
+	if code != 1 || !strings.Contains(out, "agent: ") || !strings.Contains(out, "BASE") || !strings.Contains(errOut, "rule: ") {
+		t.Errorf("BASE is refused with the field and the reason: %d %q %s", code, out, errOut)
+	}
+	if after := readManifest(t, root); after != kept {
+		t.Errorf("the refusal changed the manifest:\n%s", after)
+	}
+
+	out, _, _ = runIn(t, root, "manifest", "set", "--help")
+	if !strings.Contains(out, "agent.image.layer") || !strings.Contains(out, "agent.image.args.<NAME>") || !strings.Contains(out, "flai manifest set agent.image.layer=images/agent/Dockerfile agent.image.args.GO_VERSION=1.26.0") {
+		t.Errorf("the help names the agent image's keys:\n%s", out)
+	}
+}
