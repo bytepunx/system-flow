@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -162,6 +164,60 @@ func testArchiveNamesTheConversationsItCloses(t *testing.T) {
 	}
 	assertClosedAs(t, root, "Closed: S-0001 and S-0002 were archived", "MS-0001")
 	assertClosedAs(t, root, "Closed: S-0002 was archived", "MS-0002")
+}
+
+// I-0377, S-0842: on a board whose accepted state is shipped, flai archive
+// refused a story an acceptance had left in shipped, "S-0002 is shipped; only
+// done or cancelled items can be archived", because an item read as closed
+// only in done or cancelled. It archives such a story with its task, named by
+// its ID or, with no ID, among every closed story.
+func TestArchiveTakesAStoryInTheAcceptedStateOfTheWorkflow(t *testing.T) {
+	root := renamedProject(t)
+	mustRun(t, root, "story", "new", "Second")
+	// a story reaches shipped only by an acceptance: leave each, as the
+	// refused acceptance of I-0377 did, in shipped with its task, unarchived
+	mustRun(t, root, "task", "new", "--story", "S-0001", "Step")
+	mustRun(t, root, "task", "new", "--story", "S-0002", "Piece")
+	for _, m := range [][]string{
+		{"S-0001", "ready"}, {"S-0001", "in-progress"}, {"T-0001", "ready"}, {"T-0001", "in-progress"}, {"T-0001", "shipped"}, {"S-0001", "testing"}, {"S-0001", "acceptance-review"},
+		{"S-0002", "ready"}, {"S-0002", "in-progress"}, {"T-0002", "ready"}, {"T-0002", "in-progress"}, {"T-0002", "shipped"}, {"S-0002", "testing"}, {"S-0002", "acceptance-review"},
+	} {
+		mustRun(t, root, "move", m[0], m[1])
+	}
+	for _, f := range []string{"S-0001-moved.md", "S-0002-second.md"} {
+		path := filepath.Join(root, "wip/kanban/stories", f)
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), "\nstatus: acceptance-review\n") {
+			t.Fatalf("%s is in acceptance-review:\n%s", f, b)
+		}
+		if err := os.WriteFile(path, []byte(strings.Replace(string(b), "\nstatus: acceptance-review\n", "\nstatus: shipped\n", 1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	archived := func(files ...string) {
+		t.Helper()
+		for _, f := range files {
+			b, err := os.ReadFile(filepath.Join(root, "wip/archive/kanban", f))
+			if err != nil || !strings.Contains(string(b), "status: shipped\n") {
+				t.Errorf("%s is archived in shipped: %v\n%s", f, err, b)
+			}
+		}
+	}
+	if out, errOut, code := runIn(t, root, "archive", "S-0001"); code != 0 {
+		t.Fatalf("flai archive S-0001 archives a story in shipped: exit %d\n%s%s", code, out, errOut)
+	}
+	archived("stories/S-0001-moved.md", "tasks/T-0001-step.md")
+	if got := stateOf(t, root, "S-0002"); got != "shipped" {
+		t.Errorf("archiving S-0001 leaves S-0002 on the board: status %q", got)
+	}
+	if out, errOut, code := runIn(t, root, "archive"); code != 0 {
+		t.Fatalf("flai archive with no ID archives a story in shipped: exit %d\n%s%s", code, out, errOut)
+	}
+	archived("stories/S-0002-second.md", "tasks/T-0002-piece.md")
 }
 
 // TestAsAlex runs the tests whose commands run as the operator's agent name
