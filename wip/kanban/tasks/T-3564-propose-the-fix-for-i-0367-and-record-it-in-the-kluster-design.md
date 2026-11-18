@@ -18,6 +18,18 @@ transitions:
 stream: S-0840
 tags: [kluster, design]
 touches: [design/system/kluster.md, design/tech/kluster.md]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 4996
+      cache_read: 1947938
+      cache_write: 271291
+      cost: 2.6599
 ---
 # T-3564 Propose the fix for I-0367 and record it in the kluster design
 

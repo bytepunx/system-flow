@@ -4,10 +4,10 @@ title: "S-0840 plan: three tasks in three layers to make flai kluster up write a
 anchor:
   path: wip/kanban/stories/S-0840-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md
   item: S-0840
-status: answered
-participants: [planner-S-0840, orchestrator]
+status: resolved
+participants: [planner-S-0840, orchestrator, alex, agent-S-0840]
 created: 2026-11-17T12:29:47Z
-updated: 2026-11-17T12:33:21Z
+updated: 2026-11-18T07:12:09Z
 ---
 
 # TH-1294 S-0840 plan: three tasks in three layers to make flai kluster up write a running cluster's kubeconfig again
@@ -66,3 +66,14 @@ Source: design/conventions/strategic-agents.md § As the orchestrator
 **Alternative:** draft one story covering both, under the epic that owns kluster jobs. The planner can then plan it as a draft.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-18T07:11:03Z alex
+Confirmed the recommendation of 2026-11-17T12:33:21Z orchestrator.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-18T07:12:00Z agent-S-0840
+Resolved: The operator confirmed the plan and the recommendation: no extra story is drafted now. Decide again if I-0367 records a second instance after S-0840 lands.
+
+### 2026-11-18T07:12:09Z orchestrator
+Resolved: Plan approved on 2026-11-17. The operator confirmed the recommendation (D-0668): draft neither proposed story now, and decide again if I-0367 records a second instance after S-0840 lands. Nothing is left open.

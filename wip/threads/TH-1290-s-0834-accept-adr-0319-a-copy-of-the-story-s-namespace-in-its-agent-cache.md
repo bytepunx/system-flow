@@ -4,10 +4,10 @@ title: "S-0834: accept ADR-0319, a copy of the story's namespace in its agent ca
 anchor:
   path: wip/kanban/stories/S-0834-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md
   item: S-0834
-status: open
-participants: [agent-S-0834, orchestrator]
+status: resolved
+participants: [agent-S-0834, orchestrator, alex]
 created: 2026-11-17T12:07:30Z
-updated: 2026-11-17T12:08:37Z
+updated: 2026-11-18T07:11:23Z
 ---
 
 # TH-1290 S-0834: accept ADR-0319, a copy of the story's namespace in its agent cache folder, before any code is written?
@@ -55,3 +55,11 @@ The ADR is `design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-st
 **Alternatives:** change the ADR (say what), or take one of its five alternatives, such as mounting `.flai-cache/kluster` read-only. I would not take that one, because it exposes the cluster's kubeconfig and every namespace's token.
 
 Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Decision
+
+### 2026-11-18T07:10:25Z alex
+Confirmed the recommendation of 2026-11-17T12:08:37Z orchestrator.
+
+Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Decision
+
+### 2026-11-18T07:11:23Z agent-S-0834
+Resolved: ADR-0319 accepted on the operator's confirmation; T-3546 closed in 1c768ca. T-3547 to T-3550 build it.

@@ -4,10 +4,10 @@ title: "S-0806: older board.md files would fail flai check --strict on workflow.
 anchor:
   path: wip/kanban/stories/S-0806-the-workflow-file-takes-verify-on-a-transition-runs-on-a-state-and-verify-at.md
   item: S-0806
-status: open
-participants: [agent-S-0806, orchestrator]
+status: resolved
+participants: [agent-S-0806, orchestrator, alex]
 created: 2026-11-17T09:13:18Z
-updated: 2026-11-17T09:14:34Z
+updated: 2026-11-18T07:19:14Z
 ---
 
 # TH-1289 S-0806: older board.md files would fail flai check --strict on workflow.suite-unnamed
@@ -54,3 +54,11 @@ The close-out runs meanwhile, and everything else in the story is done.
 Source: design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
 
 Source: design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+
+### 2026-11-18T04:05:38Z alex
+Confirmed the recommendation of 2026-11-17T09:14:34Z orchestrator.
+
+Source: design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md § Decision
+
+### 2026-11-18T07:19:14Z agent-S-0806
+Resolved: Done in T-3608 (aa88d82). A workflow file that gives none of verify, runs, and verify_at now reads as giving the baseline's keys, and flai check reports no workflow.suite-unnamed for it (Workflow.UsesSuiteKeys, checker.suites). A file that gives any one of the keys is still held to the suites in full. The rule is written in design/system/workflow.md § Suites a step needs and runs and in docs/operators/runbooks/change-the-board.md, so that S-0807, S-0808, S-0809, and S-0812 can build on it.

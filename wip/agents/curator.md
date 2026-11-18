@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 366.7079
-accrued_seconds: 40311
-tasks_completed: 257
-last_run: 2026-11-17T12:58:26Z
+accrued_cost: 367.3340
+accrued_seconds: 40359
+tasks_completed: 258
+last_run: 2026-11-17T13:24:30Z
 ---
 
 # Curator activity
@@ -2067,3 +2067,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0617
 - Seconds: 48
 - Cost: 0.5037 USD, estimated
+
+### 2026-11-17T13:24:30Z
+
+- Summary: I merged S-0829 and I-0355 into D-0565, since S-0829 added a guard read without an ADR of its own. I wrote no entries and absorbed none, and `flai digest compact` compacted none. S-0829's two plan decisions were chatter.
+- Trigger: accepted S-0829
+- Items: D-0565
+- Seconds: 48
+- Cost: 0.6261 USD, estimated

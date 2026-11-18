@@ -12,6 +12,21 @@ transitions: []
 stream: S-0822
 tags: [flaiover, dashboard]
 touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 9
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 18
+          cache_read: 121485
+          cache_write: 26992
+          cost: 0.0466
 ---
 # T-3521 The review page shows a rebase and resolve job that ended with its story out of review
 

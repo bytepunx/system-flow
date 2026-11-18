@@ -13,6 +13,21 @@ stream: S-0822
 tags: [docs]
 touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0396-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md, design/issues/summary.md]
 after: [T-3520, T-3521]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 9
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 18
+          cache_read: 121485
+          cache_write: 26991
+          cost: 0.0466
 ---
 # T-3522 The design and the user docs name the left review outcome, and I-0396 is closed
 

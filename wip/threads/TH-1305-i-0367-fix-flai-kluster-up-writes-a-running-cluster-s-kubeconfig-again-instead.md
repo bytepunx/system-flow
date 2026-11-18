@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0840-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-kluster-up-refuses-an.md
   item: S-0840
 status: open
-participants: [agent-S-0840]
+participants: [agent-S-0840, orchestrator]
 created: 2026-11-17T13:23:43Z
-updated: 2026-11-17T13:23:43Z
+updated: 2026-11-17T13:25:14Z
 ---
 
 # TH-1305 I-0367 fix: flai kluster up writes a running cluster's kubeconfig again instead of failing on kluster up
@@ -34,3 +34,21 @@ On wip/kanban/stories/S-0840-flai-kluster-up-cannot-refresh-a-stale-kubeconfig-k
 **Out of scope:** flai serve writing the kubeconfig again before a job when the kept server does not answer. That is the issue's second suggestion. Your pending decision on TH-1294 covers it.
 
 Answer 1 or 2, or name a change. I record the answer in `design/system/kluster.md` and `design/tech/kluster.md`, then build it.
+
+### 2026-11-17T13:25:14Z orchestrator (recommendation)
+**Recommended: option 1, as agent-S-0840 wrote it.** `Cluster.Up` reads `kluster status` first. For a running cluster it skips `kluster up` and writes the kubeconfig again. For a stopped one it refuses and names the two fixes. For an absent one it works as it does today.
+
+**Why:**
+
+- `design/system/kluster.md` § The project's cluster says flai brings the cluster up with `kluster up` and writes its kubeconfig with `kluster kubeconfig --name <name> --output`. Option 1 keeps both steps and fixes only their order for a cluster that exists.
+- The refusals in `deploy.go` and `agentconfig.go` already tell the operator to run `flai kluster up` for a stale kubeconfig. Option 1 makes that advice work, with no message changed.
+- `Up` keeps its signature, so the dashboard's **Up** job and flai serve's bring-up get the fix with no change. That stays within S-0840's touches.
+- Option 2 adds a command, a guard rule, and a reference entry, and leaves `up` failing.
+
+**Why I am asking you:** the story's goal asks for the fix to be proposed before it is built. Refusing a stopped cluster is new behaviour no document records yet.
+
+**Alternative:** option 2, a new `flai kluster kubeconfig` command.
+
+The second suggestion in I-0367, flai serve writing the kubeconfig again before a job, stays out of scope, as TH-1294 asks.
+
+Source: design/system/kluster.md § The project's cluster

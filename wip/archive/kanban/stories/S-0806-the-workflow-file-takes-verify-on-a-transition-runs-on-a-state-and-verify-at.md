@@ -3,11 +3,11 @@ id: S-0806
 type: story
 nature: feature
 title: The workflow file takes verify on a transition, runs on a state, and verify_at for the batch, the publish, and CI, and the baseline and the template's file give today's behaviour
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:03Z
-updated: 2026-11-17T11:37:08Z
+updated: 2026-11-18T07:32:38Z
 transitions:
   - to: ready
     at: 2026-11-17T07:46:59Z
@@ -15,11 +15,18 @@ transitions:
   - to: in-progress
     at: 2026-11-17T08:16:01Z
     by: agent-S-0806
+  - to: review
+    at: 2026-11-18T07:31:06Z
+    by: agent-S-0806
+  - to: done
+    at: 2026-11-18T07:32:38Z
+    by: orchestrator
 blocked:
   - from: 2026-11-17T09:44:40Z
     until: 2026-11-17T11:36:10Z
     reason: awaiting the operator on TH-1289
   - from: 2026-11-17T11:37:08Z
+    until: 2026-11-18T04:05:39Z
     reason: awaiting the operator on TH-1289
 tags: [flai, template]
 topics: [verify, workflow]
@@ -32,19 +39,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5318
-  priced_by: harness
+  seconds: 5907
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-17
       ceremony: 2
       work: 89
+    - day: 2026-11-18
+      ceremony: 1
+      work: 20
   models:
     - model: claude-opus-5-5
-      input: 476
-      output: 144064
-      cache_read: 38197178
-      cache_write: 1603608
-      cost: 20.9182
+      input: 522
+      output: 144483
+      cache_read: 39935126
+      cache_write: 1699811
+      cost: 21.8789
   strategic:
     - kind: planner
       seconds: 55
@@ -100,6 +111,7 @@ finalized:
 - T-3473 The workflow file's keys raise flai.minimum on publish, and flai upgrade keeps a project's file without them
 - T-3474 flai check reports a suite the workflow file names that no tier has, and a non-manual tier's suite nothing names
 - T-3477 The workflow design, the board runbook, and the check codes describe verify, runs, verify_at, and the suite findings
+- T-3608 A workflow file with none of verify, runs, and verify_at reads as the baseline's, and gets no workflow.suite-unnamed (TH-1289)
 
 ## Notes
 
@@ -130,3 +142,15 @@ Touches, file by file, no folder:
 Forecast: 1h20m, delivery 2026-11-17T06:15:00Z. `flai forecast` gave 45m with the 19 touches, from 110 s per unit of size times 24, and delivery 05:40Z. Raised to 1h20m: the five workflow stories of E-0034 most like this one, S-0737, S-0738, S-0741, S-0748, and S-0755, took 34m to 1h30m of agent time each, about 1h19m at the median, against forecasts of 29m to 53m. This one has as many parts: a parser, two equal files, a check, the minimum, and four documents. The delivery is flai's with the 35m added.
 
 Cost of delay: 110.09 USD a week, as `flai cod` gives it once the forecast is 1h20m: S-0806's share of E-0034's 1500 USD a week, from the operator's input there of 10h lost per cycle, weighted by its 1h20m against the 18h10m forecast over the epic's 20 open stories without inputs. It stands as flai gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 0b056ba1bb5d13009a36d92006f0fb4dada46f8a
+- At: 2026-11-18T07:32:38Z
+
+Verdict: all five criteria met at 0b056ba1bb5d13009a36d92006f0fb4dada46f8a; the close-out passed every step there.
+- 1: flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/fields.go, flai/internal/workflow/fields_test.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, flai/internal/workflow/baseline.go
+- 2: flai/internal/workflow/baseline/board.md, template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go, template/CHANGELOG.md
+- 3: flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go
+- 4: flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/fields_test.go, flai/internal/upgrade/upgrade_test.go
+- 5: design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, design/system/flai-cli.md, design/system/work-hierarchy.md

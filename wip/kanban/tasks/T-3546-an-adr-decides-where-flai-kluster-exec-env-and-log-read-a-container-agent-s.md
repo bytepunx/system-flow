@@ -3,11 +3,11 @@ id: T-3546
 type: task
 nature: research
 title: An ADR decides where flai kluster exec, env, and log read a container agent's namespace, and the operator accepts it
-status: in-progress
+status: done
 parent: S-0834
 owner: alex
 created: 2026-11-17T08:32:08Z
-updated: 2026-11-17T12:06:03Z
+updated: 2026-11-18T07:10:55Z
 transitions:
   - to: ready
     at: 2026-11-17T12:06:03Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T12:06:03Z
     by: agent-S-0834
+  - to: done
+    at: 2026-11-18T07:10:55Z
+    by: agent-S-0834
 stream: S-0834
 tags: [adr, kluster, container]
-touches: [design/adrs/README.md, design/system/kluster.md]
+touches: [design/adrs/README.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md]
 usage:
   source: log
   seconds: 118

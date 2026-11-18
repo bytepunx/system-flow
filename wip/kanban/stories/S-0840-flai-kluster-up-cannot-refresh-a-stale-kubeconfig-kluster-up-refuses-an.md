@@ -6,7 +6,7 @@ title: "flai kluster up cannot refresh a stale kubeconfig: kluster up refuses an
 status: in-progress
 owner: alex
 created: 2026-11-17T08:32:51Z
-updated: 2026-11-17T13:22:14Z
+updated: 2026-11-18T07:12:17Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-17T13:22:14Z
     by: agent-S-0840
+blocked:
+  - from: 2026-11-17T13:24:02Z
+    until: 2026-11-18T07:11:06Z
+    reason: awaiting the operator on TH-1305
+  - from: 2026-11-18T07:12:17Z
+    reason: awaiting the operator on TH-1305
 tags: [flai, kluster]
 topics: [kluster]
 touches: [flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, design/system/kluster.md, design/tech/kluster.md]
@@ -23,9 +29,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 144
+  priced_by: harness
+  turns:
+    - day: 2026-11-17
+      ceremony: 1
+      work: 12
+    - day: 2026-11-18
+      work: 5
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 8647
+      cache_read: 3371765
+      cache_write: 469588
+      cost: 4.6042
   strategic:
     - kind: planner
       seconds: 33
@@ -44,15 +63,15 @@ usage:
           cache_write: 69067
           cost: 1.705
     - kind: orchestrator
-      seconds: 54
+      seconds: 105
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 33
-          cache_read: 506640
-          cache_write: 11536
-          cost: 0.1622
+          input: 33
+          output: 249
+          cache_read: 1418111
+          cache_write: 168901
+          cost: 0.498
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m

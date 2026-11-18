@@ -3,14 +3,17 @@ id: S-0842
 type: story
 nature: remediation
 title: workitem's Item.Closed and PlanArchive read the baseline's done and cancelled names, so on a board that renames them flai accept moves a story to the accepted state and then cannot archive it
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:53Z
-updated: 2026-11-17T13:23:37Z
+updated: 2026-11-18T07:31:16Z
 transitions:
   - to: ready
     at: 2026-11-17T12:35:54Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-18T07:31:16Z
+    by: agent-S-0842
 tags: []
 topics: [workflow]
 touches: [flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/internal/workitem/store.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/workitem/store_test.go, flai/cmd/accept_workflow_test.go, flai/cmd/archive_test.go, design/system/workflow.md]

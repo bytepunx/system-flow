@@ -6,7 +6,7 @@ title: flai kluster exec and log read .flai-cache/kluster, which a story's agent
 status: in-progress
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-17T12:08:37Z
+updated: 2026-11-18T07:10:25Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
@@ -16,6 +16,7 @@ transitions:
     by: agent-S-0834
 blocked:
   - from: 2026-11-17T12:08:37Z
+    until: 2026-11-18T07:10:25Z
     reason: awaiting the operator on TH-1290
 tags: [flai, kluster, container]
 topics: [kluster, harness]
@@ -52,15 +53,15 @@ usage:
           cache_write: 76790
           cost: 2.9372
     - kind: orchestrator
-      seconds: 145
+      seconds: 166
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 411
-          cache_read: 2181230
-          cache_write: 256287
-          cost: 0.7584
+          input: 55
+          output: 474
+          cache_read: 2361438
+          cache_write: 329179
+          cost: 0.8379
         - model: claude-sonnet-5-5
           input: 3
           output: 21

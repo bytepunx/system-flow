@@ -12,6 +12,21 @@ transitions: []
 stream: S-0822
 tags: [flai, serve]
 touches: [flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 9
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 4
+          output: 18
+          cache_read: 121485
+          cache_write: 26992
+          cost: 0.0466
 ---
 # T-3520 settle reads the story again and records left review for a story no longer in review
 
