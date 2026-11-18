@@ -32,7 +32,9 @@ func (w Workflow) AwaitsAcceptance(typ, state string) bool {
 }
 
 // SendBack is the transition of type typ out of state from with the
-// send-back effect: where an item flai sends back goes.
+// send-back effect: where an item flai sends back goes, from review or from
+// a state whose runs fail (ADR-0312 §4); its To is the state it takes the
+// item to.
 func (w Workflow) SendBack(typ, from string) (Transition, bool) {
 	for _, t := range w.From(typ, from) {
 		if t.HasEffect(EffectSendBack) {

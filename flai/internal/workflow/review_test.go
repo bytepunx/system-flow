@@ -110,6 +110,33 @@ func TestReviewRoles(t *testing.T) {
 	}
 }
 
+// S-0810: a state that runs something sends a story back by its own
+// send-back transition: the baseline's review and integrationFlow's
+// integration each to in-progress, a state with none nowhere.
+func TestSendBackFromAStateThatRuns(t *testing.T) {
+	for _, c := range []struct {
+		name, from string
+		w          Workflow
+	}{
+		{"baseline", "review", Baseline()},
+		{"integration", "integration", mustParse(t, integrationFlow)},
+		{"integration by alias", "int", mustParse(t, integrationFlow)},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if c.w.StateRuns(c.from) == nil {
+				t.Fatalf("%s runs nothing", c.from)
+			}
+			tr, ok := c.w.SendBack(TypeStory, c.from)
+			if !ok || tr.To != "in-progress" || !tr.HasEffect(EffectSendBack) {
+				t.Errorf("SendBack(story, %s) = %+v %v, want the send-back to in-progress", c.from, tr, ok)
+			}
+			if _, ok := c.w.SendBack(TypeStory, "in-progress"); ok {
+				t.Error("SendBack(story, in-progress) found a move: no send-back leaves from it")
+			}
+		})
+	}
+}
+
 // S-0743: a state named by an alias awaits the acceptance as its state does.
 func TestAwaitsAcceptanceByAlias(t *testing.T) {
 	w := mustParse(t, renamedFlow)
