@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2270.9274
-accrued_seconds: 1580523
-tasks_completed: 4070
-last_run: 2026-11-21T17:49:15Z
+accrued_cost: 2272.6490
+accrued_seconds: 1580778
+tasks_completed: 4080
+last_run: 2026-11-21T18:34:49Z
 ---
 
 # Orchestrator activity
@@ -28529,6 +28529,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0810, TH-1314
 - Seconds: 76
 - Cost: 0.2948 USD, estimated
+
+### 2026-11-21T17:49:54Z
+
+- Summary: Published under threshold. The count was 1 with a threshold of 1; the value was 175.37 with a threshold of 1000. flai went from 1.109.0 to 1.110.0 (tag flai/v1.110.0). The template went from 1.1.47 to 1.1.48 and was pushed to system-flow-template at 2f681d5. Items: S-0810.
+- Items: S-0810
+- Seconds: 39
+- Cost: 0.0834 USD, estimated
+
+### 2026-11-21T17:50:15Z
+
+- Summary: I accepted S-0810 at `80152fc38e5e` and published it as flai 1.110.0 and template 1.1.48.
+- Items: none
+- Seconds: 21
+- Cost: 0.2473 USD, estimated
+
+### 2026-11-21T17:50:41Z
+
+- Summary: Did not publish after S-0810's acceptance: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD); S-0810 is already released in flai 1.110.0, template 1.1.48 (commit 3bb515758).
+- Items: S-0810
+- Seconds: 9
+- Cost: 0.0780 USD, estimated
+
+### 2026-11-21T17:50:58Z
+
+- Summary: I didn't publish anything for S-0810 because it is already released.
+- Items: none
+- Seconds: 17
+- Cost: 0.0951 USD, estimated
+
+### 2026-11-21T18:14:29Z
+
+- Summary: TH-1319 (S-0811) and TH-1320 (S-0812) are flai's send-back notices after rebase-and-resolve jobs alex asked for; their last entry is flai's, not a story agent's or planner's, and flai serve already restarted agent-S-0811 and agent-S-0812 to settle the conflicts. No reply, no move, no thread: nothing for the orchestrator to act on.
+- Items: S-0811, S-0812
+- Seconds: 9
+- Cost: 0.0732 USD, estimated
+
+### 2026-11-21T18:14:53Z
+
+- Summary: I took no action on TH-1319 or TH-1320, because neither is the orchestrator's to answer.
+- Items: none
+- Seconds: 24
+- Cost: 0.1990 USD, estimated
+
+### 2026-11-21T18:16:11Z
+
+- Summary: Resolved TH-1317 on S-0811. Its sync conflicts are settled, and story/S-0811 contains main at ccdb3f5. Close-out job S-0811-20261121T181502Z failed at the build, because suiteNames is declared twice. S-0811 is in progress with its agent's fix uncommitted, so there is nothing to accept yet.
+- Items: S-0811
+- Seconds: 21
+- Cost: 0.1183 USD, estimated
+
+### 2026-11-21T18:16:38Z
+
+- Summary: I resolved TH-1317, but S-0811 is not ready to accept yet: its latest close-out failed when building flai.
+- Items: none
+- Seconds: 27
+- Cost: 0.2412 USD, estimated
+
+### 2026-11-21T18:34:31Z
+
+- Summary: Reviewed S-0811 at 1c58c4b: close-out passed, verifier found all 4 criteria met, but accept's dry run is blocked by undoes_main on design/system/workflow.md and docs/operators/runbooks/change-the-board.md (rewrites of the 'nothing else reads the keys' sentence); left in review and opened TH-1321 recommending the operator accept with --keep-removal
+- Items: S-0811, TH-1321
+- Seconds: 70
+- Cost: 0.3303 USD, estimated
+
+### 2026-11-21T18:34:49Z
+
+- Summary: I could not accept S-0811, so it stays in review. One flai blocker stops it, and only you can clear it.
+- Items: none
+- Seconds: 18
+- Cost: 0.2558 USD, estimated
 
 ## Refusals
 

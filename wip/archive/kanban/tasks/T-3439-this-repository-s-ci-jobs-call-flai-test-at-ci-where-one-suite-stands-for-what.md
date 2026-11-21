@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 10528
-      cache_read: 2588908
-      cache_write: 92328
-      cost: 1.3034
+      input: 28
+      output: 7167
+      cache_read: 2574836
+      cache_write: 80563
+      cost: 1.2059
 ---
 # T-3439 This repository's CI jobs call flai test --at ci where one suite stands for what the job ran, and the CI design says which keep their own commands and why
 

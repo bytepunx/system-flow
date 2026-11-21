@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 375.2441
-accrued_seconds: 41419
-tasks_completed: 263
-last_run: 2026-11-21T17:22:30Z
+accrued_cost: 377.3139
+accrued_seconds: 41630
+tasks_completed: 264
+last_run: 2026-11-21T17:52:31Z
 ---
 
 # Curator activity
@@ -2115,3 +2115,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0324, D-0332, D-0333, D-0335, D-0341, D-0345, D-0346, D-0347, D-0348, D-0353, D-0355, D-0357, D-0358, D-0364, D-0366, D-0671, D-0672
 - Seconds: 123
 - Cost: 1.8275 USD, estimated
+
+### 2026-11-21T17:52:31Z
+
+- Summary: I wrote 2 new digest entries (D-0673, D-0674) and merged S-0810 into 2 existing ones (D-0656, D-0664); nothing was absorbed or compacted.
+- Trigger: accepted S-0810
+- Items: D-0656, D-0664, D-0671, D-0672, D-0673, D-0674
+- Seconds: 211
+- Cost: 2.0698 USD, estimated

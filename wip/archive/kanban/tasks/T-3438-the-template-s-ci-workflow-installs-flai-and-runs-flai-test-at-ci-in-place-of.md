@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 8894
-      cache_read: 2186984
-      cache_write: 77994
-      cost: 1.101
+      input: 23
+      output: 6055
+      cache_read: 2175097
+      cache_write: 68056
+      cost: 1.0187
 ---
 # T-3438 The template's CI workflow installs flai and runs flai test --at ci in place of commands of its own
 

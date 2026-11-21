@@ -7,7 +7,7 @@ status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-18T09:07:52Z
+updated: 2026-11-21T18:32:45Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
@@ -18,9 +18,15 @@ transitions:
   - to: review
     at: 2026-11-18T09:07:52Z
     by: agent-S-0811
+  - to: in-progress
+    at: 2026-11-21T18:13:45Z
+    by: flai
+  - to: review
+    at: 2026-11-21T18:32:45Z
+    by: agent-S-0811
 tags: [flai, template]
 topics: [verify, workflow, release]
-touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go]
+touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go, design/issues/I-0408-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -29,23 +35,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3409
+  seconds: 4551
   priced_by: harness
   turns:
     - day: 2026-11-18
       ceremony: 1
       work: 66
     - day: 2026-11-21
-      ceremony: 3
-      test_runs: 1
-      work: 4
+      ceremony: 7
+      test_runs: 4
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 386
-      output: 94562
-      cache_read: 25442934
-      cache_write: 734962
-      cost: 11.8159
+      input: 472
+      output: 111254
+      cache_read: 29115974
+      cache_write: 814611
+      cost: 13.5219
   strategic:
     - kind: planner
       seconds: 40
@@ -64,21 +70,21 @@ usage:
           cache_write: 94362
           cost: 2.9176
     - kind: orchestrator
-      seconds: 281
+      seconds: 377
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 68
-          output: 531
-          cache_read: 2602285
-          cache_write: 284779
-          cost: 0.903
+          input: 99
+          output: 702
+          cache_read: 3777394
+          cache_write: 487634
+          cost: 1.3398
         - model: claude-sonnet-5-5
-          input: 6
-          output: 56
-          cache_read: 48153
-          cache_write: 39555
-          cost: 0.0709
+          input: 12
+          output: 139
+          cache_read: 83096
+          cache_write: 64073
+          cost: 0.1193
 cost_of_delay:
   value: 90.11
   by: planner-S-0811
@@ -146,3 +152,4 @@ Touches, all files, no folder:
 Forecast 34m, delivery 2026-11-17T03:02:00Z, as `flai forecast` gives it with the 14 touches. The first figure, 8m, counted no touches. Kept as computed: the work is one command's path, one exit mapping, one formula in two copies, and four documents, the size of the large band's stories.
 
 Cost of delay 90.11 USD a week, as `flai cod` gives it: S-0811's share of E-0034's 1500.00 USD a week, 34m of 9h26m over the epic's 20 open stories without inputs. Kept: this repository's own workflow file names no `publish` (ADR-0312 §8), so nothing here runs sooner for it, and no reason argues for more or less than its share.
+- 2026-11-21T18:13:45Z: moved to in-progress: rebase and resolve job S-0811-20261121T181345Z: the rebase of story/S-0811 onto main stopped on conflicts in design/system/workflow.md, docs/operators/runbooks/change-the-board.md, which still waits in the worktree: a rebase of story/S-0811 was already in progress in /home/alex/git/bytepunx/system-flow/.flai-cache/worktrees/S-0811, which flai left as it found it; its agent settles it in the worktree and syncs it with flai stream sync S-0811

@@ -4,10 +4,10 @@ title: S-0812 passed review, but the acceptance stops on a lint error in D-0671,
 anchor:
   path: wip/kanban/stories/S-0812-flai-test-at-ci-runs-the-suites-verify-at-ci-lists-and-the-template-s-and-this.md
   item: S-0812
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-18T09:17:45Z
-updated: 2026-11-18T09:17:45Z
+updated: 2026-11-21T18:36:21Z
 ---
 
 # TH-1309 S-0812 passed review, but the acceptance stops on a lint error in D-0671, an uncommitted digest entry on main
@@ -34,3 +34,6 @@ D-0671 is untracked (`??`) on main. It looks like the curator wrote it with `fla
 - The accept dry run named no blocker.
 
 S-0812 stays in review. I changed nothing.
+
+### 2026-11-21T18:36:21Z orchestrator
+Resolved: D-0671 is now tracked on main and scripts/lint-md.sh finds 0 errors in it; the MD028 finding that stopped the acceptance is gone.

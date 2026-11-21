@@ -3,11 +3,11 @@ id: S-0812
 type: story
 nature: feature
 title: flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:08Z
-updated: 2026-11-18T09:15:42Z
+updated: 2026-11-21T18:36:34Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:41Z
@@ -18,9 +18,18 @@ transitions:
   - to: review
     at: 2026-11-18T09:15:42Z
     by: agent-S-0812
+  - to: in-progress
+    at: 2026-11-21T18:13:57Z
+    by: flai
+  - to: review
+    at: 2026-11-21T18:35:14Z
+    by: agent-S-0812
+  - to: done
+    at: 2026-11-21T18:36:34Z
+    by: orchestrator
 tags: [flai, template]
 topics: [verify, workflow]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, docs/operators/runbooks/change-the-board.md]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, docs/users/flai-reference.md, docs/operators/settings.md, template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh, ".github/workflows/system-flow-check.yml", ".github/workflows/flai.yml", ".github/workflows/flaiover.yml", design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md, docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, docs/operators/runbooks/change-the-board.md, design/issues/I-0409-a-rebase-stops-on-a-go-test-file-where-two-stories-each-appended-a-test-at-the.md, design/issues/summary.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -29,20 +38,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2743
+  seconds: 4016
   priced_by: harness
   turns:
     - day: 2026-11-18
       ceremony: 1
       test_runs: 1
       work: 59
+    - day: 2026-11-21
+      ceremony: 5
+      test_runs: 1
+      work: 35
   models:
     - model: claude-opus-5-5
-      input: 330
-      output: 93918
-      cache_read: 23094915
-      cache_write: 823632
-      cost: 11.6272
+      input: 418
+      output: 107918
+      cache_read: 38768795
+      cache_write: 1213019
+      cost: 18.1574
   strategic:
     - kind: planner
       seconds: 15
@@ -55,15 +68,15 @@ usage:
           cache_write: 29002
           cost: 0.7049
     - kind: orchestrator
-      seconds: 118
+      seconds: 122
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 212
-          cache_read: 1032589
-          cache_write: 111616
-          cost: 0.3574
+          input: 25
+          output: 231
+          cache_read: 1111994
+          cache_write: 147752
+          cost: 0.394
         - model: claude-sonnet-5-5
           input: 4
           output: 30
@@ -131,3 +144,15 @@ Touches. The story declared none. Each one below is a file, and no folder touch 
 Forecast: 50m, delivery 2026-11-17T03:28:00Z, as `flai forecast` gives it with the touches above: size 27 at the median 110 s per unit. Before the touches, it gave 8m at size 4. It stands. About half the size is docs and CI files, which go fast, and the close-out runs integration and smoke because the story touches `flai/` and `template/`. The delivery assumes the 14 stories ahead are pulled in order.
 
 Cost of delay: 115.74 USD a week, as `flai cod` gives it. That is this story's share of E-0034's 1500 USD a week (the operator's 10h lost per cycle), by its 50m of the epic's 10h48m forecast over its 20 open stories without inputs. It stands: the story has no inputs of its own.
+- 2026-11-21T18:13:57Z: moved to in-progress: rebase and resolve job S-0812-20261121T181356Z: the rebase of story/S-0812 onto main stopped on conflicts in flai/internal/verify/select_test.go, which flai aborted, so the branch is as it was; its agent settles it in the worktree and syncs it with flai stream sync S-0812
+
+### Accepted by the orchestrator
+
+- Verified: 557cc934e0759bbb2cc1b675ea9517dc78620d1b
+- At: 2026-11-21T18:36:34Z
+
+Verdict: met; all four criteria are met by the diff at 557cc934e0759bbb2cc1b675ea9517dc78620d1b, and every changed file is within the story's touches.
+- 1: flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, flai/internal/workflow/suites.go, flai/internal/workflow/suites_test.go, docs/users/flai-reference.md, docs/operators/settings.md
+- 2: template/root/.github/workflows/system-flow-check.yml, template/CHANGELOG.md, design/system/template.md, flai/cmd/new_test.go, scripts/template-test.sh
+- 3: .github/workflows/system-flow-check.yml, .github/workflows/flai.yml, .github/workflows/flaiover.yml, design/tech/ci.md, design/system/devex.md, design/conventions/code-quality.md
+- 4: docs/users/flai.md, design/system/flai-cli.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md

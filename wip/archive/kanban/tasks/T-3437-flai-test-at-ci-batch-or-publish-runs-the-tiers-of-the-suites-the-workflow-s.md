@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 12846
-      cache_read: 3158798
-      cache_write: 112652
-      cost: 1.5903
+      input: 34
+      output: 8745
+      cache_read: 3141628
+      cache_write: 98297
+      cost: 1.4714
 ---
 # T-3437 flai test --at ci, batch, or publish runs the tiers of the suites the workflow's verify_at lists, over all paths
 

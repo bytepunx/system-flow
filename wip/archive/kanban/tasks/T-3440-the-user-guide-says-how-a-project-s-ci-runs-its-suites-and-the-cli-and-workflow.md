@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 10221
-      cache_read: 2513437
-      cache_write: 89636
-      cost: 1.2654
+      input: 27
+      output: 6958
+      cache_read: 2499775
+      cache_write: 78214
+      cost: 1.1708
 ---
 # T-3440 The user guide says how a project's CI runs its suites, and the CLI and workflow design describe flai test --at
 
