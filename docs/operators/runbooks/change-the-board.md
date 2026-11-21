@@ -151,7 +151,7 @@ Since S-0807 a story's move and its close-out read `verify` ([The move needs the
 
 Since S-0810 a state's `runs` decides what `flai serve` runs when a story enters the state, as [run suites and the cluster in a state](#run-suites-and-the-cluster-in-a-state) says.
 
-Nothing else reads the keys yet: the acceptance's gates, the batch, the publish, and CI run as they did; later releases make each read them.
+Nothing else reads the keys yet but a state's `runs` since S-0810: the acceptance's gates, the batch, the publish, and CI run as they did; later releases make each read them.
 
 The keys need a flai that knows them. The first publish from the flai release that carries them raises `flai.minimum` in `system-flow.yaml`, and from then an older flai stops before it reads the file, naming the release to install ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)). Before that publish, an older flai refuses a file that uses them with its parse error, an unknown field.
 
