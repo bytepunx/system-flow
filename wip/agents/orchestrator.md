@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2272.6490
-accrued_seconds: 1580778
-tasks_completed: 4080
-last_run: 2026-11-21T18:34:49Z
+accrued_cost: 2272.8989
+accrued_seconds: 1580829
+tasks_completed: 4081
+last_run: 2026-11-21T18:36:51Z
 ---
 
 # Orchestrator activity
@@ -28599,6 +28599,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.2558 USD, estimated
+
+### 2026-11-21T18:36:51Z
+
+- Summary: Accepted S-0812 at 557cc934e0759bbb2cc1b675ea9517dc78620d1b under accept_reviews: close-out passed at the head, verifier found all 4 criteria met; resolved own TH-1309 first since D-0671 now lints clean. Overlaps reported to S-0811, S-0834, S-0839.
+- Items: S-0812, TH-1309
+- Seconds: 51
+- Cost: 0.2499 USD, estimated
 
 ## Refusals
 

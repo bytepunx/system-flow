@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-21T18:36:35Z
+updated: 2026-11-21T18:36:48Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0811](S-0811.md) | The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails | review | agent-S-0811 | 2026-11-21T18:32:42Z |
+| [S-0811](S-0811.md) | The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails | in-progress | agent-S-0811 | 2026-11-21T18:32:42Z |
 | [S-0834](S-0834.md) | flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount | review | agent-S-0834 | 2026-11-18T08:30:21Z |
 | [S-0839](S-0839.md) | No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand | review | agent-S-0839 | 2026-11-18T10:01:45Z |
 | [S-0843](S-0843.md) | Callers of the workflow-aware guard, forecast replay, and share hold still pass the baseline, so a project's own workflow file will not reach them | review | agent-S-0843 | 2026-11-18T11:06:28Z |
