@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2270.6326
-accrued_seconds: 1580447
-tasks_completed: 4069
-last_run: 2026-11-21T17:21:55Z
+accrued_cost: 2270.9274
+accrued_seconds: 1580523
+tasks_completed: 4070
+last_run: 2026-11-21T17:49:15Z
 ---
 
 # Orchestrator activity
@@ -28522,6 +28522,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.1182 USD, estimated
+
+### 2026-11-21T17:49:15Z
+
+- Summary: Resolved TH-1314: the D-0671 lint blocker is gone, and lint-md reports 0 errors. Accepted S-0810 at 80152fc38e5e, the head of story/S-0810. The close-out passed every step, the verifier found all 5 criteria met, and the dry run's only blocker was TH-1314. Overlaps were reported to S-0811, S-0812, S-0834, S-0839, and S-0843. Value 175.37 USD a week.
+- Items: S-0810, TH-1314
+- Seconds: 76
+- Cost: 0.2948 USD, estimated
 
 ## Refusals
 

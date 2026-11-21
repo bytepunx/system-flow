@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.48 - 2026-11-21
+
+- S-0810 flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails (patch).
 - S-0810 The board's workflow file says that a state's `runs` starts flai serve's state job when a story enters the state, which runs its suites and the cluster's steps and sends the story back when one fails (patch, ADR-0312).
 
 ## 1.1.47 - 2026-11-18
