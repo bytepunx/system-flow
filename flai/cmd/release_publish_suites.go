@@ -62,8 +62,8 @@ func publishSuites(repo *workitem.Repo) *workflow.Suites {
 	return repo.Flow().VerifyAt.Publish
 }
 
-// suiteNames is the suites s names as its file gives them: all, or the list.
-func suiteNames(s *workflow.Suites) []string {
+// publishSuiteNames is the suites s names as its file gives them: all, or the list.
+func publishSuiteNames(s *workflow.Suites) []string {
 	if s.All {
 		return []string{workflow.SuitesAll}
 	}
@@ -97,7 +97,7 @@ func (a *app) previewPublishSuites(repo *workitem.Repo) *publishSuitesPreview {
 	if s == nil {
 		return nil
 	}
-	p := &publishSuitesPreview{Suites: suiteNames(s), WouldRun: []suiteTier{}}
+	p := &publishSuitesPreview{Suites: publishSuiteNames(s), WouldRun: []suiteTier{}}
 	tiers, err := verify.CheckoutTiersFor(repo.Root, a.runner, buildinfo.Version)
 	if err != nil {
 		p.Error = err.Error()
@@ -153,7 +153,7 @@ func (a *app) runPublishSuites(repo *workitem.Repo) (*publishSuitesRun, error) {
 	}
 	root := repo.Root
 	file := repo.Flow().Path
-	run := &publishSuitesRun{Suites: suiteNames(s), Tiers: []publishTier{}}
+	run := &publishSuitesRun{Suites: publishSuiteNames(s), Tiers: []publishTier{}}
 	head, err := a.runner.Run(root, "git", "rev-parse", "HEAD")
 	if err != nil {
 		return run, &exitError{code: exitReleaseSuiteFailed, msg: fmt.Sprintf("publish refused: read the head of %s to run verify_at.publish's suites %s at: %s; nothing was applied, committed, tagged, or pushed", root, strings.Join(run.Suites, ", "), firstLine(err.Error()))}
