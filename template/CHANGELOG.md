@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0812 The template's CI workflow, `.github/workflows/system-flow-check.yml`, installs flai with `install.sh`, runs `flai check --strict`, then `flai test --at ci`, the suites the workflow file's `verify_at` names for ci, in place of its markdownlint step and its `go install` (patch, ADR-0312).
+
 ## 1.1.48 - 2026-11-21
 
 - S-0810 flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails (patch).
@@ -11,7 +13,6 @@
 
 - S-0807 A story's move needs the suites its transition's verify lists to have passed at its head, and the close-out runs the suites its next transitions need (patch).
 - S-0807 The close-out runs the tiers of the suites the story's next moves need, those the `verify` of each move out of its state in `design/workflows/board.md` lists, or every suite when one gives `all` or none gives `verify`, as the baseline's move to review does, so on the baseline it runs every tier its paths select as before; `work-management.md` and `delegation.md` say so and that the move to review runs the rule `verified`, and `scripts/close-out.sh`'s comments say what `--all` and the tiers now cover (patch, ADR-0312).
-- S-0812 The template's CI workflow, `.github/workflows/system-flow-check.yml`, installs flai with `install.sh`, runs `flai check --strict`, then `flai test --at ci`, the suites the workflow file's `verify_at` names for ci, in place of its markdownlint step and its `go install` (patch, ADR-0312).
 
 ## 1.1.46 - 2026-11-18
 
