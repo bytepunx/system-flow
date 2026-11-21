@@ -6,7 +6,7 @@ title: flai serve's auto-upgrade restart interrupts the close-out jobs it was ru
 status: ready
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-21T17:20:22Z
+updated: 2026-11-21T17:48:53Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -82,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:08Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-21T20:39:00Z
+  delivery: 2026-11-21T21:07:00Z
   basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0847, S-0808 and S-0844."
   by: flai
-  at: 2026-11-21T17:20:22Z
+  at: 2026-11-21T17:48:53Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z
