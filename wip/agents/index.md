@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-21T17:20:22Z
+updated: 2026-11-21T17:20:30Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0810](S-0810.md) | flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails | review | agent-S-0810 | 2026-11-18T11:23:23Z |
+| [S-0810](S-0810.md) | flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails | in-progress | agent-S-0810 | 2026-11-18T11:23:23Z |
 | [S-0811](S-0811.md) | The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails | review | agent-S-0811 | 2026-11-18T09:07:44Z |
 | [S-0812](S-0812.md) | flai test --at ci runs the suites verify_at.ci lists, and the template's and this repository's CI call it | review | agent-S-0812 | 2026-11-18T09:15:38Z |
 | [S-0834](S-0834.md) | flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount | review | agent-S-0834 | 2026-11-18T08:30:21Z |

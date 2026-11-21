@@ -3,11 +3,11 @@ id: S-0810
 type: story
 nature: feature
 title: flai serve runs a state's suites and the cluster's deploy and checks as a job when a story enters it, skips the cluster's steps where none is configured, and sends the story back when a step fails
-status: review
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:06Z
-updated: 2026-11-18T11:23:13Z
+updated: 2026-11-21T17:20:30Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:12Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-18T11:23:13Z
     by: agent-S-0810
+  - to: in-progress
+    at: 2026-11-21T17:20:30Z
+    by: flai
 tags: [flai]
 topics: [verify, workflow, kluster]
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/transition.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/move.go, flai/cmd/move_workflow_test.go, flai/internal/workflow/runs.go, flai/internal/workflow/runs_test.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/serve.go, flai/internal/serve/agents_restart.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/sendback/sendback.go, flai/internal/sendback/sendback_test.go, flai/cmd/verify.go, flai/internal/verify/story.go, docs/users/flai-reference.md, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, design/system/kluster.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/change-the-board.md, docs/operators/settings.md, flai/cmd/verify_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_restart_test.go, flai/internal/serve/verifyjob.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story_test.go, flai/internal/workflow/baseline/board.md, template/CHANGELOG.md, template/root/design/workflows/board.md]
@@ -146,3 +149,4 @@ Task layers:
 2. T-3482 (the state job, its rebase, suites, record, and send-back), after T-3479, whose accessors it reads.
 3. T-3484 (the `kluster:` steps and skips in the job, and no deploy on review in code), after T-3482, whose `statejob.go` it extends.
 4. T-3487 (the design and the guides), after T-3475 and T-3484, whose behaviour it describes.
+- 2026-11-21T17:20:30Z: moved to in-progress: rebase and resolve job S-0810-20261121T172029Z: the rebase of story/S-0810 onto main stopped on conflicts in flai/cmd/move_workflow_test.go, flai/internal/workitem/rules_test.go, which flai aborted, so the branch is as it was; its agent settles it in the worktree and syncs it with flai stream sync S-0810
