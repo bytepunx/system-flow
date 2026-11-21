@@ -2,9 +2,9 @@
 id: D-0664
 title: A send back by hand opens its thread by flai with storygit.SentBackPrefix, so flai serve's startAcceptSentBack and resolveAcceptSentBack start and resolve it as an acceptance's send back, and tell the two apart by the title's by-hand suffix with sendback.ByHandMover
 kind: decision
-sources: [S-0823, I-0397]
+sources: [S-0823, I-0397, S-0810]
 topics: [flai, cli, go, code]
-paths: [flai/internal/sendback/sendback.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go]
+paths: [flai/internal/sendback/sendback.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/statejob.go, flai/internal/harness/harness.go]
 date: 2026-11-17
 status: active
 absorbed_by: ""
@@ -23,3 +23,13 @@ And, from the same Decisions:
 > T-3543: serve tells a send back by hand from an acceptance's by its thread's title (sendback.ByHandMover) inside startAcceptSentBack, rather than a new loop, since that loop already starts and resolves every open Acceptance sent back thread by flai. A by-hand move that writes on an acceptance's thread still open keeps that thread's acceptance wording.
 
 So a later story that adds another kind of send back can reuse that loop the same way: open the thread by `storygit.SentBackAuthor` with `storygit.SentBackPrefix`, and mark its kind in the title, as `sendback.ByHandSuffix` does in `flai/internal/sendback/sendback.go`. A story that changes the prefix or the author changes what the loop picks up. What the operator sees is in `design/system/flai-cli.md` (`flai move`) and `design/system/workflow.md` § Transitions and who makes them.
+
+S-0810 did just that for the state job's send back. From its Decisions (`wip/archive/agents/S-0810.md`):
+
+> The send-back thread title is sendback.StateJobTitle, under storygit.SentBackPrefix so startAcceptSentBack picks it up (D-0664's pattern).
+>
+> T-3482 review: harness.SentBack gained State, so the restart prompt of a story a state job sent back names that state and says the thread resolves once the story is back there, not that it is accepted again.
+
+So a new kind of send back that returns the story to a state other than review also sets `harness.SentBack.State` in `flai/internal/harness/harness.go`, else the agent's restart prompt says the thread resolves on acceptance.
+
+Sources: S-0823's and S-0810's narratives, § Decisions; I-0397.
