@@ -6,8 +6,8 @@ sources: [S-0792, TH-1220, I-0378]
 topics: [acceptance, verify, flai]
 paths: [flai/internal/preview/accept.go, flai/cmd/accept.go, design/adrs/0303-an-acceptance-s-verify-behind-main-sends-back-only-the-tiers-selected-by-the.md]
 date: 2026-11-15
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0303-an-acceptance-s-verify-behind-main-sends-back-only-the-tiers-selected-by-the.md#decision"
 asked_again: []
 cited: [TH-1237]
 ---

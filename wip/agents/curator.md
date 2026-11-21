@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 377.3139
-accrued_seconds: 41630
-tasks_completed: 264
-last_run: 2026-11-21T17:52:31Z
+accrued_cost: 378.0434
+accrued_seconds: 41699
+tasks_completed: 265
+last_run: 2026-11-21T18:37:49Z
 ---
 
 # Curator activity
@@ -2123,3 +2123,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0656, D-0664, D-0671, D-0672, D-0673, D-0674
 - Seconds: 211
 - Cost: 2.0698 USD, estimated
+
+### 2026-11-21T18:37:49Z
+
+- Summary: Wrote no entries. Merged none. Absorbed D-0633 into ADR-0303 § Decision, since installed flai 1.110.0 carries S-0792. Compact compacted none. The 8 harvested S-0812 decisions were plan, progress, or already in `docs/users/flai.md`, `design/system/workflow.md`, `design/system/template.md` and `design/tech/ci.md`.
+- Trigger: accepted S-0812
+- Items: D-0633, D-0671
+- Seconds: 69
+- Cost: 0.7295 USD, estimated

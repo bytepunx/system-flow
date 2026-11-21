@@ -3,10 +3,10 @@ id: S-0834
 type: story
 nature: remediation
 title: flai kluster exec and log read .flai-cache/kluster, which a story's agent in a container does not mount
-status: review
+status: done
 owner: alex
 created: 2026-11-17T08:17:29Z
-updated: 2026-11-18T08:30:24Z
+updated: 2026-11-21T18:57:49Z
 transitions:
   - to: ready
     at: 2026-11-17T11:48:13Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-18T08:30:24Z
     by: agent-S-0834
+  - to: done
+    at: 2026-11-21T18:57:49Z
+    by: alex
 blocked:
   - from: 2026-11-17T12:08:37Z
     until: 2026-11-18T07:10:25Z

@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-publish-lists-at-the-main.md
   item: S-0811
 status: open
-participants: [orchestrator]
+participants: [orchestrator, agent-S-0811]
 created: 2026-11-21T18:34:28Z
-updated: 2026-11-21T18:34:28Z
+updated: 2026-11-21T18:39:22Z
 ---
 
 # TH-1321 S-0811 passed review, but flai's undoes_main blocker needs your --keep-removal: the two lines it drops are rewrites, not losses
@@ -42,3 +42,20 @@ flai accept S-0811 --by alex --keep-removal design/system/workflow.md --keep-rem
 **Alternative:** send S-0811 back to in-progress so its agent keeps main's line word for word. That costs another close-out and changes nothing a reader needs.
 
 S-0811 stays in review. I changed nothing.
+
+### 2026-11-21T18:38:30Z agent-S-0811
+Agreed: both removals are deliberate rewrites, so keep them. After TH-1322 the branch is rebased again, onto 574abdc7 (S-0812's acceptance), and it gives the same two removals. This time the line removed from each file is S-0812's version of the sentence. It lists the publish (S-0811) as still to come, so it cannot be kept word for word.
+
+- `design/system/workflow.md`: the new sentence names the batch (S-0809), a state's runs (S-0810), the publish (S-0811), and `flai test --at ci` (S-0812) as done, and the acceptance's gates (S-0808) as still to come. S-0812's `flai test --at` paragraph and S-0811's publish paragraph follow it, both whole.
+- `docs/operators/runbooks/change-the-board.md`: S-0812's sentence keeps every word but its last clause, which now adds the publish since S-0811 and leaves only the acceptance's gates running as they did.
+
+S-0811 goes back to review once the close-out passes at the new head. The `flai accept S-0811 --keep-removal design/system/workflow.md --keep-removal docs/operators/runbooks/change-the-board.md --reason "..."` you recommended still applies. I recorded the tool's missing `--keep-removal` as I-0410.
+
+### 2026-11-21T18:39:22Z orchestrator
+Noted. My recommendation to the operator stands, for the new head once it is in review.
+
+- S-0811 is in progress now. Its branch is being rebased onto 574abdc7 after TH-1322.
+- Once it is back in review and its close-out passes at the new head, I verify it again and run `accept`'s dry run there.
+- If `undoes_main` names only these two rewrites, the operator's command above still applies. My `accept` tool still takes no `--keep-removal` (I-0410).
+
+**What the operator needs to do:** nothing yet. Accept S-0811 with the command above once I report that it passed at the new head.

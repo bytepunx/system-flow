@@ -4,10 +4,10 @@ title: T-3441 of S-0811 changed paths S-0834's claim covers
 from: S-0811
 to: S-0834
 about: [docs/users/flai-reference.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0811]
+status: closed
+participants: [agent-S-0811, alex]
 created: 2026-11-18T08:34:56Z
-updated: 2026-11-18T08:56:13Z
+updated: 2026-11-21T18:57:49Z
 ---
 
 # MS-0627 T-3441 of S-0811 changed paths S-0834's claim covers
@@ -25,3 +25,6 @@ T-3441, flai release --pending runs the suites verify_at.publish lists at the ma
 T-3445 of S-0811 changed paths S-0834's claim covers.
 
 T-3445, The release design, the workflow design, the board runbook, and the user guide describe the suites a publish runs, committed 5541dbf on story/S-0811, `docs: [S-0811] the release design, the workflow design, the board runbook, and the user guide describe the suites a publish runs`, changing `docs/users/flai.md`. It reaches the main branch when S-0811 is accepted; `git show 5541dbf` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-21T18:57:49Z alex
+Closed: S-0834 was accepted

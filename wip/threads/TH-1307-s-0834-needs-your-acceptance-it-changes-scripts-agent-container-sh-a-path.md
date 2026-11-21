@@ -4,10 +4,10 @@ title: "S-0834 needs your acceptance: it changes scripts/agent-container.sh, a p
 anchor:
   path: wip/kanban/stories/S-0834-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md
   item: S-0834
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-18T08:35:20Z
-updated: 2026-11-18T08:35:20Z
+updated: 2026-11-21T18:57:49Z
 ---
 
 # TH-1307 S-0834 needs your acceptance: it changes scripts/agent-container.sh, a path Claude Code protects
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0834-flai-kluster-exec-and-log-read-flai-cache-kluster-w
 - All 25 changed paths are under the story's touches.
 
 **The second blocker:** `verify_behind_main`. Main has moved since the close-out at 533a5c0, and 9 of the paths it brought in overlap the story's changes. I asked flai serve for a new close-out: job S-0834-20261118T083512Z. Accept once that job passes.
+
+### 2026-11-21T18:57:49Z alex
+Resolved: S-0834 was accepted

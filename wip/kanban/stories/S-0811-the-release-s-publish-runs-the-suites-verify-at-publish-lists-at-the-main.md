@@ -3,11 +3,11 @@ id: S-0811
 type: story
 nature: feature
 title: The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-21T18:36:48Z
+updated: 2026-11-21T18:49:20Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
@@ -27,9 +27,12 @@ transitions:
   - to: in-progress
     at: 2026-11-21T18:36:48Z
     by: flai
+  - to: review
+    at: 2026-11-21T18:49:20Z
+    by: agent-S-0811
 tags: [flai, template]
 topics: [verify, workflow, release]
-touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go, design/issues/I-0408-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md]
+touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go, design/issues/I-0408-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md, design/issues/I-0410-the-orchestrator-s-accept-takes-no-keep-removal-so-a-story-that-rewrites-a-line.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -38,7 +41,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4551
+  seconds: 5305
   priced_by: harness
   turns:
     - day: 2026-11-18
@@ -46,15 +49,15 @@ usage:
       work: 66
     - day: 2026-11-21
       ceremony: 7
-      test_runs: 4
-      work: 36
+      test_runs: 5
+      work: 61
   models:
     - model: claude-opus-5-5
-      input: 472
-      output: 111254
-      cache_read: 29115974
-      cache_write: 814611
-      cost: 13.5219
+      input: 526
+      output: 121307
+      cache_read: 33170462
+      cache_write: 851427
+      cost: 14.8286
   strategic:
     - kind: planner
       seconds: 40
@@ -73,15 +76,15 @@ usage:
           cache_write: 94362
           cost: 2.9176
     - kind: orchestrator
-      seconds: 377
+      seconds: 426
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 99
-          output: 702
-          cache_read: 3777394
-          cache_write: 487634
-          cost: 1.3398
+          input: 125
+          output: 872
+          cache_read: 4593824
+          cache_write: 637068
+          cost: 1.6463
         - model: claude-sonnet-5-5
           input: 12
           output: 139

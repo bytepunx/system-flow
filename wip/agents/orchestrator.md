@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2272.8989
-accrued_seconds: 1580829
-tasks_completed: 4081
-last_run: 2026-11-21T18:36:51Z
+accrued_cost: 2274.0985
+accrued_seconds: 1581007
+tasks_completed: 4090
+last_run: 2026-11-21T18:50:40Z
 ---
 
 # Orchestrator activity
@@ -28606,6 +28606,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0812, TH-1309
 - Seconds: 51
 - Cost: 0.2499 USD, estimated
+
+### 2026-11-21T18:37:21Z
+
+- Summary: Published under threshold (count 1 of threshold 1, value 115.74 USD/week of 1000): flai 1.110.0 to 1.111.0 (tag flai/v1.111.0), template 1.1.48 to 1.1.49 (system-flow-template v1.1.49, 0b5a352); bundled S-0812; pushed.
+- Items: S-0812
+- Seconds: 30
+- Cost: 0.0659 USD, estimated
+
+### 2026-11-21T18:37:42Z
+
+- Summary: I accepted S-0812 and published it as flai 1.111.0 and template 1.1.49.
+- Items: none
+- Seconds: 21
+- Cost: 0.1869 USD, estimated
+
+### 2026-11-21T18:38:00Z
+
+- Summary: Release-due for S-0812: did not publish. release_evaluate under threshold is not met: count 0 of 1, value 0 of 1000 USD, nothing pending (no accepted story awaits a release). TH-1322 left alone: its last entry is flai serve's notice for S-0811's agent, which settles the rebase conflicts.
+- Items: S-0812, S-0811
+- Seconds: 10
+- Cost: 0.0721 USD, estimated
+
+### 2026-11-21T18:38:19Z
+
+- Summary: I published nothing and made no changes. There was nothing to release, and TH-1322 is a job for S-0811's agent, not for me.
+- Items: none
+- Seconds: 19
+- Cost: 0.1867 USD, estimated
+
+### 2026-11-21T18:39:22Z
+
+- Summary: Answered TH-1321, citing no source
+- Items: S-0811
+- Seconds: 18
+- Cost: 0.0737 USD, estimated
+
+### 2026-11-21T18:39:36Z
+
+- Summary: TH-1321: noted agent-S-0811's agreement that the two undoes_main removals are rewrites; S-0811 is back in progress after TH-1322's rebase, so nothing to verify or accept now; my recommendation that the operator accept with --keep-removal stands for the new head once it is in review (accept tool lacks --keep-removal, I-0410)
+- Items: S-0811, TH-1321
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-21T18:39:57Z
+
+- Summary: S-0811 can't be accepted yet: it is back in progress, so there is nothing to verify or accept on TH-1321 for now.
+- Items: none
+- Seconds: 21
+- Cost: 0.2944 USD, estimated
+
+### 2026-11-21T18:50:21Z
+
+- Summary: S-0811 back in review at 68cc248 (2 issue-doc commits after the passing verify at 675d77b): asked flai serve for its close-out, job S-0811-20261121T185012Z running; accept dry run names only undoes_main in design/system/workflow.md and docs/operators/runbooks/change-the-board.md (the rewrites TH-1321 covers, needing the operator's --keep-removal) and TH-1321 open. Left in review; next run reads the verdict and reports on TH-1321.
+- Items: S-0811
+- Seconds: 26
+- Cost: 0.1967 USD, estimated
+
+### 2026-11-21T18:50:40Z
+
+- Summary: S-0811 is still in review and not accepted yet. Its close-out has to pass at the branch's new head first, and the acceptance itself has to be yours.
+- Items: none
+- Seconds: 19
+- Cost: 0.1232 USD, estimated
 
 ## Refusals
 
