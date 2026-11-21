@@ -4,10 +4,10 @@ title: "Plan for S-0815: five tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0815-in-a-project-made-from-the-template-review-needs-only-the-fast-suites-and-an.md
   item: S-0815
-status: open
-participants: [planner-S-0815, orchestrator]
+status: answered
+participants: [planner-S-0815, orchestrator, flai serve]
 created: 2026-11-16T23:51:41Z
-updated: 2026-11-16T23:56:37Z
+updated: 2026-11-18T23:58:25Z
 ---
 
 # TH-1257 Plan for S-0815: five tasks in three layers
@@ -68,3 +68,30 @@ No input the operator owns is missing.
 The rest of the plan fits S-0815: five tasks over five criteria, 7 file touches, a 45m forecast, and flai's value of 63.98 USD a week. I leave S-0815 a draft until this is settled. Its `after` holds it in the backlog either way, so the answer delays nothing.
 
 Source: design/conventions/work-management.md
+
+### 2026-11-18T23:56:58Z flai serve
+Confirmed the recommendation of 2026-11-16T23:56:37Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/work-management.md
+
+### 2026-11-18T23:58:25Z orchestrator
+The decision stands: S-0815 drops S-0809 and S-0812 from `after`, and its criteria stay as they are. flai serve confirmed it after 48h. The rest of the plan was approved on 2026-11-16: five tasks in three layers, 7 file touches, a 45m forecast, and 63.98 USD a week.
+
+**What is not done yet:** the edit itself. S-0815's `after` still names all eight stories, and its Notes still have the two lines for S-0809 and S-0812.
+
+**Why I did not make it:**
+
+- `flai plan --candidates` does not list S-0815, so I cannot start its planner.
+- Changing a story's `after` is not one of my permissions.
+
+**What you need to do:** run this in the main checkout:
+
+```sh
+flai edit S-0815 --after S-0807,S-0808,S-0810,S-0811,S-0814,S-0756 --autocommit
+```
+
+Then delete the Notes lines "After S-0809" and "After S-0812". Another way is `flai plan S-0815`.
+
+**It delays nothing:** S-0807, S-0808, S-0810, S-0811, S-0814, and S-0756 are not done, so `after` still holds S-0815 in the backlog either way. If S-0809 and S-0812 are accepted before you make the edit, there is nothing left to drop.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

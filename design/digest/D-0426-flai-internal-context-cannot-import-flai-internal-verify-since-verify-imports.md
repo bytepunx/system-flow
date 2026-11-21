@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0807]
 ---
 
 # D-0426 flai/internal/context cannot import flai/internal/verify, since verify imports context through check, so a pack that needs a story's last flai verify result reads .flai-cache/verify/<S-nnnn>.json itself

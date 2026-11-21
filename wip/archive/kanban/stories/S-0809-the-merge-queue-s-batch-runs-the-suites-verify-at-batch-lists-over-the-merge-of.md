@@ -3,11 +3,11 @@ id: S-0809
 type: story
 nature: feature
 title: The merge queue's batch runs the suites verify_at.batch lists over the merge of its stories
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:05Z
-updated: 2026-11-18T13:04:38Z
+updated: 2026-11-21T17:20:21Z
 transitions:
   - to: ready
     at: 2026-11-17T08:26:02Z
@@ -21,9 +21,15 @@ transitions:
   - to: in-progress
     at: 2026-11-18T13:04:38Z
     by: flai
+  - to: review
+    at: 2026-11-18T13:21:31Z
+    by: agent-S-0809
+  - to: done
+    at: 2026-11-21T17:20:21Z
+    by: alex
 tags: [flai]
 topics: [verify, workflow]
-touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, flai/internal/mergequeue/land_test.go]
+touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, flai/internal/mergequeue/land_test.go, design/issues/I-0407-flai-stream-sync-panics-while-continuing-a-rebase-whose-stop-the-agent-resolved.md, design/issues/summary.md]
 after: [S-0806]
 agent:
   harness: claude-code
@@ -32,18 +38,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2964
+  seconds: 3963
   priced_by: harness
   turns:
     - day: 2026-11-18
-      work: 64
+      ceremony: 4
+      work: 89
   models:
     - model: claude-opus-5-5
-      input: 324
-      output: 83168
-      cache_read: 22870008
-      cache_write: 784188
-      cost: 11.1452
+      input: 384
+      output: 100123
+      cache_read: 33647314
+      cache_write: 1169505
+      cost: 16.7225
   strategic:
     - kind: planner
       seconds: 34
@@ -56,15 +63,21 @@ usage:
           cache_write: 73387
           cost: 1.6333
     - kind: orchestrator
-      seconds: 174
+      seconds: 277
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 341
-          cache_read: 2504296
-          cache_write: 220740
-          cost: 0.8392
+          input: 68
+          output: 556
+          cache_read: 3608019
+          cache_write: 359935
+          cost: 1.232
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 61
+          cache_read: 86259
+          cache_write: 42238
+          cost: 0.1044
 cost_of_delay:
   value: 64.2
   by: planner-S-0809

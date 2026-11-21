@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 5741
-      cache_read: 1578689
-      cache_write: 54132
-      cost: 0.7693
+      input: 18
+      output: 4658
+      cache_read: 1565305
+      cache_write: 54406
+      cost: 0.7779
 ---
 # T-3451 verify.Tiers keeps the tiers of the suites it is given among those the paths select, and every one under all
 

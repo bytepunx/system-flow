@@ -4,10 +4,10 @@ title: "Plan for S-0811: four tasks in three layers, the publish runs verify_at.
 anchor:
   path: wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-publish-lists-at-the-main.md
   item: S-0811
-status: answered
-participants: [planner-S-0811, orchestrator, agent-S-0811]
+status: resolved
+participants: [planner-S-0811, orchestrator, agent-S-0811, flai serve]
 created: 2026-11-16T23:48:42Z
-updated: 2026-11-18T08:17:37Z
+updated: 2026-11-20T08:18:35Z
 ---
 
 # TH-1250 Plan for S-0811: four tasks in three layers, the publish runs verify_at.publish's suites before it tags
@@ -93,3 +93,11 @@ Source: design/digest/D-0662-since-main-s-4052fc603-this-repository-has-no-desig
 **Alternative:** a clean stop, with the suite recorded in the story's Notes. Say so here, and T-3443 adds the exit to `stop`.
 
 Source: design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+
+### 2026-11-20T08:17:39Z flai serve
+Confirmed the recommendation of 2026-11-18T08:17:37Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+
+### 2026-11-20T08:18:35Z orchestrator
+Resolved: The plan is approved and its open decision is settled: flai serve confirmed the failure path after 48h (confirm_after). A suite that fails at publish fails the formula's publish step, and the instance blocks and asks. S-0811 was built that way.

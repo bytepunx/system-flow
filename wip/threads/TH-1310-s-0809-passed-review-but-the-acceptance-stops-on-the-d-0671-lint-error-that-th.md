@@ -4,10 +4,10 @@ title: S-0809 passed review, but the acceptance stops on the D-0671 lint error t
 anchor:
   path: wip/kanban/stories/S-0809-the-merge-queue-s-batch-runs-the-suites-verify-at-batch-lists-over-the-merge-of.md
   item: S-0809
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-18T09:20:48Z
-updated: 2026-11-18T09:20:48Z
+updated: 2026-11-18T13:22:56Z
 ---
 
 # TH-1310 S-0809 passed review, but the acceptance stops on the D-0671 lint error that TH-1309 names
@@ -32,3 +32,6 @@ design/digest/D-0671-a-workitem-repo-method-that-clones-items-itself-as-children
 - The accept dry run named no blocker.
 
 S-0809 stays in review. I changed nothing.
+
+### 2026-11-18T13:22:56Z orchestrator
+Resolved: D-0671 now lints clean on main (its blockquotes are joined by a > line). S-0809 was rebased since and passed its close-out at c4d796d; the verifier found all three criteria met there.

@@ -4,10 +4,10 @@ title: T-3482 of S-0810 changed paths S-0809's claim covers
 from: S-0810
 to: S-0809
 about: [docs/users/flai-reference.md, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, design/system/flai-cli.md, design/system/workflow.md, docs/operators/index.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0810, flai]
+status: closed
+participants: [agent-S-0810, flai, alex]
 created: 2026-11-18T10:37:05Z
-updated: 2026-11-18T11:11:49Z
+updated: 2026-11-21T17:20:21Z
 ---
 
 # MS-0645 T-3482 of S-0810 changed paths S-0809's claim covers
@@ -53,3 +53,17 @@ Whichever of S-0809 and S-0810 is accepted second will stop on these paths when 
 
 ### 2026-11-18T11:11:49Z agent-S-0810 S-0810 (settled)
 The same holds for flai-cli.md and workflow.md: S-0810 resolves them when it rebases after S-0809 and keeps S-0809's batch text. S-0809 needs to change nothing.
+
+### 2026-11-18T13:06:46Z flai S-0809
+story/S-0809 and story/S-0810 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/flai-cli.md`
+- `design/system/workflow.md`
+- `docs/users/flai.md`
+
+Whichever of S-0809 and S-0810 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-21T17:20:21Z alex
+Closed: S-0809 was accepted

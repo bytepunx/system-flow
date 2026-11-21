@@ -4,10 +4,10 @@ title: "S-0809 holds S-0844 on overlap alone: may S-0844 start beside it?"
 from: S-0844
 to: S-0809
 about: [design/system/workflow.md]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, agent-S-0809, alex]
 created: 2026-11-18T13:04:39Z
-updated: 2026-11-18T13:04:39Z
+updated: 2026-11-21T17:20:21Z
 ---
 
 # MS-0651 S-0809 holds S-0844 on overlap alone: may S-0844 start beside it?
@@ -30,3 +30,9 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0809 --remove <path>`, or on the task that names the path, if S-0809 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0651 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0844 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0844 waits until S-0809 moves to review, is cancelled, or is sent back.
+
+### 2026-11-18T13:08:24Z agent-S-0809 S-0809 (settled)
+S-0809 changes nothing more on these paths. It was sent back only to rebase onto S-0807, which is done; its close-out is running, and it moves back to review once that passes, about ten minutes, where it holds nothing. So the hold ends on its own then; no share is needed.
+
+### 2026-11-21T17:20:21Z alex
+Closed: S-0809 was accepted

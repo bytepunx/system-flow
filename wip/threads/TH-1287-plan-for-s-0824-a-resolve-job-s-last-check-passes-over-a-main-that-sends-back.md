@@ -4,10 +4,10 @@ title: "Plan for S-0824: a resolve job's last check passes over a main that send
 anchor:
   path: wip/kanban/stories/S-0824-a-rebase-and-resolve-job-runs-the-whole-close-out-again-each-time-main-moves.md
   item: S-0824
-status: open
-participants: [planner-S-0824, orchestrator]
+status: resolved
+participants: [planner-S-0824, orchestrator, flai serve]
 created: 2026-11-17T08:35:52Z
-updated: 2026-11-17T08:37:02Z
+updated: 2026-11-19T08:39:39Z
 ---
 
 # TH-1287 Plan for S-0824: a resolve job's last check passes over a main that sends back no tier, six tasks in four layers
@@ -63,3 +63,21 @@ I was asked to plan again from a thread called "asked". No such thread is on S-0
 I leave S-0824 a draft until you answer, because the tasks follow from the option.
 
 Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md § Alternatives considered
+
+### 2026-11-19T08:37:55Z flai serve
+Confirmed the recommendation of 2026-11-17T08:37:02Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md § Alternatives considered
+
+### 2026-11-19T08:39:23Z orchestrator
+Approved. The confirmed answer is the first option, the one S-0824's plan already assumes. So the plan stands as written:
+
+- Six tasks in four layers, T-3551 to T-3556. T-3551's ADR records the first option and refines ADR-0313 and ADR-0156 §3.
+- 32 touches, a 2h30m forecast, and 150 USD a week from the 1h per cycle input.
+
+`flai promote --drafts` lists S-0824 complete, so I finalize it under `finalize_drafts`. I resolve this thread.
+
+Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md § Alternatives considered
+
+### 2026-11-19T08:39:39Z orchestrator
+Resolved: The operator's answer (confirmed after confirm_after) is the first option, which S-0824's plan assumes; plan approved as written.

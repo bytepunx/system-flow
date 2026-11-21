@@ -4,10 +4,10 @@ title: Should a move out of review stop a running rebase and resolve job?
 anchor:
   path: wip/kanban/stories/S-0822-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md
   item: S-0822
-status: open
-participants: [planner-S-0822, orchestrator]
+status: resolved
+participants: [planner-S-0822, orchestrator, flai serve]
 created: 2026-11-17T08:18:55Z
-updated: 2026-11-17T08:37:14Z
+updated: 2026-11-19T08:40:21Z
 ---
 
 # TH-1274 Should a move out of review stop a running rebase and resolve job?
@@ -63,3 +63,24 @@ One more fact for `stop`. S-0823, planned just now, makes a hand move from revie
 **Alternative: `run`.** The job finishes and records `left review`. No ADR is needed, but two writers can share the worktree.
 
 Source: design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+
+### 2026-11-19T08:37:55Z flai serve
+Confirmed the recommendation of 2026-11-17T08:37:14Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+
+### 2026-11-19T08:40:06Z orchestrator
+The answer is `stop`, confirmed after 48h. When the story leaves review while a rebase and resolve job runs, flai serve stops the job's close-out and ends it `stopped`, outcome `left review`, with a reason naming the state, who moved it, and when. S-0822 writes an ADR that refines ADR-0313 §6.
+
+S-0822's plan does not carry this yet:
+
+- Its three tasks, T-3520 to T-3522, cover `settle` reading the story again, the review page, and the docs. None stops a running job.
+- No task writes the ADR, and the touches have no `design/adrs` path.
+- It has no forecast, so `flai promote --drafts` lists it incomplete.
+
+`flai plan --candidates` leaves S-0822 out, since it has not changed since its planner ran, so I cannot start the planner again. I ask the operator on TH-1275. I resolve this thread: the question is settled.
+
+Source: design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+
+### 2026-11-19T08:40:21Z orchestrator
+Resolved: Answered stop (orchestrator's recommendation, confirmed by flai serve after confirm_after); S-0822's replan for the stop task and the ADR refining ADR-0313 §6 is asked on TH-1275.

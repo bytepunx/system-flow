@@ -9,7 +9,7 @@ date: 2026-11-17
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0810]
 ---
 
 # D-0664 A send back by hand opens its thread by flai with storygit.SentBackPrefix, so flai serve's startAcceptSentBack and resolveAcceptSentBack start and resolve it as an acceptance's send back, and tell the two apart by the title's by-hand suffix with sendback.ByHandMover

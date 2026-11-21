@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 9128
-      cache_read: 2509994
-      cache_write: 86065
-      cost: 1.2232
+      input: 28
+      output: 7406
+      cache_read: 2488715
+      cache_write: 86502
+      cost: 1.2369
 ---
 # T-3458 The design and the guides say the batch runs the suites verify_at.batch lists, and the baseline runs every one
 

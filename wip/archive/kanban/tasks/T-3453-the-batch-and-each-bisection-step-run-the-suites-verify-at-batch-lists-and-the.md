@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 13977
-      cache_read: 3843485
-      cache_write: 131789
-      cost: 1.873
+      input: 43
+      output: 11340
+      cache_read: 3810902
+      cache_write: 132458
+      cost: 1.894
 ---
 # T-3453 The batch and each bisection step run the suites verify_at.batch lists, and the batch's record names them
 

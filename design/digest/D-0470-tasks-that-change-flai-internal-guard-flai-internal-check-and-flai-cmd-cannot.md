@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver, flai/internal/mergequeue]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver, flai/internal/mergequeue, flai/internal/verify]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -118,4 +118,12 @@ The four layer-2 tasks ran at once, one task worktree each (.flai-cache/worktree
 
 So the per-task helper prefix holds for any layer of tasks that add tests to one package, and a task's uncommitted diff may be applied to the story worktree in place of copying its files, where the tasks' paths do not overlap.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742.
+S-0807 met it between `flai/internal/workitem` and `flai/internal/verify`. Its planner put T-3457 (the verified rule, `workitem/rules.go`) and T-3460 (suite selection, `verify/select.go`) in one layer, as they share no path, and its agent ran T-3457 in a task worktree of its own (`wip/archive/agents/S-0807.md`):
+
+```text
+T-3457 runs in its own worktree on task/T-3457, because verify imports workitem and T-3460's verify tests would otherwise build T-3457's half-done workitem edits.
+```
+
+So a task that changes `workitem` beside one that changes `verify` runs before it or in its own task worktree. The two packages read the verify record through `flai/internal/verifyrecord` (D-0672).
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807.

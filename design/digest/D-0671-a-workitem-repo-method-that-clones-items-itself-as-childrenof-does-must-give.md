@@ -9,7 +9,7 @@ date: 2026-11-18
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0807, S-0809, S-0810, S-0812, S-0839, S-0843, TH-1309, TH-1310, TH-1311, TH-1312, TH-1313, TH-1314]
 ---
 
 # D-0671 A workitem Repo method that clones items itself, as ChildrenOf does, must give each clone the repository's workflow, else Item.Closed answers by the baseline; TestCloneSharesNothing exempts Item.flow, which the items of one call share read-only

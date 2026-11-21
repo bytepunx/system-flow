@@ -4,10 +4,10 @@ title: S-0811 is ready to accept once TH-1250's decision is made
 anchor:
   path: wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-publish-lists-at-the-main.md
   item: S-0811
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-18T09:09:44Z
-updated: 2026-11-18T09:09:44Z
+updated: 2026-11-20T08:18:48Z
 ---
 
 # TH-1308 S-0811 is ready to accept once TH-1250's decision is made
@@ -34,3 +34,6 @@ On wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-pub
 **If you want the clean stop instead:** say so on TH-1250. S-0811 goes back to in-progress so that T-3443 can add exit 5 to the step's `stop`.
 
 If no one answers TH-1250, `flai serve` confirms my recommendation after `confirm_after` (48h).
+
+### 2026-11-20T08:18:48Z orchestrator
+Resolved: TH-1250's decision is made: flai serve confirmed the failure path after 48h, and TH-1250 is resolved. S-0811 now waits only on a new close-out over the current main.

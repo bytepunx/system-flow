@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 3323
-      cache_read: 913750
-      cache_write: 31332
-      cost: 0.4453
+      input: 10
+      output: 2696
+      cache_read: 906004
+      cache_write: 31491
+      cost: 0.4503
 ---
 # T-3456 flai queue names the suites the batch runs, in its listing and its --json
 

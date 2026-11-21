@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2267.9559
-accrued_seconds: 1579855
-tasks_completed: 4046
-last_run: 2026-11-18T11:25:21Z
+accrued_cost: 2270.3524
+accrued_seconds: 1580389
+tasks_completed: 4066
+last_run: 2026-11-20T08:20:18Z
 ---
 
 # Orchestrator activity
@@ -28357,6 +28357,150 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2153 USD, estimated
+
+### 2026-11-18T13:05:44Z
+
+- Summary: Published S-0807 under the threshold policy (count 1 at or over threshold 1; value 140.92 USD/week vs 1000): flai 1.107.2 -> 1.108.0 (tag flai/v1.108.0), template 1.1.46 -> 1.1.47 (system-flow-template v1.1.47, 4ca0b55), pushed. TH-1315 left alone: its last entry is flai serve's notice, addressed to S-0809's agent, and the story is back in progress.
+- Items: S-0807, S-0809
+- Seconds: 58
+- Cost: 0.1295 USD, estimated
+
+### 2026-11-18T13:06:03Z
+
+- Summary: I published S-0807 and left TH-1315 alone. flai says both reasons are done, so I'm ending.
+- Items: none
+- Seconds: 19
+- Cost: 0.1641 USD, estimated
+
+### 2026-11-18T13:23:19Z
+
+- Summary: S-0809 (value 64.2/wk) verified at c4d796d: close-out passed and the verifier found all 3 criteria met. Resolved my TH-1310 because D-0671 is fixed. The accept stopped on an MD028 lint error in the untracked D-0672 on main, so I left S-0809 in review and opened TH-1316 asking the operator to fix that file.
+- Items: S-0809, TH-1310, TH-1316
+- Seconds: 74
+- Cost: 0.4324 USD, estimated
+
+### 2026-11-18T13:23:45Z
+
+- Summary: I could not accept S-0809. The story itself is ready, but the acceptance stopped on a lint error in an uncommitted digest entry on main.
+- Items: none
+- Seconds: 26
+- Cost: 0.2506 USD, estimated
+
+### 2026-11-18T23:56:58Z
+
+- Summary: flai serve confirmed the orchestrator's recommendation of 2026-11-16T23:56:37Z on TH-1257 after 48h with no answer from the operator (orchestration.permissions.confirm_after)
+- Trigger: orchestration.permissions.confirm_after
+- Items: TH-1257, S-0815
+- Seconds: 0
+- Cost: 0.0000 USD
+
+### 2026-11-18T23:58:25Z
+
+- Summary: Answered TH-1257, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0815
+- Seconds: 52
+- Cost: 0.1551 USD, estimated
+
+### 2026-11-18T23:58:40Z
+
+- Summary: TH-1257: flai serve confirmed (confirm_after 48h) dropping S-0809 and S-0812 from S-0815's after; plan otherwise approved (5 tasks, 45m forecast, 63.98 USD/week); S-0815 is not a planner candidate and editing after is outside my permissions, so I asked the operator to run flai edit S-0815 --after S-0807,S-0808,S-0810,S-0811,S-0814,S-0756; thread left open for that edit
+- Items: S-0815
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-18T23:59:01Z
+
+- Summary: The decision on TH-1257 is settled, but you still need to make one edit to S-0815 by hand. flai serve confirmed my recommendation after 48h: S-0815 no longer waits on S-0809 and S-0812, and its criteria stay as they are.
+- Items: none
+- Seconds: 21
+- Cost: 0.2498 USD, estimated
+
+### 2026-11-19T08:37:55Z
+
+- Summary: flai serve confirmed the orchestrator's recommendation of 2026-11-17T08:37:14Z on TH-1274 after 48h with no answer from the operator (orchestration.permissions.confirm_after)
+- Trigger: orchestration.permissions.confirm_after
+- Items: TH-1274, S-0822
+- Seconds: 0
+- Cost: 0.0000 USD
+
+### 2026-11-19T08:37:55Z (2)
+
+- Summary: flai serve confirmed the orchestrator's recommendation of 2026-11-17T08:37:02Z on TH-1287 after 48h with no answer from the operator (orchestration.permissions.confirm_after)
+- Trigger: orchestration.permissions.confirm_after
+- Items: TH-1287, S-0824
+- Seconds: 0
+- Cost: 0.0000 USD
+
+### 2026-11-19T08:39:23Z
+
+- Summary: Answered TH-1287, citing design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md § Alternatives considered
+- Items: S-0824
+- Seconds: 51
+- Cost: 0.1872 USD, estimated
+
+### 2026-11-19T08:39:47Z
+
+- Summary: TH-1287: approved S-0824's plan (six tasks in four layers, option 1 as confirmed after confirm_after) and resolved the thread; finalized S-0824 under finalize_drafts, which flai promote --drafts lists complete (forecast 2h30m, value 150 USD a week).
+- Items: S-0824, TH-1287
+- Seconds: 24
+- Cost: 0.1157 USD, estimated
+
+### 2026-11-19T08:40:06Z
+
+- Summary: Answered TH-1274, citing design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md § Decision
+- Items: S-0822
+- Seconds: 19
+- Cost: 0.0396 USD, estimated
+
+### 2026-11-19T08:40:24Z
+
+- Summary: Answered TH-1275, citing no source
+- Items: S-0822
+- Seconds: 18
+- Cost: 0.0408 USD, estimated
+
+### 2026-11-19T08:40:40Z
+
+- Summary: TH-1274: recorded the confirmed answer stop and resolved the thread; S-0822's plan lacks the stop task, the ADR refining ADR-0313 §6, and a forecast, and flai plan --candidates leaves it out, so I asked the operator on TH-1275 to run flai plan S-0822. S-0822 stays a draft (promote --drafts: no forecast).
+- Items: S-0822, TH-1274, TH-1275
+- Seconds: 16
+- Cost: 0.0424 USD, estimated
+
+### 2026-11-19T08:40:59Z
+
+- Summary: I settled both threads. S-0824 is ready to be promoted, but S-0822 is stuck as a draft until you run its planner again.
+- Items: none
+- Seconds: 19
+- Cost: 0.1353 USD, estimated
+
+### 2026-11-20T08:17:39Z
+
+- Summary: flai serve confirmed the orchestrator's recommendation of 2026-11-18T08:17:37Z on TH-1250 after 48h with no answer from the operator (orchestration.permissions.confirm_after)
+- Trigger: orchestration.permissions.confirm_after
+- Items: TH-1250, S-0811
+- Seconds: 0
+- Cost: 0.0000 USD
+
+### 2026-11-20T08:18:56Z
+
+- Summary: Settled TH-1250, the planner's thread on S-0811, under plan_backlog_stories. flai serve had confirmed the failure-path recommendation after 48h, and S-0811 was built that way, so I resolved TH-1250. I then resolved my own TH-1308, whose concern is gone. The accept dry run's only remaining blocker was verify_behind_main: 24 of the 40 paths main brought in since the close-out at 5541dbf overlap S-0811's change set. I asked flai serve for a new close-out, job S-0811-20261120T081850Z, and left S-0811 in review for a later run to accept once it passes.
+- Items: S-0811, TH-1250, TH-1308
+- Seconds: 40
+- Cost: 0.1266 USD, estimated
+
+### 2026-11-20T08:19:59Z
+
+- Summary: S-0811's new close-out, job S-0811-20261120T081850Z, stopped at sync: the rebase onto main conflicts in design/system/workflow.md and docs/operators/runbooks/change-the-board.md, and the worktree is left mid-rebase. I left S-0811 in review and opened TH-1317 saying what blocks it. Its agent resolves the conflicts, then the close-out runs again.
+- Items: S-0811, TH-1317
+- Seconds: 63
+- Cost: 0.1402 USD, estimated
+
+### 2026-11-20T08:20:18Z
+
+- Summary: I've settled TH-1250, but S-0811 can't be accepted yet: its new close-out stopped on two merge conflicts with main.
+- Items: none
+- Seconds: 19
+- Cost: 0.1872 USD, estimated
 
 ## Refusals
 
