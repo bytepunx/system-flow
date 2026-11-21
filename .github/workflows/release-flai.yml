@@ -177,7 +177,7 @@ jobs:
       # and the claude-code build's BASE name.
       - name: Build and push flai-agent-bedrock
         id: bedrock
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: agent-context
           file: flai/images/bedrock/Dockerfile
@@ -194,7 +194,7 @@ jobs:
       # copies nothing, so its own folder is the whole context.
       - name: Build and push flai-agent-claude-code
         id: claude-code
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: flai/images/claude-code
           file: flai/images/claude-code/Dockerfile
