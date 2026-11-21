@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2270.3524
-accrued_seconds: 1580389
-tasks_completed: 4066
-last_run: 2026-11-20T08:20:18Z
+accrued_cost: 2270.6326
+accrued_seconds: 1580447
+tasks_completed: 4069
+last_run: 2026-11-21T17:21:55Z
 ---
 
 # Orchestrator activity
@@ -28501,6 +28501,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1872 USD, estimated
+
+### 2026-11-21T17:21:20Z
+
+- Summary: Published flai 1.108.0 → 1.109.0 (tag flai/v1.109.0, pushed) bundling S-0809, by release_publish under threshold policy: count 1 at or over threshold 1 (value 64.2 USD of 1000); no publish formula in the project.
+- Items: S-0809
+- Seconds: 23
+- Cost: 0.1351 USD, estimated
+
+### 2026-11-21T17:21:34Z
+
+- Summary: Left TH-1318 (S-0810 sent back on rebase conflicts in flai/cmd/move_workflow_test.go and flai/internal/workitem/rules_test.go) unanswered: its only entry is flai serve's notice, addressed to S-0810's agent, which settles the conflicts.
+- Items: S-0810
+- Seconds: 14
+- Cost: 0.0269 USD, estimated
+
+### 2026-11-21T17:21:55Z
+
+- Summary: I released S-0809 as flai 1.109.0. I left TH-1318 alone because it is addressed to S-0810's agent, not to the operator.
+- Items: none
+- Seconds: 21
+- Cost: 0.1182 USD, estimated
 
 ## Refusals
 

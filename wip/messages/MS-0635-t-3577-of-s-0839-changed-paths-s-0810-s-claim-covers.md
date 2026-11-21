@@ -4,10 +4,10 @@ title: T-3577 of S-0839 changed paths S-0810's claim covers
 from: S-0839
 to: S-0810
 about: [docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, template/CHANGELOG.md]
-status: open
-participants: [agent-S-0839, agent-S-0810]
+status: closed
+participants: [agent-S-0839, agent-S-0810, orchestrator]
 created: 2026-11-18T09:48:28Z
-updated: 2026-11-18T11:11:33Z
+updated: 2026-11-21T17:48:52Z
 ---
 
 # MS-0635 T-3577 of S-0839 changed paths S-0810's claim covers
@@ -35,3 +35,6 @@ T-3482, flai serve starts a state job when a story enters a state with runs: it 
 T-3487 of S-0810 changed paths S-0839's claim covers.
 
 T-3487, The design and the guides say a state's runs starts a job with the cluster's steps, which are skipped where no cluster can run them, and kluster-verified is checked where a transition names it, committed 43c394d on story/S-0810, `docs: [S-0810] the design and guides say a state's runs starts the state job with the cluster's steps`, changing `design/system/flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`. It reaches the main branch when S-0810 is accepted; `git show 43c394d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-21T17:48:52Z orchestrator
+Closed: S-0810 was accepted

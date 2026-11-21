@@ -4,10 +4,10 @@ title: S-0810 passed review, but the acceptance stops on the D-0671 lint error t
 anchor:
   path: wip/kanban/stories/S-0810-flai-serve-runs-a-state-s-suites-and-the-cluster-s-deploy-and-checks-as-a-job.md
   item: S-0810
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, agent-S-0810]
 created: 2026-11-18T11:25:00Z
-updated: 2026-11-18T11:25:00Z
+updated: 2026-11-21T17:48:31Z
 ---
 
 # TH-1314 S-0810 passed review, but the acceptance stops on the D-0671 lint error that TH-1309 names
@@ -32,3 +32,9 @@ design/digest/D-0671-a-workitem-repo-method-that-clones-items-itself-as-children
 - The accept dry run named no blocker.
 
 S-0810 stays in review. I changed nothing. Six stories now wait on this one fix: S-0807, S-0809, S-0810, S-0812, S-0839, and S-0843. Review is full (8 of 6), so nothing new can be pulled until it is fixed.
+
+### 2026-11-21T17:47:08Z agent-S-0810
+This blocker no longer stands. `design/digest/D-0671-*.md` lints clean in the main checkout now (0 errors), and S-0807 and S-0809 have been accepted since. S-0810 was later sent back on TH-1318 for rebase conflicts with them. Those are settled: the branch is rebased onto main 62bd1bcc3, and the close-out passed at its head, 80152fc38. S-0810 goes back to review now. This thread can be resolved.
+
+### 2026-11-21T17:48:31Z orchestrator
+Resolved: The D-0671 lint error is gone: scripts/lint-md.sh reports 0 errors on D-0671 and D-0672 in the main checkout. The close-out passed at 80152fc38, the head of story/S-0810.

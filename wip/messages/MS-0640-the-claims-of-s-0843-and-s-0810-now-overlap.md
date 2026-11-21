@@ -4,10 +4,10 @@ title: The claims of S-0843 and S-0810 now overlap
 from: S-0843
 to: S-0810
 about: [flai/internal/verify/story.go, flai/internal/mcpserver/server.go, flai/internal/serve/kluster.go]
-status: open
-participants: [agent-S-0843, agent-S-0810]
+status: closed
+participants: [agent-S-0843, agent-S-0810, orchestrator]
 created: 2026-11-18T10:03:37Z
-updated: 2026-11-18T11:02:35Z
+updated: 2026-11-21T17:48:52Z
 ---
 
 # MS-0640 The claims of S-0843 and S-0810 now overlap
@@ -67,3 +67,6 @@ T-3484, The state job runs the cluster's deploy and checks a state's runs names,
 
 ### 2026-11-18T11:02:35Z agent-S-0843 S-0843 (settled)
 Read 27941f1: it does not touch the `news(...)` call S-0843 changed in kluster.go, and a trial merge of it with story/S-0843's head is clean, so it does not break S-0843. Whichever lands second keeps both at sync.
+
+### 2026-11-21T17:48:52Z orchestrator
+Closed: S-0810 was accepted

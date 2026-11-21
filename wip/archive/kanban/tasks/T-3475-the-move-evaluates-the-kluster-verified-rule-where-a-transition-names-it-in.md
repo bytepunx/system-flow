@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 16543
-      cache_read: 3247235
-      cache_write: 112915
-      cost: 1.6047
+      input: 29
+      output: 13329
+      cache_read: 3245129
+      cache_write: 103919
+      cost: 1.5352
 ---
 # T-3475 The move evaluates the kluster-verified rule where a transition names it, in place of a warning on every move into a waiting state
 

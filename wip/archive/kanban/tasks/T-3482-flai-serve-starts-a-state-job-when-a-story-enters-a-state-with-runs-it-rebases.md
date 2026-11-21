@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 258
-      output: 128730
-      cache_read: 25269207
-      cache_write: 878676
-      cost: 12.4871
+      input: 222
+      output: 103723
+      cache_read: 25252817
+      cache_write: 808670
+      cost: 11.9462
 ---
 # T-3482 flai serve starts a state job when a story enters a state with runs: it rebases the branch, runs the state's suites, records each step, and sends the story back by the state's send-back transition when one fails
 

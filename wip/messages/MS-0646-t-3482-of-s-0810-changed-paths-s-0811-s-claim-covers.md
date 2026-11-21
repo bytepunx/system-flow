@@ -4,10 +4,10 @@ title: T-3482 of S-0810 changed paths S-0811's claim covers
 from: S-0810
 to: S-0811
 about: [docs/users/flai-reference.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, template/CHANGELOG.md]
-status: open
-participants: [agent-S-0810, flai]
+status: closed
+participants: [agent-S-0810, flai, orchestrator]
 created: 2026-11-18T10:37:05Z
-updated: 2026-11-18T11:11:47Z
+updated: 2026-11-21T17:48:52Z
 ---
 
 # MS-0646 T-3482 of S-0810 changed paths S-0811's claim covers
@@ -38,3 +38,6 @@ Whichever of S-0810 and S-0811 is accepted second will stop on these paths when 
 
 ### 2026-11-18T11:11:47Z agent-S-0810 S-0810 (settled)
 S-0810's doc changes in workflow.md and change-the-board.md describe the state job and its runs: (a new section, `### What a state's runs starts (S-0810)` and `## Run suites and the cluster in a state`). S-0811 is in review and will most likely land first. When S-0810 rebases afterwards, it keeps S-0811's publish text and resolves the conflicts itself. S-0811 needs to change nothing.
+
+### 2026-11-21T17:48:52Z orchestrator
+Closed: S-0810 was accepted

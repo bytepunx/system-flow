@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 6283
-      cache_read: 1233332
-      cache_write: 42886
-      cost: 0.6095
+      input: 11
+      output: 5062
+      cache_read: 1232532
+      cache_write: 39469
+      cost: 0.5831
 ---
 # T-3479 The workflow package says what a state runs on entry and which transition sends a story back from it
 

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 87685
-      cache_read: 17212327
-      cache_write: 598517
-      cost: 8.5057
+      input: 151
+      output: 70652
+      cache_read: 17201163
+      cache_write: 550832
+      cost: 8.1373
 ---
 # T-3484 The state job runs the cluster's deploy and checks a state's runs names, skips them with the reason where no cluster can run them, and the cluster no longer deploys on review in code
 

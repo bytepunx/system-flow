@@ -5,7 +5,7 @@ status: active
 wip_limits:
   ready: 10
   in-progress: 3
-  review: 6
+  review: 2
 order:
   - S-0847
   - S-0808

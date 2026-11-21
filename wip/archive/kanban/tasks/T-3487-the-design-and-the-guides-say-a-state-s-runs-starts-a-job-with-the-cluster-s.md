@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 125
-      output: 62416
-      cache_read: 12252040
-      cache_write: 426035
-      cost: 6.0545
+      input: 108
+      output: 50291
+      cache_read: 12244094
+      cache_write: 392092
+      cost: 5.7922
 ---
 # T-3487 The design and the guides say a state's runs starts a job with the cluster's steps, which are skipped where no cluster can run them, and kluster-verified is checked where a transition names it
 

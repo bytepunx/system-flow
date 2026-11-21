@@ -9,7 +9,7 @@ date: 2026-11-18
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0809, TH-1316]
 ---
 
 # D-0672 flai/internal/workitem cannot import flai/internal/verify, since verify imports workitem, so Repo.Move reads a story's verify record through the leaf package flai/internal/verifyrecord, which both read
