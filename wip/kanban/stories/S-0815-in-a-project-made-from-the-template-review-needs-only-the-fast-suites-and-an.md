@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:11Z
-updated: 2026-11-18T13:04:08Z
+updated: 2026-11-21T17:20:22Z
 transitions: []
 tags: [flai, template, flaiover]
 topics: [verify, workflow]
@@ -34,25 +34,25 @@ usage:
           cache_write: 5265
           cost: 0.1038
     - kind: orchestrator
-      seconds: 68
+      seconds: 120
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 132
-          cache_read: 1026213
-          cache_write: 22654
-          cost: 0.3215
+          input: 25
+          output: 209
+          cache_read: 1431254
+          cache_write: 108294
+          cost: 0.4766
 cost_of_delay:
   value: 63.98
   by: planner-S-0815
   at: 2026-11-16T23:49:55Z
 forecast:
   duration: 45m
-  delivery: 2026-11-19T00:40:00Z
+  delivery: 2026-11-22T04:56:00Z
   basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0847, S-0808, S-0844, S-0846, S-0837, S-0845, S-0241, S-0813 and S-0814."
   by: flai
-  at: 2026-11-18T13:04:08Z
+  at: 2026-11-21T17:20:22Z
 finalized:
   by: alex
   at: 2026-11-17T07:47:11Z
