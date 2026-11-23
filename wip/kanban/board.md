@@ -1,6 +1,6 @@
 ---
 title: Board
-updated: 2026-11-21
+updated: 2026-11-23
 status: active
 wip_limits:
   ready: 10
@@ -13,6 +13,7 @@ order:
   - S-0846
   - S-0837
   - S-0845
+  - S-0850
 ---
 
 # Board
