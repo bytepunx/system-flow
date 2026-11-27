@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-27T23:38:25Z
+updated: 2026-11-27T23:38:35Z
 ---
 
 # Active streams
@@ -8,7 +8,7 @@ updated: 2026-11-27T23:38:25Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0808](S-0808.md) | The acceptance's gates, the merge queue's eligibility, queue_tiers, and verify_behind_main, judge only the suites the accept transition's verify lists | in-progress | agent-S-0808 | 2026-11-27T23:35:32Z |
-| [S-0844](S-0844.md) | ADR-0301 rules for a project's own workflow file that no code enforces yet: operator-only acceptance of a change to it, the dashboard's refusal to save it on main, board.wip-state, and WIP limits on a state the project adds | in-progress | agent-S-0844 | 2026-11-27T23:37:13Z |
+| [S-0844](S-0844.md) | ADR-0301 rules for a project's own workflow file that no code enforces yet: operator-only acceptance of a change to it, the dashboard's refusal to save it on main, board.wip-state, and WIP limits on a state the project adds | in-progress | agent-S-0844 | 2026-11-27T23:38:35Z |
 | [S-0846](S-0846.md) | flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch | in-progress | agent-S-0846 | 2026-11-27T23:33:07Z |
 
 ## Strategic agents

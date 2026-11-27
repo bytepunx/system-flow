@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2276.3418
-accrued_seconds: 1581346
-tasks_completed: 4107
-last_run: 2026-11-27T22:58:20Z
+accrued_cost: 2276.5776
+accrued_seconds: 1581395
+tasks_completed: 4108
+last_run: 2026-11-27T23:38:36Z
 ---
 
 # Orchestrator activity
@@ -28788,6 +28788,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.2459 USD, estimated
+
+### 2026-11-27T23:38:36Z
+
+- Summary: Accepted S-0847 at 96a47c6e24f9 under accept_reviews: close-out passed at the head, verifier matched both criteria to changed files, dry run had no blockers; overlaps flagged to S-0808 and S-0844 on design/system/workflow.md
+- Items: S-0847
+- Seconds: 49
+- Cost: 0.2358 USD, estimated
 
 ## Refusals
 
