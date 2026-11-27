@@ -4,10 +4,10 @@ title: "S-0811 holds S-0837 on overlap alone: may S-0837 start beside it?"
 from: S-0837
 to: S-0811
 about: [flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/cmd/release.go, template/root/design/workflows/formulas/publish.md, design/system/workflow.md, design/system/pushing-from-the-board.md]
-status: open
-participants: [flai, agent-S-0811]
+status: closed
+participants: [flai, agent-S-0811, alex]
 created: 2026-11-21T18:13:46Z
-updated: 2026-11-21T18:15:07Z
+updated: 2026-11-27T22:47:30Z
 ---
 
 # MS-0664 S-0811 holds S-0837 on overlap alone: may S-0837 start beside it?
@@ -33,3 +33,6 @@ Answer in one of three ways:
 
 ### 2026-11-21T18:15:07Z agent-S-0811 S-0811 (settled)
 The hold stands, briefly. S-0811 is rebased onto main and its close-out job is running now. It moves to review as soon as that passes, which lifts the hold. The overlap is real code, not wording: S-0811 changes `flai/cmd/release.go`, the `hostapi` publish outcome, and the template's publish formula, which S-0837 retires. Starting S-0837 on main after S-0811's change saves both stories a rebase over those files.
+
+### 2026-11-27T22:47:30Z alex
+Closed: S-0811 was accepted

@@ -4,10 +4,10 @@ title: "S-0811 holds S-0845 on overlap alone: may S-0845 start beside it?"
 from: S-0845
 to: S-0811
 about: [design/system/workflow.md]
-status: open
-participants: [flai, agent-S-0811]
+status: closed
+participants: [flai, agent-S-0811, alex]
 created: 2026-11-21T18:13:46Z
-updated: 2026-11-21T18:15:12Z
+updated: 2026-11-27T22:47:30Z
 ---
 
 # MS-0665 S-0811 holds S-0845 on overlap alone: may S-0845 start beside it?
@@ -33,3 +33,6 @@ Answer in one of three ways:
 
 ### 2026-11-21T18:15:12Z agent-S-0811 S-0811 (settled)
 The hold stands, briefly. S-0811 is rebased onto main and its close-out job is running. It moves to review once that passes, which lifts the hold, so S-0845 can start then.
+
+### 2026-11-27T22:47:30Z alex
+Closed: S-0811 was accepted

@@ -3,11 +3,11 @@ id: S-0811
 type: story
 nature: feature
 title: The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:07Z
-updated: 2026-11-21T18:49:20Z
+updated: 2026-11-27T22:47:30Z
 transitions:
   - to: ready
     at: 2026-11-17T08:27:38Z
@@ -30,6 +30,9 @@ transitions:
   - to: review
     at: 2026-11-21T18:49:20Z
     by: agent-S-0811
+  - to: done
+    at: 2026-11-27T22:47:30Z
+    by: alex
 tags: [flai, template]
 topics: [verify, workflow, release]
 touches: [flai/cmd/release.go, flai/cmd/release_publish_suites.go, flai/cmd/release_publish_suites_test.go, docs/users/flai-reference.md, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_formula_suites_test.go, template/CHANGELOG.md, design/system/pushing-from-the-board.md, design/system/workflow.md, docs/operators/runbooks/change-the-board.md, docs/users/flai.md, flai/internal/hostapi/writes_actions.go, design/issues/I-0408-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md, design/issues/I-0410-the-orchestrator-s-accept-takes-no-keep-removal-so-a-story-that-rewrites-a-line.md]
@@ -160,3 +163,8 @@ Forecast 34m, delivery 2026-11-17T03:02:00Z, as `flai forecast` gives it with th
 Cost of delay 90.11 USD a week, as `flai cod` gives it: S-0811's share of E-0034's 1500.00 USD a week, 34m of 9h26m over the epic's 20 open stories without inputs. Kept: this repository's own workflow file names no `publish` (ADR-0312 §8), so nothing here runs sooner for it, and no reason argues for more or less than its share.
 - 2026-11-21T18:13:45Z: moved to in-progress: rebase and resolve job S-0811-20261121T181345Z: the rebase of story/S-0811 onto main stopped on conflicts in design/system/workflow.md, docs/operators/runbooks/change-the-board.md, which still waits in the worktree: a rebase of story/S-0811 was already in progress in /home/alex/git/bytepunx/system-flow/.flai-cache/worktrees/S-0811, which flai left as it found it; its agent settles it in the worktree and syncs it with flai stream sync S-0811
 - 2026-11-21T18:36:48Z: moved to in-progress: rebase and resolve job S-0811-20261121T183647Z: the rebase of story/S-0811 onto main stopped on conflicts in design/system/workflow.md, docs/operators/runbooks/change-the-board.md, which flai aborted, so the branch is as it was; its agent settles it in the worktree and syncs it with flai stream sync S-0811
+
+### Removals kept
+
+- `design/system/workflow.md`, kept by alex at 2026-11-27T22:47:30Z: the branch rewrites main's 'nothing else reads the keys' sentence to add S-0811's publish; every other mention in main's line is kept
+- `docs/operators/runbooks/change-the-board.md`, kept by alex at 2026-11-27T22:47:30Z: the branch rewrites main's 'nothing else reads the keys' sentence to add S-0811's publish; every other mention in main's line is kept

@@ -4,10 +4,10 @@ title: "S-0811 passed review, but flai's undoes_main blocker needs your --keep-r
 anchor:
   path: wip/kanban/stories/S-0811-the-release-s-publish-runs-the-suites-verify-at-publish-lists-at-the-main.md
   item: S-0811
-status: open
-participants: [orchestrator, agent-S-0811]
+status: resolved
+participants: [orchestrator, agent-S-0811, alex]
 created: 2026-11-21T18:34:28Z
-updated: 2026-11-21T18:39:22Z
+updated: 2026-11-27T22:47:30Z
 ---
 
 # TH-1321 S-0811 passed review, but flai's undoes_main blocker needs your --keep-removal: the two lines it drops are rewrites, not losses
@@ -59,3 +59,6 @@ Noted. My recommendation to the operator stands, for the new head once it is in 
 - If `undoes_main` names only these two rewrites, the operator's command above still applies. My `accept` tool still takes no `--keep-removal` (I-0410).
 
 **What the operator needs to do:** nothing yet. Accept S-0811 with the command above once I report that it passed at the new head.
+
+### 2026-11-27T22:47:30Z alex
+Resolved: S-0811 was accepted
