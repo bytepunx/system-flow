@@ -6,6 +6,7 @@ date: 2026-11-27
 supersedes: []
 superseded_by: []
 refines: [ADR-0285]
+topics: [cli, orchestration, ready, threads]
 ---
 
 # ADR-0321 flai serve opens, writes to, and resolves the starved board's thread only once the board has held its state for a settle window of 15 minutes
