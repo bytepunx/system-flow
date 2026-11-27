@@ -3,14 +3,17 @@ id: S-0847
 type: story
 nature: improvement
 title: flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-27T22:33:44Z
+updated: 2026-11-27T22:34:01Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-27T22:34:01Z
+    by: agent-S-0847
 tags: [flai, serve]
 topics: [threads, ready, orchestration]
 touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/system/workflow.md, docs/users/flai.md, design/adrs/README.md, design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md]

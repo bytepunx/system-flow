@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.50 - 2026-11-27
+
+- S-0839 No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand (patch).
 - S-0839 The template's manifest says, in its commented `layer:` and `args:` lines, that `flai manifest set agent.image.layer=<path>` and `flai manifest set agent.image.args.<NAME>=<value>` write them (patch, I-0364).
 
 ## 1.1.49 - 2026-11-21

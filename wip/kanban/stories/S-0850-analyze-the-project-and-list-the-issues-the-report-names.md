@@ -3,14 +3,17 @@ id: S-0850
 type: story
 nature: improvement
 title: Analyze the project and list the issues the report names
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-23T06:00:22Z
-updated: 2026-11-23T06:00:23Z
+updated: 2026-11-27T22:34:01Z
 transitions:
   - to: ready
     at: 2026-11-23T06:00:23Z
     by: flai-serve
+  - to: in-progress
+    at: 2026-11-27T22:34:01Z
+    by: agent-S-0850
 tags: []
 touches: [wip/kanban/stories/S-0850-analyze-the-project-and-list-the-issues-the-report-names.md]
 agent:

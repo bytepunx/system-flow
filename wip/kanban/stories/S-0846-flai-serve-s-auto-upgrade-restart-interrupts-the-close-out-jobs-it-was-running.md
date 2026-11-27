@@ -3,14 +3,17 @@ id: S-0846
 type: story
 nature: improvement
 title: flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-27T22:33:44Z
+updated: 2026-11-27T22:33:59Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-27T22:33:59Z
+    by: agent-S-0846
 tags: []
 topics: [serve, close-out, release]
 touches: [design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
