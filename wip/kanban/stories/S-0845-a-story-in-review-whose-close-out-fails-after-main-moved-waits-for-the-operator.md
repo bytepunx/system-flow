@@ -6,7 +6,7 @@ title: A story in review whose close-out fails after main moved waits for the op
 status: ready
 owner: alex
 created: 2026-11-17T08:32:56Z
-updated: 2026-11-27T22:33:44Z
+updated: 2026-11-27T22:51:39Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:05Z
@@ -82,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:34:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-28T04:41:00Z
-  basis: "Its own forecast of 3h; 6th in the pull order with an in-progress limit of 3, behind S-0847, S-0808, S-0844, S-0846 and S-0837."
+  delivery: 2026-11-28T04:42:00Z
+  basis: "Its own forecast of 3h; 3rd in the pull order with an in-progress limit of 3, behind S-0808, S-0846, S-0847, S-0844 and S-0837."
   by: flai
-  at: 2026-11-27T22:33:44Z
+  at: 2026-11-27T22:51:39Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:38:55Z

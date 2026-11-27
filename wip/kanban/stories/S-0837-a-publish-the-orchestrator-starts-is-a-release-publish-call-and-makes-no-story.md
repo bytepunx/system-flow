@@ -6,7 +6,7 @@ title: A publish the orchestrator starts is a release_publish call and makes no 
 status: ready
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-27T22:47:30Z
+updated: 2026-11-27T22:51:39Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:39:39Z
 forecast:
   duration: 1h38m
-  delivery: 2026-11-28T02:34:00Z
-  basis: "Its own forecast of 1h38m; 3rd in the pull order with an in-progress limit of 3, behind S-0846, S-0847, S-0850, S-0808 and S-0844."
+  delivery: 2026-11-28T02:35:00Z
+  basis: "Its own forecast of 1h38m; 2nd in the pull order with an in-progress limit of 3, behind S-0808, S-0846, S-0847 and S-0844."
   by: flai
-  at: 2026-11-27T22:47:30Z
+  at: 2026-11-27T22:51:39Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:09Z
