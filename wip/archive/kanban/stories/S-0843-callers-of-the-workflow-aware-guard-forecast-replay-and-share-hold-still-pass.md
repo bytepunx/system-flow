@@ -3,10 +3,10 @@ id: S-0843
 type: story
 nature: remediation
 title: Callers of the workflow-aware guard, forecast replay, and share hold still pass the baseline, so a project's own workflow file will not reach them
-status: review
+status: done
 owner: alex
 created: 2026-11-17T08:32:54Z
-updated: 2026-11-18T11:06:34Z
+updated: 2026-11-27T22:33:43Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:02Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-18T11:06:34Z
     by: agent-S-0843
+  - to: done
+    at: 2026-11-27T22:33:43Z
+    by: alex
 tags: []
 topics: [workflow]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, design/issues/I-0379-callers-of-the-workflow-aware-guard-forecast-replay-and-share-hold-still-pass.md, design/issues/summary.md, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/mcpserver/shared.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/cmd/items.go, flai/cmd/plan.go, flai/internal/hostapi/hostapi.go, flai/internal/inbox/inbox.go, flai/internal/inbox/starved.go, flai/internal/mcpserver/server.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/kluster.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, design/issues/I-0406-flai-serve-still-reads-three-state-questions-by-the-baseline-workflow-directly.md]
