@@ -57,7 +57,7 @@ func TestAskAnswersTheJobFlaiServeStarts(t *testing.T) {
 	got := take(t, cache, "S-0001", func(r Request) Answer {
 		return Answer{Job: r.Story + "-20261031T090000Z", Story: r.Story, Started: true, Log: LogPath(cache, r.Story)}
 	})
-	a, err := Ask(context.Background(), cache, Request{Story: "S-0001", By: "agent-S-0001", Message: "close out", Fresh: true}, quick)
+	a, err := Ask(context.Background(), cache, Request{Story: "S-0001", By: "agent-S-0001", Message: "close out", Fresh: true, Again: true}, quick)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestAskAnswersTheJobFlaiServeStarts(t *testing.T) {
 		t.Errorf("the answer: %+v", a)
 	}
 	req := <-got
-	if req.Story != "S-0001" || req.By != "agent-S-0001" || req.Message != "close out" || !req.Fresh || req.At.IsZero() {
+	if req.Story != "S-0001" || req.By != "agent-S-0001" || req.Message != "close out" || !req.Fresh || !req.Again || req.At.IsZero() {
 		t.Errorf("the request flai serve read: %+v", req)
 	}
 	for _, suffix := range []string{RequestSuffix, TakenSuffix, AnswerSuffix} {
@@ -137,11 +137,11 @@ func TestReadJobReadsWhatWriteJobWrote(t *testing.T) {
 		t.Fatal(err)
 	}
 	started := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
-	if err := WriteJob(dir, Job{ID: "S-0001-20261031T090000Z", Story: "S-0001", By: "agent-S-0001", Started: started}); err != nil {
+	if err := WriteJob(dir, Job{ID: "S-0001-20261031T090000Z", Story: "S-0001", By: "agent-S-0001", Again: true, Started: started}); err != nil {
 		t.Fatal(err)
 	}
 	j, ok, err := ReadJob(cache, "S-0001")
-	if err != nil || !ok || !j.Running() || j.ID != "S-0001-20261031T090000Z" || !j.Started.Equal(started) {
+	if err != nil || !ok || !j.Running() || j.ID != "S-0001-20261031T090000Z" || !j.Again || !j.Started.Equal(started) {
 		t.Fatalf("the running job: %+v %v %v", j, ok, err)
 	}
 	code := 0

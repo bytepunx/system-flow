@@ -385,31 +385,138 @@ func TestACloseOutTheRecordHoldsIsAnsweredWithoutAJob(t *testing.T) {
 	}
 }
 
-// ADR-0229 §2: a job an earlier flai serve left running is ended interrupted
-// at the pass's first look, journaled failed, and announced.
-func TestAJobLeftRunningIsEndedInterruptedWhenServeStarts(t *testing.T) {
-	t.Parallel()
-	lab := newVerifyLab(t, false)
+// leave writes j in the lab's jobs folder as a job an earlier flai serve
+// left running.
+func (lab *verifyLab) leave(j closeout.Job) {
+	lab.t.Helper()
 	dir := closeout.Dir(lab.repo.CacheDir())
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+		lab.t.Fatal(err)
 	}
-	left := closeout.Job{ID: lab.story + "-20261031T080000Z", Story: lab.story, By: "agent-" + lab.story, Started: time.Now().Add(-time.Hour).UTC()}
-	if err := closeout.WriteJob(dir, left); err != nil {
-		t.Fatal(err)
+	if err := closeout.WriteJob(dir, j); err != nil {
+		lab.t.Fatal(err)
 	}
+}
+
+// waiting writes a request of the lab's story with message as the file of
+// suffix in its jobs folder: a request, or a held one, waiting.
+func (lab *verifyLab) waiting(suffix, message string) {
+	lab.t.Helper()
+	dir := closeout.Dir(lab.repo.CacheDir())
+	data, err := json.Marshal(closeout.Request{Story: lab.story, By: "agent-" + lab.story, Message: message})
+	if err == nil {
+		err = os.MkdirAll(dir, 0o755)
+	}
+	if err == nil {
+		err = os.WriteFile(closeout.File(dir, lab.story, suffix), data, 0o644)
+	}
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// leftJob is a job of the lab's story an earlier flai serve started an hour
+// ago, of kind, asked for by by, and left running.
+func (lab *verifyLab) leftJob(kind, by string) closeout.Job {
+	return closeout.Job{ID: lab.story + "-20261031T080000Z", Story: lab.story, Kind: kind, By: by, Started: time.Now().Add(-time.Hour).UTC()}
+}
+
+// ADR-0229 §2, ADR-0320 §5, I-0388: a job an earlier flai serve left running
+// is ended interrupted at the pass's first look, journaled failed, saying it
+// was asked again, and announced; flai serve asks again for it with the same
+// asker, message, all, and fresh, and the job that starts runs, marked
+// again, its start journaled as asked again, its end a second verified
+// event.
+func TestAJobLeftRunningIsEndedInterruptedWhenServeStarts(t *testing.T) {
+	t.Parallel()
+	lab := newVerifyLab(t, true)
+	lab.release()
+	left := lab.leftJob("", "agent-"+lab.story)
+	left.Message, left.All, left.Fresh = "close out", true, true
+	lab.leave(left)
 	lab.start()
 	e := lab.awaitVerified(1)
 	if e.To != closeout.VerdictInterrupted || e.Fields[inbox.FieldJob] != left.ID || e.Fields[inbox.FieldCommit] != "head-a" {
 		t.Errorf("the verified event of an interrupted job: %+v", e)
 	}
+	again := lab.awaitVerified(2)
+	if again.To != closeout.VerdictPassed || again.Fields[inbox.FieldJob] == left.ID || again.Fields[inbox.FieldJob] == "" {
+		t.Errorf("the verified event of the job asked again: %+v", again)
+	}
 	job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
-	if err != nil || job.Running() || job.Verdict != closeout.VerdictInterrupted || job.ExitCode == nil || *job.ExitCode != -1 {
-		t.Errorf("the interrupted job's state: %+v %v", job, err)
+	if err != nil || job.ID != again.Fields[inbox.FieldJob] || job.Running() || !job.Again || job.Kind != "" ||
+		job.By != left.By || job.Message != left.Message || !job.All || !job.Fresh || job.Verdict != closeout.VerdictPassed {
+		t.Errorf("the job asked again: %+v %v", job, err)
 	}
 	entries := lab.journal()
-	if len(entries) != 1 || entries[0].Outcome != "failed" || entries[0].Verdict != closeout.VerdictInterrupted || entries[0].By != left.By {
-		t.Errorf("the interrupted job journaled failed: %+v", entries)
+	if len(entries) != 3 {
+		t.Fatalf("the interrupted job, then the start and the end of the one asked again: %+v", entries)
+	}
+	if i := entries[0]; i.Outcome != "failed" || i.Verdict != closeout.VerdictInterrupted || i.By != left.By ||
+		i.Detail != lab.story+" job "+left.ID+": interrupted, flai serve stopped while it ran; asked again" {
+		t.Errorf("the interrupted job journaled failed and asked again: %+v", i)
+	}
+	if s := entries[1]; s.Outcome != "started" || s.By != left.By || s.Detail != lab.story+" job "+job.ID+", "+askedAgainByServe {
+		t.Errorf("the start of the job asked again: %+v", s)
+	}
+	out := lab.logged()
+	if !strings.Contains(out, "close-out "+lab.story+" -m close out") || !strings.Contains(out, "fresh=1 all=1") || !strings.Contains(out, "agent="+left.By) {
+		t.Errorf("the log of the job asked again:\n%s", out)
+	}
+	if _, err := os.Stat(closeout.File(closeout.Dir(lab.repo.CacheDir()), lab.story, closeout.RequestSuffix)); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the request asked again is left waiting: %v", err)
+	}
+}
+
+// ADR-0320 §5: a job that was itself asked again and is interrupted too is
+// not asked again: a job is asked again at most once.
+func TestAJobAskedAgainIsNotAskedAgainWhenInterruptedToo(t *testing.T) {
+	t.Parallel()
+	lab := newVerifyLab(t, true)
+	lab.release()
+	left := lab.leftJob("", "agent-"+lab.story)
+	left.Again = true
+	lab.leave(left)
+	lab.start()
+	lab.awaitVerified(1)
+	time.Sleep(50 * time.Millisecond) // looks of the pass after the sweep
+	if job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); err != nil || job.ID != left.ID || job.Verdict != closeout.VerdictInterrupted {
+		t.Errorf("a job started for a job asked again: %+v %v", job, err)
+	}
+	if n := len(lab.verified()); n != 1 {
+		t.Errorf("one interrupted job, one verified event: %d", n)
+	}
+	entries := lab.journal()
+	if len(entries) != 1 || strings.Contains(entries[0].Detail, "asked again") || !strings.HasSuffix(entries[0].Detail, "interrupted, flai serve stopped while it ran") {
+		t.Errorf("the interrupted job's journal: %+v", entries)
+	}
+}
+
+// ADR-0320 §5: an interrupted close-out whose story has a request, or a held
+// request, waiting is not asked again: the one waiting runs, alone.
+func TestAnInterruptedJobWithARequestWaitingIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
+	for _, suffix := range []string{closeout.RequestSuffix, closeout.HeldSuffix} {
+		t.Run(suffix, func(t *testing.T) {
+			t.Parallel()
+			lab := newVerifyLab(t, true)
+			lab.release()
+			left := lab.leftJob("", "agent-"+lab.story)
+			left.Message = "left"
+			lab.leave(left)
+			lab.waiting(suffix, "waiting")
+			lab.start()
+			lab.awaitVerified(2)
+			time.Sleep(50 * time.Millisecond) // looks of the pass after the job
+			job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+			if err != nil || job.Message != "waiting" || job.Again || job.Running() {
+				t.Errorf("the job ran %+v %v, want the waiting request's", job, err)
+			}
+			entries := lab.journal()
+			if len(entries) != 3 || strings.Contains(entries[0].Detail, "asked again") || strings.Contains(entries[1].Detail, "asked again") {
+				t.Errorf("the interrupted job and the waiting request's, alone: %+v", entries)
+			}
+		})
 	}
 }
 

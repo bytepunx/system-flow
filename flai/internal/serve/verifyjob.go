@@ -53,6 +53,13 @@ const (
 	// fromTheRecord begins the journal detail of a close-out answered from
 	// the verify record, which flai stats counts apart (metrics.md).
 	fromTheRecord = "from the record"
+	// interruptedDetail ends the journal detail of a job flai serve's restart
+	// interrupted, which flai stats and the analyzer read; askedAgain follows
+	// it when flai serve asked again for the job, and askedAgainByServe ends
+	// the start's detail of the job that request started (ADR-0320 §5).
+	interruptedDetail = closeout.VerdictInterrupted + ", flai serve stopped while it ran"
+	askedAgain        = "; asked again"
+	askedAgainByServe = "asked again by flai serve after its restart interrupted the last"
 	// verifyServeAuthor is who tells of a close-out's end in the event log.
 	verifyServeAuthor = "flai serve"
 )
@@ -202,7 +209,8 @@ func (p *verifyPass) start(ctx context.Context) {
 func (p *verifyPass) dir() string { return closeout.Dir(filepath.Join(p.e.Root, ".flai-cache")) }
 
 // look ends, at its first, the jobs an earlier flai serve left running,
-// starts, every stateEvery once they are, the state jobs of the stories that
+// asking again for those it may, which this look takes (sweep), starts,
+// every stateEvery once they are, the state jobs of the stories that
 // entered a state whose runs name something (lookStates), puts back the
 // requests held while no upgrade waits on the drain, then takes each request
 // waiting and answers it; a request another look took first is left to it.
@@ -421,7 +429,7 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 		body, settle = r.run, r.settle
 		command = "flai stream sync " + story + ", then " + command
 	}
-	job := closeout.Job{ID: story + "-" + stamp, Story: story, Kind: req.Kind, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
+	job := closeout.Job{ID: story + "-" + stamp, Story: story, Kind: req.Kind, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Again: req.Again, Started: started}
 	if !p.track(story, job.ID, "") {
 		// the upgrade began to wait on the drain since answer looked
 		version, _ := p.drain.holding()
@@ -431,8 +439,12 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 		p.forget(story)
 		return refused(fmt.Sprintf("flai serve could not start %s's %s: %v", story, jobName(req.Kind), err))
 	}
-	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), Method: jobMethod(job.Kind), By: req.By, Outcome: "started", Detail: story + " job " + job.ID})
-	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "kind", job.Kind, "by", req.By, "command", command)
+	detail := story + " job " + job.ID
+	if job.Again {
+		detail += ", " + askedAgainByServe
+	}
+	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), Method: jobMethod(job.Kind), By: req.By, Outcome: "started", Detail: detail})
+	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "kind", job.Kind, "by", req.By, "again", job.Again, "command", command)
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -621,7 +633,8 @@ func (p *verifyPass) untrack(story string) {
 // running, its state job too, and reports whether it is done: false when
 // there were some and the project could not be opened, to try again at the
 // next look. Nothing is sent back; a close-out or resolve job's end is
-// announced, and an interrupted state job's entry runs again (lookStates).
+// announced and the job asked again (askAgain), for this look to take, and
+// an interrupted state job's entry runs again (lookStates).
 func (p *verifyPass) sweep(dir string) bool {
 	paths, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.JobSuffix))
 	states, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.StateSuffix))
@@ -654,8 +667,12 @@ func (p *verifyPass) sweep(dir string) bool {
 		if err := closeout.WriteJob(dir, j); err != nil {
 			p.o.Logger.Warn("close-out job's end not written", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "err", err.Error())
 		}
-		p.journal(hostapi.Entry{At: now.Format(time.RFC3339), Method: jobMethod(j.Kind), By: j.By, Outcome: closeOutOutcome(closeout.VerdictInterrupted), Verdict: closeout.VerdictInterrupted,
-			Detail: fmt.Sprintf("%s job %s: %s, flai serve stopped while it ran", j.Story, j.ID, closeout.VerdictInterrupted)})
+		again := p.askAgain(repo, dir, j, now)
+		detail := fmt.Sprintf("%s job %s: %s", j.Story, j.ID, interruptedDetail)
+		if again {
+			detail += askedAgain
+		}
+		p.journal(hostapi.Entry{At: now.Format(time.RFC3339), Method: jobMethod(j.Kind), By: j.By, Outcome: closeOutOutcome(closeout.VerdictInterrupted), Verdict: closeout.VerdictInterrupted, Detail: detail})
 		if j.Kind != closeout.KindState {
 			p.announce(repo, j.Story, inbox.Verification{Job: j.ID, Commit: j.Commit, Verdict: closeout.VerdictInterrupted})
 		}
@@ -663,6 +680,72 @@ func (p *verifyPass) sweep(dir string) bool {
 	}
 	p.o.Logger.Warn("close-out jobs interrupted", "component", "serve", "root", p.e.Root, "jobs", len(left), "stories", strings.Join(stories, ","))
 	return true
+}
+
+// askAgain writes, at now, the request for interrupted job j's story that
+// asks again for the same job, of its kind, asker, message, all, and fresh,
+// marked again, and reports whether it did (ADR-0320 §5). It writes none for
+// a state job, whose entry runs again; for a job that was itself asked
+// again; while a request or a held request of the story waits, which wins;
+// or for a rebase and resolve of a story no longer in review.
+func (p *verifyPass) askAgain(repo *workitem.Repo, dir string, j closeout.Job, now time.Time) bool {
+	if j.Kind == closeout.KindState || j.Again {
+		return false
+	}
+	request := closeout.File(dir, j.Story, closeout.RequestSuffix)
+	for _, waiting := range []string{request, closeout.File(dir, j.Story, closeout.HeldSuffix)} {
+		if _, err := os.Stat(waiting); err == nil {
+			p.o.Logger.Info("close-out job not asked again for a request waiting", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "kind", j.Kind)
+			return false
+		}
+	}
+	if j.Kind == closeout.KindResolve {
+		if why := resolveRefusal(repo, j.Story); why != "" {
+			p.o.Logger.Info("close-out job not asked again", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "kind", j.Kind, "reason", why)
+			return false
+		}
+	}
+	req := closeout.Request{Story: j.Story, Kind: j.Kind, By: j.By, Message: j.Message, All: j.All, Fresh: j.Fresh, Again: true, At: now}
+	if err := writeNewRequest(dir, req); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			p.o.Logger.Info("close-out job not asked again for a request waiting", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "kind", j.Kind)
+		} else {
+			p.o.Logger.Warn("close-out job not asked again", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "kind", j.Kind, "err", err.Error())
+		}
+		return false
+	}
+	p.o.Logger.Info("close-out job asked again", "component", "serve", "root", p.e.Root, "story", j.Story, "job_id", j.ID, "kind", j.Kind)
+	return true
+}
+
+// writeNewRequest writes req as its story's request in dir, the jobs folder,
+// whole or not at all, and never over a request there: an error wrapping
+// fs.ErrExist says one was.
+func writeNewRequest(dir string, req closeout.Request) error {
+	data, err := json.MarshalIndent(req, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, "."+req.Story+".again-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	_, err = tmp.Write(append(data, '\n'))
+	if err == nil {
+		err = tmp.Chmod(0o644)
+	}
+	if err == nil {
+		err = tmp.Sync()
+	}
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+	// a link, unlike a rename, never writes over a request the agent wrote
+	return os.Link(tmp.Name(), closeout.File(dir, req.Story, closeout.RequestSuffix))
 }
 
 // head is the worktree's head commit; "" when git cannot say.

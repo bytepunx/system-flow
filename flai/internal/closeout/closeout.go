@@ -150,6 +150,9 @@ type Request struct {
 	// All and Fresh are flai verify's --all and --fresh.
 	All   bool `json:"all,omitempty"`
 	Fresh bool `json:"fresh,omitempty"`
+	// Again is a request flai serve wrote itself, asking again for the job
+	// of the story that its restart interrupted (ADR-0320 §5).
+	Again bool `json:"again,omitempty"`
 	// At is when it was asked; Ask stamps it when zero.
 	At time.Time `json:"at"`
 }
@@ -194,11 +197,15 @@ type Job struct {
 	ID    string `json:"id"`
 	Story string `json:"story"`
 	// Kind is the job's kind: KindResolve, KindState, or "" for a close-out.
-	Kind    string    `json:"kind,omitempty"`
-	By      string    `json:"by"`
-	Message string    `json:"message,omitempty"`
-	All     bool      `json:"all,omitempty"`
-	Fresh   bool      `json:"fresh,omitempty"`
+	Kind    string `json:"kind,omitempty"`
+	By      string `json:"by"`
+	Message string `json:"message,omitempty"`
+	All     bool   `json:"all,omitempty"`
+	Fresh   bool   `json:"fresh,omitempty"`
+	// Again is a job flai serve started from its own request, asked again
+	// after its restart interrupted the story's job; such a job is not asked
+	// again when it is interrupted too (ADR-0320 §5).
+	Again   bool      `json:"again,omitempty"`
 	Started time.Time `json:"started"`
 	// Head is the worktree's head when the job's run began, written once it
 	// is read, before the close-out starts; "" until then, when it could not

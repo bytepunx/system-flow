@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -445,23 +446,27 @@ func TestARebaseAndResolveOfAStoryNotInReviewIsRefused(t *testing.T) {
 	}
 }
 
-// S-0804 criterion 8: a rebase and resolve flai serve's restart interrupted
-// is ended interrupted, journaled as a resolve job, and sends nothing back.
+// S-0804 criterion 8, ADR-0320 §5: a rebase and resolve flai serve's restart
+// interrupted is ended interrupted, journaled as a resolve job, and sends
+// nothing back; its story still in review, flai serve asks again for it,
+// and the rebase and resolve that starts, marked again, runs.
 func TestAnInterruptedRebaseAndResolveSendsNothingBack(t *testing.T) {
 	t.Parallel()
-	lab, _, _ := newResolveLab(t)
-	dir := closeout.Dir(lab.repo.CacheDir())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	left := closeout.Job{ID: lab.story + "-20261116T080000Z", Story: lab.story, Kind: closeout.KindResolve, By: "alex", Started: time.Now().Add(-time.Hour).UTC()}
-	if err := closeout.WriteJob(dir, left); err != nil {
-		t.Fatal(err)
-	}
+	lab, fake, _ := newResolveLab(t)
+	left := lab.leftJob(closeout.KindResolve, "alex")
+	lab.leave(left)
 	lab.start()
-	job := lab.endedJob()
-	if job.Verdict != closeout.VerdictInterrupted || job.Outcome != "" || job.Thread != "" {
-		t.Errorf("the interrupted job: %+v", job)
+	if e := lab.awaitVerified(1); e.To != closeout.VerdictInterrupted || e.Fields[inbox.FieldJob] != left.ID {
+		t.Errorf("the verified event of the interrupted job: %+v", e)
+	}
+	again := lab.awaitVerified(2)
+	job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+	if err != nil || job.ID != again.Fields[inbox.FieldJob] || job.Running() || !job.Again || job.Kind != closeout.KindResolve || job.By != "alex" ||
+		job.Message != resolveMessage(lab.story) || job.Outcome != closeout.OutcomeStayed || job.Thread != "" {
+		t.Errorf("the rebase and resolve asked again: %+v %v", job, err)
+	}
+	if got := argvs(fake.ran()); len(got) != 2 || strings.Join(got[0], " ") != syncArgv(lab.story) {
+		t.Errorf("the job asked again ran %q, want the sync, then the close-out", got)
 	}
 	if status, _ := lab.status(); status != workitem.Review {
 		t.Errorf("the story is %s; want it left in review", status)
@@ -469,7 +474,34 @@ func TestAnInterruptedRebaseAndResolveSendsNothingBack(t *testing.T) {
 	if th := lab.threadsOn(); len(th) != 0 {
 		t.Errorf("an interrupted job sent the story back: %+v", th)
 	}
-	if entries := lab.resolveJournal(); len(entries) != 1 || entries[0].Verdict != closeout.VerdictInterrupted {
+	entries := lab.resolveJournal()
+	if len(entries) != 3 || entries[0].Verdict != closeout.VerdictInterrupted || !strings.HasSuffix(entries[0].Detail, "; asked again") ||
+		entries[1].Outcome != "started" || !strings.HasSuffix(entries[1].Detail, askedAgainByServe) {
+		t.Errorf("the resolve jobs' journal: %+v", entries)
+	}
+}
+
+// ADR-0320 §5: an interrupted rebase and resolve of a story that left review
+// is not asked again, and nothing runs.
+func TestAnInterruptedRebaseAndResolveOfAStoryThatLeftReviewIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
+	lab, fake, _ := newResolveLab(t)
+	lab.moveStory(workitem.InProgress)
+	left := lab.leftJob(closeout.KindResolve, "alex")
+	lab.leave(left)
+	lab.start()
+	lab.awaitVerified(1)
+	time.Sleep(50 * time.Millisecond) // looks of the pass after the sweep
+	if job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); err != nil || job.ID != left.ID || job.Verdict != closeout.VerdictInterrupted {
+		t.Errorf("a job started for a story out of review: %+v %v", job, err)
+	}
+	if got := fake.ran(); len(got) != 0 {
+		t.Errorf("nothing runs, yet %q ran", argvs(got))
+	}
+	if _, err := os.Stat(closeout.File(closeout.Dir(lab.repo.CacheDir()), lab.story, closeout.RequestSuffix)); !os.IsNotExist(err) {
+		t.Errorf("a request was written: %v", err)
+	}
+	if entries := lab.resolveJournal(); len(entries) != 1 || strings.Contains(entries[0].Detail, "asked again") {
 		t.Errorf("the interrupted resolve job's journal: %+v", entries)
 	}
 }
