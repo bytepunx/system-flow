@@ -3,15 +3,36 @@ id: T-3583
 type: task
 nature: improvement
 title: Decide in an ADR that the auto-upgrade drains the close-out jobs before it restarts and that serve asks again once a job a restart interrupted
-status: backlog
+status: done
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:22Z
-updated: 2026-11-17T12:33:22Z
-transitions: []
+updated: 2026-11-27T22:37:02Z
+transitions:
+  - to: ready
+    at: 2026-11-27T22:35:48Z
+    by: agent-S-0846
+  - to: in-progress
+    at: 2026-11-27T22:35:48Z
+    by: agent-S-0846
+  - to: done
+    at: 2026-11-27T22:37:02Z
+    by: agent-S-0846
 stream: S-0846
 tags: [adr, serve]
 touches: [design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 70
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 74
+      cache_read: 1816091
+      cache_write: 18983
+      cost: 0.705
 ---
 # T-3583 Decide in an ADR that the auto-upgrade drains the close-out jobs before it restarts and that serve asks again once a job a restart interrupted
 

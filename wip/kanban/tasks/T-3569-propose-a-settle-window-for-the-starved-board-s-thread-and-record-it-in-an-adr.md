@@ -3,15 +3,33 @@ id: T-3569
 type: task
 nature: improvement
 title: Propose a settle window for the starved board's thread and record it in an ADR refining ADR-0285
-status: backlog
+status: in-progress
 parent: S-0847
 owner: alex
 created: 2026-11-17T12:29:29Z
-updated: 2026-11-17T12:29:29Z
-transitions: []
+updated: 2026-11-27T22:35:02Z
+transitions:
+  - to: ready
+    at: 2026-11-27T22:35:01Z
+    by: agent-S-0847
+  - to: in-progress
+    at: 2026-11-27T22:35:02Z
+    by: agent-S-0847
 stream: S-0847
 tags: [adr, design]
 touches: [design/adrs/README.md, design/system/workflow.md]
+usage:
+  source: log
+  seconds: 25
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1636
+      cache_read: 625947
+      cache_write: 66223
+      cost: 0.6877
 ---
 # T-3569 Propose a settle window for the starved board's thread and record it in an ADR refining ADR-0285
 

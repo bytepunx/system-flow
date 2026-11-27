@@ -3,15 +3,21 @@ id: T-3584
 type: task
 nature: improvement
 title: Hold the auto-upgrade while a close-out or rebase and resolve job runs, take no new job meanwhile, and upgrade once the bound passes
-status: backlog
+status: in-progress
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:31Z
-updated: 2026-11-17T12:33:31Z
-transitions: []
+updated: 2026-11-27T22:37:15Z
+transitions:
+  - to: ready
+    at: 2026-11-27T22:37:15Z
+    by: agent-S-0846
+  - to: in-progress
+    at: 2026-11-27T22:37:15Z
+    by: agent-S-0846
 stream: S-0846
 tags: [serve, code]
-touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/verify.go, flai/cmd/verify_job_test.go, flai/internal/serve/statejob.go]
 after: [T-3583]
 ---
 # T-3584 Hold the auto-upgrade while a close-out or rebase and resolve job runs, take no new job meanwhile, and upgrade once the bound passes

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 379.1515
-accrued_seconds: 41780
-tasks_completed: 266
-last_run: 2026-11-21T18:59:15Z
+accrued_cost: 382.9222
+accrued_seconds: 42200
+tasks_completed: 268
+last_run: 2026-11-27T22:40:14Z
 ---
 
 # Curator activity
@@ -2139,3 +2139,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0667
 - Seconds: 81
 - Cost: 1.1081 USD, estimated
+
+### 2026-11-27T22:35:11Z
+
+- Summary: I wrote D-0675, merged nothing, absorbed nothing, and `flai digest compact` compacted D-0167, D-0330, D-0362, D-0370, D-0371, D-0385, D-0386, D-0387, D-0388, D-0389, D-0390, D-0391, D-0393, D-0394, D-0395, D-0397, D-0398, D-0399, D-0401, D-0404, D-0405, D-0408, and D-0409.
+- Trigger: accepted S-0839
+- Items: D-0167, D-0330, D-0362, D-0370, D-0371, D-0385, D-0386, D-0387, D-0388, D-0389, D-0390, D-0391, D-0393, D-0394, D-0395, D-0397, D-0398, D-0399, D-0401, D-0404, D-0405, D-0408, D-0409, D-0675
+- Seconds: 123
+- Cost: 1.7447 USD, estimated
+
+### 2026-11-27T22:40:14Z
+
+- Summary: Curator run: wrote D-0676, merged S-0843 into D-0653, absorbed nothing, and `flai digest compact` compacted nothing (it recorded the citers of all 676 entries, and no active entry was uncited within 720h).
+- Trigger: accepted S-0843
+- Items: D-0653, D-0676
+- Seconds: 297
+- Cost: 2.0260 USD, estimated

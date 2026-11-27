@@ -7,11 +7,11 @@ status: backlog
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:39Z
-updated: 2026-11-17T12:33:39Z
+updated: 2026-11-27T22:37:15Z
 transitions: []
 stream: S-0846
 tags: [serve, code]
-touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go]
+touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go]
 after: [T-3584]
 ---
 # T-3585 Ask again once, at serve's start, a close-out or rebase and resolve job a restart left interrupted

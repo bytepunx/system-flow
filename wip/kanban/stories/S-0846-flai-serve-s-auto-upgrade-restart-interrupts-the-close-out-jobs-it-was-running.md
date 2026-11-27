@@ -6,7 +6,7 @@ title: flai serve's auto-upgrade restart interrupts the close-out jobs it was ru
 status: in-progress
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-27T22:33:59Z
+updated: 2026-11-27T22:36:41Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -16,16 +16,27 @@ transitions:
     by: agent-S-0846
 tags: []
 topics: [serve, close-out, release]
-touches: [design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
+touches: [design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md, design/adrs/0320-the-auto-upgrade-drains-the-verify-pass-s-jobs-before-it-restarts-holds-new.md, design/adrs/README.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 189
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-27
+      work: 20
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 229
+      cache_read: 3809095
+      cache_write: 255056
+      cost: 1.5614
   strategic:
     - kind: planner
       seconds: 92

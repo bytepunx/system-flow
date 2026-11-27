@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2274.4965
-accrued_seconds: 1581041
-tasks_completed: 4092
-last_run: 2026-11-21T18:58:59Z
+accrued_cost: 2275.2705
+accrued_seconds: 1581177
+tasks_completed: 4099
+last_run: 2026-11-27T22:36:37Z
 ---
 
 # Orchestrator activity
@@ -28683,6 +28683,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.3116 USD, estimated
+
+### 2026-11-27T22:34:16Z
+
+- Summary: Published under threshold (count 2 >= 1, value 62.5 USD/week): flai 1.111.1 -> 1.111.2 (tag flai/v1.111.2), template 1.1.49 -> 1.1.50 (system-flow-template v1.1.50, 85d92bd), bundling S-0839 and S-0843; pushed.
+- Items: S-0839, S-0843
+- Seconds: 38
+- Cost: 0.0786 USD, estimated
+
+### 2026-11-27T22:34:36Z
+
+- Summary: I published the release that S-0839's acceptance made due, under the `threshold` policy.
+- Items: none
+- Seconds: 20
+- Cost: 0.2478 USD, estimated
+
+### 2026-11-27T22:35:06Z
+
+- Summary: Release-due S-0843: did not publish. release_evaluate under threshold is not met: count 0 of 1, value 0 of 1000 USD, nothing pending (no accepted story waiting for a release).
+- Items: S-0843
+- Seconds: 9
+- Cost: 0.0511 USD, estimated
+
+### 2026-11-27T22:35:25Z
+
+- Summary: I did not publish a release for S-0843. The release check (threshold policy) is not met: no accepted story is waiting for a release.
+- Items: none
+- Seconds: 19
+- Cost: 0.1124 USD, estimated
+
+### 2026-11-27T22:36:06Z
+
+- Summary: Recommended an answer on TH-1323, citing design/adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md § Decision
+- Items: S-0847
+- Seconds: 19
+- Cost: 0.1209 USD, estimated
+
+### 2026-11-27T22:36:20Z
+
+- Summary: Recommended on TH-1323 (S-0847) that the operator accept the fixed 15-minute settle window for the starved board's thread, as an ADR refining ADR-0285 §4 and §5. I escalated rather than answered under answer_threads autonomous because the decision is not recorded yet. Source: ADR-0285 § Decision.
+- Items: S-0847
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-27T22:36:37Z
+
+- Summary: I posted a recommendation on TH-1323 instead of answering it. The question needs a design decision that no ADR records yet. Under `answer_threads: autonomous`, a decision like that goes to you.
+- Items: none
+- Seconds: 17
+- Cost: 0.1632 USD, estimated
 
 ## Refusals
 

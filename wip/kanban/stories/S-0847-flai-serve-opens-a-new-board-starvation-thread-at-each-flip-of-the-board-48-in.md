@@ -6,7 +6,7 @@ title: flai serve opens a new board-starvation thread at each flip of the board,
 status: in-progress
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-27T22:34:01Z
+updated: 2026-11-27T22:35:28Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:34:01Z
     by: agent-S-0847
+blocked:
+  - from: 2026-11-27T22:35:28Z
+    reason: awaiting the operator on TH-1323
 tags: [flai, serve]
 topics: [threads, ready, orchestration]
 touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/system/workflow.md, docs/users/flai.md, design/adrs/README.md, design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md]
@@ -23,9 +26,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 99
+  priced_by: harness
+  turns:
+    - day: 2026-11-27
+      ceremony: 1
+      work: 12
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 5413
+      cache_read: 2070622
+      cache_write: 219065
+      cost: 2.275
   strategic:
     - kind: planner
       seconds: 5
@@ -44,15 +58,15 @@ usage:
           cache_write: 9307
           cost: 0.2541
     - kind: orchestrator
-      seconds: 26
+      seconds: 45
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 46
-          cache_read: 231480
-          cache_write: 22249
-          cost: 0.0797
+          input: 17
+          output: 136
+          cache_read: 564195
+          cache_write: 70240
+          cost: 0.2006
         - model: claude-sonnet-5-5
           input: 1
           output: 8
