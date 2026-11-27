@@ -6,7 +6,7 @@ title: flai stream sync panics while continuing a rebase whose stop the agent re
 status: backlog
 owner: alex
 created: 2026-11-21T17:20:23Z
-updated: 2026-11-27T23:56:35Z
+updated: 2026-11-27T23:56:47Z
 transitions: []
 tags: []
 topics: [git, sync]
@@ -35,6 +35,8 @@ This story remediates [I-0407](../../../design/issues/I-0407-flai-stream-sync-pa
 
 ## Tasks
 - T-3615 Find the input that panics the section merge at S-0809's second stop and fix it, with a test that reproduces it
+- T-3616 A resolver that panics at a stop leaves the stop waiting with its paths, so flai stream sync reports them instead of crashing
+- T-3617 Close I-0407 saying what fixed it
 
 ## Notes
 

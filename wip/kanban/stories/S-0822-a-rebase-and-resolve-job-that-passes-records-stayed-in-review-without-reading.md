@@ -6,7 +6,7 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-27T23:56:21Z
+updated: 2026-11-27T23:56:52Z
 transitions: []
 tags: [flai, flaiover]
 touches: [flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0396-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md, design/issues/summary.md]
@@ -55,6 +55,12 @@ cost_of_delay:
   value: 75
   by: planner-S-0822
   at: 2026-11-17T08:23:00Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-11-28T06:15:00Z
+  basis: flai forecast's 41m (120 s per unit of size times 20) raised to 1h30m for five tasks in three layers, a cancel path through runJob with race tests in flai/internal/serve, and a close-out of about 12m like S-0847's.
+  by: planner-S-0822
+  at: 2026-11-27T23:56:52Z
 ---
 # S-0822 A rebase and resolve job that passes records stayed in review without reading the story, and a move out of review neither stops the job nor is noticed by it
 
@@ -98,6 +104,6 @@ Touches, and where each came from:
 Figures:
 
 - Cost of delay value: 75 USD a week, as `flai cod` gives it from the operator's input, 30m lost per 168h cycle at 150 USD an hour. It stands.
-- Forecast: see the forecast's basis. `flai forecast` answered 33m from size 16 before the `stop` touches were added.
+- Forecast: 1h30m, raised from the 41m `flai forecast` gives (120 s per unit of size, size 20). The figure counts touches, not tasks. The plan has five tasks in three layers, and T-3614 threads a cancel through `runJob` with race tests in `flai/internal/serve`. The close-out alone took about 12m for S-0847 today. Delivery is moved from flai's 2026-11-28T05:26Z by the same 49m, to 2026-11-28T06:15Z.
 
 The story has no `after`: it reads nothing another open story writes. S-0824 and S-0846 change `resolvejob.go` too; a trial merge judges that overlap.
