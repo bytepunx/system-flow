@@ -44,15 +44,21 @@ usage:
       cost: 3.5668
   strategic:
     - kind: orchestrator
-      seconds: 19
+      seconds: 79
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 76
-          cache_read: 384482
-          cache_write: 72787
-          cost: 0.1453
+          input: 24
+          output: 178
+          cache_read: 989316
+          cache_write: 79336
+          cost: 0.3396
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 27
+          cache_read: 0
+          cache_write: 13936
+          cost: 0.0114
 formula: analysis-cadence
 ---
 # S-0850 Analyze the project and list the issues the report names

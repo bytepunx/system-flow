@@ -3,14 +3,17 @@ id: S-0844
 type: story
 nature: remediation
 title: "ADR-0301 rules for a project's own workflow file that no code enforces yet: operator-only acceptance of a change to it, the dashboard's refusal to save it on main, board.wip-state, and WIP limits on a state the project adds"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:32:55Z
-updated: 2026-11-27T22:47:30Z
+updated: 2026-11-27T23:37:13Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-27T23:37:13Z
+    by: agent-S-0844
 tags: [flai]
 topics: [workflow, acceptance, orchestration, dashboard]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/accept_workflow_file_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go, flai/internal/workitem/boardview_test.go, flai/cmd/board.go, flai/cmd/board_limit_test.go, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md, design/issues/summary.md]

@@ -3,15 +3,36 @@ id: T-3433
 type: task
 nature: feature
 title: Read the suites the acceptance needs from the workflow, and judge a verify report against them
-status: backlog
+status: done
 parent: S-0808
 owner: alex
 created: 2026-11-16T23:46:24Z
-updated: 2026-11-16T23:46:24Z
-transitions: []
+updated: 2026-11-27T23:03:09Z
+transitions:
+  - to: ready
+    at: 2026-11-27T22:52:14Z
+    by: agent-S-0808
+  - to: in-progress
+    at: 2026-11-27T22:52:14Z
+    by: agent-S-0808
+  - to: done
+    at: 2026-11-27T23:03:09Z
+    by: agent-S-0808
 stream: S-0808
 tags: [flai]
 touches: [flai/internal/workitem/transition.go, flai/internal/workitem/transition_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+usage:
+  source: log
+  seconds: 655
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 324
+      cache_read: 2460531
+      cache_write: 98268
+      cost: 0.9835
 ---
 # T-3433 Read the suites the acceptance needs from the workflow, and judge a verify report against them
 

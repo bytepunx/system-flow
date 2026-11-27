@@ -18,7 +18,7 @@ tags: [cli, dashboard, template]
 topics: [cli, template]
 usage:
   source: sum
-  seconds: 115190
+  seconds: 117907
   estimated: true
   priced_by: estimate
   turns:
@@ -45,6 +45,9 @@ usage:
       ceremony: 16
       test_runs: 14
       work: 130
+    - day: 2026-11-27
+      ceremony: 1
+      work: 44
   models:
     - model: claude-haiku-5-5
       input: 52
@@ -53,11 +56,11 @@ usage:
       cache_write: 228029
       cost: 0.1346
     - model: claude-opus-5-5
-      input: 11804
-      output: 3703118
-      cache_read: 1021524160
-      cache_write: 32424438
-      cost: 481.9986
+      input: 12194
+      output: 3705348
+      cache_read: 1045768222
+      cache_write: 33516608
+      cost: 491.7362
   strategic:
     - kind: planner
       seconds: 777

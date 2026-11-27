@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 382.9222
-accrued_seconds: 42200
-tasks_completed: 268
-last_run: 2026-11-27T22:40:14Z
+accrued_cost: 384.5107
+accrued_seconds: 42565
+tasks_completed: 270
+last_run: 2026-11-27T22:53:50Z
 ---
 
 # Curator activity
@@ -2155,3 +2155,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0653, D-0676
 - Seconds: 297
 - Cost: 2.0260 USD, estimated
+
+### 2026-11-27T22:52:55Z
+
+- Summary: Found nothing to take in: none of S-0811's 8 decisions needs an entry, no entry was merged or absorbed, and `flai digest compact` compacted none (it updated the citations on 2 entries).
+- Trigger: accepted S-0811
+- Items: D-0669, D-0672
+- Seconds: 320
+- Cost: 0.8310 USD, estimated
+
+### 2026-11-27T22:53:50Z
+
+- Summary: I found nothing to take in. Nothing was written, merged, or absorbed, and `flai digest compact` compacted none.
+- Trigger: accepted S-0850
+- Items: none
+- Seconds: 45
+- Cost: 0.7575 USD, estimated

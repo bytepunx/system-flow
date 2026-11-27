@@ -7,7 +7,7 @@ count: 1
 cost: 14h
 first_reported: 2026-11-27T22:46:27Z
 last_reported: 2026-11-27T22:46:27Z
-updated: 2026-11-27T22:46:27Z
+updated: 2026-11-27T22:55:27Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ Serve journal: 666 orchestrator runs between 2026-11-17T17:24:45Z and 2026-11-18
 ## Remediation
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+
+Story S-0855 remediates this issue, created from it at 2026-11-27T22:55:27Z.

@@ -7,7 +7,7 @@ count: 2
 cost: 74h10m
 first_reported: 2026-11-21T18:38:23Z
 last_reported: 2026-11-27T22:46:52Z
-updated: 2026-11-27T22:47:26Z
+updated: 2026-11-27T22:55:19Z
 usage:
   strategic:
     - kind: analyzer
@@ -51,3 +51,5 @@ flai stats aging: S-0811 in review 829,391 s (9d14h), over_p85, the one story in
 ## Remediation
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+
+Story S-0852 remediates this issue, created from it at 2026-11-27T22:55:19Z.

@@ -23,7 +23,7 @@ tags: [adr, serve]
 touches: [design/system/flai-cli.md]
 usage:
   source: log
-  seconds: 70
+  seconds: 74
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 74
       cache_read: 1816091
       cache_write: 18983
-      cost: 0.705
+      cost: 0.7052
 ---
 # T-3583 Decide in an ADR that the auto-upgrade drains the close-out jobs before it restarts and that serve asks again once a job a restart interrupted
 

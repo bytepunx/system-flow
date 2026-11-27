@@ -7,7 +7,7 @@ count: 1
 cost: 76h
 first_reported: 2026-11-27T22:46:18Z
 last_reported: 2026-11-27T22:46:18Z
-updated: 2026-11-27T22:46:18Z
+updated: 2026-11-27T22:55:25Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ Serve journal: 20 orchestrator refusals 2026-11-15T00:52Z to 2026-11-18T13:22Z r
 ## Remediation
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+
+Story S-0853 remediates this issue, created from it at 2026-11-27T22:55:25Z.

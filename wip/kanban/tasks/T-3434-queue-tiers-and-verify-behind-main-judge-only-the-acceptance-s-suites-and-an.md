@@ -3,16 +3,37 @@ id: T-3434
 type: task
 nature: feature
 title: queue_tiers and verify_behind_main judge only the acceptance's suites, and an acceptance waits for a suite its verify did not run
-status: backlog
+status: done
 parent: S-0808
 owner: alex
 created: 2026-11-16T23:46:37Z
-updated: 2026-11-16T23:46:37Z
-transitions: []
+updated: 2026-11-27T23:24:04Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:09:14Z
+    by: agent-S-0808
+  - to: in-progress
+    at: 2026-11-27T23:09:14Z
+    by: agent-S-0808
+  - to: done
+    at: 2026-11-27T23:24:04Z
+    by: agent-S-0808
 stream: S-0808
 tags: [flai]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_suites_test.go, docs/users/flai-reference.md]
 after: [T-3433]
+usage:
+  source: log
+  seconds: 890
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 525
+      cache_read: 6004453
+      cache_write: 309318
+      cost: 2.4266
 ---
 # T-3434 queue_tiers and verify_behind_main judge only the acceptance's suites, and an acceptance waits for a suite its verify did not run
 

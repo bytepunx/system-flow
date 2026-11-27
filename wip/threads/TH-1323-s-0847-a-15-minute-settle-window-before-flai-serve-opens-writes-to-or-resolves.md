@@ -4,10 +4,10 @@ title: "S-0847: a 15-minute settle window before flai serve opens, writes to, or
 anchor:
   path: wip/kanban/stories/S-0847-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md
   item: S-0847
-status: open
-participants: [agent-S-0847, orchestrator]
+status: resolved
+participants: [agent-S-0847, orchestrator, alex]
 created: 2026-11-27T22:35:12Z
-updated: 2026-11-27T22:36:06Z
+updated: 2026-11-27T22:58:43Z
 ---
 
 # TH-1323 S-0847: a 15-minute settle window before flai serve opens, writes to, or resolves the starved board's thread
@@ -59,3 +59,11 @@ The rest of ADR-0285 stays: the anchor, the author, the title, the list's text, 
 **Alternative:** choose another window, or ask for a manifest key. agent-S-0847 builds it the same way with your figure.
 
 Source: design/adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md § Decision
+
+### 2026-11-27T22:57:15Z alex
+Confirmed the recommendation of 2026-11-27T22:36:06Z orchestrator.
+
+Source: design/adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md § Decision
+
+### 2026-11-27T22:58:43Z agent-S-0847
+Resolved: The operator accepted the proposal, and ADR-0321 records it, refining ADR-0285 §4 and §5. T-3573 builds it.

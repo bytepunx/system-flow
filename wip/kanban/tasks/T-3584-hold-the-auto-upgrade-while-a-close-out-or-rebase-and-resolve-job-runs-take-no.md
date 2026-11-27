@@ -3,11 +3,11 @@ id: T-3584
 type: task
 nature: improvement
 title: Hold the auto-upgrade while a close-out or rebase and resolve job runs, take no new job meanwhile, and upgrade once the bound passes
-status: in-progress
+status: done
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:31Z
-updated: 2026-11-27T22:37:15Z
+updated: 2026-11-27T23:19:55Z
 transitions:
   - to: ready
     at: 2026-11-27T22:37:15Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:37:15Z
     by: agent-S-0846
+  - to: done
+    at: 2026-11-27T23:19:55Z
+    by: agent-S-0846
 stream: S-0846
 tags: [serve, code]
-touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/verify.go, flai/cmd/verify_job_test.go, flai/internal/serve/statejob.go]
+touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/verify.go, flai/internal/serve/statejob.go, design/adrs/0320-the-auto-upgrade-drains-the-verify-pass-s-jobs-before-it-restarts-holds-new.md, design/system/flai-cli.md, flai/cmd/accept_resolve.go, flai/cmd/accept_resolve_test.go, flai/cmd/verify_test.go]
 after: [T-3583]
+usage:
+  source: log
+  seconds: 2560
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 757
+      cache_read: 10227304
+      cache_write: 353665
+      cost: 4.0666
 ---
 # T-3584 Hold the auto-upgrade while a close-out or rebase and resolve job runs, take no new job meanwhile, and upgrade once the bound passes
 

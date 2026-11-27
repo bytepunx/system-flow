@@ -3,16 +3,37 @@ id: T-3586
 type: task
 nature: improvement
 title: Document the drain and the ask again for operators and users, and close I-0388
-status: backlog
+status: done
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:47Z
-updated: 2026-11-17T12:33:47Z
-transitions: []
+updated: 2026-11-27T23:33:00Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:32:26Z
+    by: agent-S-0846
+  - to: in-progress
+    at: 2026-11-27T23:32:26Z
+    by: agent-S-0846
+  - to: done
+    at: 2026-11-27T23:33:00Z
+    by: agent-S-0846
 stream: S-0846
 tags: [docs]
 touches: [docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md]
 after: [T-3585]
+usage:
+  source: log
+  seconds: 28
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 91
+      cache_read: 1403679
+      cache_write: 9019
+      cost: 0.5429
 ---
 # T-3586 Document the drain and the ask again for operators and users, and close I-0388
 

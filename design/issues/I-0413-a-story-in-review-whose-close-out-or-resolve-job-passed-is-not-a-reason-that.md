@@ -7,7 +7,7 @@ count: 1
 cost: 48h
 first_reported: 2026-11-27T22:46:35Z
 last_reported: 2026-11-27T22:46:35Z
-updated: 2026-11-27T22:46:35Z
+updated: 2026-11-27T22:55:26Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ Serve journal: S-0843's rebase-and-resolve job "passed in 12m46s; stayed in revi
 ## Remediation
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+
+Story S-0854 remediates this issue, created from it at 2026-11-27T22:55:26Z.

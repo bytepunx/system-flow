@@ -7,7 +7,7 @@ count: 3
 cost: 39m
 first_reported: 2026-11-21T18:15:40Z
 last_reported: 2026-11-27T22:46:44Z
-updated: 2026-11-27T22:47:26Z
+updated: 2026-11-27T22:55:28Z
 usage:
   strategic:
     - kind: analyzer
@@ -55,3 +55,5 @@ S-0811 was sent back from review three times on design/system/workflow.md and do
 ## Remediation
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+
+Story S-0856 remediates this issue, created from it at 2026-11-27T22:55:28Z.

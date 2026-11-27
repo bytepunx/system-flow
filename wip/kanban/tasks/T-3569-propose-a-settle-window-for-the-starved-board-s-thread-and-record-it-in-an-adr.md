@@ -3,11 +3,11 @@ id: T-3569
 type: task
 nature: improvement
 title: Propose a settle window for the starved board's thread and record it in an ADR refining ADR-0285
-status: in-progress
+status: done
 parent: S-0847
 owner: alex
 created: 2026-11-17T12:29:29Z
-updated: 2026-11-27T22:35:02Z
+updated: 2026-11-27T22:58:35Z
 transitions:
   - to: ready
     at: 2026-11-27T22:35:01Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:35:02Z
     by: agent-S-0847
+  - to: done
+    at: 2026-11-27T22:58:34Z
+    by: agent-S-0847
 stream: S-0847
 tags: [adr, design]
-touches: [design/adrs/README.md, design/system/workflow.md]
+touches: [design/adrs/README.md, design/system/workflow.md, design/adrs/0321-flai-serve-opens-writes-to-and-resolves-the-starved-board-s-thread-only-once.md]
 usage:
   source: log
-  seconds: 25
+  seconds: 94
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 1636
-      cache_read: 625947
-      cache_write: 66223
-      cost: 0.6877
+      input: 30
+      output: 9758
+      cache_read: 2634831
+      cache_write: 67104
+      cost: 1.213
 ---
 # T-3569 Propose a settle window for the starved board's thread and record it in an ADR refining ADR-0285
 

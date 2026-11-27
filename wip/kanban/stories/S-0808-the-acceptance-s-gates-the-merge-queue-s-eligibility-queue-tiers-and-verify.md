@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-27T22:50:11Z
+updated: 2026-11-27T23:30:51Z
 transitions:
   - to: ready
     at: 2026-11-17T07:47:04Z
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2717
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-27
+      ceremony: 1
+      work: 44
+  models:
+    - model: claude-opus-5-5
+      input: 390
+      output: 2230
+      cache_read: 24244062
+      cache_write: 1092170
+      cost: 9.7376
   strategic:
     - kind: planner
       seconds: 248
@@ -77,9 +89,9 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] `verify_behind_main` sends back only tiers of the suites the transition with the `accept` effect lists in `verify:`, and lists no blocker when it lists none of the tiers main's paths select.
-- [ ] `queue_tiers` and the merge queue's eligibility read the same suites.
-- [ ] A story whose last verify did not run a suite the acceptance needs is refused with words naming the suite and the close-out that runs it.
+- [x] `verify_behind_main` sends back only tiers of the suites the transition with the `accept` effect lists in `verify:`, and lists no blocker when it lists none of the tiers main's paths select.
+- [x] `queue_tiers` and the merge queue's eligibility read the same suites.
+- [x] A story whose last verify did not run a suite the acceptance needs is refused with words naming the suite and the close-out that runs it.
 - [ ] On the baseline every gate judges what it judged before this story, shown by the tests of ADR-0291, ADR-0303, and ADR-0221 passing unchanged.
 
 ## Tasks

@@ -3,16 +3,37 @@ id: T-3573
 type: task
 nature: improvement
 title: flai serve opens, resolves, and adds to the starved board's thread only once the board has held its state for the settle window
-status: backlog
+status: done
 parent: S-0847
 owner: alex
 created: 2026-11-17T12:29:41Z
-updated: 2026-11-17T12:29:50Z
-transitions: []
+updated: 2026-11-27T23:23:53Z
+transitions:
+  - to: ready
+    at: 2026-11-27T22:58:45Z
+    by: agent-S-0847
+  - to: in-progress
+    at: 2026-11-27T22:58:45Z
+    by: agent-S-0847
+  - to: done
+    at: 2026-11-27T23:23:53Z
+    by: agent-S-0847
 stream: S-0847
 tags: [flai, serve]
 touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, docs/users/flai.md]
 after: [T-3569]
+usage:
+  source: log
+  seconds: 1508
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 11943
+      cache_read: 3224876
+      cache_write: 82132
+      cost: 1.4846
 ---
 # T-3573 flai serve opens, resolves, and adds to the starved board's thread only once the board has held its state for the settle window
 

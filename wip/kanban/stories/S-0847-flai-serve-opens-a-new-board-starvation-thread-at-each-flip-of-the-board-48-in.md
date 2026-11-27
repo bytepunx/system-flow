@@ -3,10 +3,10 @@ id: S-0847
 type: story
 nature: improvement
 title: flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-27T22:35:28Z
+updated: 2026-11-27T23:37:05Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -14,12 +14,16 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:34:01Z
     by: agent-S-0847
+  - to: review
+    at: 2026-11-27T23:37:05Z
+    by: agent-S-0847
 blocked:
   - from: 2026-11-27T22:35:28Z
+    until: 2026-11-27T22:57:15Z
     reason: awaiting the operator on TH-1323
 tags: [flai, serve]
 topics: [threads, ready, orchestration]
-touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/system/workflow.md, docs/users/flai.md, design/adrs/README.md, design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md]
+touches: [flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/system/workflow.md, docs/users/flai.md, design/adrs/README.md, design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md, design/adrs/0321-flai-serve-opens-writes-to-and-resolves-the-starved-board-s-thread-only-once.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,19 +31,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 99
+  seconds: 2487
   priced_by: harness
   turns:
     - day: 2026-11-27
       ceremony: 1
-      work: 12
+      work: 50
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 5413
-      cache_read: 2070622
-      cache_write: 219065
-      cost: 2.275
+      input: 172
+      output: 55509
+      cache_read: 14988309
+      cache_write: 381724
+      cost: 6.8999
   strategic:
     - kind: planner
       seconds: 5
@@ -58,15 +62,15 @@ usage:
           cache_write: 9307
           cost: 0.2541
     - kind: orchestrator
-      seconds: 45
+      seconds: 54
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 136
-          cache_read: 564195
-          cache_write: 70240
-          cost: 0.2006
+          input: 25
+          output: 199
+          cache_read: 744964
+          cache_write: 130987
+          cost: 0.2774
         - model: claude-sonnet-5-5
           input: 1
           output: 8
@@ -114,8 +118,8 @@ finalized:
 This story remediates [I-0389](../../../design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md), "flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator", which the analysis in [2026-11-16-all.md](../../../design/analysis/2026-11-16-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0389 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0389 is closed with `flai issue close I-0389 --reason` saying what fixed it
+- [x] The cause I-0389 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0389 is closed with `flai issue close I-0389 --reason` saying what fixed it
 
 ## Tasks
 - T-3569 Propose a settle window for the starved board's thread and record it in an ADR refining ADR-0285

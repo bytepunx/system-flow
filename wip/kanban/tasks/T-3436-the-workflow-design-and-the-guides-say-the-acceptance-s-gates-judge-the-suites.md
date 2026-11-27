@@ -3,16 +3,37 @@ id: T-3436
 type: task
 nature: feature
 title: The workflow design and the guides say the acceptance's gates judge the suites its transition's verify lists
-status: backlog
+status: done
 parent: S-0808
 owner: alex
 created: 2026-11-16T23:46:50Z
-updated: 2026-11-16T23:46:50Z
-transitions: []
+updated: 2026-11-27T23:35:32Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:30:53Z
+    by: agent-S-0808
+  - to: in-progress
+    at: 2026-11-27T23:30:53Z
+    by: agent-S-0808
+  - to: done
+    at: 2026-11-27T23:35:32Z
+    by: agent-S-0808
 stream: S-0808
 tags: [flai]
-touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
+touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/users/flai-reference.md, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
 after: [T-3434, T-3435]
+usage:
+  source: log
+  seconds: 272
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 610
+      cache_read: 6323307
+      cache_write: 124685
+      cost: 2.4782
 ---
 # T-3436 The workflow design and the guides say the acceptance's gates judge the suites its transition's verify lists
 

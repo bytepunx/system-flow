@@ -3,16 +3,37 @@ id: T-3435
 type: task
 nature: feature
 title: The merge queue's eligibility needs only the acceptance's suites to have passed at the story's head
-status: backlog
+status: done
 parent: S-0808
 owner: alex
 created: 2026-11-16T23:46:42Z
-updated: 2026-11-16T23:46:42Z
-transitions: []
+updated: 2026-11-27T23:23:44Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:09:14Z
+    by: agent-S-0808
+  - to: in-progress
+    at: 2026-11-27T23:09:14Z
+    by: agent-S-0808
+  - to: done
+    at: 2026-11-27T23:23:44Z
+    by: agent-S-0808
 stream: S-0808
 tags: [flai]
 touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go]
 after: [T-3433]
+usage:
+  source: log
+  seconds: 870
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 484
+      cache_read: 4111008
+      cache_write: 273789
+      cost: 1.6853
 ---
 # T-3435 The merge queue's eligibility needs only the acceptance's suites to have passed at the story's head
 

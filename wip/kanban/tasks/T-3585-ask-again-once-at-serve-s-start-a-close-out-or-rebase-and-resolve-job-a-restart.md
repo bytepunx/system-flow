@@ -3,16 +3,37 @@ id: T-3585
 type: task
 nature: improvement
 title: Ask again once, at serve's start, a close-out or rebase and resolve job a restart left interrupted
-status: backlog
+status: done
 parent: S-0846
 owner: alex
 created: 2026-11-17T12:33:39Z
-updated: 2026-11-27T22:37:15Z
-transitions: []
+updated: 2026-11-27T23:32:02Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:20:11Z
+    by: agent-S-0846
+  - to: in-progress
+    at: 2026-11-27T23:20:11Z
+    by: agent-S-0846
+  - to: done
+    at: 2026-11-27T23:32:02Z
+    by: agent-S-0846
 stream: S-0846
 tags: [serve, code]
-touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go]
+touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go]
 after: [T-3584]
+usage:
+  source: log
+  seconds: 711
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 279
+      cache_read: 2731979
+      cache_write: 221363
+      cost: 1.1351
 ---
 # T-3585 Ask again once, at serve's start, a close-out or rebase and resolve job a restart left interrupted
 

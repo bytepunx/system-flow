@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2275.7293
-accrued_seconds: 1581236
-tasks_completed: 4102
-last_run: 2026-11-27T22:50:57Z
+accrued_cost: 2276.3418
+accrued_seconds: 1581346
+tasks_completed: 4107
+last_run: 2026-11-27T22:58:20Z
 ---
 
 # Orchestrator activity
@@ -28753,6 +28753,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0850
 - Seconds: 19
 - Cost: 0.1453 USD, estimated
+
+### 2026-11-27T22:51:42Z
+
+- Summary: Accepted S-0850 (analysis-cadence instance) under accept_reviews at e38a7e6: close-out passed at the head, no blockers in the dry run, verifier pass; evidence 1: T-3611 done, 2: T-3612 done; merged and archived 3 items
+- Items: S-0850
+- Seconds: 45
+- Cost: 0.1393 USD, estimated
+
+### 2026-11-27T22:51:57Z
+
+- Summary: No publish after S-0850's acceptance: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD; nothing accepted awaits a release)
+- Items: S-0850
+- Seconds: 15
+- Cost: 0.0664 USD, estimated
+
+### 2026-11-27T22:52:17Z
+
+- Summary: I accepted S-0850 (the analysis-cadence run) as the orchestrator at commit e38a7e6, and no release is due.
+- Items: none
+- Seconds: 20
+- Cost: 0.0841 USD, estimated
+
+### 2026-11-27T22:57:59Z
+
+- Summary: TH-1323 (S-0847): the operator confirmed my recommendation, a fixed 15-minute settle window recorded in an ADR refining ADR-0285 §4 and §5 (D-0677). Nothing is owed by me: no cost of delay input to set, and the thread is not mine to resolve. agent-S-0847 has restarted to build it.
+- Items: S-0847
+- Seconds: 9
+- Cost: 0.0768 USD, estimated
+
+### 2026-11-27T22:58:20Z
+
+- Summary: I didn't need to do anything on TH-1323. You confirmed my recommendation on it: a fixed 15-minute settle window before flai serve opens, writes to, or resolves the starved board's thread. The decision goes in a new ADR that refines ADR-0285 §4 and §5, and the digest has recorded your answer as D-0677.
+- Items: none
+- Seconds: 21
+- Cost: 0.2459 USD, estimated
 
 ## Refusals
 

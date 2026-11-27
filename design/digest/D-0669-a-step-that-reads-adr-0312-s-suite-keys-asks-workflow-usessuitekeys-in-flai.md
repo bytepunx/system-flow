@@ -9,7 +9,7 @@ date: 2026-11-18
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0807, S-0809, S-0812]
+cited: [S-0807, S-0808, S-0809, S-0812]
 ---
 
 # D-0669 A step that reads ADR-0312's suite keys asks Workflow.UsesSuiteKeys in flai/internal/workflow/suites.go, and reads a workflow file for which it is false as giving the baseline's keys
