@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -927,5 +928,110 @@ func TestAcceptOptionsEnqueues(t *testing.T) {
 		if got := c.opts.Enqueues(); got != c.want {
 			t.Errorf("%s: Enqueues() = %v, want %v", name, got, c.want)
 		}
+	}
+}
+
+// acceptSuitesFlow is the baseline workflow with the verify of its acceptance,
+// verify: all, replaced by verify, or taken out when verify is "".
+func acceptSuitesFlow(t *testing.T, verify string) *workflow.Workflow {
+	t.Helper()
+	base, err := os.ReadFile(filepath.Join("..", "workflow", "baseline", "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const all = "rules: [children-closed, criteria-ticked], verify: all}"
+	if !strings.Contains(string(base), all) {
+		t.Fatalf("the baseline workflow file's acceptance no longer gives %q", all)
+	}
+	given := "rules: [children-closed, criteria-ticked]}"
+	if verify != "" {
+		given = strings.TrimSuffix(given, "}") + ", " + verify + "}"
+	}
+	w, p := workflow.Parse("design/workflows/board.md", strings.Replace(string(base), all, given, 1))
+	if p != nil {
+		t.Fatalf("the edited workflow does not parse: %s", p)
+	}
+	return &w
+}
+
+// S-0808, ADR-0312 §3: while the workflow's acceptance lists suites, a story
+// whose last flai verify did not select one of them is refused with
+// verify_suites, naming the suites and the close-out, in the operator's
+// acceptance, the orchestrator's, among the acceptance's blockers and not the
+// orchestrator's own, one that enqueues the story, and one past a held
+// queue; not in the queue's landing, nor for a story resumed, nor once the
+// last verify ran every suite or each listed one. With no report it names
+// every listed suite, and a report that cannot be read is the blocker,
+// naming why. On the baseline and with no verify on the acceptance nothing
+// is held.
+func TestTheVerifySuitesGateHoldsASuiteTheAcceptanceNeedsThatDidNotRun(t *testing.T) {
+	at := time.Date(2026, 11, 27, 16, 0, 0, 0, time.UTC)
+	repo, s := forgeRepo(t, "local", at)
+	listed := acceptSuitesFlow(t, "verify: [behavior, integration]")
+	ran := func(suites ...string) lastVerify {
+		return lastVerify{head: forgeHead, ok: true, rep: verify.Report{Story: s.ID, Commit: forgeHead, Passed: true, Suites: suites}}
+	}
+	gate := func(w *workflow.Workflow, resumed bool, opts AcceptOptions, last lastVerify) *Acceptance {
+		t.Helper()
+		repo.Workflow = w
+		res := &Acceptance{ID: s.ID, Branch: "story/" + s.ID, Resumed: resumed}
+		verifySuitesGate(repo, s, res, opts, last)
+		return res
+	}
+	want := s.ID + "'s last flai verify did not run suite integration, which its acceptance needs: ask for its close-out, with the MCP tool verify or flai verify " + s.ID + " --job"
+	for name, opts := range map[string]AcceptOptions{
+		"the operator's acceptance":         {},
+		"the orchestrator's acceptance":     {Orchestrator: true},
+		"an acceptance that enqueues":       {QueueBatches: true},
+		"a hand acceptance past held queue": {QueueBatches: true, QueueHeld: true},
+	} {
+		res := gate(listed, false, opts, ran("behavior"))
+		if b := res.VerifySuitesBlocker; b == nil || b.Code != BlockVerifySuites || !strings.HasPrefix(b.Message, want) || !slices.Equal(res.Blockers, []string{b.Message}) || !slices.Equal(res.SuitesNotRun, []string{"integration"}) {
+			t.Errorf("%s must list verify_suites naming integration: %+v %q %q", name, res.VerifySuitesBlocker, res.SuitesNotRun, res.Blockers)
+		}
+		if len(res.OrchestratorBlockers) > 0 {
+			t.Errorf("%s: verify_suites is not among the orchestrator's own blockers: %+v", name, res.OrchestratorBlockers)
+		}
+	}
+	for name, c := range map[string]struct {
+		w       *workflow.Workflow
+		resumed bool
+		opts    AcceptOptions
+		last    lastVerify
+	}{
+		"the queue's landing":                {listed, false, AcceptOptions{QueueBatches: true, Batch: "20261127-160000"}, ran("behavior")},
+		"a resumed acceptance":               {listed, true, AcceptOptions{}, ran("behavior")},
+		"a verify of every suite":            {listed, false, AcceptOptions{}, ran()},
+		"a verify of each listed suite":      {listed, false, AcceptOptions{}, ran("integration", "behavior", "static")},
+		"the baseline":                       {nil, false, AcceptOptions{}, ran("behavior")},
+		"an acceptance that gives no verify": {acceptSuitesFlow(t, ""), false, AcceptOptions{}, ran("behavior")},
+		"an acceptance that needs all":       {acceptSuitesFlow(t, "verify: all"), false, AcceptOptions{}, lastVerify{err: errors.New("read the report: boom")}},
+	} {
+		if res := gate(c.w, c.resumed, c.opts, c.last); res.VerifySuitesBlocker != nil || len(res.SuitesNotRun) > 0 || len(res.Blockers) > 0 {
+			t.Errorf("%s must hold nothing on verify_suites: %+v %q %q", name, res.VerifySuitesBlocker, res.SuitesNotRun, res.Blockers)
+		}
+	}
+	if res := gate(listed, false, AcceptOptions{}, lastVerify{head: forgeHead}); res.VerifySuitesBlocker == nil || !strings.Contains(res.VerifySuitesBlocker.Message, "did not run suites behavior, integration,") || !slices.Equal(res.SuitesNotRun, []string{"behavior", "integration"}) {
+		t.Errorf("with no report every listed suite is named: %+v %q", res.VerifySuitesBlocker, res.SuitesNotRun)
+	}
+	unread := "cannot tell whether " + s.ID + "'s last flai verify ran behavior, integration, which its acceptance needs: cannot read the report: boom (ADR-0312 §3)"
+	if res := gate(listed, false, AcceptOptions{}, lastVerify{err: errors.New("read the report: boom")}); res.VerifySuitesBlocker == nil || res.VerifySuitesBlocker.Message != unread || !slices.Equal(res.Blockers, []string{unread}) {
+		t.Errorf("a report that cannot be read is the blocker %q: %+v %q", unread, res.VerifySuitesBlocker, res.Blockers)
+	}
+}
+
+// S-0808, ADR-0312 §3: with no verify on the workflow's acceptance, it needs
+// no suite, so neither queue_tiers nor verify_behind_main reads a head or a
+// report to hold the story.
+func TestAnAcceptanceThatNeedsNoSuiteHasNoQueueTiersNorVerifyBehindMain(t *testing.T) {
+	at := time.Date(2026, 11, 27, 16, 0, 0, 0, time.UTC)
+	repo, s, answers, _, report := behindMainFixture(t, at)
+	report(true, []string{"flai/internal/guard/roles_test.go"})
+	repo.Workflow = acceptSuitesFlow(t, "")
+	res := &Acceptance{ID: s.ID, Branch: "story/" + s.ID}
+	queueTiersGate(repo, s, res, AcceptOptions{QueueBatches: true}, lastVerify{headErr: errors.New("no answer")})
+	verifyBehindMainGate(withGit{answers}, repo, s, res, AcceptOptions{})
+	if res.QueueTiersWhy != "" || res.QueueTiersBlocker != nil || res.VerifyBehindMainBlocker != nil || len(res.StaleTiers) > 0 || len(res.Blockers) > 0 {
+		t.Errorf("an acceptance that needs no suite must hold nothing: %q %+v %+v %q %q", res.QueueTiersWhy, res.QueueTiersBlocker, res.VerifyBehindMainBlocker, res.StaleTiers, res.Blockers)
 	}
 }

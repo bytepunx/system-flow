@@ -153,6 +153,15 @@ type Acceptance struct {
 	// and that the merge queue's batch runs every tier again over the main it
 	// lands on, in place of the blocker (ADR-0291, ADR-0308); "" otherwise.
 	StaleTiersQueued string `json:"stale_tiers_queued,omitempty"`
+	// SuitesNotRun are the suites the acceptance needs, as the verify of the
+	// workflow's transition with the accept effect lists them, that the
+	// story's last flai verify did not select, and VerifySuitesBlocker the
+	// blocker verify_suites they bring, also in Blockers, in every acceptance
+	// verify_behind_main gates, one that enqueues the story among them
+	// (ADR-0312 §3); empty and nil on the baseline, whose acceptance needs
+	// every suite, and when the last run selected each listed suite.
+	SuitesNotRun        []string `json:"suites_not_run,omitempty"`
+	VerifySuitesBlocker *Blocker `json:"verify_suites_blocker,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -206,6 +215,12 @@ const BlockQueueTiers = "queue_tiers"
 // main that has since brought in paths overlapping its change set and sending
 // back a tier it ran (ADR-0291, ADR-0303).
 const BlockVerifyBehindMain = "verify_behind_main"
+
+// BlockVerifySuites is the code of the blocker of every acceptance but the
+// merge queue's landing for a story whose last flai verify did not run a suite
+// the verify of the workflow's transition with the accept effect lists
+// (ADR-0312 §3).
+const BlockVerifySuites = "verify_suites"
 
 // BlockKluster is the code of the blocker of every acceptance of a story,
 // while the kluster host action is on, whose namespace was not deployed at
@@ -272,9 +287,13 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // main has brought in, since the story's last passing flai verify, paths that
 // send back a tier it ran, save one the merge queue takes (opts.Enqueues),
 // whose batch runs every tier again over the main it lands on (ADR-0291,
-// ADR-0303, ADR-0308). A story's close-out job running at another commit than
-// its last report is named beside the blockers, which it does not change
-// (I-0384).
+// ADR-0303, ADR-0308). queue_tiers and verify_behind_main judge only the
+// tiers of the suites the verify of the workflow's acceptance lists, and the
+// acceptances verify_behind_main gates, one that enqueues the story among
+// them, have the blocker verify_suites while the story's last flai verify did
+// not run one of those suites (ADR-0312 §3). A story's close-out job running
+// at another commit than its last report is named beside the blockers, which
+// it does not change (I-0384).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -438,6 +457,9 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	// a verify main has outrun since does not vouch for the head the
 	// acceptance lands, whoever accepts but the queue (ADR-0291)
 	verifyBehindMainGate(r, repo, it, res, opts)
+	// a suite the acceptance needs that the last verify did not run does not
+	// vouch for the story, whoever accepts but the queue (ADR-0312 §3)
+	verifySuitesGate(repo, it, res, opts, last)
 	// the queue's landing takes the batch's verification of the story's
 	// rebased head (ADR-0176); for the orchestrator, in place of its own
 	var landing []string
@@ -524,12 +546,14 @@ func DirtyMainMessage(id string, paths []string) string {
 // story with a branch, not done already, while the merge queue batches
 // (opts.QueueBatches), and neither the orchestrator's acceptance, which
 // enqueues the story instead (S-0403), nor the queue's landing, whose batch
-// ran every tier. last is the story's last report read against that head.
+// ran every tier. last is the story's last report read against that head. It
+// judges only the tiers of the suites the verify of the workflow's acceptance
+// lists, and none when it lists none (ADR-0312 §3).
 func queueTiersGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions, last lastVerify) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Orchestrator || opts.Batch != "" || !opts.QueueBatches {
 		return
 	}
-	res.QueueTiers, res.QueueTiersWhy = queueTiersNotRun(repo, it.ID, res.Branch, last)
+	res.QueueTiers, res.QueueTiersWhy = queueTiersNotRun(repo, it.ID, res.Branch, last, workitem.AcceptSuites(repo.Flow(), it.Type))
 	if res.QueueTiersWhy == "" || opts.WithoutQueueTiers {
 		return
 	}
@@ -538,13 +562,17 @@ func queueTiersGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, opt
 	res.Blockers = append(res.Blockers, b.Message)
 }
 
-// queueTiersNotRun is verify.QueueTiersNotRun for story id's last report
-// against the head of branch, as last read them, with the tiers its
-// worktree's manifest declares, which its flai verify ran, or the main
-// checkout's when it has no worktree: a report not at the head names the
-// close-out job running (I-0384). A head, a report, or tiers that cannot be
-// read is why, naming the error, so the gate never opens unread.
-func queueTiersNotRun(repo *workitem.Repo, id, branch string, last lastVerify) ([]string, string) {
+// queueTiersNotRun is verify.QueueTiersNotRunOf for the suites need names and
+// story id's last report against the head of branch, as last read them, with
+// the tiers its worktree's manifest declares, which its flai verify ran, or
+// the main checkout's when it has no worktree: a report not at the head names
+// the close-out job running (I-0384). Nothing when need is nil, which needs
+// no suite. A head, a report, or tiers that cannot be read is why, naming the
+// error, so the gate never opens unread.
+func queueTiersNotRun(repo *workitem.Repo, id, branch string, last lastVerify, need *workflow.Suites) ([]string, string) {
+	if need == nil {
+		return nil, ""
+	}
 	if last.headErr != nil {
 		return nil, fmt.Sprintf("cannot read the head of %s: %v", branch, last.headErr)
 	}
@@ -556,7 +584,7 @@ func queueTiersNotRun(repo *workitem.Repo, id, branch string, last lastVerify) (
 	if err != nil {
 		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
 	}
-	return verify.QueueTiersNotRun(last.rep, last.ok, last.head, tiers)
+	return verify.QueueTiersNotRunOf(last.rep, last.ok, last.head, tiers, need)
 }
 
 // lastVerify is a story's last flai verify report read against the head of
@@ -645,13 +673,14 @@ func QueueTiersBlocker(id, why string) Blocker {
 // a why that is an error too, which the enqueue does not read (ADR-0308).
 // The blocker is among the acceptance's blockers, not the orchestrator's own:
 // the orchestrator's enqueue vouches with those alone, and the batch runs
-// every tier.
+// every tier. Only tiers of the suites the verify of the workflow's
+// acceptance lists are sent back, and none when it lists none (ADR-0312 §3).
 func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
 		return
 	}
 	var why string
-	res.StaleTiers, why = verifyBehindMain(r, repo, it.ID)
+	res.StaleTiers, why = verifyBehindMain(r, repo, it.ID, workitem.AcceptSuites(repo.Flow(), it.Type))
 	if why == "" {
 		return
 	}
@@ -664,16 +693,20 @@ func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	res.Blockers = append(res.Blockers, b.Message)
 }
 
-// verifyBehindMain is, for story id's last flai verify report, the tiers it ran
-// that the paths the main branch brought in since its merge base and that
-// overlap the story's change set send back (ADR-0303), with the tiers its
-// worktree's manifest declares, or the main checkout's when it has no
-// worktree, selected over the main checkout, and why they are stale, as a
-// sentence fragment; nothing when there is no report, the report did not
-// pass, or nothing main brought in overlaps the change set and sends a tier
-// back. A report, a main, or tiers that cannot be read is why, naming the
-// error, so the gate never opens unread.
-func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string) ([]string, string) {
+// verifyBehindMain is, for story id's last flai verify report, the tiers of
+// the suites need names that it ran and that the paths the main branch
+// brought in since its merge base and that overlap the story's change set
+// send back (ADR-0303, ADR-0312 §3), with the tiers its worktree's manifest
+// declares, or the main checkout's when it has no worktree, selected over the
+// main checkout, and why they are stale, as a sentence fragment; nothing when
+// need is nil, there is no report, the report did not pass, or nothing main
+// brought in overlaps the change set and sends such a tier back. A report, a
+// main, or tiers that cannot be read is why, naming the error, so the gate
+// never opens unread.
+func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string, need *workflow.Suites) ([]string, string) {
+	if need == nil {
+		return nil, ""
+	}
 	rep, ok, err := verify.LastReport(repo, id)
 	if err != nil {
 		return nil, fmt.Sprintf("cannot %v", err)
@@ -694,7 +727,7 @@ func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string) ([]string,
 	if err != nil {
 		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
 	}
-	names := verify.StaleTiers(os.DirFS(repo.MainRoot), tiers, rep, overlap)
+	names := verify.StaleTiersOf(os.DirFS(repo.MainRoot), tiers, rep, overlap, need)
 	if len(names) == 0 {
 		return nil, ""
 	}
@@ -770,6 +803,46 @@ func firstPaths(paths []string, n int) string {
 // naming the way out (ADR-0291, ADR-0303).
 func VerifyBehindMainBlocker(id, why string) Blocker {
 	return Blocker{Code: BlockVerifyBehindMain, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291, ADR-0303)", id, why, id, id)}
+}
+
+// verifySuitesGate sets on res the suites the verify of the workflow's
+// acceptance lists that story it's last flai verify, as last read it, did not
+// select, and the blocker verify_suites they bring (ADR-0312 §3). It gates
+// the acceptances verify_behind_main gates, a story with a branch, not done
+// already, but for the merge queue's landing, whose batch verified it; one
+// that enqueues the story is held too, since the batch runs the suites
+// verify_at names for it, not those the acceptance needs, and the merge queue
+// does not take such a story. On the baseline, whose acceptance needs every
+// suite, and with no verify on the acceptance it holds nothing. A report that
+// cannot be read is the blocker too, so the gate never opens unread. The
+// blocker is among the acceptance's blockers, as verify_behind_main's is.
+func verifySuitesGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions, last lastVerify) {
+	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
+		return
+	}
+	need := workitem.AcceptSuites(repo.Flow(), it.Type)
+	if need == nil || need.All {
+		return
+	}
+	var b Blocker
+	if last.err != nil {
+		b = Blocker{Code: BlockVerifySuites, Message: fmt.Sprintf("cannot tell whether %s's last flai verify ran %s, which its acceptance needs: cannot %v (ADR-0312 §3)", it.ID, strings.Join(need.Names, ", "), last.err)}
+	} else {
+		res.SuitesNotRun = verify.SuitesNotRun(last.rep, last.ok, need)
+		if len(res.SuitesNotRun) == 0 {
+			return
+		}
+		b = VerifySuitesBlocker(it.ID, res.SuitesNotRun)
+	}
+	res.VerifySuitesBlocker = &b
+	res.Blockers = append(res.Blockers, b.Message)
+}
+
+// VerifySuitesBlocker is why story id cannot be accepted while its last flai
+// verify did not run suites, which the verify of the workflow's acceptance
+// lists, naming them and the close-out that runs them (ADR-0312 §3).
+func VerifySuitesBlocker(id string, suites []string) Blocker {
+	return Blocker{Code: BlockVerifySuites, Message: verify.SuitesNotRunText(id, suites)}
 }
 
 // klusterGate sets on res why story it is not accepted yet while the kluster

@@ -296,6 +296,18 @@ main branch and runs again only the tiers its new paths send back, and
 accept it once that passes. No flag overrides it, and --batch is not held by
 it: the batch ran every tier over the main branch it lands on.
 
+queue_tiers and verify_behind_main judge only the tiers of the suites the
+verify: of the transition with the accept effect in design/workflows/board.md
+lists, every suite on the baseline (ADR-0312 §3): a tier of another suite
+neither holds the story nor sends it back. While that verify: lists suites,
+an acceptance that verify_behind_main gates is refused too while the story's
+last flai verify did not run one of them, as the blocker verify_suites,
+naming the suites and flai verify <id> --job, which runs them; --dry-run
+lists it, with --json under verify_suites_blocker, and suites_not_run names
+the suites. An acceptance that enqueues the story lands nothing, and the
+merge queue holds the story, not eligible as verify_suites, until a flai
+verify runs them.
+
 While the kluster host action is on for the project and its system-flow.yaml
 has a kluster: block, a change the cluster has not run is not shipped
 (ADR-0254 §5a): every acceptance of a story with a branch, by hand, from the
