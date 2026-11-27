@@ -34,6 +34,7 @@ type upgradeLab struct {
 	public   map[string]bool // the releases published; nil when flai serve does not look
 	unlisted error           // what listing the published releases answers instead
 	checked  []string        // the releases looked for
+	drain    *jobDrain       // the verify passes' jobs, begun and ended by the test
 }
 
 func newUpgradeLab(t *testing.T) *upgradeLab {
@@ -46,7 +47,8 @@ func newUpgradeLab(t *testing.T) *upgradeLab {
 // restart is a new flai serve on the same serve directory: it keeps nothing
 // in memory, only what it recorded.
 func (lab *upgradeLab) restart() {
-	u := &upgrader{now: func() time.Time { return lab.at }, log: slog.New(slog.NewTextHandler(&lab.logs, nil)), dir: lab.dir,
+	lab.drain = &jobDrain{}
+	u := &upgrader{hold: lab.drain.hold, lift: lab.drain.lift, now: func() time.Time { return lab.at }, log: slog.New(slog.NewTextHandler(&lab.logs, nil)), dir: lab.dir,
 		outdated: func(root string) *release.Outdated {
 			if n := lab.newest[root]; n != "" && n != lab.running {
 				return &release.Outdated{Running: lab.running, Newest: n}
@@ -92,6 +94,16 @@ func (lab *upgradeLab) look(roots ...string) {
 }
 
 func (lab *upgradeLab) after(d time.Duration) { lab.at = lab.at.Add(d) }
+
+// draining answers the release the upgrade waits on the drain for, "" when
+// none waits.
+func (lab *upgradeLab) draining() string {
+	version, holding := lab.drain.holding()
+	if holding && version == "" {
+		lab.t.Fatal("the drain holds for no release")
+	}
+	return version
+}
 
 // I-0141, S-0387: a flai serve already running when the project's history
 // gains a newer flai release finds it on its next minute's look and, with
@@ -390,5 +402,105 @@ func TestTheThreadAfterAnHourOfRefusalsDoesNotWaitForPublication(t *testing.T) {
 	}
 	if len(lab.checked) != 0 {
 		t.Errorf("looked for the release %v before telling the host's refusal", lab.checked)
+	}
+}
+
+// I-0388, ADR-0320 §1: an upgrade due while a verify pass runs a job is not
+// asked; the wait is logged once, the passes may start no job meanwhile, and
+// the first look after the job ended asks, letting them start jobs again.
+func TestTheUpgradeWaitsForTheVerifyPassJobs(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.auto["harbour"] = true
+	lab.newest["harbour"] = "1.49.0"
+	if !lab.drain.begin() {
+		t.Fatal("a job could not start before any upgrade was due")
+	}
+	lab.look("harbour")
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if len(lab.asked) != 0 {
+		t.Fatalf("asked for %v while a close-out job ran", lab.asked)
+	}
+	if got := lab.draining(); got != "1.49.0" {
+		t.Errorf("the drain holds for %q, want 1.49.0", got)
+	}
+	if lab.drain.begin() {
+		t.Error("a job started while the upgrade waited on the drain")
+	}
+	logs := lab.logs.String()
+	if n := strings.Count(logs, `level=INFO msg="flai upgrade waits for a close-out job"`); n != 1 || !strings.Contains(logs, "jobs=1") || !strings.Contains(logs, "newest=1.49.0") {
+		t.Errorf("the wait is logged once, with the jobs running (%d times):\n%s", n, logs)
+	}
+	lab.drain.end()
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if strings.Join(lab.asked, " ") != "1.49.0" {
+		t.Fatalf("once the job ended the host was asked for %v", lab.asked)
+	}
+	// the host took it and restarts flai serve, so no job starts until then
+	if got := lab.draining(); got != "1.49.0" {
+		t.Errorf("the drain holds for %q once the host took the ask, want 1.49.0", got)
+	}
+	if lab.drain.begin() {
+		t.Error("a job may start between the ask the host took and its restart")
+	}
+}
+
+// ADR-0320 §4: 45 minutes from the look that first found the upgrade waiting
+// on a job, it is asked with the job still running, logged at warn.
+func TestTheUpgradeStopsWaitingForTheJobsAfter45Minutes(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.auto["harbour"] = true
+	lab.newest["harbour"] = "1.49.0"
+	lab.drain.begin()
+	lab.look("harbour")
+	for range 44 {
+		lab.after(time.Minute)
+		lab.look("harbour")
+	}
+	if len(lab.asked) != 0 {
+		t.Fatalf("asked for %v within 45 minutes of the wait", lab.asked)
+	}
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if strings.Join(lab.asked, " ") != "1.49.0" {
+		t.Fatalf("45 minutes on the host was asked for %v", lab.asked)
+	}
+	if logs := lab.logs.String(); !strings.Contains(logs, `level=WARN msg="flai upgrade stops waiting for close-out jobs"`) || !strings.Contains(logs, "jobs=1") {
+		t.Errorf("the end of the wait is logged at warn with the jobs running:\n%s", logs)
+	}
+	if got := lab.draining(); got != "1.49.0" {
+		t.Errorf("the drain holds for %q once the host took the ask, want 1.49.0", got)
+	}
+}
+
+// ADR-0320 §2 and §3: an upgrade the host refuses, or one no longer due,
+// lifts the drain, so that the requests it held go back.
+func TestTheDrainLiftsWhenTheHostRefusesOrNoUpgradeIsDue(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.auto["harbour"] = true
+	lab.newest["harbour"] = "1.49.0"
+	lab.refuse = errors.New("flai 1.49.0 is not published; published are 1.48.0")
+	lab.look("harbour")
+	if len(lab.asked) != 1 {
+		t.Fatalf("asked for %v", lab.asked)
+	}
+	if got := lab.draining(); got != "" {
+		t.Errorf("the drain holds for %q after the host refused", got)
+	}
+
+	lab = newUpgradeLab(t)
+	lab.auto["harbour"] = true
+	lab.newest["harbour"] = "1.49.0"
+	lab.drain.begin()
+	lab.look("harbour")
+	if got := lab.draining(); got != "1.49.0" {
+		t.Fatalf("the drain holds for %q, want 1.49.0", got)
+	}
+	lab.running = "1.49.0" // caught up meanwhile
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if got := lab.draining(); got != "" || len(lab.asked) != 0 {
+		t.Errorf("no upgrade is due, yet the drain holds for %q, asked %v", got, lab.asked)
 	}
 }

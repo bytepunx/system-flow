@@ -8,8 +8,10 @@
 // holds, as the merge pass takes a merge request. The job's state is
 // S-nnnn.job.json and its output S-nnnn.log; a state job's, which flai serve
 // starts itself when a story enters a state whose runs name something
-// (ADR-0312 §4), are S-nnnn.state.json and S-nnnn.state.log. Both sides
-// import this package, so neither imports the other.
+// (ADR-0312 §4), are S-nnnn.state.json and S-nnnn.state.log. A request
+// flai serve holds while its upgrade waits for the jobs it runs to end is
+// kept as S-nnnn.held.json until it is put back as a request (ADR-0320).
+// Both sides import this package, so neither imports the other.
 package closeout
 
 import (
@@ -28,12 +30,14 @@ import (
 )
 
 // The suffixes of a story's files in the jobs folder: its request, the
-// request once flai serve took it, flai serve's answer, the job's state, the
-// job's output, and a state job's state and output, kept apart from the
+// request once flai serve took it, the request flai serve holds until it
+// restarts on a newer flai, flai serve's answer, the job's state, the job's
+// output, and a state job's state and output, kept apart from the
 // close-out's.
 const (
 	RequestSuffix  = ".request.json"
 	TakenSuffix    = ".taken.json"
+	HeldSuffix     = ".held.json"
 	AnswerSuffix   = ".answer.json"
 	JobSuffix      = ".job.json"
 	LogSuffix      = ".log"
@@ -170,10 +174,15 @@ type Answer struct {
 	// Reason is why flai serve ran nothing for the request, saying what to
 	// do; "" when it started a job, found one, or answered from the record.
 	Reason string `json:"reason,omitempty"`
+	// Held is a request flai serve keeps while its upgrade waits for the
+	// jobs it runs to end, and starts once it has restarted, its end told by
+	// a verified event (ADR-0320); Reason says so.
+	Held bool `json:"held,omitempty"`
 }
 
-// Refused reports whether flai serve ran nothing for the request.
-func (a Answer) Refused() bool { return a.Reason != "" }
+// Refused reports whether flai serve ran nothing for the request and will
+// not: a held request runs later, so it is not refused.
+func (a Answer) Refused() bool { return a.Reason != "" && !a.Held }
 
 // Running reports whether the answer names a job of the story that was
 // running already, which the request did not start.

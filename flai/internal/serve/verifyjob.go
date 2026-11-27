@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/config"
@@ -32,7 +34,9 @@ import (
 // answers at once with the job's id, or with the verdict the verify record
 // holds for the commit. The job runs the project's close-out in the story's
 // worktree with no model; its end is journaled and announced by a verified
-// event in the project's event log, which the agent waits for.
+// event in the project's event log, which the agent waits for. While flai
+// serve's upgrade waits for the jobs to end, a request that would start one
+// is held until the drain lifts, after the restart (ADR-0320).
 
 const (
 	// verifyEvery is how often the verify pass looks for a request.
@@ -107,11 +111,15 @@ func closeOutEnv(env []string, by string) []string {
 
 // verifyPass takes the close-out requests of one served project every second
 // and answers each: from the verify record, with the id of the story's job
-// that runs, or by starting one. Jobs of different stories run side by side.
+// that runs, by starting one, or, while an upgrade waits on the drain, by
+// holding it. Jobs of different stories run side by side.
 type verifyPass struct {
-	o     Options
-	e     Entry
-	wg    *sync.WaitGroup
+	o  Options
+	e  Entry
+	wg *sync.WaitGroup
+	// drain counts the pass's jobs for flai serve's upgrader and says
+	// whether one may start (ADR-0320); nil holds nothing.
+	drain *jobDrain
 	every time.Duration
 	limit time.Duration
 	run   closeOutRunner
@@ -135,13 +143,15 @@ type verifyPass struct {
 	stateEvery time.Duration
 	statesAt   time.Time
 
-	mu      sync.Mutex
+	mu sync.Mutex
+	// running is counted in drain: track adds to it and forget and
+	// forgetState delete from it.
 	running map[string]string // story → id of its job that runs
 	states  map[string]string // story → the state its state job that runs is for
 }
 
-func newVerifyPass(o Options, e Entry, wg *sync.WaitGroup) *verifyPass {
-	return &verifyPass{o: o, e: e, wg: wg, every: verifyEvery, limit: verifyJobLimit, run: runCloseOut, exe: os.Executable, stateEvery: stateEvery,
+func newVerifyPass(o Options, e Entry, wg *sync.WaitGroup, drain *jobDrain) *verifyPass {
+	return &verifyPass{o: o, e: e, wg: wg, drain: drain, every: verifyEvery, limit: verifyJobLimit, run: runCloseOut, exe: os.Executable, stateEvery: stateEvery,
 		running: map[string]string{}, states: map[string]string{}, recorded: recordedFor(o, e), keepAt: verify.KeepAt}
 }
 
@@ -193,9 +203,9 @@ func (p *verifyPass) dir() string { return closeout.Dir(filepath.Join(p.e.Root, 
 
 // look ends, at its first, the jobs an earlier flai serve left running,
 // starts, every stateEvery once they are, the state jobs of the stories that
-// entered a state whose runs name something (lookStates), then takes each
-// request waiting and answers it; a request another look took first is left
-// to it.
+// entered a state whose runs name something (lookStates), puts back the
+// requests held while no upgrade waits on the drain, then takes each request
+// waiting and answers it; a request another look took first is left to it.
 func (p *verifyPass) look(ctx context.Context) {
 	dir := p.dir()
 	if !p.swept {
@@ -204,6 +214,9 @@ func (p *verifyPass) look(ctx context.Context) {
 	if now := p.o.Now(); p.swept && now.Sub(p.statesAt) >= p.stateEvery {
 		p.statesAt = now
 		p.lookStates(ctx)
+	}
+	if _, holding := p.drain.holding(); !holding {
+		p.putBack(dir)
 	}
 	requests, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.RequestSuffix))
 	if len(requests) == 0 {
@@ -233,7 +246,8 @@ func (p *verifyPass) look(ctx context.Context) {
 // answer answers the request at taken for story's close-out, starting its
 // job when no job of the story runs and the record holds no verdict, or for
 // its rebase and resolve, starting that job when the story is in review and
-// no job of it runs, never from the record (S-0804).
+// no job of it runs, never from the record (S-0804); a job it would start
+// while an upgrade waits on the drain is held instead (ADR-0320).
 func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story, taken string) closeout.Answer {
 	refused := func(why string) closeout.Answer {
 		p.o.Logger.Warn("close-out request refused", "component", "serve", "root", p.e.Root, "story", story, "reason", why)
@@ -298,7 +312,61 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 			return p.fromRecord(repo, req, rep)
 		}
 	}
+	if version, holding := p.drain.holding(); holding {
+		return p.hold(dir, req, version, refused)
+	}
 	return p.startJob(ctx, dir, worktree, req, ca, refused)
+}
+
+// hold keeps req as its story's held request, for the look after the drain
+// lifts to put back, and answers that it is held, saying until when; the
+// upgrade waits for version, "" when it is not known.
+func (p *verifyPass) hold(dir string, req closeout.Request, version string, refused func(string) closeout.Answer) closeout.Answer {
+	story, name := req.Story, jobName(req.Kind)
+	held := closeout.File(dir, story, closeout.HeldSuffix)
+	data, err := json.MarshalIndent(req, "", "  ")
+	if err == nil {
+		err = atomicfile.WriteFile(held, append(data, '\n'), 0o644)
+	}
+	if err != nil {
+		return refused(fmt.Sprintf("flai serve waits to upgrade flai until the jobs it runs end, so it starts no %s for %s now, and could not keep the request to start it after the restart (%v): ask again once flai serve has restarted", name, story, err))
+	}
+	release := "a newer flai release"
+	if version != "" {
+		release = "flai " + version
+	}
+	p.o.Logger.Info("close-out request held", "component", "serve", "root", p.e.Root, "story", story, "kind", req.Kind, "by", req.By, "newest", version)
+	return closeout.Answer{Story: story, Held: true, Reason: fmt.Sprintf("flai serve upgrades to %s once the jobs it runs end, at most 45 minutes from now, so it holds %s's %s and starts it once it has restarted, ending with a verified event as any job does: hold wait_for_events until it reports verified for %s", release, story, name, story)}
+}
+
+// putBack renames each request held in dir back to its story's request, for
+// this look to take, unless the story has a request waiting already, which
+// is newer and wins: the held one is removed.
+func (p *verifyPass) putBack(dir string) {
+	held, _ := filepath.Glob(filepath.Join(dir, "*"+closeout.HeldSuffix))
+	for _, path := range held {
+		story := strings.TrimSuffix(filepath.Base(path), closeout.HeldSuffix)
+		request := closeout.File(dir, story, closeout.RequestSuffix)
+		// a link never writes over a request the story's agent wrote meanwhile
+		err := os.Link(path, request)
+		if err != nil && !errors.Is(err, fs.ErrExist) {
+			if _, serr := os.Stat(request); errors.Is(serr, fs.ErrNotExist) {
+				err = os.Rename(path, request)
+			}
+		}
+		switch {
+		case errors.Is(err, fs.ErrExist):
+			p.o.Logger.Info("held close-out request dropped for a newer one", "component", "serve", "root", p.e.Root, "story", story)
+		case err != nil:
+			p.o.Logger.Warn("held close-out request not put back", "component", "serve", "root", p.e.Root, "story", story, "err", err.Error())
+			continue
+		default:
+			p.o.Logger.Info("held close-out request put back", "component", "serve", "root", p.e.Root, "story", story)
+		}
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			p.o.Logger.Warn("held close-out request not removed", "component", "serve", "root", p.e.Root, "story", story, "err", err.Error())
+		}
+	}
 }
 
 // fromRecord answers req with the verdict the record holds in rep, journals
@@ -354,12 +422,15 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 		command = "flai stream sync " + story + ", then " + command
 	}
 	job := closeout.Job{ID: story + "-" + stamp, Story: story, Kind: req.Kind, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
+	if !p.track(story, job.ID, "") {
+		// the upgrade began to wait on the drain since answer looked
+		version, _ := p.drain.holding()
+		return p.hold(dir, req, version, refused)
+	}
 	if err := closeout.WriteJob(dir, job); err != nil {
+		p.forget(story)
 		return refused(fmt.Sprintf("flai serve could not start %s's %s: %v", story, jobName(req.Kind), err))
 	}
-	p.mu.Lock()
-	p.running[story] = job.ID
-	p.mu.Unlock()
 	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), Method: jobMethod(job.Kind), By: req.By, Outcome: "started", Detail: story + " job " + job.ID})
 	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "kind", job.Kind, "by", req.By, "command", command)
 	p.wg.Add(1)
@@ -514,11 +585,36 @@ func (p *verifyPass) keep(job closeout.Job, rep verify.Report) {
 	}
 }
 
+// track marks story's job id as running, for its entry into state when it
+// is a state job, and counts it in the drain; it reports false and marks
+// nothing while an upgrade waits on the drain.
+func (p *verifyPass) track(story, id, state string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.running[story]; !ok && !p.drain.begin() {
+		return false
+	}
+	p.running[story] = id
+	if state != "" {
+		p.states[story] = state
+	}
+	return true
+}
+
 // forget marks story's job as no longer running.
 func (p *verifyPass) forget(story string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	delete(p.running, story)
+	p.untrack(story)
+}
+
+// untrack deletes story from running, counting its job's end in the drain;
+// p.mu is held.
+func (p *verifyPass) untrack(story string) {
+	if _, ok := p.running[story]; ok {
+		delete(p.running, story)
+		p.drain.end()
+	}
 }
 
 // sweep ends interrupted each job in dir that an earlier flai serve left

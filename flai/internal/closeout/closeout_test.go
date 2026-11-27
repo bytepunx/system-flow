@@ -76,7 +76,7 @@ func TestAskAnswersTheJobFlaiServeStarts(t *testing.T) {
 }
 
 // An answer naming a job flai serve did not start says it was running; one
-// with a reason is a refusal.
+// with a reason is a refusal, unless it is held (ADR-0320).
 func TestAnAnswerSaysWhetherItsJobWasRunningOrItWasRefused(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
@@ -87,6 +87,7 @@ func TestAnAnswerSaysWhetherItsJobWasRunningOrItWasRefused(t *testing.T) {
 		{Answer{Job: "S-0001-x"}, true, false},
 		{Answer{Recorded: true, Verdict: VerdictPassed}, false, false},
 		{Answer{Reason: "no worktree"}, false, true},
+		{Answer{Held: true, Reason: "flai serve upgrades first"}, false, false},
 	} {
 		if c.a.Running() != c.running || c.a.Refused() != c.refused {
 			t.Errorf("%+v: running %v refused %v, want %v %v", c.a, c.a.Running(), c.a.Refused(), c.running, c.refused)

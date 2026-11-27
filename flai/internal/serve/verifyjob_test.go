@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -63,6 +64,7 @@ type verifyLab struct {
 	story    string
 	worktree string
 	pass     *verifyPass
+	drain    *jobDrain
 	wg       sync.WaitGroup
 	stop     context.CancelFunc
 
@@ -96,7 +98,7 @@ func newVerifyLab(t *testing.T, script bool) *verifyLab {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lab := &verifyLab{t: t, repo: repo, story: st.ID, worktree: repo.WorktreePath(st.ID)}
+	lab := &verifyLab{t: t, repo: repo, story: st.ID, worktree: repo.WorktreePath(st.ID), drain: &jobDrain{}}
 	lab.write("HEAD", "head-a\n")
 	if script {
 		lab.write("hold", "")
@@ -108,7 +110,7 @@ func newVerifyLab(t *testing.T, script bool) *verifyLab {
 			defer lab.mu.Unlock()
 			lab.entries = append(lab.entries, e)
 		}}}
-	lab.pass = newVerifyPass(o, Entry{Key: "t", Name: "t", Root: root}, &lab.wg)
+	lab.pass = newVerifyPass(o, Entry{Key: "t", Name: "t", Root: root}, &lab.wg, lab.drain)
 	lab.pass.every = 5 * time.Millisecond
 	lab.pass.keepAt = func(_ *workitem.Repo, commit string, rep verify.Report) error {
 		lab.mu.Lock()
@@ -162,6 +164,30 @@ func (lab *verifyLab) ask(req closeout.Request) closeout.Answer {
 		lab.t.Fatal(err)
 	}
 	return a
+}
+
+// jobs is how many jobs the drain counts as running.
+func (lab *verifyLab) jobs() int {
+	lab.drain.mu.Lock()
+	defer lab.drain.mu.Unlock()
+	return lab.drain.jobs
+}
+
+// held is the story's held request, and whether there is one.
+func (lab *verifyLab) held() (closeout.Request, bool) {
+	lab.t.Helper()
+	data, err := os.ReadFile(closeout.File(closeout.Dir(lab.repo.CacheDir()), lab.story, closeout.HeldSuffix))
+	if errors.Is(err, os.ErrNotExist) {
+		return closeout.Request{}, false
+	}
+	var req closeout.Request
+	if err == nil {
+		err = json.Unmarshal(data, &req)
+	}
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return req, true
 }
 
 // verified are the verified events in the project's event log.
@@ -1306,7 +1332,7 @@ func TestTheRecordAnswersACloseOutOnlyWhenEveryNeededSuitePassedThere(t *testing
 	}
 
 	var wg sync.WaitGroup
-	pass := newVerifyPass(o, e, &wg)
+	pass := newVerifyPass(o, e, &wg, nil)
 	fake := &fakeCloseOut{}
 	pass.every, pass.run = 5*time.Millisecond, fake.run
 	pass.exe = func() (string, error) { return "/opt/flai", nil }
@@ -1340,5 +1366,130 @@ func TestTheRecordAnswersACloseOutOnlyWhenEveryNeededSuitePassedThere(t *testing
 	}
 	if n := len(fake.ran()); n != 1 {
 		t.Errorf("the answer from the record ran a job: %d calls", n)
+	}
+}
+
+// I-0388, ADR-0320: flai serve's auto-upgrade restarted it while close-out
+// jobs ran, which ended them interrupted. Now the upgrade due while a job
+// runs waits for it; a request made meanwhile starts no job, is answered
+// held, naming the release, and kept; once the drain lifts, the next look
+// puts it back and starts its job.
+func TestAnUpgradeWaitsForTheCloseOutAndHoldsTheRequestsMeanwhile(t *testing.T) {
+	t.Parallel()
+	lab := newVerifyLab(t, true)
+	up := newUpgradeLab(t)
+	up.upgrader.hold, up.upgrader.lift = lab.drain.hold, lab.drain.lift
+	up.auto["harbour"] = true
+	up.newest["harbour"] = "1.49.0"
+	up.refuse = errors.New("flai 1.49.0 is not published") // serve stays up to show what follows
+	lab.start()
+	first := lab.ask(closeout.Request{Message: "close out"})
+	if !first.Started || lab.jobs() != 1 {
+		t.Fatalf("the close-out did not start: %+v, %d jobs", first, lab.jobs())
+	}
+	up.look("harbour")
+	if len(up.asked) != 0 {
+		t.Fatalf("the upgrade was asked for %v while the close-out ran", up.asked)
+	}
+	if again := lab.ask(closeout.Request{}); again.Job != first.Job || again.Held {
+		t.Errorf("a request while the job runs is answered with its id: %+v", again)
+	}
+	lab.release()
+	lab.awaitVerified(1)
+	waitFor(t, "the job's end counted", func() bool { return lab.jobs() == 0 })
+
+	a := lab.ask(closeout.Request{Message: "after", Fresh: true})
+	if !a.Held || a.Refused() || a.Started || a.Job != "" || !strings.Contains(a.Reason, "flai 1.49.0") || !strings.Contains(a.Reason, "verified event") || !strings.Contains(a.Reason, "wait_for_events") {
+		t.Fatalf("the request while the drain holds: %+v, want it held, naming the release and the verified event", a)
+	}
+	if req, ok := lab.held(); !ok || req.Story != lab.story || req.Message != "after" || !req.Fresh || req.By != "agent-"+lab.story {
+		t.Errorf("the held request: %+v %v", req, ok)
+	}
+	time.Sleep(50 * time.Millisecond) // looks of the pass while the drain holds
+	if job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); err != nil || job.ID != first.Job || lab.jobs() != 0 {
+		t.Fatalf("a job started while the drain held: %+v %v, %d jobs", job, err, lab.jobs())
+	}
+
+	up.after(time.Minute)
+	up.look("harbour")
+	if strings.Join(up.asked, " ") != "1.49.0" {
+		t.Fatalf("once the job ended the upgrade was asked for %v", up.asked)
+	}
+	// the host refused, so the drain lifts and the held request runs now
+	waitFor(t, "the held request's job", func() bool {
+		job, ok, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+		return err == nil && ok && job.Message == "after" && job.Fresh
+	})
+	if _, ok := lab.held(); ok {
+		t.Error("the held request was kept after it was put back")
+	}
+	lab.awaitVerified(2)
+}
+
+// ADR-0320 §3: at its first look a pass puts back the requests an earlier
+// flai serve held, unless the story has a newer request waiting, which wins.
+func TestHeldRequestsArePutBackAtTheFirstLookAndANewerOneWins(t *testing.T) {
+	t.Parallel()
+	for _, newer := range []bool{false, true} {
+		t.Run(fmt.Sprintf("newer %v", newer), func(t *testing.T) {
+			t.Parallel()
+			lab := newVerifyLab(t, true)
+			lab.release()
+			dir := closeout.Dir(lab.repo.CacheDir())
+			write := func(suffix, message string) {
+				t.Helper()
+				data, err := json.Marshal(closeout.Request{Story: lab.story, By: "agent-" + lab.story, Message: message})
+				if err == nil {
+					err = os.MkdirAll(dir, 0o755)
+				}
+				if err == nil {
+					err = os.WriteFile(closeout.File(dir, lab.story, suffix), data, 0o644)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			write(closeout.HeldSuffix, "held")
+			want := "held"
+			if newer {
+				write(closeout.RequestSuffix, "newer")
+				want = "newer"
+			}
+			lab.start()
+			lab.awaitVerified(1)
+			job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+			if err != nil || job.Message != want {
+				t.Errorf("the job ran %+v %v, want the %s request's", job, err, want)
+			}
+			if _, ok := lab.held(); ok {
+				t.Error("the held request is still kept")
+			}
+			if n := len(lab.journal()); n != 2 {
+				t.Errorf("one job, started and ended, is journaled: %d entries", n)
+			}
+		})
+	}
+}
+
+// ADR-0320 §2: while an upgrade waits on the drain, a story entering a state
+// whose runs name something gets no state job; its entry runs once the
+// drain lifts, and its job is counted while it runs.
+func TestNoStateJobStartsWhileTheDrainHolds(t *testing.T) {
+	t.Parallel()
+	lab, fake, _ := newStateLab(t)
+	fake.answer = passing(lab)
+	lab.drain.hold("1.49.0")
+	lab.moveStory(integration)
+	lab.lookOnce()
+	if _, ok := lab.stateJob(); ok || len(fake.ran()) != 0 {
+		t.Fatalf("a state job started while the drain held: %v, ran %q", ok, argvs(fake.ran()))
+	}
+	lab.drain.lift()
+	lab.lookOnce()
+	if job, ok := lab.stateJob(); !ok || job.Running() || job.Verdict != closeout.VerdictPassed {
+		t.Errorf("the entry's job once the drain lifted: %+v %v", job, ok)
+	}
+	if n := lab.jobs(); n != 0 {
+		t.Errorf("the ended state job is still counted: %d", n)
 	}
 }

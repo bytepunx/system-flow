@@ -1338,6 +1338,20 @@ func TestVerifyJobAnsweredFromTheRecordSaysSo(t *testing.T) {
 	}
 }
 
+// I-0388, ADR-0320 §2: a request flai serve holds until it has restarted on
+// a newer flai is printed with its reason and exits 0, as a job started.
+func TestVerifyJobHeldPrintsWhyAndExitsZero(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 7")
+	why := "flai serve upgrades flai once the jobs it runs end, and starts S-004's close-out once it has restarted"
+	takeCloseOut(t, openProject(t, root).CacheDir(), func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Held: true, Reason: why}
+	})
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != 0 || out != why+"\n" {
+		t.Errorf("a held request: exit %d %q\n%s", code, out, errOut)
+	}
+}
+
 // ADR-0229 §1: with no flai serve to take the request, flai verify --job
 // withdraws it and exits 2, saying to run the close-out yourself; a request
 // flai serve refuses exits 2 with its reason.

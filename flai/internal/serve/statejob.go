@@ -74,8 +74,12 @@ const (
 // lookStates starts a state job for each story, not archived, that is in a
 // state whose runs name something and whose entry into it has had no job,
 // or one that flai serve's restart interrupted; a story a job of which runs
-// is left to it and looked at again at a later look.
+// is left to it and looked at again at a later look. While an upgrade waits
+// on the drain it starts none: the entries run once it lifts (ADR-0320).
 func (p *verifyPass) lookStates(ctx context.Context) {
+	if _, holding := p.drain.holding(); holding {
+		return
+	}
 	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		return
@@ -276,13 +280,16 @@ func (p *verifyPass) startState(ctx context.Context, repo *workitem.Repo, it *wo
 		return
 	}
 	job.StateSteps = j.records()
+	// marked running before it is recorded, so that an entry the drain
+	// holds back is not recorded as a job that runs
+	if !p.track(it.ID, job.ID, j.state) {
+		return
+	}
 	if err := closeout.WriteJob(dir, job); err != nil {
+		p.forgetState(it.ID)
 		p.o.Logger.Warn("state job not started", "component", "serve", "root", p.e.Root, "story", it.ID, "state", j.state, "err", err.Error())
 		return
 	}
-	p.mu.Lock()
-	p.running[it.ID], p.states[it.ID] = job.ID, j.state
-	p.mu.Unlock()
 	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), Method: stateMethod, By: job.By, Outcome: "started", Detail: fmt.Sprintf("%s job %s on entering %s", it.ID, job.ID, j.state)})
 	p.o.Logger.Info("state job started", "component", "serve", "root", p.e.Root, "story", it.ID, "state", j.state, "job_id", job.ID, "entry", entry.Format(time.RFC3339))
 	p.wg.Add(1)
@@ -374,7 +381,7 @@ func (p *verifyPass) runState(ctx context.Context, dir string, j *stateJob, job 
 func (p *verifyPass) forgetState(story string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	delete(p.running, story)
+	p.untrack(story)
 	delete(p.states, story)
 }
 

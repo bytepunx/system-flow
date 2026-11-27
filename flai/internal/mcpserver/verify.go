@@ -14,7 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const verifyDescription = "Ask flai serve for a story's close-out (S-0546, ADR-0229): it runs the close-out in the story's worktree as a job, with no model, scripts/close-out.sh S-nnnn -m <message> where the worktree has the script, else flai verify S-nnnn --record-issues, so no tool call holds it and the harness's time limit does not cut it short. Its flai verify runs the tiers of the suites the moves out of the story's state need, those the verify of each transition out of it in the workflow file lists, or every suite when one of them gives all or none gives verify, as the baseline's move to review does (ADR-0312 §2). It answers at once: the job's id (started true, or running true when a job of the story was running already and is answered instead), or, when the worktree is clean at a commit the verify record holds a passing verdict for, for every suite the close-out would run, that verdict with recorded true, its commit and ran_at, and nothing runs. message is the commit message the close-out commits with; all leaves no tier to the merge queue and runs every suite; fresh runs whatever the record holds. Then hold wait_for_events until it reports verified for the story, with the job, the commit, the verdict (passed, stopped with stopped_at, failed, or interrupted), and the duration, and read the result, each step with its findings, with flai verify S-nnnn --last; the job's output is in log. Call it before you move a story to review, instead of running the close-out in a turn, and keep the verifier sub-agent for the review of the diff against the story's acceptance criteria and the conventions. When flai serve is not running, it takes no request within ten seconds and the call says so: run the close-out script, or flai verify where the project has none, yourself. A story with no worktree, or an ID that is not a story, is refused."
+const verifyDescription = "Ask flai serve for a story's close-out (S-0546, ADR-0229): it runs the close-out in the story's worktree as a job, with no model, scripts/close-out.sh S-nnnn -m <message> where the worktree has the script, else flai verify S-nnnn --record-issues, so no tool call holds it and the harness's time limit does not cut it short. Its flai verify runs the tiers of the suites the moves out of the story's state need, those the verify of each transition out of it in the workflow file lists, or every suite when one of them gives all or none gives verify, as the baseline's move to review does (ADR-0312 §2). It answers at once: the job's id (started true, or running true when a job of the story was running already and is answered instead), or, when the worktree is clean at a commit the verify record holds a passing verdict for, for every suite the close-out would run, that verdict with recorded true, its commit and ran_at, and nothing runs; or, while flai serve waits to upgrade flai until the jobs it runs end, held true with a reason: the close-out starts once flai serve has restarted, and ends with a verified event as any job does (ADR-0320). message is the commit message the close-out commits with; all leaves no tier to the merge queue and runs every suite; fresh runs whatever the record holds. Then hold wait_for_events until it reports verified for the story, with the job, the commit, the verdict (passed, stopped with stopped_at, failed, or interrupted), and the duration, and read the result, each step with its findings, with flai verify S-nnnn --last; the job's output is in log. Call it before you move a story to review, instead of running the close-out in a turn, and keep the verifier sub-agent for the review of the diff against the story's acceptance criteria and the conventions. When flai serve is not running, it takes no request within ten seconds and the call says so: run the close-out script, or flai verify where the project has none, yourself. A story with no worktree, or an ID that is not a story, is refused."
 
 // VerifyIn asks flai serve for one story's close-out (S-0546).
 type VerifyIn struct {
@@ -41,13 +41,19 @@ type VerifyOut struct {
 	RanAt     time.Time `json:"ran_at,omitzero"`
 	// Log is where the job's output is kept.
 	Log string `json:"log,omitempty"`
+	// Held is a request flai serve keeps until it has restarted on a newer
+	// flai, and Reason says so; its job starts then and ends with a
+	// verified event (ADR-0320).
+	Held   bool   `json:"held,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 func (in VerifyIn) project() string { return in.Project }
 
 // verify asks flai serve for the close-out of the story the call names as a
 // job, as flai verify --job does, and answers its answer; it runs nothing in
-// this process. A refusal and a request flai serve did not take are errors.
+// this process. A refusal and a request flai serve did not take are errors;
+// a held request is an answer.
 func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn) (*mcp.CallToolResult, VerifyOut, error) {
 	story, err := s.storyWithWorktree(in.Story)
 	if err != nil {
@@ -61,7 +67,7 @@ func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn
 		return nil, VerifyOut{}, errors.New(ans.Reason)
 	}
 	return nil, VerifyOut{Job: ans.Job, Story: ans.Story, Started: ans.Started, Running: ans.Running(), Recorded: ans.Recorded,
-		Verdict: ans.Verdict, StoppedAt: ans.StoppedAt, Commit: ans.Commit, RanAt: ans.RanAt, Log: ans.Log}, nil
+		Verdict: ans.Verdict, StoppedAt: ans.StoppedAt, Commit: ans.Commit, RanAt: ans.RanAt, Log: ans.Log, Held: ans.Held, Reason: ans.Reason}, nil
 }
 
 // storyWithWorktree is the story id names, as its canonical ID, which must

@@ -257,6 +257,26 @@ func TestAcceptResolveRefusesWhatFlaiServeRefuses(t *testing.T) {
 	assertResolveChangedNothing(t, root, head, mainBefore, before)
 }
 
+// ADR-0320: a request flai serve holds while its upgrade waits for the jobs
+// it runs is no refusal: flai accept --resolve prints why and exits 0, and
+// the story stays as it was until the job runs after the restart.
+func TestAcceptResolveSaysWhenFlaiServeHoldsTheRequest(t *testing.T) {
+	t.Parallel()
+	root, head, before := heldStoryInReview(t)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	cache := openProject(t, root).CacheDir()
+
+	why := "flai serve upgrades to flai 1.49.0 once the jobs it runs end, at most 45 minutes from now, so it holds S-0001's rebase and resolve and starts it once it has restarted"
+	takeResolve(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Held: true, Reason: why}
+	})
+	out, _, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--resolve")
+	if code != 0 || strings.TrimSpace(out) != why {
+		t.Errorf("a held request: exit %d\n%s", code, out)
+	}
+	assertResolveChangedNothing(t, root, head, mainBefore, before)
+}
+
 // S-0804: with no flai serve to take the request, flai accept --resolve
 // withdraws it and is refused with exit 4, saying to start flai serve; the
 // story stays as it was. It shortens resolveJobWait, so it does not run in

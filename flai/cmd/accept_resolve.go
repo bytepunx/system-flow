@@ -35,6 +35,9 @@ type resolveAnswer struct {
 	Running bool   `json:"running"`
 	Log     string `json:"log"`
 	Reason  string `json:"reason"`
+	// Held is a request flai serve keeps until it has restarted on a newer
+	// flai, which then starts the job; Reason says so (ADR-0320).
+	Held bool `json:"held,omitempty"`
 }
 
 // resolveJobWait is how long flai accept --resolve waits for flai serve to
@@ -88,6 +91,14 @@ func (a *app) resolveAccept(cmd *cobra.Command, repo *workitem.Repo, it *workite
 		return fmt.Errorf("ask flai serve for %s's rebase and resolve: %w", it.ID, err)
 	case ans.Refused():
 		return a.resolveRefused(it.ID, fmt.Sprintf("flai serve runs no rebase and resolve for %s: %s", it.ID, ans.Reason))
+	case ans.Held:
+		a.logger().Info("rebase and resolve held", "component", "accept", "item", it.ID, "by", by, "blockers", len(res.Blockers))
+		out := resolveAnswer{ID: it.ID, Held: true, Reason: ans.Reason}
+		if a.jsonOut {
+			return a.printJSON(out)
+		}
+		_, err = fmt.Fprintln(a.out, out.Reason)
+		return err
 	case ans.Recorded || ans.Job == "":
 		return a.resolveRefused(it.ID, fmt.Sprintf("flai serve answered the request for %s's rebase and resolve with no job, as a flai serve older than S-0804 does, so nothing runs: upgrade flai with flai self-upgrade, restart flai serve with flai host restart serve, and ask again", it.ID))
 	}

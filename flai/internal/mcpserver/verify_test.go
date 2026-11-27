@@ -181,6 +181,24 @@ func TestVerifyFailsWithTheReasonFlaiServeRefused(t *testing.T) {
 	}
 }
 
+// I-0388, ADR-0320 §2: a request flai serve holds until it has restarted on
+// a newer flai is answered, held with its reason, not an error.
+func TestVerifyAnswersARequestFlaiServeHolds(t *testing.T) {
+	t.Parallel()
+	f := closeOutFixture(t, nil)
+	why := "flai serve upgrades flai once the jobs it runs end, and starts this close-out once it has restarted"
+	takeCloseOut(t, f.repo.CacheDir(), f.story.ID, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Held: true, Reason: why}
+	})
+	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
+	if failed != "" {
+		t.Fatalf("a held request failed: %s", failed)
+	}
+	if out["held"] != true || out["reason"] != why || out["story"] != f.story.ID || out["job"] != nil || out["started"] != false {
+		t.Errorf("the held answer: %v", out)
+	}
+}
+
 // ADR-0229 §1: with no flai serve to take the request, it is withdrawn and
 // the call fails, saying to run the close-out yourself.
 func TestVerifySaysFlaiServeIsNotRunning(t *testing.T) {

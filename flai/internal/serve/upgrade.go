@@ -36,6 +36,11 @@ import (
 // the release is published (ADR-0161): a release is tagged minutes before
 // its binaries are, and the host refuses one that is not, so each look asks
 // again until it is.
+//
+// The ask waits too for the jobs the served projects' verify passes run,
+// close-outs, rebase and resolves, and state jobs, which the restart would
+// cut, for at most 45 minutes, and meanwhile the passes start none, holding
+// the requests that would start one until after the restart (ADR-0320).
 
 const (
 	// upgradeEvery is how often the served projects are looked at again.
@@ -52,7 +57,79 @@ const (
 	upgradeTimeout = 6 * time.Minute
 	// publishedTimeout bounds one look at the published releases.
 	publishedTimeout = 30 * time.Second
+	// upgradeDrainLimit is the longest an upgrade waits for the verify
+	// passes' jobs to end before it is asked for with them running.
+	upgradeDrainLimit = 45 * time.Minute
 )
+
+// jobDrain is shared by flai serve's upgrader and the verify pass of every
+// project it serves (ADR-0320): it counts the jobs the passes run, and says
+// whether an upgrade waits for them to end, while which no pass starts one.
+// A nil jobDrain counts nothing and never holds.
+type jobDrain struct {
+	mu       sync.Mutex
+	jobs     int
+	draining bool
+	version  string // the release the upgrade waits to ask for
+}
+
+// begin counts a job that starts and reports true, or reports false and
+// counts nothing while an upgrade waits on the drain.
+func (d *jobDrain) begin() bool {
+	if d == nil {
+		return true
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.draining {
+		return false
+	}
+	d.jobs++
+	return true
+}
+
+// end counts a job that ended.
+func (d *jobDrain) end() {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.jobs--
+}
+
+// hold has the passes start no job while the upgrade to version waits, and
+// answers how many jobs run.
+func (d *jobDrain) hold(version string) int {
+	if d == nil {
+		return 0
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.draining, d.version = true, version
+	return d.jobs
+}
+
+// lift lets the passes start jobs again.
+func (d *jobDrain) lift() {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.draining, d.version = false, ""
+}
+
+// holding answers the release an upgrade waits on the drain to ask for, and
+// whether one does.
+func (d *jobDrain) holding() (string, bool) {
+	if d == nil {
+		return "", false
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.version, d.draining
+}
 
 // HostUpgrade asks the host flai serve runs under to install the flai
 // release version, as flai host upgrade --version does, and answers whether
@@ -113,6 +190,11 @@ type upgrader struct {
 	tell      func(e Entry, title, text string) (thread string, err error)
 	journal   func(hostapi.Entry)
 	published ReleasePublished // nil names a release without looking
+	// hold has the verify passes start no job while the upgrade to version
+	// waits for theirs to end, and answers how many run; lift lets them
+	// start jobs again; nil for either holds nothing (jobDrain).
+	hold func(version string) (jobs int)
+	lift func()
 
 	busy     atomic.Bool
 	wg       sync.WaitGroup
@@ -121,9 +203,12 @@ type upgrader struct {
 	attempts map[string]*upgradeAttempt // by release
 	told     map[string]string          // root → release asked about, as recorded
 	public   map[string]bool            // the releases found published
+	// drainFrom is when the look that first found the upgrade waiting on a
+	// job ran; zero while none waits.
+	drainFrom time.Time
 }
 
-func newUpgrader(o Options) *upgrader {
+func newUpgrader(o Options, drain *jobDrain) *upgrader {
 	git := gitOf(o)
 	return &upgrader{
 		now:      o.Now,
@@ -138,6 +223,8 @@ func newUpgrader(o Options) *upgrader {
 		tell:      upgradeThread(o.Now),
 		journal:   o.Host.Record,
 		published: o.Published,
+		hold:      drain.hold,
+		lift:      drain.lift,
 	}
 }
 
@@ -225,6 +312,7 @@ func (u *upgrader) look(ctx context.Context, served []Entry) {
 		}
 	}
 	if best < 0 {
+		u.endDrain()
 		return
 	}
 	target := auto[best]
@@ -236,7 +324,7 @@ func (u *upgrader) look(ctx context.Context, served []Entry) {
 	case u.writing() > 0:
 		u.log.Info("flai upgrade waits for a dashboard write", "component", "serve", "running", target.out.Running, "newest", version, "writes", u.writing())
 	default:
-		att = u.request(ctx, now, target)
+		att = u.drained(ctx, now, target)
 	}
 	if att == nil || now.Sub(att.first) < upgradeTellAfter {
 		return
@@ -247,6 +335,47 @@ func (u *upgrader) look(ctx context.Context, served []Entry) {
 	}
 	for _, b := range auto {
 		u.ask(ctx, b.e, b.out, why, false)
+	}
+}
+
+// drained asks the host to install b's newest release once the verify
+// passes run no job, or once upgradeDrainLimit has passed since the look
+// that first found it waiting on one, and answers the release's attempt.
+// Until then the passes start no job, nor after an ask the host took, since
+// it restarts flai serve; after one it refused they may again, and the
+// release is left to the next ask.
+func (u *upgrader) drained(ctx context.Context, now time.Time, b behindProject) *upgradeAttempt {
+	version := b.out.Newest
+	jobs := 0
+	if u.hold != nil {
+		jobs = u.hold(version)
+	}
+	if jobs > 0 {
+		if u.drainFrom.IsZero() {
+			u.drainFrom = now
+			u.log.Info("flai upgrade waits for a close-out job", "component", "serve", "running", b.out.Running, "newest", version, "jobs", jobs)
+		}
+		if now.Sub(u.drainFrom) < upgradeDrainLimit {
+			return u.attempts[version]
+		}
+		u.log.Warn("flai upgrade stops waiting for close-out jobs", "component", "serve", "running", b.out.Running, "newest", version, "jobs", jobs, "waited", now.Sub(u.drainFrom).String())
+	}
+	att := u.request(ctx, now, b)
+	u.drainFrom = time.Time{}
+	// a host that installed restarts flai serve, so the passes stay held
+	// until then; one that refused, or a stop, lets them start jobs again
+	if att == nil || att.refusal != "" || ctx.Err() != nil {
+		u.endDrain()
+	}
+	return att
+}
+
+// endDrain lets the verify passes start jobs again, and forgets when the
+// upgrade began to wait for theirs.
+func (u *upgrader) endDrain() {
+	u.drainFrom = time.Time{}
+	if u.lift != nil {
+		u.lift()
 	}
 }
 

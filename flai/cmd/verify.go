@@ -940,7 +940,8 @@ func jobFlagsRefusal(job, last, syncOnly, record bool, message string) string {
 // askCloseOut asks flai serve for the story's close-out as a job (ADR-0229)
 // and prints its answer: the job it started, or the one of the story that
 // runs, with where to wait and read; the verdict the record holds, as a
-// verify that passed or stopped answers it; or why it ran nothing, as an
+// verify that passed or stopped answers it; why flai serve holds it until it
+// has restarted, as a job started (ADR-0320); or why it ran nothing, as an
 // unusable verify.
 func (a *app) askCloseOut(cmd *cobra.Command, repo *workitem.Repo, story string, req closeout.Request) error {
 	id, _, err := storyWorktree(repo, story)
@@ -957,7 +958,7 @@ func (a *app) askCloseOut(cmd *cobra.Command, repo *workitem.Repo, story string,
 		}
 		return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("ask flai serve for %s's close-out: %v", id, err)}
 	}
-	a.logger().Debug("close-out asked", "component", "cmd", "story", id, "job_id", ans.Job, "started", ans.Started, "recorded", ans.Recorded, "refused", ans.Refused())
+	a.logger().Debug("close-out asked", "component", "cmd", "story", id, "job_id", ans.Job, "started", ans.Started, "recorded", ans.Recorded, "held", ans.Held, "refused", ans.Refused())
 	if a.jsonOut {
 		if err := a.printJSON(ans); err != nil {
 			return err
@@ -980,8 +981,12 @@ func (a *app) askCloseOut(cmd *cobra.Command, repo *workitem.Repo, story string,
 
 // closeOutAnswerText is flai serve's answer to a close-out request as flai
 // verify --job prints it: the job it started or found running, what to wait
-// for, and where its output is; or the verdict the record holds.
+// for, and where its output is; the verdict the record holds; or why it
+// holds the request until it has restarted.
 func closeOutAnswerText(ans closeout.Answer) string {
+	if ans.Held {
+		return ans.Reason
+	}
 	if ans.Recorded {
 		verdict := ans.Verdict
 		if ans.StoppedAt != "" {

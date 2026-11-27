@@ -604,8 +604,11 @@ func Run(ctx context.Context, o Options) error {
 		checker.considerImage(ctx, root, cfg, image, version, provider)
 	}
 	// Each served project's history is looked at for a newer flai release
-	// every minute, and at once when it is first served (ADR-0158).
-	upgrades := newUpgrader(o)
+	// every minute, and at once when it is first served (ADR-0158); the ask
+	// waits for the jobs every project's verify pass runs, which start none
+	// meanwhile (ADR-0320).
+	drain := &jobDrain{}
+	upgrades := newUpgrader(o, drain)
 	defer upgrades.wait()
 	// Each served project's stories in review are pushed, and their pull
 	// requests opened, once a minute under pull-request acceptance while its
@@ -807,7 +810,7 @@ func Run(ctx context.Context, o Options) error {
 			// a story's agent's requests for its close-out are taken every
 			// second and run as jobs in its worktree, with no model; a job
 			// running is stopped with the project and waited for (S-0546)
-			newVerifyPass(o, e, &forgeLooks).start(cctx)
+			newVerifyPass(o, e, &forgeLooks, drain).start(cctx)
 			// the stories in review are deployed into the project's kluster,
 			// one job at a time, behind the kluster host action (S-0579)
 			newKlusterPass(o, e, &klusterJobs).start(cctx)
