@@ -2,12 +2,12 @@
 id: I-0388
 title: flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch
 class: efficiency
-status: open
+status: closed
 count: 4
 cost: 41m
 first_reported: 2026-11-16T06:16:21Z
 last_reported: 2026-11-27T22:47:15Z
-updated: 2026-11-27T22:47:15Z
+updated: 2026-11-27T23:32:49Z
 usage:
   strategic:
     - kind: analyzer
@@ -71,3 +71,4 @@ Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
 Story S-0846 remediates this issue, created from it at 2026-11-17T08:32:57Z.
 
 Found by the analysis in [2026-11-27-all.md](../analysis/2026-11-27-all.md).
+Closed 2026-11-27T23:32:49Z: S-0846 fixed it under ADR-0320. flai serve's auto-upgrade now waits for the close-out, rebase and resolve, and state jobs that every served project's verify pass runs, for at most 45 minutes, and starts no new job meanwhile, holding requests as S-nnnn.held.json until after the restart (T-3584). A close-out or rebase and resolve that a restart still interrupts is asked again once when flai serve starts (T-3585).
