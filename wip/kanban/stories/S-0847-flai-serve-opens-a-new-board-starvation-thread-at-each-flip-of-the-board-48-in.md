@@ -6,7 +6,7 @@ title: flai serve opens a new board-starvation thread at each flip of the board,
 status: ready
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-27T22:33:03Z
+updated: 2026-11-27T22:33:44Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -82,10 +82,10 @@ cost_of_delay:
   at: 2026-11-17T12:28:58Z
 forecast:
   duration: 1h
-  delivery: 2026-11-27T23:47:00Z
+  delivery: 2026-11-27T23:48:00Z
   basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-11-27T22:33:03Z
+  at: 2026-11-27T22:33:44Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:35:34Z
