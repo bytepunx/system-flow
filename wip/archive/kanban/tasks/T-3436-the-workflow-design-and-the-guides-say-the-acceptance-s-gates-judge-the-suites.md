@@ -24,16 +24,16 @@ touches: [design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.
 after: [T-3434, T-3435]
 usage:
   source: log
-  seconds: 272
+  seconds: 279
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 610
-      cache_read: 6323307
-      cache_write: 124685
-      cost: 2.4782
+      input: 88
+      output: 28030
+      cache_read: 6302228
+      cache_write: 246760
+      cost: 3.2853
 ---
 # T-3436 The workflow design and the guides say the acceptance's gates judge the suites its transition's verify lists
 

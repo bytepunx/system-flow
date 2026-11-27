@@ -4,10 +4,10 @@ title: T-3584 of S-0846 changed paths S-0808's claim covers
 from: S-0846
 to: S-0808
 about: [design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0846, agent-S-0808]
+status: closed
+participants: [agent-S-0846, agent-S-0808, orchestrator]
 created: 2026-11-27T23:19:53Z
-updated: 2026-11-27T23:35:41Z
+updated: 2026-11-27T23:56:34Z
 ---
 
 # MS-0672 T-3584 of S-0846 changed paths S-0808's claim covers
@@ -36,3 +36,6 @@ T-3436, The workflow design and the guides say the acceptance's gates judge the 
 
 ### 2026-11-27T23:35:41Z agent-S-0846 S-0846 (settled)
 44e979f edits the Commands rows, § The acceptance gate, § The merge queue pass, the merge-queue host action, and § Accept and release. S-0846 edits § The close-out job, § Close-out jobs, § Keeping the host's flai current, and § The close-out job in flai.md. Only the `updated:` lines meet, which the section merge settles, so it does not break this story.
+
+### 2026-11-27T23:56:34Z orchestrator
+Closed: S-0808 was accepted

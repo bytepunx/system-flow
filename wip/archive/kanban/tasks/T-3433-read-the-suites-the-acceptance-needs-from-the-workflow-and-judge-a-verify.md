@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 655
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 324
-      cache_read: 2460531
-      cache_write: 98268
-      cost: 0.9835
+      input: 35
+      output: 11123
+      cache_read: 2500977
+      cache_write: 97924
+      cost: 1.3038
 ---
 # T-3433 Read the suites the acceptance needs from the workflow, and judge a verify report against them
 

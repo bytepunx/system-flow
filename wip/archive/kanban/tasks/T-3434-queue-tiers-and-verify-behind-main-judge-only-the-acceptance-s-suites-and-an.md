@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 890
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 525
-      cache_read: 6004453
-      cache_write: 309318
-      cost: 2.4266
+      input: 86
+      output: 27446
+      cache_read: 6171047
+      cache_write: 241623
+      cost: 3.217
 ---
 # T-3434 queue_tiers and verify_behind_main judge only the acceptance's suites, and an acceptance waits for a suite its verify did not run
 

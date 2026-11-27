@@ -6,9 +6,11 @@ title: flai stream sync panics while continuing a rebase whose stop the agent re
 status: backlog
 owner: alex
 created: 2026-11-21T17:20:23Z
-updated: 2026-11-21T17:20:23Z
+updated: 2026-11-27T23:56:35Z
 transitions: []
 tags: []
+topics: [git, sync]
+touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, design/issues/I-0407-flai-stream-sync-panics-while-continuing-a-rebase-whose-stop-the-agent-resolved.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -32,6 +34,7 @@ This story remediates [I-0407](../../../design/issues/I-0407-flai-stream-sync-pa
 - [ ] I-0407 is closed with `flai issue close I-0407 --reason` saying what fixed it
 
 ## Tasks
+- T-3615 Find the input that panics the section merge at S-0809's second stop and fix it, with a test that reproduces it
 
 ## Notes
 

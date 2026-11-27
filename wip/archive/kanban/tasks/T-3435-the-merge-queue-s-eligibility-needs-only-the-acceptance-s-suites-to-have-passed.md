@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 870
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 484
-      cache_read: 4111008
-      cache_write: 273789
-      cost: 1.6853
+      input: 60
+      output: 19061
+      cache_read: 4285686
+      cache_write: 167803
+      cost: 2.2341
 ---
 # T-3435 The merge queue's eligibility needs only the acceptance's suites to have passed at the story's head
 

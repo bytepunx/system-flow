@@ -3,11 +3,11 @@ id: S-0808
 type: story
 nature: feature
 title: The acceptance's gates, the merge queue's eligibility, queue_tiers, and verify_behind_main, judge only the suites the accept transition's verify lists
-status: in-progress
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-27T23:30:51Z
+updated: 2026-11-27T23:56:34Z
 transitions:
   - to: ready
     at: 2026-11-17T07:47:04Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:50:11Z
     by: agent-S-0808
+  - to: review
+    at: 2026-11-27T23:55:02Z
+    by: agent-S-0808
+  - to: done
+    at: 2026-11-27T23:56:34Z
+    by: orchestrator
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/workitem/transition.go, flai/internal/workitem/transition_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_suites_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md]
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2717
-  estimated: true
-  priced_by: estimate
+  seconds: 3903
+  priced_by: harness
   turns:
     - day: 2026-11-27
       ceremony: 1
-      work: 44
+      work: 59
   models:
     - model: claude-opus-5-5
-      input: 390
-      output: 2230
-      cache_read: 24244062
-      cache_write: 1092170
-      cost: 9.7376
+      input: 430
+      output: 136547
+      cache_read: 30701525
+      cache_write: 1202098
+      cost: 16.0047
   strategic:
     - kind: planner
       seconds: 248
@@ -92,7 +97,7 @@ finalized:
 - [x] `verify_behind_main` sends back only tiers of the suites the transition with the `accept` effect lists in `verify:`, and lists no blocker when it lists none of the tiers main's paths select.
 - [x] `queue_tiers` and the merge queue's eligibility read the same suites.
 - [x] A story whose last verify did not run a suite the acceptance needs is refused with words naming the suite and the close-out that runs it.
-- [ ] On the baseline every gate judges what it judged before this story, shown by the tests of ADR-0291, ADR-0303, and ADR-0221 passing unchanged.
+- [x] On the baseline every gate judges what it judged before this story, shown by the tests of ADR-0291, ADR-0303, and ADR-0221 passing unchanged.
 
 ## Tasks
 - T-3433 Read the suites the acceptance needs from the workflow, and judge a verify report against them
@@ -118,3 +123,14 @@ finalized:
   - `flai touches suggest` also listed `flai/internal/preview/orchestrator.go`, `flai/cmd/verify.go`, and `flai/internal/mergequeue/batch.go`. They are left out: the gates read `repo.Flow()` themselves, so no option or batch code changes.
 - Forecast 1h15m, raised from flai's 35m. flai's figure is 110 s per unit of size over 142 large-band feature stories, times size 19. The one-gate stories S-0683 and S-0792 took 55m and 48m of agent time. This story changes three gates, adds a refusal, and updates four documents. Delivery 2026-11-17T06:30Z, after the serial chain S-0805, S-0806, and S-0807 it waits on is accepted. flai's 03:05Z does not count that chain.
 - Cost of delay 185.64 USD a week, as `flai cod` gives it after the forecast. It is S-0808's share of E-0034's 1500 USD a week, the operator's input, 1h15m of the 10h6m forecast over the epic's 20 open stories without inputs. The story has no inputs of its own, and none were written. The figure moves as the other planners revise their stories' forecasts.
+
+### Accepted by the orchestrator
+
+- Verified: ac32f95ff527b5cdc21296cd68d5f6aeadc78cd0
+- At: 2026-11-27T23:56:34Z
+
+Verdict: met. All four criteria are met at ac32f95, and every changed file is within the story's touches.
+- 1: flai/internal/workitem/transition.go, flai/internal/workitem/transition_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go
+- 2: flai/internal/preview/accept.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/preview/accept_test.go
+- 3: flai/internal/verify/story.go, flai/internal/preview/accept.go, flai/internal/mergequeue/eligible.go, flai/cmd/accept.go, flai/cmd/accept_suites_test.go, docs/users/flai-reference.md
+- 4: flai/cmd/accept_suites_test.go, flai/internal/preview/accept_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/verify/story_test.go, design/system/workflow.md

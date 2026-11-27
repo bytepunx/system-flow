@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2276.5776
-accrued_seconds: 1581395
-tasks_completed: 4108
-last_run: 2026-11-27T23:38:36Z
+accrued_cost: 2276.9893
+accrued_seconds: 1581475
+tasks_completed: 4112
+last_run: 2026-11-27T23:40:11Z
 ---
 
 # Orchestrator activity
@@ -28795,6 +28795,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0847
 - Seconds: 49
 - Cost: 0.2358 USD, estimated
+
+### 2026-11-27T23:39:05Z
+
+- Summary: Published flai 1.112.0 -> 1.112.1 (tag flai/v1.112.1, pushed) bundling S-0847, under threshold policy: count 1 at or over threshold 1, value 75 USD/week against 1000
+- Items: S-0847
+- Seconds: 29
+- Cost: 0.0626 USD, estimated
+
+### 2026-11-27T23:39:28Z
+
+- Summary: I accepted S-0847 and published it as flai 1.112.1. The tag is pushed.
+- Items: none
+- Seconds: 23
+- Cost: 0.1812 USD, estimated
+
+### 2026-11-27T23:39:53Z
+
+- Summary: release-due S-0847: did not publish. release_evaluate under threshold is not met (0 pending, value 0 of 1000 USD, count 0 of 1). S-0847 is already released in flai 1.112.1 (commit 81c2e50cf, tag flai/v1.112.1).
+- Items: S-0847
+- Seconds: 10
+- Cost: 0.0730 USD, estimated
+
+### 2026-11-27T23:40:11Z
+
+- Summary: I didn't publish for S-0847 because it is already released. It shipped in flai 1.112.1: commit `81c2e50cf` (`chore: publish flai 1.112.1`), tag `flai/v1.112.1`.
+- Items: none
+- Seconds: 18
+- Cost: 0.0949 USD, estimated
 
 ## Refusals
 
