@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2275.2705
-accrued_seconds: 1581177
-tasks_completed: 4099
-last_run: 2026-11-27T22:36:37Z
+accrued_cost: 2275.7293
+accrued_seconds: 1581236
+tasks_completed: 4102
+last_run: 2026-11-27T22:50:57Z
 ---
 
 # Orchestrator activity
@@ -28732,6 +28732,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1632 USD, estimated
+
+### 2026-11-27T22:48:27Z
+
+- Summary: Published S-0811 with release_publish under threshold (count 1 at threshold 1, 90.11 USD/week): flai 1.111.2 -> 1.112.0 (tag flai/v1.112.0), template 1.1.50 -> 1.1.51 (system-flow-template v1.1.51, 13149ea), pushed
+- Items: S-0811
+- Seconds: 22
+- Cost: 0.0943 USD, estimated
+
+### 2026-11-27T22:48:45Z
+
+- Summary: I published S-0811 as a release: `release_evaluate` met the threshold policy (1 accepted story, count threshold 1).
+- Items: none
+- Seconds: 18
+- Cost: 0.2192 USD, estimated
+
+### 2026-11-27T22:50:57Z
+
+- Summary: S-0850 in review: last verify passed at 59206c0, not the head of story/S-0850 (e38a7e6); asked flai serve for its close-out, job S-0850-20261127T225051Z started; left in review for a later run to read the verdict and accept under accept_reviews
+- Items: S-0850
+- Seconds: 19
+- Cost: 0.1453 USD, estimated
 
 ## Refusals
 

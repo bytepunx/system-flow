@@ -3,15 +3,18 @@ id: S-0808
 type: story
 nature: feature
 title: The acceptance's gates, the merge queue's eligibility, queue_tiers, and verify_behind_main, judge only the suites the accept transition's verify lists
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:04Z
-updated: 2026-11-27T22:47:30Z
+updated: 2026-11-27T22:50:11Z
 transitions:
   - to: ready
     at: 2026-11-17T07:47:04Z
     by: alex
+  - to: in-progress
+    at: 2026-11-27T22:50:11Z
+    by: agent-S-0808
 tags: [flai]
 topics: [verify, workflow]
 touches: [flai/internal/workitem/transition.go, flai/internal/workitem/transition_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_suites_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md]

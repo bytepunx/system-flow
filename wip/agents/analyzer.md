@@ -1,9 +1,9 @@
 ---
 kind: analyzer
-accrued_cost: 31.8290
-accrued_seconds: 2136
-tasks_completed: 3
-last_run: 2026-11-16T06:17:09Z
+accrued_cost: 46.3509
+accrued_seconds: 2989
+tasks_completed: 4
+last_run: 2026-11-27T22:48:56Z
 ---
 
 # Analyzer activity
@@ -35,3 +35,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: I-0386, I-0387, I-0388, I-0389, I-0390, I-0391, I-0392, I-0393, I-0394
 - Seconds: 889
 - Cost: 11.3293 USD, estimated
+
+### 2026-11-27T22:48:56Z
+
+- Summary: Report written: `design/analysis/2026-11-27-all.md` (focus all, window 2026-10-28 to 2026-11-27), indexed in `design/analysis/README.md`; it filed I-0411 (the curator's unlinted digest entries on main refused every acceptance for three days), I-0412 (666 orchestrator restarts in 14 h on an expired login, no hold or thread), I-0413 (a passed close-out or resolve job starts no orchestrator, so S-0839 and S-0843 waited six days), I-0414 and I-0415 (S-0811's three send-backs on one shared sentence and the `--keep-removal` only the operator can give; folded with S-0811's I-0408 and I-0410 at its acceptance), impressions I-0416 (MCP HTTP agent identity is a header), I-0417 (host config written 0644 with a notify URL that may carry a secret), and I-0418 (goreleaser hooks run tidy and tests with the signing key in the environment), and bumped I-0388 (13 close-outs interrupted by auto-upgrade since 2026-11-16) and I-0390 (nine more design sentences the code does not match); lint and `flai check` are clean, and the 26 uncommitted digest files on main, one failing MD028, are the operator's first item.
+- Trigger: formula analysis-cadence S-0850
+- Items: I-0388, I-0390, I-0411, I-0412, I-0413, I-0414, I-0415, I-0416, I-0417, I-0418
+- Seconds: 853
+- Cost: 14.5219 USD, estimated

@@ -8,6 +8,24 @@ cost: 74h10m
 first_reported: 2026-11-21T18:38:23Z
 last_reported: 2026-11-27T22:46:52Z
 updated: 2026-11-27T22:47:26Z
+usage:
+  strategic:
+    - kind: analyzer
+      seconds: 85
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 55
+          output: 5532
+          cache_read: 391176
+          cache_write: 29513
+          cost: 0.9652
+        - model: claude-opus-5-5
+          input: 29
+          output: 4664
+          cache_read: 1264948
+          cache_write: 28114
+          cost: 0.487
 ---
 
 # I-0415 The orchestrator's accept takes no --keep-removal, so a story that rewrites a line main added waits in review for the operator even after the story's agent and the orchestrator agree the removal is right

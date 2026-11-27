@@ -8,6 +8,24 @@ cost: 39m
 first_reported: 2026-11-21T18:15:40Z
 last_reported: 2026-11-27T22:46:44Z
 updated: 2026-11-27T22:47:26Z
+usage:
+  strategic:
+    - kind: analyzer
+      seconds: 85
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 55
+          output: 5532
+          cache_read: 391176
+          cache_write: 29514
+          cost: 0.9652
+        - model: claude-opus-5-5
+          input: 29
+          output: 4664
+          cache_read: 1264948
+          cache_write: 28114
+          cost: 0.487
 ---
 
 # I-0414 Sibling stories of one ADR each rewrite the same 'nothing else reads the keys yet' sentence in a hub design doc and runbook, so each acceptance stops the next on a rebase conflict

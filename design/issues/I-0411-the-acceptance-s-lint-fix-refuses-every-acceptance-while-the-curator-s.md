@@ -8,6 +8,24 @@ cost: 76h
 first_reported: 2026-11-27T22:46:18Z
 last_reported: 2026-11-27T22:46:18Z
 updated: 2026-11-27T22:46:18Z
+usage:
+  strategic:
+    - kind: analyzer
+      seconds: 86
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 55
+          output: 5533
+          cache_read: 391177
+          cache_write: 29514
+          cost: 0.9652
+        - model: claude-opus-5-5
+          input: 29
+          output: 4664
+          cache_read: 1264948
+          cache_write: 28114
+          cost: 0.487
 ---
 
 # I-0411 The acceptance's lint fix refuses every acceptance while the curator's uncommitted digest entries in the main checkout fail markdownlint, so stories that passed review wait for the operator

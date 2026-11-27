@@ -11,21 +11,27 @@ updated: 2026-11-27T22:47:23Z
 usage:
   strategic:
     - kind: analyzer
-      seconds: 99
+      seconds: 185
       estimated: true
       models:
         - model: claude-fable-5-1
-          input: 47
-          output: 6584
-          cache_read: 349360
-          cache_write: 34306
-          cost: 1.1031
+          input: 102
+          output: 12117
+          cache_read: 740537
+          cache_write: 63820
+          cost: 2.0683
         - model: claude-haiku-5-5
           input: 36
           output: 14843
           cache_read: 2398931
           cache_write: 47318
           cost: 0.1557
+        - model: claude-opus-5-5
+          input: 29
+          output: 4665
+          cache_read: 1264948
+          cache_write: 28114
+          cost: 0.487
 ---
 
 # I-0390 Design sentences the code contradicts: ci.md's race detector on macOS, markdown.md's yaml in flaiover, metrics.md's WIP series and unnamed keys, flai-cli.md's missing dashboard logs row, the analyzer's MultiEdit

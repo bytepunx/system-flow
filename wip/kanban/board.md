@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 3
   review: 2
 order:
-  - S-0808
   - S-0844
   - S-0837
   - S-0845

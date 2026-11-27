@@ -8,6 +8,24 @@ cost: 48h
 first_reported: 2026-11-27T22:46:35Z
 last_reported: 2026-11-27T22:46:35Z
 updated: 2026-11-27T22:46:35Z
+usage:
+  strategic:
+    - kind: analyzer
+      seconds: 85
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 55
+          output: 5532
+          cache_read: 391176
+          cache_write: 29514
+          cost: 0.9652
+        - model: claude-opus-5-5
+          input: 29
+          output: 4664
+          cache_read: 1264948
+          cache_write: 28114
+          cost: 0.487
 ---
 
 # I-0413 A story in review whose close-out or resolve job passed is not a reason that starts the orchestrator, so an eligible story waits for the operator or for an unrelated event
