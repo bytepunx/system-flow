@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-18
+updated: 2026-11-27
 status: active
 ---
 
@@ -3495,6 +3495,8 @@ close-out running: close-out job S-0031-20261116T020000Z runs at S-0031's head 9
 
 `queue_tiers_why` names the job too. Once the job ends, preview again.
 
+The tiers that hold an acceptance are those of the suites the acceptance needs: the `verify` of the transition with the `accept` effect in your workflow file, review to done on the baseline (S-0808, [ADR-0312](../../design/adrs/0312-a-tier-belongs-to-a-suite-and-the-workflow-file-names-the-suites-a-transition.md) §3). The baseline's is `verify: all`, so every tier counts, as before. With a list, such as `verify: [static, behavior]`, `queue_tiers` and `verify_behind_main` hold the story only for tiers of those suites, and a failed tier of another suite holds nothing. While the story's last `flai verify` did not run one of the listed suites, the acceptance is refused with the blocker `verify_suites`, which names the suites. To clear it, ask for the close-out: `flai verify S-0031 --job`, or the MCP tool `verify`, runs the suites the acceptance needs while the story is in review; then accept again. With `--json` it is in `verify_suites_blocker`, with the suites in `suites_not_run`. While the queue batches and is not held, your acceptance still enqueues the story, and the queue holds it as `verify_suites` until that close-out passes. Which step reads what: [What the acceptance's gates read](../../design/system/workflow.md#what-the-acceptances-gates-read-s-0808).
+
 A story in review that cannot be accepted, for a verify behind main or any other blocker `flai accept --dry-run` lists, most often needs only a rebase onto main and a close-out over it, which `flai serve` does for you with no agent (S-0804, [ADR-0313](../../design/adrs/0313-rebase-and-resolve-runs-as-a-flai-serve-job-that-rebases-a-review-story-s.md)). `flai accept S-0031 --resolve`, and the dashboard's Rebase and resolve button on the story, accepts nothing: it asks `flai serve` for a rebase and resolve job and answers at once with the job's id and where its output is kept, `.flai-cache/verify/jobs/S-0031.log`. The story stays in review while the job runs. The job rebases `story/S-0031` onto main as `flai stream sync` does, then runs the story's close-out at the rebased head, writing a line to the log as each step and tier starts and ends. How it ends:
 
 - **The rebase is clean and the close-out passes.** The story stays in review, with nothing sent back and no agent started. Preview again, and accept it.
@@ -3828,6 +3830,7 @@ batch: none
 | `verify_failed` | Its last `flai verify` failed. When it failed before the head of its branch moved, as after a sync, the reason says so, names both commits, and says to close it out again at the head, with the MCP tool `verify` or `flai verify S-nnnn --job` |
 | `verify_stale` | Its last `flai verify` passed at a commit that is not its branch's head |
 | `verify_running` | A close-out job runs at another commit than its last `flai verify` result, or it has none yet, as after a sync moved the head. It takes the place of the three above. The reason names what the last result was, the job, the head it runs at, and its step, and says the story is eligible once the job passes |
+| `verify_suites` | Its last `flai verify` did not run a suite the acceptance needs, while the `verify` of the transition with the `accept` effect lists suites; the reason names them and `flai verify S-nnnn --job`, which runs them (S-0808). With such a list, only a failed tier of a listed suite, or a failed step before the tiers, is `verify_failed`; with no `verify` on that transition, no `flai verify` result holds the story |
 | `branch_unread` | The head of its branch cannot be read |
 | `criteria_unticked` | An acceptance criterion is unticked; the reason names each |
 | `thread_open` | A thread on the story or one of its tasks is not resolved; the reason names each |

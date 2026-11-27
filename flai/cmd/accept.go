@@ -306,7 +306,8 @@ naming the suites and flai verify <id> --job, which runs them; --dry-run
 lists it, with --json under verify_suites_blocker, and suites_not_run names
 the suites. An acceptance that enqueues the story lands nothing, and the
 merge queue holds the story, not eligible as verify_suites, until a flai
-verify runs them.
+verify runs them: --dry-run lists that as left to the merge queue, with
+--json under suites_not_run_queued.
 
 While the kluster host action is on for the project and its system-flow.yaml
 has a kluster: block, a change the cluster has not run is not shipped
@@ -1687,6 +1688,11 @@ func (a *app) printAccept(acc *accepted) error {
 		// batch's to run, not a blocker (ADR-0308)
 		if res.StaleTiersQueued != "" {
 			fmt.Fprintf(a.out, "left to the merge queue: %s\n", res.StaleTiersQueued)
+		}
+		// so are the suites its last verify did not run: the queue holds the
+		// story until a verify runs them (ADR-0312 §3)
+		if res.SuitesNotRunQueued != "" {
+			fmt.Fprintf(a.out, "left to the merge queue: %s\n", res.SuitesNotRunQueued)
 		}
 		// a close-out running at the new head, after a sync, is not yet a
 		// verify the preview can go by (I-0384)

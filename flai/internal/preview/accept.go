@@ -157,11 +157,15 @@ type Acceptance struct {
 	// workflow's transition with the accept effect lists them, that the
 	// story's last flai verify did not select, and VerifySuitesBlocker the
 	// blocker verify_suites they bring, also in Blockers, in every acceptance
-	// verify_behind_main gates, one that enqueues the story among them
-	// (ADR-0312 §3); empty and nil on the baseline, whose acceptance needs
-	// every suite, and when the last run selected each listed suite.
+	// verify_behind_main gates (ADR-0312 §3); empty and nil on the baseline,
+	// whose acceptance needs every suite, and when the last run selected each
+	// listed suite. An acceptance that enqueues the story has
+	// SuitesNotRunQueued in place of the blocker: it lands nothing, and the
+	// merge queue holds the story, not eligible as verify_suites, as
+	// StaleTiersQueued stands in for verify_behind_main (ADR-0308).
 	SuitesNotRun        []string `json:"suites_not_run,omitempty"`
 	VerifySuitesBlocker *Blocker `json:"verify_suites_blocker,omitempty"`
+	SuitesNotRunQueued  string   `json:"suites_not_run_queued,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -809,13 +813,14 @@ func VerifyBehindMainBlocker(id, why string) Blocker {
 // acceptance lists that story it's last flai verify, as last read it, did not
 // select, and the blocker verify_suites they bring (ADR-0312 §3). It gates
 // the acceptances verify_behind_main gates, a story with a branch, not done
-// already, but for the merge queue's landing, whose batch verified it; one
-// that enqueues the story is held too, since the batch runs the suites
-// verify_at names for it, not those the acceptance needs, and the merge queue
-// does not take such a story. On the baseline, whose acceptance needs every
-// suite, and with no verify on the acceptance it holds nothing. A report that
-// cannot be read is the blocker too, so the gate never opens unread. The
-// blocker is among the acceptance's blockers, as verify_behind_main's is.
+// already, but for the merge queue's landing, whose batch verified it. One
+// that enqueues the story (opts.Enqueues) lands nothing: it has
+// res.SuitesNotRunQueued in place of the blocker, since the merge queue holds
+// the story, not eligible as verify_suites, until a flai verify runs the
+// suites (ADR-0308). On the baseline, whose acceptance needs every suite, and
+// with no verify on the acceptance it holds nothing. A report that cannot be
+// read is the blocker too, so the gate never opens unread. The blocker is
+// among the acceptance's blockers, as verify_behind_main's is.
 func verifySuitesGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions, last lastVerify) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
 		return
@@ -830,6 +835,10 @@ func verifySuitesGate(repo *workitem.Repo, it *workitem.Item, res *Acceptance, o
 	} else {
 		res.SuitesNotRun = verify.SuitesNotRun(last.rep, last.ok, need)
 		if len(res.SuitesNotRun) == 0 {
+			return
+		}
+		if opts.Enqueues() {
+			res.SuitesNotRunQueued = verify.SuitesNotRunText(it.ID, res.SuitesNotRun) + "; the acceptance enqueues it, and the merge queue holds it, not eligible as verify_suites, until a flai verify runs them (ADR-0308)"
 			return
 		}
 		b = VerifySuitesBlocker(it.ID, res.SuitesNotRun)

@@ -958,8 +958,8 @@ func acceptSuitesFlow(t *testing.T, verify string) *workflow.Workflow {
 // whose last flai verify did not select one of them is refused with
 // verify_suites, naming the suites and the close-out, in the operator's
 // acceptance, the orchestrator's, among the acceptance's blockers and not the
-// orchestrator's own, one that enqueues the story, and one past a held
-// queue; not in the queue's landing, nor for a story resumed, nor once the
+// orchestrator's own, and one past a held queue, and noted, not blocked,
+// for one that enqueues the story (ADR-0308); not in the queue's landing, nor for a story resumed, nor once the
 // last verify ran every suite or each listed one. With no report it names
 // every listed suite, and a report that cannot be read is the blocker,
 // naming why. On the baseline and with no verify on the acceptance nothing
@@ -982,7 +982,6 @@ func TestTheVerifySuitesGateHoldsASuiteTheAcceptanceNeedsThatDidNotRun(t *testin
 	for name, opts := range map[string]AcceptOptions{
 		"the operator's acceptance":         {},
 		"the orchestrator's acceptance":     {Orchestrator: true},
-		"an acceptance that enqueues":       {QueueBatches: true},
 		"a hand acceptance past held queue": {QueueBatches: true, QueueHeld: true},
 	} {
 		res := gate(listed, false, opts, ran("behavior"))
@@ -992,6 +991,11 @@ func TestTheVerifySuitesGateHoldsASuiteTheAcceptanceNeedsThatDidNotRun(t *testin
 		if len(res.OrchestratorBlockers) > 0 {
 			t.Errorf("%s: verify_suites is not among the orchestrator's own blockers: %+v", name, res.OrchestratorBlockers)
 		}
+	}
+	// an acceptance that enqueues lands nothing: the queue holds the story,
+	// so the preview notes it in place of the blocker (ADR-0308)
+	if res := gate(listed, false, AcceptOptions{QueueBatches: true}, ran("behavior")); res.VerifySuitesBlocker != nil || len(res.Blockers) > 0 || !slices.Equal(res.SuitesNotRun, []string{"integration"}) || !strings.HasPrefix(res.SuitesNotRunQueued, want) || !strings.Contains(res.SuitesNotRunQueued, "not eligible as verify_suites") {
+		t.Errorf("an acceptance that enqueues must note verify_suites, not block on it: %+v %q %q %q", res.VerifySuitesBlocker, res.SuitesNotRun, res.Blockers, res.SuitesNotRunQueued)
 	}
 	for name, c := range map[string]struct {
 		w       *workflow.Workflow
