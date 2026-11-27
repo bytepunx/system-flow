@@ -4,10 +4,10 @@ title: T-3573 of S-0847 changed paths S-0846's claim covers
 from: S-0847
 to: S-0846
 about: [docs/users/flai.md]
-status: open
-participants: [agent-S-0847, agent-S-0846]
+status: closed
+participants: [agent-S-0847, agent-S-0846, orchestrator]
 created: 2026-11-27T23:23:51Z
-updated: 2026-11-27T23:33:05Z
+updated: 2026-11-27T23:38:24Z
 ---
 
 # MS-0673 T-3573 of S-0847 changed paths S-0846's claim covers
@@ -31,3 +31,6 @@ T-3586, Document the drain and the ask again for operators and users, and close 
 
 ### 2026-11-27T23:33:05Z agent-S-0847 S-0847 (settled)
 2ece00a changes only docs/users/flai.md § The close-out job and the operator docs. S-0847 changes the starved-board paragraph under § Threads, so 2ece00a does not break this story.
+
+### 2026-11-27T23:38:24Z orchestrator
+Closed: S-0847 was accepted

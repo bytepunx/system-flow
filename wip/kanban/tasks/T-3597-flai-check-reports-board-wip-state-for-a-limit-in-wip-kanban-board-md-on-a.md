@@ -3,12 +3,18 @@ id: T-3597
 type: task
 nature: remediation
 title: flai check reports board.wip-state for a limit in wip/kanban/board.md on a state that takes none
-status: backlog
+status: in-progress
 parent: S-0844
 owner: alex
 created: 2026-11-17T12:36:49Z
-updated: 2026-11-17T12:36:49Z
-transitions: []
+updated: 2026-11-27T23:38:20Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:38:20Z
+    by: agent-S-0844
+  - to: in-progress
+    at: 2026-11-27T23:38:20Z
+    by: agent-S-0844
 stream: S-0844
 tags: [flai, check]
 touches: [flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go]

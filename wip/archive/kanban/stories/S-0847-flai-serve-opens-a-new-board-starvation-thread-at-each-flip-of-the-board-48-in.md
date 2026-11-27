@@ -3,10 +3,10 @@ id: S-0847
 type: story
 nature: improvement
 title: flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator
-status: review
+status: done
 owner: alex
 created: 2026-11-17T08:32:58Z
-updated: 2026-11-27T23:37:05Z
+updated: 2026-11-27T23:38:24Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-27T23:37:05Z
     by: agent-S-0847
+  - to: done
+    at: 2026-11-27T23:38:24Z
+    by: orchestrator
 blocked:
   - from: 2026-11-27T22:35:28Z
     until: 2026-11-27T22:57:15Z
@@ -156,3 +159,12 @@ Figures:
 - **Cost of delay.** `flai cod` gave 75 USD a week from the input flai carried over from I-0389: 30m lost per 168h cycle at 150 USD an hour. It stands as given. The 48 threads in five days, a fifth of W46's threads to the operator, fit half an hour of reading a week.
 
 The plan's assumptions are on the plan's thread: a fixed 15-minute settle window with no manifest key, and the `ready-empty` events out of scope.
+
+### Accepted by the orchestrator
+
+- Verified: 96a47c6e24f98bda908b0013058154d3fc0f14af
+- At: 2026-11-27T23:38:24Z
+
+Verdict: pass — both criteria are met by in-touches changes with a reproducing test, an ADR, and updated design and user docs, and the close-out passed at 96a47c6.
+- 1: flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/readyempty_test.go, design/adrs/0321-flai-serve-opens-writes-to-and-resolves-the-starved-board-s-thread-only-once.md, design/system/workflow.md, docs/users/flai.md
+- 2: design/issues/I-0389-flai-serve-opens-a-new-board-starvation-thread-at-each-flip-of-the-board-48-in.md, design/issues/summary.md
