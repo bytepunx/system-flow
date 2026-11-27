@@ -55,6 +55,8 @@ type readyEmptyLab struct {
 	o    Options
 	l    *launcher
 	logs bytes.Buffer
+	// clock is the time a newStarvedLab's launcher last read
+	clock time.Time
 }
 
 func newReadyEmptyLab(t *testing.T, limit int) *readyEmptyLab {
@@ -354,6 +356,8 @@ func (lab *readyEmptyLab) t3215Through(id string, states ...string) {
 // stories in the queue the pull takes from against the room the limits of
 // doing and testing leave together. A story in doing and one in testing both
 // fill it, and one in awaiting does not; the event's limit is their sum.
+// The thread opens, and is resolved, once the board has held its state for
+// the settle window (ADR-0321).
 func TestReadyEmptyAndTheStarvedBoardCountTheActiveWorkRoom(t *testing.T) {
 	lab := t3215Lab(t)
 	lab.backlog("Count the turns", true)
@@ -364,6 +368,11 @@ func TestReadyEmptyAndTheStarvedBoardCountTheActiveWorkRoom(t *testing.T) {
 	works := lab.ready("Works")
 	lab.t3215Through(works, "doing")
 
+	t3215Look(lab)
+	if n := len(lab.boardThreads()); n != 0 {
+		t.Fatalf("%d threads on the board at the first starved look, want none within the settle window", n)
+	}
+	lab.wait(starvedSettle)
 	room, limit := t3215Look(lab)
 	if room != 1 || limit != 3 {
 		t.Fatalf("one story in doing and one in testing of limits 2 and 1 leave room %d of %d, want 1 of 3", room, limit)
@@ -378,6 +387,11 @@ func TestReadyEmptyAndTheStarvedBoardCountTheActiveWorkRoom(t *testing.T) {
 	lab.move(waits, "doing")
 	if room, _ := t3215Look(lab); room != 0 {
 		t.Fatalf("two stories in doing and one in testing leave room %d, want 0", room)
+	}
+	lab.starved(1, "every active-work lane taken within the settle window")
+	lab.wait(starvedSettle)
+	if room, _ := t3215Look(lab); room != 0 {
+		t.Fatalf("two stories in doing and one in testing leave room %d after the window, want 0", room)
 	}
 	lab.want(1, "no room left, so no second event")
 	for _, b := range lab.boardThreads() {
