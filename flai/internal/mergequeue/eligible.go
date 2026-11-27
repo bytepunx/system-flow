@@ -27,6 +27,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -37,6 +38,7 @@ const (
 	KindVerifyFailed     = "verify_failed"     // its last flai verify failed
 	KindVerifyStale      = "verify_stale"      // its last flai verify passed at a commit other than its branch's head
 	KindVerifyRunning    = "verify_running"    // a close-out job runs at another commit than its last flai verify's (I-0384)
+	KindVerifySuites     = "verify_suites"     // its last flai verify did not select a suite its acceptance needs (ADR-0312 §3)
 	KindBranchUnread     = "branch_unread"     // the head of its branch cannot be read
 	KindCriteriaUnticked = "criteria_unticked" // an acceptance criterion is unticked
 	KindThreadOpen       = "thread_open"       // a thread on the story or one of its tasks is not resolved
@@ -139,7 +141,8 @@ type Entry struct {
 	// EnteredReview is when the story last entered review, in UTC.
 	EnteredReview time.Time `json:"entered_review"`
 	// Head is its branch's head, set only when its last flai verify
-	// passed.
+	// passed what its acceptance needs, or its acceptance needs no suite
+	// (ADR-0312 §3).
 	Head string `json:"head,omitempty"`
 	// Enqueued says the state has the story enqueued.
 	Enqueued bool     `json:"enqueued,omitempty"`
@@ -212,6 +215,9 @@ type Actions struct {
 // while act.Kluster is on and the manifest has a kluster: block, a story in
 // review is eligible only while kluster.AcceptGate passes it at the head of
 // its branch, with act.Checks, as flai accept --batch refuses it otherwise.
+// A story's last flai verify is judged by the suites its acceptance needs,
+// the verify of the workflow's transition with the accept effect (ADR-0312
+// §3).
 func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions) (Queue, error) {
 	q := Queue{Mode: repo.Manifest.Acceptance.ModeOrDefault(), Eligible: []Entry{}, Ineligible: []Entry{}, Enqueued: []Enqueued{}, Outcomes: []Outcome{}}
 	if repo.Manifest.Acceptance.PullRequest() {
@@ -245,12 +251,13 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 	if err != nil {
 		return q, fmt.Errorf("read the threads to check the stories in review for the merge queue: %w; fix the thread file it names", err)
 	}
+	need := needOf(repo, flow)
 	reports := make([]lastVerify, len(review))
 	needHeads, anyPassed := false, false
 	for i, it := range review {
 		reports[i] = readLastVerify(repo, it.ID, "")
-		needHeads = needHeads || reports[i].needsHead()
-		anyPassed = anyPassed || reports[i].passed()
+		needHeads = needHeads || reports[i].needsHead(need)
+		anyPassed = anyPassed || reports[i].passed(need)
 	}
 	// Only a story with a flai verify result, or a close-out job running,
 	// needs its branch's head, to tell a result from before the head moved
@@ -261,7 +268,7 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 	if needHeads {
 		g = readGitState(r, repo, anyPassed)
 		for i, it := range review {
-			if head, ok := g.head(it.ID); ok && reports[i].needsHead() {
+			if head, ok := g.head(it.ID); ok && reports[i].needsHead(need) {
 				reports[i] = readLastVerify(repo, it.ID, head)
 			}
 		}
@@ -274,7 +281,7 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 	for i, it := range review {
 		e := Entry{Story: it.ID, Title: it.Title, EnteredReview: enteredReview(flow, it), Enqueued: enqueued[workitem.CanonicalID(it.ID)]}
 		var verifyReason *Reason
-		e.Head, verifyReason = g.verified(it.ID, reports[i])
+		e.Head, verifyReason = g.verified(it.ID, reports[i], need)
 		if verifyReason != nil {
 			e.Reasons = append(e.Reasons, *verifyReason)
 		}
@@ -314,7 +321,8 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 // held, by the operator or the preflight, a batch is under way or waits to
 // be landed or bisected, the queue has no window to wait out, or the main
 // branch's head was not read. A story is eligible only once its flai verify
-// passed, so g holds the heads whenever a story is.
+// passed what its acceptance needs, or that needs no suite, and either reads
+// the heads, so g holds them whenever a story is.
 func filling(repo *workitem.Repo, q Queue, g gitState, now time.Time) *Window {
 	if q.Held || q.Preflight != nil || (q.Batch != nil && (q.Batch.Result == nil || q.Batch.Dropped == nil)) {
 		return nil
@@ -425,12 +433,92 @@ func readLastVerify(repo *workitem.Repo, story, head string) lastVerify {
 }
 
 // needsHead reports whether the queue needs the head of the story's branch
-// to tell why it is or is not eligible: it has a result, or a close-out job
-// runs.
-func (l lastVerify) needsHead() bool { return l.err == nil && (l.ok || l.rep.Running != nil) }
+// to tell why it is or is not eligible: its acceptance needs no suite, so it
+// is eligible from its head whatever its result, it has a result, or a
+// close-out job runs.
+func (l lastVerify) needsHead(n need) bool {
+	return n.none() || (l.err == nil && (l.ok || l.rep.Running != nil))
+}
 
-// passed reports whether the result passed, at whichever commit.
-func (l lastVerify) passed() bool { return l.err == nil && l.ok && l.rep.Passed }
+// passed reports whether the result passed what n needs, at whichever
+// commit; with no suite needed, it has nothing to pass.
+func (l lastVerify) passed(n need) bool {
+	return n.none() || (l.err == nil && l.ok && n.passes(l.rep))
+}
+
+// need is what the queue's eligibility needs of a story's last flai verify:
+// suites, those the verify of the workflow's transition with the accept
+// effect lists, nil for none, and, under a list, suiteOf, the suite of each
+// of the manifest's tiers by its name (ADR-0312 §3).
+type need struct {
+	suites  *workflow.Suites
+	suiteOf map[string]string
+}
+
+// needOf is what flow's acceptance of a story needs, with the suites of
+// repo's manifest's tiers.
+func needOf(repo *workitem.Repo, flow workflow.Workflow) need {
+	n := need{suites: workitem.AcceptSuites(flow, workitem.Story)}
+	if n.none() || n.suites.All {
+		return n
+	}
+	n.suiteOf = map[string]string{}
+	for _, t := range repo.Manifest.Tests {
+		if name := strings.TrimSpace(t.Name); n.suiteOf[name] == "" {
+			n.suiteOf[name] = t.SuiteOrDefault()
+		}
+	}
+	return n
+}
+
+// none reports whether the acceptance needs no suite.
+func (n need) none() bool { return n.suites == nil }
+
+// passes reports whether rep passed what n needs. Under all it passed, as
+// before ADR-0312. Under a list, it stopped at no step but a tier, since
+// every suite depends on the steps before the tiers, and each listed suite's
+// tiers that it selected passed, were reused, were left to the merge queue,
+// which runs them in its batch (ADR-0174), or were skipped for a tier that
+// one of those did, as verifyrecord.Group judges a suite: a failed tier of
+// another suite does not count. A tier's suite is the one rep recorded it
+// in, else the manifest's.
+func (n need) passes(rep verify.Report) bool {
+	if n.none() || n.suites.All {
+		return n.none() || rep.Passed
+	}
+	if !rep.Passed && !stoppedAtTier(rep) {
+		return false
+	}
+	recorded := map[string]string{}
+	for _, s := range rep.SuiteRuns {
+		for _, t := range s.Tiers {
+			if recorded[t.Name] == "" {
+				recorded[t.Name] = s.Name
+			}
+		}
+	}
+	suiteOf := func(tier string) string { return cmp.Or(recorded[tier], n.suiteOf[tier]) }
+	for _, s := range verifyrecord.Group(stepsOf(rep), suiteOf) {
+		if slices.Contains(n.suites.Names, s.Name) && !s.Passed {
+			return false
+		}
+	}
+	return true
+}
+
+// stoppedAtTier reports whether the step rep stopped at is a tier.
+func stoppedAtTier(rep verify.Report) bool {
+	return slices.ContainsFunc(rep.Steps, func(s verify.Step) bool { return s.Tier && s.Name == rep.StoppedAt })
+}
+
+// stepsOf is the record of rep's steps, which verifyrecord.Group groups.
+func stepsOf(rep verify.Report) verifyrecord.Record {
+	rec := verifyrecord.Record{Story: rep.Story, Commit: rep.Commit, Passed: rep.Passed, Steps: make([]verifyrecord.Step, 0, len(rep.Steps))}
+	for _, s := range rep.Steps {
+		rec.Steps = append(rec.Steps, verifyrecord.Step{Name: s.Name, Tier: s.Tier, State: verifyrecord.State(s.State), CoveredBy: s.CoveredBy, ReusedFrom: s.ReusedFrom})
+	}
+	return rec
+}
 
 // gitState is the git the queue reads once for every story in review: each
 // local branch's head and the branch checked out, or why they could not be
@@ -476,34 +564,42 @@ func (g gitState) head(story string) (string, bool) {
 }
 
 // verified is the head of story's branch and nil when its last flai verify,
-// last, passed there; otherwise the reason it did not, with the head when the
-// result passed and the head was read. While a close-out job runs at another
-// commit than a result not at the head, or than none, the reason is the job's
-// (I-0384).
-func (g gitState) verified(story string, last lastVerify) (string, *Reason) {
+// last, passed there what n needs; otherwise the reason it did not, with the
+// head when the result passed and the head was read. While a close-out job
+// runs at another commit than a result not at the head, or than none, the
+// reason is the job's (I-0384). A result that did not select a suite n lists
+// is the reason KindVerifySuites. When n needs no suite, the result is not
+// read and the story's reason is only a head that was not read, since the
+// batch rebases its head (ADR-0312 §3).
+func (g gitState) verified(story string, last lastVerify, n need) (string, *Reason) {
+	branch := storygit.Branch(story)
+	head, read := g.head(story)
+	if n.none() {
+		if !read {
+			return "", g.unread(story, "to batch it from, though its acceptance needs no suite")
+		}
+		return head, nil
+	}
 	rep := last.rep
 	if last.err != nil {
 		return "", &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read the last flai verify result of %s: %v", story, last.err)}
 	}
-	branch := storygit.Branch(story)
-	head, read := g.head(story)
-	if !last.ok || !rep.Passed {
+	notRun := verify.SuitesNotRun(rep, last.ok, n.suites)
+	if !last.ok || !n.passes(rep) {
 		switch {
 		case rep.Running != nil:
 			return "", runningReason(story, last, head)
 		case !last.ok:
 			return "", &Reason{Kind: KindVerifyMissing, Text: fmt.Sprintf("%s has no flai verify result: run flai verify %s at the head of its branch", story, story)}
+		case len(notRun) > 0:
+			return "", &Reason{Kind: KindVerifySuites, Text: verify.SuitesNotRunText(story, notRun)}
 		case rep.Moved:
 			return "", &Reason{Kind: KindVerifyFailed, Text: fmt.Sprintf("the last flai verify of %s failed%s, at %s, before the head of %s moved to %s: close it out again at the head, with the MCP tool verify or flai verify %s --job", story, stoppedAt(rep), short(rep.Commit), branch, short(head), story)}
 		}
 		return "", &Reason{Kind: KindVerifyFailed, Text: fmt.Sprintf("the last flai verify of %s failed%s, at %s: fix it and run flai verify %s again", story, stoppedAt(rep), short(rep.Commit), story)}
 	}
 	if !read {
-		why := "git names no commit"
-		if g.headsErr != nil {
-			why = g.headsErr.Error()
-		}
-		return "", &Reason{Kind: KindBranchUnread, Text: fmt.Sprintf("cannot read the head of %s to check that flai verify passed there: %s; a story is batched from its branch, so check that git can read it", branch, why)}
+		return "", g.unread(story, "to check that flai verify passed there")
 	}
 	if rep.Commit != head {
 		if rep.Running != nil {
@@ -511,7 +607,20 @@ func (g gitState) verified(story string, last lastVerify) (string, *Reason) {
 		}
 		return head, &Reason{Kind: KindVerifyStale, Text: fmt.Sprintf("the last flai verify of %s passed at %s, but the head of %s is %s: run flai verify %s again at the head", story, short(rep.Commit), branch, short(head), story)}
 	}
+	if len(notRun) > 0 {
+		return head, &Reason{Kind: KindVerifySuites, Text: verify.SuitesNotRunText(story, notRun)}
+	}
 	return head, nil
+}
+
+// unread is the reason KindBranchUnread of story, whose branch's head g did
+// not read, which the queue needed for, as a text's clause, what.
+func (g gitState) unread(story, what string) *Reason {
+	why := "git names no commit"
+	if g.headsErr != nil {
+		why = g.headsErr.Error()
+	}
+	return &Reason{Kind: KindBranchUnread, Text: fmt.Sprintf("cannot read the head of %s %s: %s; a story is batched from its branch, so check that git can read it", storygit.Branch(story), what, why)}
 }
 
 // stoppedAt names, for a text, the step a failed result stopped at, or ""

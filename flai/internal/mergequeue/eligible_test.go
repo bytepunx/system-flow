@@ -983,3 +983,187 @@ func TestUnderAnotherWorkflowAddTakesAStoryTheAcceptanceLeavesFrom(t *testing.T)
 		t.Errorf("%s in testing is enqueued", inTesting.ID)
 	}
 }
+
+// acceptNeeds has repo run the baseline workflow with the verify of its
+// acceptance listing suites, none when suites is nil, and its manifest
+// declare the tiers go-test, of the suite behavior, and integration, of its
+// own (ADR-0312 §3).
+func acceptNeeds(t *testing.T, repo *workitem.Repo, suites []string) {
+	t.Helper()
+	w := workflow.Baseline()
+	i := slices.IndexFunc(w.Transitions, func(tr workflow.Transition) bool {
+		return tr.Takes(workitem.Story) && tr.HasEffect(workflow.EffectAccept)
+	})
+	if i < 0 {
+		t.Fatal("the baseline has no acceptance of a story")
+	}
+	w.Transitions[i].Verify = nil
+	if suites != nil {
+		w.Transitions[i].Verify = &workflow.Verify{Suites: workflow.Suites{Names: suites}}
+	}
+	repo.Workflow = &w
+	repo.Manifest.Tests = []manifest.TestTier{
+		{Name: "go-test", Command: []string{"go", "test"}, Suite: "behavior"},
+		{Name: "integration", Command: []string{"scripts/integration.sh"}},
+	}
+}
+
+// ranTiers stores story's last flai verify at commit, which ran the steps
+// before the tiers and then go-test and integration as given, failing at the
+// first tier that did not pass or was not skipped or left to the queue, and
+// scripts commit as its branch's head.
+func ranTiers(t *testing.T, repo *workitem.Repo, g scriptedGit, story, commit string, goTest, integration verify.State) {
+	t.Helper()
+	rep := verify.Report{Story: story, Commit: commit, Passed: true, Steps: []verify.Step{
+		{Name: "sync", State: verify.Passed}, {Name: "check", State: verify.Passed},
+		{Name: "go-test", Tier: true, State: goTest}, {Name: "integration", Tier: true, State: integration},
+	}}
+	for _, s := range rep.Steps[2:] {
+		if s.State == verify.Failed {
+			rep.Passed, rep.StoppedAt = false, s.Name
+			break
+		}
+	}
+	if err := verify.SaveReport(repo, rep); err != nil {
+		t.Fatal(err)
+	}
+	g.head(story, commit)
+}
+
+// ADR-0312 §3: while the acceptance needs only the suite behavior, a story
+// whose last flai verify passed go-test at its head is eligible though its
+// integration tier, of a suite the acceptance does not need, failed, and its
+// head is the entry's; so is one whose go-test was left to the merge queue.
+func TestAFailedTierOfASuiteTheAcceptanceDoesNotNeedLeavesAStoryEligible(t *testing.T) {
+	repo := project(t, "")
+	acceptNeeds(t, repo, []string{"behavior"})
+	g := scriptedGit{}
+	s, _ := story(t, repo, "Integration failed", []bool{true}, t0.Add(time.Hour))
+	ranTiers(t, repo, g, s.ID, "aaaa", verify.Passed, verify.Failed)
+	queued, _ := story(t, repo, "Left to the queue", []bool{true}, t0.Add(2*time.Hour))
+	ranTiers(t, repo, g, queued.ID, "bbbb", verify.Queued, verify.Failed)
+	q := compute(t, g, repo)
+	if got := ids(q.Eligible); !slices.Equal(got, []string{s.ID, queued.ID}) {
+		t.Fatalf("eligible %v, ineligible %+v; want %s and %s eligible", got, q.Ineligible, s.ID, queued.ID)
+	}
+	if q.Eligible[0].Head != "aaaa" || q.Eligible[1].Head != "bbbb" {
+		t.Errorf("heads %q and %q, want aaaa and bbbb", q.Eligible[0].Head, q.Eligible[1].Head)
+	}
+}
+
+// ADR-0312 §3: while the acceptance needs the suite behavior, a story whose
+// last flai verify failed go-test, or did not reach it because a step before
+// the tiers or a tier of another suite before it failed, is ineligible, as
+// verify_failed, beside one whose integration tier alone failed, which is
+// eligible.
+func TestAFailedTierOfASuiteTheAcceptanceNeedsMakesAStoryIneligible(t *testing.T) {
+	repo := project(t, "")
+	acceptNeeds(t, repo, []string{"behavior"})
+	g := scriptedGit{}
+	other, _ := story(t, repo, "Integration failed", []bool{true}, t0.Add(30*time.Minute))
+	ranTiers(t, repo, g, other.ID, "dddd", verify.Passed, verify.Failed)
+	failed, _ := story(t, repo, "Go test failed", []bool{true}, t0.Add(time.Hour))
+	ranTiers(t, repo, g, failed.ID, "aaaa", verify.Failed, verify.NotReached)
+
+	unreached, _ := story(t, repo, "Go test not reached", []bool{true}, t0.Add(2*time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: unreached.ID, Commit: "bbbb", Passed: false, StoppedAt: "integration", Steps: []verify.Step{
+		{Name: "integration", Tier: true, State: verify.Failed}, {Name: "go-test", Tier: true, State: verify.NotReached},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	g.head(unreached.ID, "bbbb")
+
+	synced, _ := story(t, repo, "Sync failed", []bool{true}, t0.Add(3*time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: synced.ID, Commit: "cccc", Passed: false, StoppedAt: "sync", Steps: []verify.Step{
+		{Name: "sync", State: verify.Failed},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	g.head(synced.ID, "cccc")
+
+	q := compute(t, g, repo)
+	if got := ids(q.Eligible); !slices.Equal(got, []string{other.ID}) {
+		t.Fatalf("eligible %v, want only %s", got, other.ID)
+	}
+	byID := map[string]Entry{}
+	for _, e := range q.Ineligible {
+		byID[e.Story] = e
+	}
+	for id, says := range map[string]string{failed.ID: "failed at its step go-test", unreached.ID: "failed at its step integration", synced.ID: "failed at its step sync"} {
+		e := byID[id]
+		if got := kinds(e); !slices.Equal(got, []string{KindVerifyFailed}) {
+			t.Errorf("%s reasons %v, want only %s", id, got, KindVerifyFailed)
+			continue
+		}
+		if !strings.Contains(e.Reasons[0].Text, says) {
+			t.Errorf("%s's reason %q does not say %q", id, e.Reasons[0].Text, says)
+		}
+	}
+}
+
+// ADR-0312 §3: while the acceptance needs the suites behavior and smoke, a
+// story whose last flai verify, at its head, ran only the suite behavior is
+// ineligible with the reason verify_suites, naming smoke and the close-out
+// that runs it; one that ran every suite is eligible.
+func TestAStoryWhoseVerifyDidNotRunASuiteTheAcceptanceNeedsIsIneligible(t *testing.T) {
+	repo := project(t, "")
+	acceptNeeds(t, repo, []string{"behavior", "smoke"})
+	g := scriptedGit{}
+	s, _ := story(t, repo, "Behavior only", []bool{true}, t0.Add(time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: s.ID, Commit: "aaaa", Passed: true, Suites: []string{"behavior"}, Steps: []verify.Step{
+		{Name: "go-test", Tier: true, State: verify.Passed},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	g.head(s.ID, "aaaa")
+	every, _ := story(t, repo, "Every suite", []bool{true}, t0.Add(2*time.Hour))
+	ranTiers(t, repo, g, every.ID, "bbbb", verify.Passed, verify.Passed)
+
+	q := compute(t, g, repo)
+	if got := ids(q.Eligible); !slices.Equal(got, []string{every.ID}) {
+		t.Errorf("eligible %v, want only %s", got, every.ID)
+	}
+	if len(q.Ineligible) != 1 || q.Ineligible[0].Story != s.ID {
+		t.Fatalf("ineligible %+v, want only %s", q.Ineligible, s.ID)
+	}
+	e := q.Ineligible[0]
+	if got := kinds(e); !slices.Equal(got, []string{KindVerifySuites}) {
+		t.Fatalf("reasons %v, want only %s", got, KindVerifySuites)
+	}
+	for _, says := range []string{"did not run suite smoke", "flai verify " + s.ID + " --job", "ADR-0312"} {
+		if !strings.Contains(e.Reasons[0].Text, says) {
+			t.Errorf("reason %q does not say %q", e.Reasons[0].Text, says)
+		}
+	}
+	if e.Reasons[0].Text != verify.SuitesNotRunText(s.ID, []string{"smoke"}) {
+		t.Errorf("reason %q, want the acceptance's words %q", e.Reasons[0].Text, verify.SuitesNotRunText(s.ID, []string{"smoke"}))
+	}
+}
+
+// ADR-0312 §3: while the acceptance needs no suite, a story in review with no
+// flai verify result, or a failed one, is eligible from the head of its
+// branch, which the batch rebases; one whose head cannot be read is not.
+func TestWhenTheAcceptanceNeedsNoSuiteNoVerifyResultHoldsAStory(t *testing.T) {
+	repo := project(t, "")
+	acceptNeeds(t, repo, nil)
+	g := scriptedGit{}
+	unverified, _ := story(t, repo, "Unverified", []bool{true}, t0.Add(time.Hour))
+	g.head(unverified.ID, "aaaa")
+	failed, _ := story(t, repo, "Failed", []bool{true}, t0.Add(2*time.Hour))
+	ranTiers(t, repo, g, failed.ID, "bbbb", verify.Failed, verify.NotReached)
+	noBranch, _ := story(t, repo, "No branch", []bool{true}, t0.Add(3*time.Hour))
+
+	q := compute(t, g, repo)
+	if got := ids(q.Eligible); !slices.Equal(got, []string{unverified.ID, failed.ID}) {
+		t.Fatalf("eligible %v, ineligible %+v; want %s and %s", got, q.Ineligible, unverified.ID, failed.ID)
+	}
+	if q.Eligible[0].Head != "aaaa" || q.Eligible[1].Head != "bbbb" {
+		t.Errorf("heads %q and %q, want aaaa and bbbb", q.Eligible[0].Head, q.Eligible[1].Head)
+	}
+	if len(q.Ineligible) != 1 || !slices.Equal(kinds(q.Ineligible[0]), []string{KindBranchUnread}) {
+		t.Fatalf("ineligible %+v, want %s with only %s", q.Ineligible, noBranch.ID, KindBranchUnread)
+	}
+	if says := "cannot read the head of story/" + noBranch.ID; !strings.Contains(q.Ineligible[0].Reasons[0].Text, says) {
+		t.Errorf("reason %q does not say %q", q.Ineligible[0].Reasons[0].Text, says)
+	}
+}
