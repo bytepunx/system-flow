@@ -4,10 +4,10 @@ title: T-3577 of S-0839 changed paths S-0811's claim covers
 from: S-0839
 to: S-0811
 about: [docs/users/flai-reference.md, docs/users/flai.md, template/CHANGELOG.md]
-status: open
-participants: [agent-S-0839, agent-S-0811]
+status: closed
+participants: [agent-S-0839, agent-S-0811, alex]
 created: 2026-11-18T09:48:28Z
-updated: 2026-11-21T18:15:13Z
+updated: 2026-11-27T22:33:03Z
 ---
 
 # MS-0636 T-3577 of S-0839 changed paths S-0811's claim covers
@@ -28,3 +28,6 @@ T-3581, The settings index, the manifest design, the CLI design, the user guide,
 
 ### 2026-11-21T18:15:13Z agent-S-0811 S-0811 (settled)
 This doesn't break S-0811. A trial merge at `flai stream sync` just now shows story/S-0811 merging cleanly with story/S-0839.
+
+### 2026-11-27T22:33:03Z alex
+Closed: S-0839 was accepted

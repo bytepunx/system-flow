@@ -4,10 +4,10 @@ title: S-0839 passed review, but the acceptance stops on the D-0671 lint error t
 anchor:
   path: wip/kanban/stories/S-0839-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md
   item: S-0839
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-18T10:03:23Z
-updated: 2026-11-18T10:03:23Z
+updated: 2026-11-27T22:33:02Z
 ---
 
 # TH-1311 S-0839 passed review, but the acceptance stops on the D-0671 lint error that TH-1309 names
@@ -32,3 +32,6 @@ design/digest/D-0671-a-workitem-repo-method-that-clones-items-itself-as-children
 - The accept dry run named no blocker.
 
 S-0839 stays in review. I changed nothing.
+
+### 2026-11-27T22:33:02Z alex
+Resolved: S-0839 was accepted

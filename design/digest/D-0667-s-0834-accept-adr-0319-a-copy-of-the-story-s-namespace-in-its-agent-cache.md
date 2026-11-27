@@ -2,12 +2,12 @@
 id: D-0667
 title: "S-0834: accept ADR-0319, a copy of the story's namespace in its agent cache folder, before any code is written: Recommended: accept ADR-0319 as written (`story/S-0834`, eaa744e87), so that T-3547 to…"
 kind: answer
-sources: [TH-1290]
+sources: [TH-1290, S-0834]
 topics: [kluster, harness, flai, cli, go, code, all]
 paths: [design/adrs/README.md, design/system/kluster.md, flai/internal/kluster/agentcopy.go, flai/internal/kluster/agentcopy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, docs/operators/settings.md, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/kluster_container_test.go, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/users/flai.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md, design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md]
 date: 2026-11-18
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md#decision"
 asked_again: []
 cited: []
 ---
@@ -41,4 +41,10 @@ The answer:
 Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Decision
 ```
 
-Source: TH-1290.
+S-0834's narrative records the answer under `## Decisions`, and the story built ADR-0319 as written, its tasks T-3547 to T-3550 after it:
+
+```text
+2026-11-18: 2026-11-17: TH-1290: does the operator accept ADR-0319 as written, before T-3547 to T-3550 build it? — yes (answered by alex)
+```
+
+Sources: TH-1290, S-0834 (wip/archive/agents/S-0834.md).

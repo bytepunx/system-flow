@@ -3,10 +3,10 @@ id: S-0839
 type: story
 nature: improvement
 title: No flai command writes agent.image.args, so a project's layer build arguments can only be written by hand
-status: review
+status: done
 owner: alex
 created: 2026-11-17T08:32:50Z
-updated: 2026-11-18T10:01:48Z
+updated: 2026-11-27T22:33:02Z
 transitions:
   - to: ready
     at: 2026-11-18T09:19:58Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-18T10:01:48Z
     by: agent-S-0839
+  - to: done
+    at: 2026-11-27T22:33:02Z
+    by: alex
 tags: [flai, template]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/flai.md, design/system/project-manifest.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md, design/issues/summary.md]
 agent:
