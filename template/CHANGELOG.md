@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.51 - 2026-11-27
+
+- S-0811 The release's publish runs the suites verify_at.publish lists at the main branch's head before it tags, and publishes nothing when one fails (patch).
 - S-0811 The publish formula's body says that its publish step exits 5 when a suite the workflow file's `verify_at.publish` lists fails at the main branch's head, before anything is tagged or pushed; that exit is not in the step's `stop`, which stays `[2]`, so it fails the step, and the instance's agent blocks the task and asks on a thread naming the suite, the tier, and the log path (patch, ADR-0312).
 
 ## 1.1.50 - 2026-11-27

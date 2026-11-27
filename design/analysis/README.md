@@ -9,3 +9,4 @@ Only the analyzer writes here, and it adds a row below for each report it writes
 | [2026-10-15-bottlenecks.md](2026-10-15-bottlenecks.md) | bottlenecks | 2026-09-15 to 2026-10-15 | active |
 | [2026-11-07-all.md](2026-11-07-all.md) | all | 2026-10-08 to 2026-11-07 | active |
 | [2026-11-16-all.md](2026-11-16-all.md) | all | 2026-10-17 to 2026-11-16 | active |
+| [2026-11-27-all.md](2026-11-27-all.md) | all | 2026-10-28 to 2026-11-27 | active |
