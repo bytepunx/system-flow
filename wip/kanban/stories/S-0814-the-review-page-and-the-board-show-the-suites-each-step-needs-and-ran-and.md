@@ -3,12 +3,15 @@ id: S-0814
 type: story
 nature: feature
 title: The review page and the board show the suites each step needs and ran, and follow a state's job in the activity stream
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:10Z
-updated: 2026-11-27T23:38:25Z
-transitions: []
+updated: 2026-11-27T23:56:35Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:54:13Z
+    by: claude-concierge
 tags: [flaiover]
 topics: [verify, workflow]
 touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/verify_suites.go, flai/internal/hostapi/verify_suites_test.go, flai/internal/hostapi/resolve_status.go, flai/internal/hostapi/resolve_status_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/VerifySuites.svelte, flaiover/src/lib/components/VerifySuites.svelte.test.ts, design/components/flaiover/src/lib/components/VerifySuites.examples.json, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/lib/components/LogFeed.svelte.test.ts, design/components/flaiover/src/lib/components/LogFeed.examples.json, "flaiover/src/routes/api/items/[id]/resolve/+server.ts", "flaiover/src/routes/api/items/[id]/resolve/resolve.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:52:43Z
 forecast:
   duration: 1h1m
-  delivery: 2026-11-28T04:20:00Z
-  basis: "Its own forecast of 1h1m; 5th in the pull order with an in-progress limit of 3, behind S-0808, S-0844, S-0846, S-0837, S-0845, S-0241 and S-0813."
+  delivery: 2026-11-28T02:48:00Z
+  basis: "Its own forecast of 1h1m; 3rd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0845 and S-0835."
   by: flai
-  at: 2026-11-27T23:38:25Z
+  at: 2026-11-27T23:56:35Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:27Z

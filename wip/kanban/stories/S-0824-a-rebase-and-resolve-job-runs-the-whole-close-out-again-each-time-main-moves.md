@@ -3,11 +3,14 @@ id: S-0824
 type: story
 nature: improvement
 title: A rebase and resolve job runs the whole close-out again each time main moves under it, so one took three rounds and 33 minutes while other stories were accepted
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T07:13:20Z
-updated: 2026-11-27T22:51:39Z
-transitions: []
+updated: 2026-11-27T23:56:35Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:54:13Z
+    by: claude-concierge
 tags: [flai, flaiover]
 topics: [verify, acceptance, serve, dashboard, template]
 touches: [design/adrs, design/adrs/README.md, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/closeout/script_test.go, flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/hostapi/resolve_status.go, flai/internal/hostapi/resolve_status_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, design/issues/I-0398-a-rebase-and-resolve-job-runs-the-whole-close-out-again-each-time-main-moves.md, design/issues/summary.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:55Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-28T07:36:00Z
-  basis: "Its own forecast of 2h30m; 9th in the pull order with an in-progress limit of 3, behind S-0808, S-0846, S-0847, S-0844, S-0837, S-0845, S-0241, S-0813, S-0814, S-0815 and S-0822."
+  delivery: 2026-11-28T05:48:00Z
+  basis: "Its own forecast of 2h30m; 4th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0845, S-0835 and S-0814."
   by: flai
-  at: 2026-11-27T22:51:39Z
+  at: 2026-11-27T23:56:35Z
 finalized:
   by: orchestrator
   at: 2026-11-19T08:39:43Z

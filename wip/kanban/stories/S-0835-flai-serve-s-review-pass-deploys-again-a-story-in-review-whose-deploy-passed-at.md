@@ -3,11 +3,14 @@ id: S-0835
 type: story
 nature: remediation
 title: "flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-27T23:38:25Z
-transitions: []
+updated: 2026-11-27T23:56:35Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:54:12Z
+    by: claude-concierge
 tags: [flai]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, design/system/kluster.md, docs/users/flai.md, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md]
@@ -48,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:07Z
 forecast:
   duration: 50m
-  delivery: 2026-11-28T05:10:00Z
-  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 3, behind S-0808, S-0844, S-0846, S-0837, S-0845, S-0241, S-0813, S-0814, S-0815, S-0822 and S-0824."
+  delivery: 2026-11-28T02:11:00Z
+  basis: "Its own forecast of 50m; 2nd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846 and S-0845."
   by: flai
-  at: 2026-11-27T23:38:25Z
+  at: 2026-11-27T23:56:35Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z
