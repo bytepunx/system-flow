@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -2312,5 +2313,151 @@ func TestVerifyTellsItsHooksAsEachStepAndTierStartsAndEnds(t *testing.T) {
 	}
 	if want := []string{"started rebase", "ended rebase failed"}; !reflect.DeepEqual(*told, want) {
 		t.Errorf("a sync check told %q, want %q", *told, want)
+	}
+}
+
+// gateTiers are queueTiers with go-test in suite behavior and markdown in
+// suite static; integration, template, and smoke are each their own suite.
+func gateTiers() []Tier {
+	tiers := queueTiers()
+	tiers[0].Suite, tiers[1].Suite = "behavior", "static"
+	return tiers
+}
+
+// needList is a list of suites, as a transition's verify gives it.
+func needList(names ...string) *workflow.Suites { return &workflow.Suites{Names: names} }
+
+// ADR-0312 §3: of the tiers main's new paths send back, only those of the
+// suites the acceptance needs are stale, and the tier that ran in place of
+// one of them; none when it needs none, and StaleTiers' answer under all.
+func TestStaleTiersOfKeepsTheNeededSuites(t *testing.T) {
+	tier := func(name string, state State) Step { return Step{Name: name, Tier: true, State: state} }
+	ran := Report{Steps: []Step{
+		{Name: StepCheck, State: Passed},
+		tier("go-test", Passed), tier("markdown", Passed), tier("integration", Reused), tier("smoke", Passed),
+	}}
+	fsys := fstest.MapFS{"flai/go.mod": {Data: []byte("module x\n")}, "flai/internal/roles/conditions.go": {Data: []byte("package roles\n")}}
+	paths := []string{"flai/internal/roles/conditions.go"}
+	for _, tc := range []struct {
+		name string
+		need *workflow.Suites
+		want []string
+	}{
+		{"all", &workflow.Suites{All: true}, []string{"go-test", "integration", "smoke"}},
+		{"a list that leaves integration's suite out", needList("behavior", "smoke"), []string{"go-test", "smoke"}},
+		{"a list whose tiers main does not select", needList("static"), nil},
+		{"none needed", nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := StaleTiersOf(fsys, gateTiers(), ran, paths, tc.need); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("StaleTiersOf = %q; want %q", got, tc.want)
+			}
+		})
+	}
+	t.Run("the tier that covered one of a listed suite", func(t *testing.T) {
+		tiers := []Tier{
+			{Name: "vet", Suite: "static", Paths: []string{"flai/**/*.go"}, Command: []string{"vet"}},
+			{Name: "full", Suite: "behavior", Paths: []string{"flaiover/**"}, Command: []string{"full"}},
+		}
+		rep := Report{Steps: []Step{{Name: "vet", Tier: true, State: Skipped, CoveredBy: "full"}, tier("full", Passed)}}
+		if got := StaleTiersOf(fstest.MapFS{}, tiers, rep, []string{"flai/a.go"}, needList("static")); !reflect.DeepEqual(got, []string{"full"}) {
+			t.Errorf("StaleTiersOf = %q; want full, which ran in place of vet", got)
+		}
+		if got := StaleTiersOf(fstest.MapFS{}, tiers, rep, []string{"flaiover/a.ts"}, needList("static")); got != nil {
+			t.Errorf("with only full selected, StaleTiersOf = %q; want none, as behavior is not needed", got)
+		}
+	})
+}
+
+// ADR-0312 §3: QueueTiersNotRunOf names only the queue tiers of the suites
+// the acceptance needs, keeps the reasons of no report and one not at head,
+// counts a stop only at a step before the tiers or a tier of a listed suite,
+// answers nothing when no suite is needed, and QueueTiersNotRun's answer
+// under all.
+func TestQueueTiersNotRunOfReadsTheNeededSuites(t *testing.T) {
+	tier := func(name string, state State) Step { return Step{Name: name, Tier: true, State: state} }
+	const head = "0123abcdef0123abcdef"
+	report := func(commit, stopped string, steps ...Step) Report {
+		check := Step{Name: StepCheck, State: Passed}
+		if stopped == StepCheck {
+			check.State = Failed
+		}
+		return Report{Commit: commit, Passed: stopped == "", StoppedAt: stopped, Steps: append([]Step{check}, steps...)}
+	}
+	leftToQueue := report(head, "", tier("go-test", Passed), tier("integration", Queued), tier("smoke", Queued))
+	goTestFailed := report(head, "go-test", tier("go-test", Failed), tier("integration", Queued), tier("smoke", Queued))
+	checkFailed := report(head, StepCheck, tier("go-test", NotReached), tier("smoke", Queued))
+	for _, tc := range []struct {
+		name  string
+		rep   Report
+		ok    bool
+		need  *workflow.Suites
+		names []string
+		why   string
+	}{
+		{"none needed, no report", Report{}, false, nil, nil, ""},
+		{"none needed, left to the queue", leftToQueue, true, nil, nil, ""},
+		{"a list, no report", Report{}, false, needList("behavior"), nil, "no flai verify has run on it"},
+		{"a list, at another commit", report("4567def0123", ""), true, needList("behavior"),
+			nil, "its last flai verify ran at 4567def, not at its head 0123abc"},
+		{"a list without the queue tiers' suites", leftToQueue, true, needList("behavior"), nil, ""},
+		{"a list with one queue tier's suite", leftToQueue, true, needList("behavior", "smoke"),
+			[]string{"smoke"}, "its last flai verify did not run tier smoke, marked queue"},
+		{"a failed tier of a suite not listed", goTestFailed, true, needList("smoke"),
+			[]string{"smoke"}, "its last flai verify did not run tier smoke, marked queue"},
+		{"a failed tier of a listed suite", goTestFailed, true, needList("behavior"), nil, "its last flai verify stopped at go-test"},
+		{"a failed step before the tiers", checkFailed, true, needList("static"), nil, "its last flai verify stopped at check"},
+		{"all, a failed tier", goTestFailed, true, &workflow.Suites{All: true},
+			[]string{"integration", "smoke"}, "its last flai verify stopped at go-test"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			names, why := QueueTiersNotRunOf(tc.rep, tc.ok, head, gateTiers(), tc.need)
+			if !reflect.DeepEqual(names, tc.names) || why != tc.why {
+				t.Errorf("answered %q, %q; want %q, %q", names, why, tc.names, tc.why)
+			}
+		})
+	}
+}
+
+// ADR-0312 §3: the suites an acceptance lists that the last flai verify did
+// not select are named, every listed one with no report; none under all or
+// nil, after a run of every suite, or for a suite selected whose tiers the
+// paths did not select.
+func TestSuitesNotRun(t *testing.T) {
+	static := Report{Suites: []string{"static"}, SuiteRuns: []verifyrecord.Suite{{Name: "static"}}}
+	for _, tc := range []struct {
+		name string
+		rep  Report
+		ok   bool
+		need *workflow.Suites
+		want []string
+	}{
+		{"a listed suite the run did not select", static, true, needList("static", "behavior"), []string{"behavior"}},
+		{"every listed suite selected", static, true, needList("static"), nil},
+		{"no report", Report{}, false, needList("static", "behavior"), []string{"static", "behavior"}},
+		{"all", static, true, &workflow.Suites{All: true}, nil},
+		{"none needed", static, true, nil, nil},
+		{"a run of every suite", Report{}, true, needList("behavior"), nil},
+		{"a suite selected with no tier run", Report{Suites: []string{"static", "behavior"}, SuiteRuns: static.SuiteRuns}, true, needList("behavior"), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SuitesNotRun(tc.rep, tc.ok, tc.need); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("SuitesNotRun = %q; want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// ADR-0312 §3: the refusal names the story, the suites it did not run, and
+// the close-out that runs them.
+func TestSuitesNotRunTextNamesTheSuitesAndTheCloseOut(t *testing.T) {
+	one := SuitesNotRunText("S-0042", []string{"behavior"})
+	for _, want := range []string{"S-0042's last flai verify did not run suite behavior, which its acceptance needs", "flai verify S-0042 --job", "ADR-0312 §3"} {
+		if !strings.Contains(one, want) {
+			t.Errorf("SuitesNotRunText = %q; want it to say %q", one, want)
+		}
+	}
+	if two := SuitesNotRunText("S-0042", []string{"static", "behavior"}); !strings.Contains(two, "did not run suites static, behavior,") {
+		t.Errorf("SuitesNotRunText = %q; want it to name suites static, behavior", two)
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verifyrecord"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -761,6 +762,21 @@ func inListOrder(tiers []Tier, run, queued []Selected) []Selected {
 // A report not at head, or none, whose Running LastReportAt set names the
 // close-out job that runs, where, and at which of its steps (I-0384).
 func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []string, why string) {
+	return QueueTiersNotRunOf(rep, ok, head, tiers, &workflow.Suites{All: true})
+}
+
+// QueueTiersNotRunOf is QueueTiersNotRun for the suites need names, those an
+// acceptance needs (ADR-0312 §3): nil needs none and answers nothing; all is
+// QueueTiersNotRun's answer. Under a list, no report or one not at head gives
+// the same reasons, since the needed suites must pass at head; only the queue
+// tiers of the listed suites are named; and a report that did not pass
+// stopped only when it stopped at a step before the tiers, which every suite
+// depends on, or at a tier of a listed suite: a failed tier of another suite
+// leaves the answer that of a run that passed.
+func QueueTiersNotRunOf(rep Report, ok bool, head string, tiers []Tier, need *workflow.Suites) (names []string, why string) {
+	if need == nil {
+		return nil, ""
+	}
 	if !ok {
 		if rep.Running != nil {
 			return nil, "no flai verify has run on it, and " + jobText(*rep.Running, head, "at its head "+shortHash(head))
@@ -785,7 +801,7 @@ func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []s
 		}
 	}
 	for _, s := range rep.Steps {
-		if !s.Tier || slices.Contains(names, s.Name) {
+		if !s.Tier || slices.Contains(names, s.Name) || !tierNeeded(tiers, s.Name, need) {
 			continue
 		}
 		ran := s.State == Passed || s.State == Reused || s.State == Skipped
@@ -794,12 +810,77 @@ func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []s
 		}
 	}
 	switch {
-	case !rep.Passed:
+	case !rep.Passed && stopNeeded(rep, tiers, need):
 		return names, "its last flai verify stopped at " + rep.StoppedAt
 	case len(names) > 0:
 		return names, "its last flai verify did not run " + tierList(names) + ", marked queue"
 	}
 	return nil, ""
+}
+
+// tierNeeded reports whether need names the suite of the tier called name, as
+// the first of tiers of that name gives it: under all every tier, under nil
+// none, and a tier tiers does not declare is in no listed suite.
+func tierNeeded(tiers []Tier, name string, need *workflow.Suites) bool {
+	if need == nil || need.All {
+		return need != nil
+	}
+	name = strings.TrimSpace(name)
+	for _, t := range tiers {
+		if strings.TrimSpace(t.Name) == name {
+			return slices.Contains(need.Names, t.SuiteOrName())
+		}
+	}
+	return false
+}
+
+// stopNeeded reports whether the step rep stopped at bears on the suites need
+// names: a step before the tiers, which every suite depends on, or a tier
+// tierNeeded keeps; a report that stopped at no step it records counts.
+func stopNeeded(rep Report, tiers []Tier, need *workflow.Suites) bool {
+	for _, s := range rep.Steps {
+		if s.Name == rep.StoppedAt {
+			return !s.Tier || tierNeeded(tiers, s.Name, need)
+		}
+	}
+	return true
+}
+
+// SuitesNotRun are the suites need lists, in its order, that a story's last
+// report rep did not select, ok false when it has none: each listed suite
+// rep.Suites lacks when the run named its suites, or every listed suite with
+// no report. Under all or nil it names none, and a run of every suite
+// (rep.Suites nil) selected them all; a suite the run selected but recorded no
+// run of is one whose tiers its paths did not select, and is not named
+// (ADR-0312 §3).
+func SuitesNotRun(rep Report, ok bool, need *workflow.Suites) []string {
+	if need == nil || need.All {
+		return nil
+	}
+	if !ok {
+		return slices.Clone(need.Names)
+	}
+	if rep.Suites == nil {
+		return nil
+	}
+	var out []string
+	for _, name := range need.Names {
+		if !slices.Contains(rep.Suites, name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// SuitesNotRunText is the refusal of story id's acceptance, or of its place in
+// the merge queue, for the suites its last flai verify did not run
+// (SuitesNotRun), naming them and the close-out that runs them.
+func SuitesNotRunText(id string, suites []string) string {
+	what := "suites " + strings.Join(suites, ", ")
+	if len(suites) == 1 {
+		what = "suite " + suites[0]
+	}
+	return fmt.Sprintf("%s's last flai verify did not run %s, which its acceptance needs: ask for its close-out, with the MCP tool verify or flai verify %s --job, which runs the suites the acceptance needs, and accept it once that passes (ADR-0312 §3)", id, what, id)
 }
 
 // jobText says that close-out job p runs, as "close-out job <id> runs, at its
@@ -864,21 +945,34 @@ func MainPathsSince(r execx.Runner, dir string, rep Report, main, wip string) ([
 // merge queue, or did not reach is not named: it ran nothing to be stale
 // (ADR-0156, ADR-0291).
 func StaleTiers(fsys fs.FS, tiers []Tier, rep Report, mainPaths []string) []string {
-	if len(mainPaths) == 0 {
+	return StaleTiersOf(fsys, tiers, rep, mainPaths, &workflow.Suites{All: true})
+}
+
+// StaleTiersOf is StaleTiers for the suites need names, those an acceptance
+// needs (ADR-0312 §3): of the tiers StaleTiers names, those tierNeeded keeps,
+// and each that ran in place of a tier of a listed suite that the paths
+// select, since that tier's result is its; nil needs none and names none,
+// and all is StaleTiers' answer.
+func StaleTiersOf(fsys fs.FS, tiers []Tier, rep Report, mainPaths []string, need *workflow.Suites) []string {
+	if len(mainPaths) == 0 || need == nil {
 		return nil
 	}
-	back := map[string]bool{}
+	back, needed := map[string]bool{}, map[string]bool{}
 	for _, s := range SelectStory(fsys, tiers, mainPaths) {
 		back[s.Tier.Name] = true
 	}
 	for _, s := range rep.Steps {
 		if s.Tier && s.State == Skipped && s.CoveredBy != "" && back[s.Name] {
 			back[s.CoveredBy] = true
+			if tierNeeded(tiers, s.Name, need) {
+				needed[s.CoveredBy] = true
+			}
 		}
 	}
 	var names []string
 	for _, s := range rep.Steps {
-		if s.Tier && (s.State == Passed || s.State == Reused) && back[s.Name] && !slices.Contains(names, s.Name) {
+		keep := needed[s.Name] || tierNeeded(tiers, s.Name, need)
+		if s.Tier && (s.State == Passed || s.State == Reused) && back[s.Name] && keep && !slices.Contains(names, s.Name) {
 			names = append(names, s.Name)
 		}
 	}

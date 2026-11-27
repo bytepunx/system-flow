@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workflow"
@@ -37,6 +38,22 @@ func AcceptTarget(w workflow.Workflow, typ string) string {
 		return t.To
 	}
 	return FirstOfKind(w, workflow.KindAccepted)
+}
+
+// AcceptSuites are the suites the verify of w's acceptance of an item of type
+// typ lists, as a copy, nil when it gives none (ADR-0312 §3); a file with none
+// of ADR-0312's keys reads as the baseline's, whose acceptance gives all.
+func AcceptSuites(w workflow.Workflow, typ string) *workflow.Suites {
+	if !w.UsesSuiteKeys() {
+		w = workflow.Baseline()
+	}
+	t, ok := w.WithEffect(typ, workflow.EffectAccept)
+	if !ok || t.Verify == nil {
+		return nil
+	}
+	s := t.Verify.Suites
+	s.Names = slices.Clone(s.Names)
+	return &s
 }
 
 // CancelledState is w's first state of the cancelled kind, where an item
