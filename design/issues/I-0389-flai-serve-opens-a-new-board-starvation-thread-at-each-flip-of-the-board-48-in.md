@@ -2,12 +2,12 @@
 id: I-0389
 title: flai serve opens a new board-starvation thread at each flip of the board, 48 in five days, each a thread to the operator
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 1m
 first_reported: 2026-11-16T06:16:26Z
 last_reported: 2026-11-16T06:16:26Z
-updated: 2026-11-17T08:32:58Z
+updated: 2026-11-27T23:24:11Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,4 @@ Analysis 2026-11-16: the board flips between starved and not while drafts are fi
 Found by the analysis in [2026-11-16-all.md](../analysis/2026-11-16-all.md).
 
 Story S-0847 remediates this issue, created from it at 2026-11-17T08:32:58Z.
+Closed 2026-11-27T23:24:11Z: S-0847 fixed it as ADR-0321 decides. flai serve now opens the starved board's thread only once the board has stayed starved for 15 minutes, and resolves it only once the board has stayed not starved for 15 minutes. A starving within that window keeps the same thread. A changed list is written at most once every 15 minutes, and the times are kept in .flai-cache/starved.json across a restart (flai/internal/serve/starved.go, e7e2bb2). TestAFlippingBoardOfI0389OpensOneThreadAndWritesOnceAWindow reproduces the issue and fails on the old code. The 48 ready-empty events are out of scope: they start the orchestrator, not a thread to the operator.
