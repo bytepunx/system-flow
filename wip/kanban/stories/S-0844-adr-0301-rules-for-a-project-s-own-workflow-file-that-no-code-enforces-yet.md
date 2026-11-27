@@ -6,7 +6,7 @@ title: "ADR-0301 rules for a project's own workflow file that no code enforces y
 status: ready
 owner: alex
 created: 2026-11-17T08:32:55Z
-updated: 2026-11-27T22:33:44Z
+updated: 2026-11-27T22:47:30Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-17T12:37:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T00:28:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0847 and S-0808."
+  delivery: 2026-11-28T01:28:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0846, S-0847, S-0850 and S-0808."
   by: flai
-  at: 2026-11-27T22:33:44Z
+  at: 2026-11-27T22:47:30Z
 finalized:
   by: orchestrator
   at: 2026-11-17T12:41:08Z

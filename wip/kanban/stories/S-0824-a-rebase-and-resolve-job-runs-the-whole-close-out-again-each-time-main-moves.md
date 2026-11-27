@@ -6,7 +6,7 @@ title: A rebase and resolve job runs the whole close-out again each time main mo
 status: backlog
 owner: alex
 created: 2026-11-17T07:13:20Z
-updated: 2026-11-27T22:33:44Z
+updated: 2026-11-27T22:47:30Z
 transitions: []
 tags: [flai, flaiover]
 topics: [verify, acceptance, serve, dashboard, template]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:55Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-28T07:31:00Z
-  basis: "Its own forecast of 2h30m; 13th in the pull order with an in-progress limit of 3, behind S-0847, S-0808, S-0844, S-0846, S-0837, S-0845, S-0850, S-0241, S-0813, S-0814, S-0815 and S-0822."
+  delivery: 2026-11-28T07:35:00Z
+  basis: "Its own forecast of 2h30m; 10th in the pull order with an in-progress limit of 3, behind S-0846, S-0847, S-0850, S-0808, S-0844, S-0837, S-0845, S-0241, S-0813, S-0814, S-0815 and S-0822."
   by: flai
-  at: 2026-11-27T22:33:44Z
+  at: 2026-11-27T22:47:30Z
 finalized:
   by: orchestrator
   at: 2026-11-19T08:39:43Z
