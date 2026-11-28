@@ -3,6 +3,8 @@ package workitem
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -497,12 +499,58 @@ func TestBoardViewPullSourceAndSharesByKind(t *testing.T) {
 // of its limited states by kind, doing's and testing's among them, and the
 // board takes a limit for testing and none for backlog or for a state the
 // workflow does not have; Save writes the limit of every limited state.
-func TestBoardLimitsFollowTheWorkflow(t *testing.T) {
-	if want := map[string]int{Ready: 5, InProgress: 2, Review: 3}; !reflect.DeepEqual(DefaultWIPLimits, want) {
-		t.Errorf("default limits %v, want %v", DefaultWIPLimits, want)
+// ADR-0301 §6, S-0844: a limit wip/kanban/board.md gives a limited state
+// under one of its aliases is read as the state's, under its name, and the
+// next write of the board keeps it there rather than dropping it; a limit
+// given under the name wins over one under an alias.
+func TestBoardReadsALimitUnderAnAliasAsTheStates(t *testing.T) {
+	r := withTestFlow(t, newProject(t))
+	for i := range r.Workflow.States {
+		if r.Workflow.States[i].Name == fixtureDoing {
+			r.Workflow.States[i].Aliases = []string{InProgress}
+		}
 	}
-	if want := []string{Ready, InProgress, Review}; !slices.Equal(LimitedColumns, want) {
-		t.Errorf("limited columns %v, want %v", LimitedColumns, want)
+	path := filepath.Join(r.KanbanDir(), BoardFile)
+	board := "---\ntitle: Board\nupdated: 2026-11-27\nstatus: active\nwip_limits:\n  ready: 4\n  in-progress: 1\n  testing: 2\n  review: 3\norder: []\n---\n\n# Board\n"
+	if err := os.WriteFile(path, []byte(board), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	b, err := r.LoadBoard()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string]int{Ready: 4, fixtureDoing: 1, fixtureTesting: 2, Review: 3}; !reflect.DeepEqual(b.WIPLimits, want) {
+		t.Errorf("limits %v, want %v: in-progress is read as doing", b.WIPLimits, want)
+	}
+	if err := b.Save("2026-11-27"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "  doing: 1\n") || strings.Contains(string(data), "in-progress") {
+		t.Errorf("the write must keep the limit under the state's name:\n%s", data)
+	}
+
+	both := strings.Replace(board, "  in-progress: 1\n", "  in-progress: 1\n  doing: 6\n", 1)
+	if err := os.WriteFile(path, []byte(both), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if b, err = r.LoadBoard(); err != nil {
+		t.Fatal(err)
+	}
+	if b.WIPLimits[fixtureDoing] != 6 {
+		t.Errorf("a limit under the name wins over one under an alias: %v", b.WIPLimits)
+	}
+}
+
+func TestBoardLimitsFollowTheWorkflow(t *testing.T) {
+	if got, want := defaultLimits(baselineFlow), map[string]int{Ready: 5, InProgress: 2, Review: 3}; !reflect.DeepEqual(got, want) {
+		t.Errorf("the baseline's default limits %v, want %v", got, want)
+	}
+	if got, want := stateNames(limitedStates(baselineFlow)), []string{Ready, InProgress, Review}; !slices.Equal(got, want) {
+		t.Errorf("the baseline's limited states %v, want %v", got, want)
 	}
 	r := withTestFlow(t, newProject(t))
 	b, err := r.LoadBoard()

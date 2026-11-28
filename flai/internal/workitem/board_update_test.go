@@ -32,7 +32,7 @@ func readyStories(t *testing.T, r *Repo, n int) []*Item {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, col := range LimitedColumns {
+	for _, col := range stateNames(limitedStates(board.Flow())) {
 		if err := board.SetLimit(col, 0); err != nil {
 			t.Fatal(err)
 		}

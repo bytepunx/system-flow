@@ -109,9 +109,12 @@ func newBoardLimitCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "limit <column> <n>",
 		Short: "Set a column's WIP limit",
-		Long: `Set the WIP limit of ready, in-progress, or review in wip/kanban/board.md,
-the one place flai, flai serve, flai check, and the dashboard read it from.
-0 removes the limit. Limits count stories; a move past one warns.`,
+		Long: `Set the WIP limit of a state whose limit is true in the workflow,
+design/workflows/board.md or else the baseline, in wip/kanban/board.md, the
+one place flai, flai serve, flai check, and the dashboard read it from. On the
+baseline those states are ready, in-progress, and review. A state whose limit
+is not true is refused. 0 removes the limit. Limits count stories; a move past
+one warns.`,
 		Example: `  flai board limit in-progress 3
   flai board limit review 0`,
 		Args: cobra.ExactArgs(2),

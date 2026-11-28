@@ -60,10 +60,6 @@ func defaultLimits(w workflow.Workflow) map[string]int {
 	return out
 }
 
-// DefaultWIPLimits are the workflow.md defaults for the baseline's limited
-// states.
-var DefaultWIPLimits = defaultLimits(baselineFlow)
-
 // LoadBoard reads board.md, returning defaults when it does not exist: the
 // default limits of the repository's workflow's limited states.
 func (r *Repo) LoadBoard() (*Board, error) {
@@ -90,7 +86,34 @@ func (r *Repo) LoadBoard() (*Board, error) {
 	if b.WIPLimits == nil {
 		b.WIPLimits = map[string]int{}
 	}
+	var given struct {
+		WIPLimits map[string]int `yaml:"wip_limits"`
+	}
+	if err := yaml.Unmarshal([]byte(fm), &given); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	limitsByName(b.WIPLimits, given.WIPLimits, flow)
 	return b, nil
+}
+
+// limitsByName moves into limits, under a limited state's name, the limit
+// given names it by only under one of its aliases, so that every reader
+// finds it by the name and the next write keeps it there: flai reads an
+// alias as the state that lists it, and every write names the current state
+// (ADR-0301 §6).
+func limitsByName(limits, given map[string]int, w workflow.Workflow) {
+	for _, s := range limitedStates(w) {
+		if _, named := given[s.Name]; named {
+			continue
+		}
+		for _, a := range s.Aliases {
+			if v, ok := given[a]; ok {
+				limits[s.Name] = v
+				delete(limits, a)
+				break
+			}
+		}
+	}
 }
 
 // LockBoard takes the one lock every write of board.md is made under, an
@@ -231,10 +254,6 @@ func (b *Board) Save(today string) error {
 	}
 	return atomicfile.WriteFile(b.Path, []byte(sb.String()), 0o644)
 }
-
-// LimitedColumns are the columns of the baseline that carry a WIP limit
-// (workflow.md), in board order.
-var LimitedColumns = stateNames(limitedStates(baselineFlow))
 
 // SetLimit sets a column's WIP limit; 0 means none (S-0167). Only a state
 // of the board's workflow that takes a limit has one.
