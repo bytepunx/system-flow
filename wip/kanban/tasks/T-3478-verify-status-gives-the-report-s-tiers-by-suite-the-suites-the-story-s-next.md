@@ -3,12 +3,18 @@ id: T-3478
 type: task
 nature: feature
 title: verify.status gives the report's tiers by suite, the suites the story's next transitions need, and which of them have not passed at its head
-status: backlog
+status: in-progress
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:50:58Z
-updated: 2026-11-16T23:50:58Z
-transitions: []
+updated: 2026-11-28T00:43:59Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:43:59Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-28T00:43:59Z
+    by: system-flow
 stream: S-0814
 tags: [flai]
 touches: [flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/verify_suites.go, flai/internal/hostapi/verify_suites_test.go]

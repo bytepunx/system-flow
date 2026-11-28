@@ -3,12 +3,18 @@ id: T-3480
 type: task
 nature: feature
 title: resolve.status gives the dashboard a job a state's runs started, with its state, its current step, its skipped cluster steps and why, and how it ended
-status: backlog
+status: in-progress
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:51:03Z
-updated: 2026-11-16T23:51:03Z
-transitions: []
+updated: 2026-11-28T00:43:59Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:43:59Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-28T00:43:59Z
+    by: system-flow
 stream: S-0814
 tags: [flai]
 touches: [flai/internal/hostapi/resolve_status.go, flai/internal/hostapi/resolve_status_test.go]

@@ -3,12 +3,18 @@ id: T-3476
 type: task
 nature: feature
 title: board.get gives the dashboard the suites each transition's verify names, each state's runs, and verify_at's batch, publish, and ci
-status: backlog
+status: in-progress
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:50:53Z
-updated: 2026-11-16T23:50:53Z
-transitions: []
+updated: 2026-11-28T00:43:58Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:43:58Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-28T00:43:58Z
+    by: system-flow
 stream: S-0814
 tags: [flai]
 touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go]
