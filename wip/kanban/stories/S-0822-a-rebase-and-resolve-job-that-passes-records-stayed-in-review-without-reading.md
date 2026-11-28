@@ -3,11 +3,14 @@ id: S-0822
 type: story
 nature: remediation
 title: A rebase and resolve job that passes records stayed in review without reading the story, and a move out of review neither stops the job nor is noticed by it
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-27T23:56:52Z
-transitions: []
+updated: 2026-11-28T00:01:28Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:01:12Z
+    by: orchestrator
 tags: [flai, flaiover]
 touches: [flai/internal/serve/resolvejob.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0396-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md, design/issues/summary.md]
 agent:
@@ -21,32 +24,37 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 17028
+      seconds: 17176
       estimated: true
       models:
+        - model: claude-haiku-5-5
+          input: 184
+          output: 682
+          cache_read: 7742885
+          cache_write: 555665
+          cost: 0.5667
         - model: claude-opus-5-5
-          input: 75
-          output: 4474
-          cache_read: 9673105
-          cache_write: 27338
-          cost: 2.2431
+          input: 315
+          output: 20180
+          cache_read: 21279281
+          cache_write: 634376
+          cost: 6.36
     - kind: orchestrator
-      seconds: 233
+      seconds: 314
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 63
-          output: 436
-          cache_read: 2555785
-          cache_write: 374681
-          cost: 0.9125
+          input: 86
+          output: 560
+          cache_read: 3896773
+          cache_write: 508759
+          cost: 1.3819
         - model: claude-sonnet-5-5
           input: 20
           output: 1495
           cache_read: 188416
           cache_write: 79678
           cost: 0.216
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -57,10 +65,13 @@ cost_of_delay:
   at: 2026-11-17T08:23:00Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T06:15:00Z
-  basis: flai forecast's 41m (120 s per unit of size times 20) raised to 1h30m for five tasks in three layers, a cancel path through runJob with race tests in flai/internal/serve, and a close-out of about 12m like S-0847's.
-  by: planner-S-0822
-  at: 2026-11-27T23:56:52Z
+  delivery: 2026-11-28T03:27:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814 and S-0813."
+  by: flai
+  at: 2026-11-28T00:01:28Z
+finalized:
+  by: orchestrator
+  at: 2026-11-28T00:00:01Z
 ---
 # S-0822 A rebase and resolve job that passes records stayed in review without reading the story, and a move out of review neither stops the job nor is noticed by it
 

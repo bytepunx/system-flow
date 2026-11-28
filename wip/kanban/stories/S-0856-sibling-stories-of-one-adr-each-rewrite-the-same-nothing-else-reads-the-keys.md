@@ -6,11 +6,11 @@ title: Sibling stories of one ADR each rewrite the same 'nothing else reads the 
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:28Z
-updated: 2026-11-27T23:57:10Z
+updated: 2026-11-28T00:01:28Z
 transitions: []
 tags: []
 topics: [documentation, check]
-touches: [design/system/workflow.md, docs/operators/runbooks/change-the-board.md, design/conventions/documentation.md, design/conventions/strategic-agents.md, design/system/documentation-standard.md, design/system/agent-context.md, flai/internal/check/check_docs.go, flai/internal/check/docs_stories.go, flai/internal/check/docs_stories_test.go, design/system/flai-cli.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/issues/I-0414-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md]
+touches: [design/system/workflow.md, docs/operators/runbooks/change-the-board.md, design/conventions/documentation.md, design/conventions/strategic-agents.md, design/system/documentation-standard.md, design/system/agent-context.md, flai/internal/check/check_docs.go, flai/internal/check/docs_stories.go, flai/internal/check/docs_stories_test.go, design/system/flai-cli.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/issues/I-0414-sibling-stories-of-one-adr-each-rewrite-the-same-nothing-else-reads-the-keys.md, design/issues/summary.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go]
 after: [S-0808]
 agent:
   harness: claude-code
@@ -22,6 +22,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 74
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 106
+          output: 22935
+          cache_read: 6429380
+          cache_write: 182241
+          cost: 2.9931
     - kind: analyzer
       seconds: 85
       estimated: true
@@ -44,6 +54,15 @@ cost_of_delay:
     time_lost_per_cycle: 2h
     by: flai
     at: 2026-11-27T22:55:28Z
+  value: 300
+  by: planner-S-0856
+  at: 2026-11-27T23:57:39Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-11-28T10:11:00Z
+  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852, S-0853, S-0854 and S-0855."
+  by: flai
+  at: 2026-11-28T00:01:28Z
 ---
 # S-0856 Sibling stories of one ADR each rewrite the same 'nothing else reads the keys yet' sentence in a hub design doc and runbook, so each acceptance stops the next on a rebase conflict
 
@@ -56,6 +75,10 @@ This story remediates [I-0414](../../../design/issues/I-0414-sibling-stories-of-
 - [ ] I-0414 is closed with `flai issue close I-0414 --reason` saying what fixed it
 
 ## Tasks
+- T-3627 Rewrite the suite keys' hub sentence in workflow.md and the board runbook so each step has its own sentence, with no running list of stories
+- T-3632 flai check advises docs.unstarted-story on a design or docs line that names a story in backlog or ready, with an ADR and a test that reproduces I-0414's list
+- T-3635 Project additions: documentation keeps no running list of sibling stories, and the planner gives each sibling of one document its own section
+- T-3637 Close I-0414 with the reason naming the rewritten hub lines, the docs.unstarted-story check, and the project additions
 
 ## Notes
 
@@ -87,6 +110,6 @@ Touches, and where each came from:
 
 After: S-0808, the last of ADR-0312's sibling stories, is in review and rewrites the very sentence of `design/system/workflow.md` this story restructures, and adds § What the acceptance's gates read (S-0808). This story reads that text and the behaviour it describes, the acceptance's gates reading `verify`, to write each step's own sentence. Written before S-0808 lands, the rewrite would describe the gates as they were and conflict with S-0808 on the line, which is I-0414 again.
 
-Forecast: flai's 2m rests on size 2, two criteria and no touches. It is adjusted to 3h for four tasks: two document rewrites, a check rule with its test and ADR, and the close of the issue; the median improvement story of this size that adds a check rule took two to three hours of agent time.
+Forecast: `flai forecast` gives 31m, size 17 (2 criteria, 15 touches) at the 109 s median of 187 done improvement stories in the large band. It is raised to 1h30m: the size counts touches, not the four tasks, one of which is a new Go check rule with its test and an ADR, and the close-out alone ran 602 s at W47's p50. Delivery moves by the same hour, to 2026-11-28T07:09Z.
 
-Cost of delay: 300 USD a week, as `flai cod` gives it from the 2h `time_lost_per_cycle` I-0414 carried over, at 150 USD an hour and one cycle a week. It stands: S-0813, S-0814, and S-0815 under E-0034 still change the same section, so the cycle recurs.
+Cost of delay: 300 USD a week, as `flai cod` gives it from the 2h `time_lost_per_cycle` I-0414 carried over, at 150 USD an hour and one cycle a week. It stands: S-0813 and S-0815 under E-0034 still change the same section of `design/system/workflow.md`, so the cycle can recur.

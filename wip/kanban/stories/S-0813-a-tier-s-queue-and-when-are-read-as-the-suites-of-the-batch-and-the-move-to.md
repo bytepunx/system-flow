@@ -3,12 +3,15 @@ id: S-0813
 type: story
 nature: feature
 title: A tier's queue and when are read as the suites of the batch and the move to review, flai upgrade writes them into a project's file, and the two keys are retired
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:09Z
-updated: 2026-11-27T23:56:35Z
-transitions: []
+updated: 2026-11-28T00:01:28Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:01:10Z
+    by: orchestrator
 tags: [flai, template]
 topics: [verify, workflow]
 touches: [design/adrs/README.md, design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md, design/adrs/0233-while-the-merge-queue-can-batch-the-close-out-runs-a-queue-tier-whose-when.md, flai/internal/workflow/migrate.go, flai/internal/workflow/migrate_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/load.go, flai/internal/workflow/load_test.go, flai/internal/check/check_layout.go, flai/internal/check/tests_test.go, flai/internal/verify/manifest.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, system-flow.yaml, design/workflows/board.md, design/conventions/tooling.md, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/project-manifest.md, design/system/workflow.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -49,10 +52,10 @@ cost_of_delay:
   at: 2026-11-16T23:48:49Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T04:54:00Z
-  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0845, S-0835, S-0814, S-0824 and S-0241."
+  delivery: 2026-11-28T02:57:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835 and S-0814."
   by: flai
-  at: 2026-11-27T23:56:35Z
+  at: 2026-11-28T00:01:28Z
 finalized:
   by: orchestrator
   at: 2026-11-16T23:56:27Z

@@ -6,7 +6,7 @@ title: "flai serve's review pass deploys again a story in review whose deploy pa
 status: ready
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-27T23:56:35Z
+updated: 2026-11-28T00:01:28Z
 transitions:
   - to: ready
     at: 2026-11-27T23:54:12Z
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:07Z
 forecast:
   duration: 50m
-  delivery: 2026-11-28T02:11:00Z
-  basis: "Its own forecast of 50m; 2nd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846 and S-0845."
+  delivery: 2026-11-28T01:08:00Z
+  basis: "Its own forecast of 50m; 1st in the pull order with an in-progress limit of 3, behind S-0837, S-0844 and S-0846."
   by: flai
-  at: 2026-11-27T23:56:35Z
+  at: 2026-11-28T00:01:28Z
 finalized:
   by: orchestrator
   at: 2026-11-17T08:36:57Z

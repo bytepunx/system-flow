@@ -6,7 +6,7 @@ title: The orchestrator's accept takes no --keep-removal, so a story that rewrit
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:19Z
-updated: 2026-11-27T23:57:00Z
+updated: 2026-11-28T00:01:28Z
 transitions: []
 tags: [flai, template]
 topics: [orchestration, review, git]
@@ -21,6 +21,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 17
+          output: 4073
+          cache_read: 924285
+          cache_write: 26770
+          cost: 0.4594
     - kind: analyzer
       seconds: 85
       estimated: true
@@ -48,10 +58,10 @@ cost_of_delay:
   at: 2026-11-27T23:57:00Z
 forecast:
   duration: 1h13m
-  delivery: 2026-11-28T06:55:00Z
-  basis: "flai forecast: median 109 s per unit of size over 187 done improvement stories on claude-opus-5-5 in the large band, times size 40 (2 criteria, 38 touches), 12th in the pull order with an in-progress limit of 3"
-  by: planner-S-0852
-  at: 2026-11-27T23:57:00Z
+  delivery: 2026-11-28T07:25:00Z
+  basis: "Its own forecast of 1h13m; 12th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849 and S-0851."
+  by: flai
+  at: 2026-11-28T00:01:28Z
 ---
 # S-0852 The orchestrator's accept takes no --keep-removal, so a story that rewrites a line main added waits in review for the operator even after the story's agent and the orchestrator agree the removal is right
 
@@ -64,6 +74,14 @@ This story remediates [I-0415](../../../design/issues/I-0415-the-orchestrator-s-
 - [ ] I-0415 is closed with `flai issue close I-0415 --reason` saying what fixed it
 
 ## Tasks
+- T-3618 Propose in an ADR refining ADR-0155 how the orchestrator keeps a recorded removal of main's lines, behind a permission off by default
+- T-3619 The manifest reads orchestration.permissions.keep_removals, off by default and needing accept_reviews, and the settings index lists it
+- T-3620 flai accept --by orchestrator keeps a recorded removal with --keep-removal and --reason while keep_removals is on and the narrative's Decisions name the path
+- T-3621 The MCP tool accept takes keep_removals, each a path and a reason, and passes them to flai accept --by orchestrator on the host
+- T-3622 queue_add records the orchestrator's keep_removals with the entry, the queue leaves a kept path out of undone_main, and its landing passes the keeps
+- T-3624 The orchestrator's role file and the strategic-agents convention say when it keeps a removal and how it logs it
+- T-3626 The design, the user and operator guides, and the template changelog describe the orchestrator's keep of a removal
+- T-3629 Close I-0415 as fixed by the orchestrator's keep of a removal the story's narrative records as a rewrite
 
 ## Notes
 
@@ -75,4 +93,16 @@ Strategic usage carried over from I-0415: analyzer 1m25s, 1.4522 USD.
 
 ### Planning
 
-- `design/adrs` is kept as a folder touch: the story writes a new ADR refining ADR-0155, ADR-0093, and ADR-0278, whose number and slug are taken when it is written.
+The proposal the goal asks for is the planner's recommendation, written into T-3618: a new permission, `orchestration.permissions.keep_removals`, off by default and needing `accept_reviews`. With it on, the orchestrator keeps a recorded removal through `flai accept --by orchestrator --keep-removal`, the MCP tool `accept`, and `queue_add`. It may keep only a path the story's narrative names under `## Decisions`, with a reason. The story's agent confirms or changes the proposal in that ADR, and the plan's thread asks the operator first.
+
+Touches. The story declared none, and `flai touches suggest` needs a path to start from, so it ran from `flai/cmd/accept.go`, `flai/internal/mcpserver/accept.go`, `flai/internal/mergequeue/eligible.go`, and `flai/internal/manifest/manifest_roles.go`.
+
+- Design: ADR-0155's refusal of a keep with `--by orchestrator` in `flai/cmd/accept.go`. ADR-0278's tool `accept` in `flai/internal/mcpserver/accept.go`. The queue's `undone_main` in `flai/internal/mergequeue/eligible.go`, its entry in `state.go`, and its enqueue in `flai/internal/mcpserver/queue.go` and `flai/cmd/queue.go`. The permission in `flai/internal/manifest/manifest_roles.go` and `settings.go`. The orchestrator's accept rule in `flai/internal/guard/guard_rules.go`.
+- Co-change: `flai/internal/preview/accept.go` (25%), `docs/users/flai-reference.md` (21%), `design/system/flai-cli.md` (18%), `docs/users/flai.md` (18%), `docs/operators/settings.md` (9%), `docs/operators/index.md` (8%), `design/issues/summary.md` (8%), `design/system/workflow.md` (7%), `flai/internal/mergequeue/eligible_test.go` and `flai/cmd/accept_queue_test.go`.
+- Layout: the tests beside each changed file. The orchestrator's role file and its template and baseline copies. `design/conventions/strategic-agents.md` and its template copy. `design/system/strategic-agents.md`, `design/system/project-manifest.md`, `template/CHANGELOG.md`, `design/adrs/README.md`, and I-0415's file.
+- Left out of the co-change list: `flai/cmd/branch.go`, `flai/internal/preview/orchestrator.go`, `flai/internal/hostapi/writes_test.go`, and the flaiover files. The dashboard's `accept.run` stays the operator's, and the keep reaches flai only through `flai accept` and the queue.
+- `design/adrs` is kept as a folder touch: the story writes a new ADR refining ADR-0155, ADR-0093, and ADR-0278, whose number is taken when it is written. T-3618 names 0322 as a guess.
+
+Forecast: 1h13m, delivery 2026-11-28T06:55:00Z, as `flai forecast` gives it. Its basis is 187 done improvement stories in the large band at size 40. Eight tasks over three code paths fit that size, and no measure argues for another figure. It leaves out any wait for the operator's answer on the plan's thread, which is not agent time.
+
+Cost of delay: 22200 USD a week, as `flai cod` works it out from the operator's input of 148h lost per 168h cycle at 150 USD an hour. Kept as given. The 148h is S-0811's one wait in review, so it is the cost of one instance per cycle. The input is the operator's to change.
