@@ -3,14 +3,17 @@ id: S-0835
 type: story
 nature: remediation
 title: "flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-28T00:03:04Z
+updated: 2026-11-28T00:24:45Z
 transitions:
   - to: ready
     at: 2026-11-27T23:54:12Z
     by: claude-concierge
+  - to: in-progress
+    at: 2026-11-28T00:24:45Z
+    by: agent-S-0835
 tags: [flai]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, design/system/kluster.md, docs/users/flai.md, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md]

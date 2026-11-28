@@ -2,9 +2,9 @@
 id: D-0672
 title: flai/internal/workitem cannot import flai/internal/verify, since verify imports workitem, so Repo.Move reads a story's verify record through the leaf package flai/internal/verifyrecord, which both read
 kind: decision
-sources: [S-0807, T-3454, T-3457]
+sources: [S-0807, T-3454, T-3457, S-0808]
 topics: [verify, workflow, go, code, flai]
-paths: [flai/internal/verifyrecord, flai/internal/workitem/rules.go, flai/internal/verify]
+paths: [flai/internal/verifyrecord, flai/internal/workitem/rules.go, flai/internal/verify, flai/internal/mergequeue/eligible.go]
 date: 2026-11-18
 status: active
 absorbed_by: ""
@@ -24,4 +24,8 @@ So the record's per-suite shape (`suite_runs`), `Merge`, `AllPassed`, and `AtHea
 
 `verifyrecord.AtHead` answers a `Verdict` per suite: `AtHead` (the entry is of the head, in a clean run), `Held` (tiers that passed, were reused, or were skipped for one that was), `Queued` (tiers left to the merge queue), and `Passed`, which is true only when every tier is held, so a queued tier makes it false. T-3457's review fix: "a tier left to the merge queue counts as held for the verified rule on a move, as the close-out passes without it (ADR-0174). verifyrecord.Verdict gained AtHead and Queued, so that S-0808 can still be strict at the acceptance." The move's rule counts `Held` and `Queued` together; a gate that must not count a queued tier reads `Passed`.
 
-Source: S-0807, T-3454, T-3457.
+S-0808 read the same record for the merge queue's eligibility, `flai/internal/mergequeue/eligible.go`, and counts a queued tier as held there too, since the batch runs it. Its narrative's Decisions (`wip/archive/agents/S-0808.md`):
+
+> The merge queue judges a story's verify per suite from SuiteRuns when the acceptance names suites, counting a tier left to the queue as held, since the batch runs it (ADR-0174, D-0672).
+
+Source: S-0807, T-3454, T-3457, S-0808.

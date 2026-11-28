@@ -3,10 +3,10 @@ id: S-0846
 type: story
 nature: improvement
 title: flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:32:57Z
-updated: 2026-11-27T23:32:02Z
+updated: 2026-11-28T00:26:01Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-27T22:33:59Z
     by: agent-S-0846
+  - to: review
+    at: 2026-11-28T00:24:38Z
+    by: agent-S-0846
+  - to: done
+    at: 2026-11-28T00:26:01Z
+    by: orchestrator
 tags: []
 topics: [serve, close-out, release]
 touches: [design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md, design/adrs/0320-the-auto-upgrade-drains-the-verify-pass-s-jobs-before-it-restarts-holds-new.md, design/adrs/README.md, flai/cmd/accept_resolve.go, flai/cmd/accept_resolve_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/serve/statejob.go]
@@ -112,8 +118,8 @@ finalized:
 This story remediates [I-0388](../../../design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md), "flai serve's auto-upgrade restart interrupts the close-out jobs it was running, which start again from scratch", which the analysis in [2026-11-16-all.md](../../../design/analysis/2026-11-16-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0388 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0388 is closed with `flai issue close I-0388 --reason` saying what fixed it
+- [x] The cause I-0388 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0388 is closed with `flai issue close I-0388 --reason` saying what fixed it
 
 ## Tasks
 - T-3583 Decide in an ADR that the auto-upgrade drains the close-out jobs before it restarts and that serve asks again once a job a restart interrupted
@@ -150,3 +156,12 @@ The new ADR's file is not named: its number is not known until `flai adr new`, a
 No `after`: the story reads no output of another open story.
 
 Forecast: `flai forecast` gave 26m; raised to 1h30m, reason in the forecast's basis. Cost of delay: 300 USD a week, as `flai cod` works it from the inputs flai carried over from I-0388 (2h lost per 168h cycle at 150 USD an hour); it stands, since the issue counts 11 interrupted close-outs in W46 alone.
+
+### Accepted by the orchestrator
+
+- Verified: 2d892d29d4707953e5534236797a4be00e44ea6a
+- At: 2026-11-28T00:26:01Z
+
+Verdict: pass, both criteria met at 2d892d29d4707953e5534236797a4be00e44ea6a; close-out passed every step at that head.
+- 1: flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/resolvejob_test.go, flai/internal/serve/serve.go, flai/internal/serve/statejob.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/accept_resolve.go, flai/cmd/accept_resolve_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, design/adrs/0320-the-auto-upgrade-drains-the-verify-pass-s-jobs-before-it-restarts-holds-new.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md
+- 2: design/issues/I-0388-flai-serve-s-auto-upgrade-restart-interrupts-the-close-out-jobs-it-was-running.md, design/issues/summary.md

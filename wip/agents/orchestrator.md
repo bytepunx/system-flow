@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2277.2505
-accrued_seconds: 1581537
-tasks_completed: 4113
-last_run: 2026-11-27T23:56:49Z
+accrued_cost: 2280.6491
+accrued_seconds: 1582214
+tasks_completed: 4137
+last_run: 2026-11-28T00:09:18Z
 ---
 
 # Orchestrator activity
@@ -28830,6 +28830,174 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0808
 - Seconds: 62
 - Cost: 0.2612 USD, estimated
+
+### 2026-11-27T23:57:17Z
+
+- Summary: Published under threshold (count 1 at threshold 1, value 185.64 USD/week): flai 1.112.1 -> 1.113.0, tag flai/v1.113.0, pushed; bundles S-0808.
+- Items: S-0808
+- Seconds: 28
+- Cost: 0.0723 USD, estimated
+
+### 2026-11-27T23:57:41Z
+
+- Summary: I accepted S-0808 and published it as flai 1.113.0. The tag `flai/v1.113.0` is pushed.
+- Items: none
+- Seconds: 24
+- Cost: 0.2243 USD, estimated
+
+### 2026-11-27T23:59:30Z
+
+- Summary: Answered TH-1324, citing no source
+- Items: S-0822
+- Seconds: 71
+- Cost: 0.4424 USD, estimated
+
+### 2026-11-27T23:59:44Z
+
+- Summary: Answered TH-1326, citing no source
+- Items: S-0848
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-28T00:00:08Z
+
+- Summary: Recommended an answer on TH-1325, citing design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md § Consequences
+- Items: S-0837
+- Seconds: 24
+- Cost: 0.1049 USD, estimated
+
+### 2026-11-28T00:00:28Z
+
+- Summary: Approved and resolved planner threads TH-1324 (S-0822, 5 tasks, 1h30m, 75 USD/wk) and TH-1326 (S-0848, 3 tasks, 1h30m, 12.50 USD/wk) under plan_backlog_stories; finalized S-0822 and S-0848 under finalize_drafts, both listed complete by flai promote --drafts (positions 2 and 3)
+- Items: S-0822, S-0848, TH-1324, TH-1326
+- Seconds: 20
+- Cost: 0.0540 USD, estimated
+
+### 2026-11-28T00:00:46Z
+
+- Summary: Recommended on TH-1325 (S-0837 criterion 8): leave archived S-0811 as history and record the choice in ADR-0316's Consequences before it is accepted; a recommendation since it changes how an operator's criterion is met
+- Items: S-0837, TH-1325
+- Seconds: 18
+- Cost: 0.0000 USD
+
+### 2026-11-28T00:01:36Z
+
+- Summary: Promoted S-0813, S-0822, S-0848 to ready in flai promote --candidates order (ranks 1-3, 1h30m each, ready 4 of 10 before); applied flai order --by throughput: S-0835 50m, S-0814 1h1m, S-0813, S-0822, S-0848 1h30m, S-0824 2h30m, S-0845 3h
+- Items: S-0813, S-0822, S-0848
+- Seconds: 50
+- Cost: 0.2754 USD, estimated
+
+### 2026-11-28T00:01:53Z
+
+- Summary: Started planners for S-0849 and S-0851, the story candidates flai plan --candidates lists (no touches, forecast, value, or tasks); did not replan E-0034: alex's TH-1321 entry 'Resolved: S-0811 was accepted' asks for no change to the plan
+- Items: S-0849, S-0851, E-0034
+- Seconds: 17
+- Cost: 0.0554 USD, estimated
+
+### 2026-11-28T00:02:14Z
+
+- Summary: Release (S-0808 release-due): did not publish; release_evaluate under threshold is not met, 0 pending stories, 0 USD against 1000 USD or a count of 1
+- Items: S-0808
+- Seconds: 21
+- Cost: 0.0558 USD, estimated
+
+### 2026-11-28T00:03:08Z
+
+- Summary: Drafts S-0852, S-0853, S-0857 were settled and finalized by the operator's session (TH-1328, TH-1329, TH-1330), S-0856 is being replanned, so none was mine to finalize; ready is full at 10 of 10, so S-0856, S-0857, S-0855 (promote ranks 1-3) wait; reapplied flai order --by throughput; resolved my TH-1275 now that S-0822 is ready
+- Items: S-0852, S-0853, S-0856, S-0857, S-0822, TH-1275
+- Seconds: 54
+- Cost: 0.4733 USD, estimated
+
+### 2026-11-28T00:03:35Z
+
+- Summary: I've acted on every reason in the start prompt. flai answered `reasons done`, so this run ends.
+- Items: none
+- Seconds: 27
+- Cost: 0.1186 USD, estimated
+
+### 2026-11-28T00:04:33Z
+
+- Summary: Answered TH-1327, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0856
+- Seconds: 51
+- Cost: 0.3104 USD, estimated
+
+### 2026-11-28T00:04:52Z
+
+- Summary: Approved and resolved TH-1327, planner-S-0856's replan: same 4 tasks in 3 layers, forecast 1h30m, value 300 USD/week, only records corrected (plan_backlog_stories)
+- Items: S-0856
+- Seconds: 19
+- Cost: 0.0566 USD, estimated
+
+### 2026-11-28T00:05:17Z
+
+- Summary: No other change: S-0848/52/53/54/55/57 plans and TH-1328 to TH-1332 already finalized and resolved by the operator's session; ready full (10/10), so no promotion of S-0856 (rank 1), S-0857 (2), S-0855 (3); ready order already matches throughput (50m to 3h); S-0849 complete and S-0851 lacking a forecast both wait for their running planners; E-0034 not replanned, since alex's TH-1321 entry only resolves it
+- Items: S-0848, S-0852, S-0853, S-0854, S-0855, S-0857, S-0856, S-0851, S-0849, E-0034
+- Seconds: 25
+- Cost: 0.0577 USD, estimated
+
+### 2026-11-28T00:05:39Z
+
+- Summary: I settled the one reason that was still open, TH-1327. The operator's session had already handled every other reason, so nothing else needed doing on this run.
+- Items: none
+- Seconds: 22
+- Cost: 0.1983 USD, estimated
+
+### 2026-11-28T00:06:52Z
+
+- Summary: Recommended an answer on TH-1334, citing design/adrs/0319-flai-copies-a-story-namespace-s-record-step-logs-state-and-kubeconfig-into-the.md § Consequences
+- Items: S-0849
+- Seconds: 68
+- Cost: 0.3607 USD, estimated
+
+### 2026-11-28T00:07:08Z
+
+- Summary: Recommended an answer on TH-1333, citing design/system/workflow.md § A state added in the workflow file alone (S-0756)
+- Items: S-0851
+- Seconds: 16
+- Cost: 0.0000 USD
+
+### 2026-11-28T00:07:26Z
+
+- Summary: Recommended on TH-1334 that S-0849 build the planner's agent-cache requests folder fix and approve its plan (a new ADR refining ADR-0292/0319, so the operator's call); S-0849 stays a draft until it settles, though flai promote --drafts lists it complete (1h30m, 25 USD/week)
+- Items: S-0849, TH-1334
+- Seconds: 18
+- Cost: 0.0429 USD, estimated
+
+### 2026-11-28T00:07:39Z
+
+- Summary: Recommended on TH-1333 that S-0851's plan be approved with T-3654 also closing I-0402 (a scope addition, so the operator's call); S-0851 stays a draft until it settles, though flai promote --drafts lists it complete (1h, 17.50 USD/week)
+- Items: S-0851, TH-1333
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-28T00:07:54Z
+
+- Summary: S-0856 replanned (T-3627, T-3632) with no plan thread open; it is promote_candidates rank 1 under throughput (1h30m) but ready is full at 10 of 10, so it was not promoted
+- Items: S-0856
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-28T00:08:22Z
+
+- Summary: I've handled all eight reasons. Two plan threads now wait for you, and nothing was finalized or promoted.
+- Items: none
+- Seconds: 28
+- Cost: 0.2345 USD, estimated
+
+### 2026-11-28T00:08:56Z
+
+- Summary: planned:S-0849: nothing more to do. My recommendation on TH-1334 (build the agent-cache-folder fix, a new ADR refining ADR-0292 §1 and ADR-0319) awaits the operator; S-0849 stays a draft until the thread is settled, then I finalize it under finalize_drafts.
+- Items: S-0849
+- Seconds: 12
+- Cost: 0.0863 USD, estimated
+
+### 2026-11-28T00:09:18Z
+
+- Summary: I took no new action on S-0849. An earlier run of mine already handled this planner run, and the story stays a draft until you choose which fix to build.
+- Items: none
+- Seconds: 22
+- Cost: 0.1748 USD, estimated
 
 ## Refusals
 

@@ -3,16 +3,37 @@ id: T-3603
 type: task
 nature: improvement
 title: The orchestrator's role file, in the baseline, the template, and this repository, publishes with release_publish only, and its definition is generated again
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:37:49Z
-updated: 2026-11-17T12:37:49Z
-transitions: []
+updated: 2026-11-28T00:22:46Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:57:39Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-27T23:57:39Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:22:46Z
+    by: agent-S-0837
 stream: S-0837
 tags: [flai, template]
 touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, flai/internal/roles/roles_test.go, flai/internal/guard/roles_test.go]
 after: [T-3600]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 0
+      output: 1
+      cache_read: 47972
+      cache_write: 131
+      cost: 0.0185
 ---
 # T-3603 The orchestrator's role file, in the baseline, the template, and this repository, publishes with release_publish only, and its definition is generated again
 

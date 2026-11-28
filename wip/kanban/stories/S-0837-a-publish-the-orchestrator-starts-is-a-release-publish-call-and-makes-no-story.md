@@ -6,7 +6,7 @@ title: A publish the orchestrator starts is a release_publish call and makes no 
 status: in-progress
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-27T23:55:10Z
+updated: 2026-11-28T00:22:26Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0837
 tags: [flai, template]
 topics: [release, orchestration, upgrade]
-touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, flai/internal/roles/roles_test.go, flai/internal/guard/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/workflow.md, design/system/pushing-from-the-board.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, docs/contributors/index.md, docs/contributors/template.md]
+touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, flai/internal/roles/roles_test.go, flai/internal/guard/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/workflow.md, design/system/pushing-from-the-board.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, docs/contributors/index.md, docs/contributors/template.md, flai/cmd/formula_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 156
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-27
+      ceremony: 2
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 453
+      cache_read: 4287216
+      cache_write: 225195
+      cost: 1.7361
   strategic:
     - kind: planner
       seconds: 119
@@ -38,15 +50,15 @@ usage:
           cache_write: 27783
           cost: 0.7023
     - kind: orchestrator
-      seconds: 118
+      seconds: 142
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 346
-          cache_read: 1478637
-          cache_write: 221619
-          cost: 0.5326
+          input: 40
+          output: 445
+          cache_read: 1799793
+          cache_write: 230074
+          cost: 0.6375
         - model: claude-sonnet-5-5
           input: 1
           output: 7
@@ -79,7 +91,7 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] The ADR is accepted, ADR-0240 and ADR-0273 name it as what supersedes them, and no accepted ADR is otherwise edited.
+- [x] The ADR is accepted, ADR-0240 and ADR-0273 name it as what supersedes them, and no accepted ADR is otherwise edited.
 - [ ] With `publish` on and the policy met, the orchestrator's publish is one `release_publish` call: no story, task, branch, or worktree is made, shown by a test of the orchestrator's publish that reads the board before and after.
 - [ ] `release_publish` fetches the remote's branch and tags, evaluates the policy again, publishes only when it is met and something is pending, and says which release covers each component when another publish got there first, changing nothing.
 - [ ] `release_publish` no longer refuses for a formula named `publish`, flai refuses the orchestrator `flai formula run` for every formula, and the `push` host action still gates the pending publish for an agent flai serve started.

@@ -3,15 +3,36 @@ id: T-3600
 type: task
 nature: improvement
 title: Accept ADR-0316 as superseding ADR-0240 and ADR-0273, and ask on S-0811 for its publish formula criterion to name release_publish
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:37:23Z
-updated: 2026-11-17T12:37:23Z
-transitions: []
+updated: 2026-11-27T23:57:47Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:57:37Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-27T23:57:38Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-27T23:57:47Z
+    by: agent-S-0837
 stream: S-0837
 tags: [docs]
 touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 0
+      output: 1
+      cache_read: 47972
+      cache_write: 131
+      cost: 0.0185
 ---
 # T-3600 Accept ADR-0316 as superseding ADR-0240 and ADR-0273, and ask on S-0811 for its publish formula criterion to name release_publish
 

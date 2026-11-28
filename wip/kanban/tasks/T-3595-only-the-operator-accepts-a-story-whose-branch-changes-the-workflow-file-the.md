@@ -3,11 +3,11 @@ id: T-3595
 type: task
 nature: remediation
 title: "Only the operator accepts a story whose branch changes the workflow file: the acceptance preview, the orchestrator's blockers, and the merge queue's eligibility"
-status: in-progress
+status: done
 parent: S-0844
 owner: alex
 created: 2026-11-17T12:36:28Z
-updated: 2026-11-27T23:38:19Z
+updated: 2026-11-28T00:21:33Z
 transitions:
   - to: ready
     at: 2026-11-27T23:38:19Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-27T23:38:19Z
     by: agent-S-0844
+  - to: done
+    at: 2026-11-28T00:21:33Z
+    by: agent-S-0844
 stream: S-0844
 tags: [flai, acceptance]
-touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/accept_workflow_file_test.go]
+touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/accept_workflow_file_test.go, flai/cmd/accept.go, flai/internal/preview/accept_test.go]
+usage:
+  source: log
+  seconds: 2594
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 131
+      output: 711
+      cache_read: 6756114
+      cache_write: 151029
+      cost: 2.6595
 ---
 # T-3595 Only the operator accepts a story whose branch changes the workflow file: the acceptance preview, the orchestrator's blockers, and the merge queue's eligibility
 

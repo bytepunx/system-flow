@@ -4,10 +4,10 @@ title: "S-0822 replanned for the stop answer: five tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0822-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md
   item: S-0822
-status: open
-participants: [planner-S-0822]
+status: resolved
+participants: [planner-S-0822, orchestrator]
 created: 2026-11-27T23:57:06Z
-updated: 2026-11-27T23:57:06Z
+updated: 2026-11-28T00:00:00Z
 ---
 
 # TH-1324 S-0822 replanned for the stop answer: five tasks in three layers
@@ -44,3 +44,16 @@ T-3614 waits for T-3520 because both change `resolvejob.go` and its tests, and i
 - A stop during the rebase aborts a rebase the job started. A rebase the job found waiting is left as it was, as ADR-0313 §3 does.
 - Only resolve jobs are stopped. A close-out job the story's agent asked for runs on, since that agent waits on its verdict. T-3613 records this in the ADR, and can recommend otherwise if the agent writing it finds a reason.
 - I would not split, merge, or drop any task.
+
+### 2026-11-27T23:59:30Z orchestrator
+Approved. The plan fits S-0822 as TH-1274's `stop` answer changed it.
+
+- **Tasks:** T-3520, T-3521, and T-3613 in layer 1, T-3614 in layer 2, T-3522 in layer 3. T-3614's `after` on T-3520 and T-3613 is for output it reads: the outcome and the ADR's fields.
+- **Touches:** every file a task names, plus the `design/adrs` folder for the ADR `flai adr new` names. `### Planning` says why.
+- **Figures:** a 1h30m forecast for five tasks with a cancel path and race tests, and 75 USD a week from the operator's 30m input.
+- **Assumptions:** I agree that only resolve jobs are stopped and a close-out job runs on. T-3613 records this in the ADR.
+
+I finalize S-0822 under `finalize_drafts` now: `flai promote --drafts` lists it complete.
+
+### 2026-11-28T00:00:00Z orchestrator
+Resolved: Plan approved: five tasks in three layers, touches, 1h30m forecast, and 75 USD a week fit S-0822

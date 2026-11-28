@@ -4,10 +4,10 @@ title: "S-0822 stays a draft: no touches, forecast, or cost of delay value yet"
 anchor:
   path: wip/kanban/stories/S-0822-a-rebase-and-resolve-job-that-passes-records-stayed-in-review-without-reading.md
   item: S-0822
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-17T08:22:54Z
-updated: 2026-11-19T08:40:24Z
+updated: 2026-11-28T00:03:06Z
 ---
 
 # TH-1275 S-0822 stays a draft: no touches, forecast, or cost of delay value yet
@@ -45,3 +45,6 @@ flai plan S-0822
 **Why I did not start the planner:** `flai plan --candidates` leaves S-0822 out: "its planner ran until 2026-11-17T17:24:03Z and it has not changed since". I start the planner only for the stories it lists.
 
 **Alternative:** finalize S-0822 as it is, once it has a forecast, and let its story agent add the stop task and the ADR when it reads TH-1274.
+
+### 2026-11-28T00:03:06Z orchestrator
+Resolved: S-0822 was replanned for TH-1274's stop answer (TH-1324), finalized, and moved to ready

@@ -3,11 +3,11 @@ id: T-3598
 type: task
 nature: remediation
 title: A state the project adds with limit true takes a WIP limit through flai board limit, whose help names no baseline states, and the baseline-only LimitedColumns and DefaultWIPLimits are retired
-status: in-progress
+status: done
 parent: S-0844
 owner: alex
 created: 2026-11-17T12:37:00Z
-updated: 2026-11-27T23:38:21Z
+updated: 2026-11-28T00:23:01Z
 transitions:
   - to: ready
     at: 2026-11-27T23:38:21Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-27T23:38:21Z
     by: agent-S-0844
+  - to: done
+    at: 2026-11-28T00:23:01Z
+    by: agent-S-0844
 stream: S-0844
 tags: [flai, board]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go, flai/internal/workitem/boardview_test.go, flai/cmd/board.go, flai/cmd/board_limit_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 2592
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 365
+      cache_read: 3658177
+      cache_write: 154197
+      cost: 1.4679
 ---
 # T-3598 A state the project adds with limit true takes a WIP limit through flai board limit, whose help names no baseline states, and the baseline-only LimitedColumns and DefaultWIPLimits are retired
 

@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1469.4340
-accrued_seconds: 182962
-tasks_completed: 308
-last_run: 2026-11-17T17:23:48Z
+accrued_cost: 1485.5185
+accrued_seconds: 183698
+tasks_completed: 319
+last_run: 2026-11-28T00:06:57Z
 ---
 
 # Planner activity
@@ -2458,3 +2458,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0822, T-3520, T-3521, T-3522
 - Seconds: 17028
 - Cost: 2.2431 USD, estimated
+
+### 2026-11-27T23:57:09Z
+
+- Summary: I replanned S-0822 for TH-1274's `stop` answer, adding 4 touches, a 1h30m forecast and a `### Planning` note (cost of delay stays at 75 USD a week), created tasks T-3613 (the ADR) and T-3614 (the stop), revised T-3522, left T-3520 and T-3521 as they were, and summed up the plan on TH-1324.
+- Trigger: asked
+- Items: S-0822, T-3613, T-3614, T-3522
+- Seconds: 148
+- Cost: 4.6836 USD, estimated
+
+### 2026-11-27T23:57:36Z
+
+- Summary: Planned S-0848 for the first time (no "asked" thread was found): created tasks T-3615, T-3616 and T-3617; set file touches, topics git and sync, forecast 1h30m (delivery 06:15Z) and cost of delay 12.50 USD/week; opened plan thread TH-1326
+- Items: S-0848, T-3615, T-3616, T-3617
+- Seconds: 27
+- Cost: 0.6492 USD, estimated
+
+### 2026-11-27T23:57:54Z
+
+- Summary: Planned S-0848 for the first time, with no "asked" thread found: created T-3615, T-3616 (layer 1) and T-3617 (layer 2), revisited none, set file touches, topics git and sync, forecast 1h30m (delivery 2026-11-28T06:15Z) and cost of delay 12.50 USD/week, and summarised the plan on TH-1326, where the operator can drop T-3616's broader guard.
+- Trigger: asked
+- Items: S-0848, T-3615, T-3616, T-3617
+- Seconds: 18
+- Cost: 0.4114 USD, estimated
+
+### 2026-11-27T23:59:08Z
+
+- Summary: I planned S-0856 from scratch: there was no earlier plan and no operator thread on it to work from. It now has its touches, a forecast, a cost of delay and four new backlog tasks (T-3627, T-3632, T-3635, T-3637), and the plan is up for review on thread TH-1327. `flai check --strict --story S-0856` reports 0 errors and 0 warnings.
+- Trigger: asked
+- Items: S-0856, T-3627, T-3632, T-3635, T-3637
+- Seconds: 74
+- Cost: 2.9931 USD, estimated
+
+### 2026-11-27T23:59:20Z
+
+- Summary: S-0852 planned: touches, forecast 1h13m, cost of delay 22200 USD/week and Planning notes written; tasks T-3618, T-3619, T-3620, T-3621, T-3622, T-3624, T-3626 and T-3629 created in six layers, none revisited; no thread on S-0852 existed to answer, so plan thread TH-1329 asks the operator to confirm a new `keep_removals` permission before the code tasks start.
+- Trigger: asked
+- Items: S-0852, T-3618, T-3619, T-3620, T-3621, T-3622, T-3624, T-3626, T-3629
+- Seconds: 12
+- Cost: 0.4594 USD, estimated
+
+### 2026-11-27T23:59:36Z
+
+- Summary: I planned S-0853 from scratch: it had no tasks, and there was no "asked" thread on it. I enriched the story, created tasks T-3631, T-3636, T-3638, T-3639 and T-3640 in three layers (none revisited), and opened plan thread TH-1330.
+- Trigger: asked
+- Items: S-0853, T-3631, T-3636, T-3638, T-3639, T-3640
+- Seconds: 16
+- Cost: 0.4351 USD, estimated
+
+### 2026-11-28T00:00:16Z
+
+- Summary: S-0854 is planned. I enriched it and created five tasks in four layers: T-3641, T-3642, T-3645, T-3646 and T-3648. None were revisited because it had none; it stays a backlog draft, and the plan is on thread TH-1331.
+- Trigger: asked
+- Items: S-0854, T-3641, T-3642, T-3645, T-3646, T-3648
+- Seconds: 40
+- Cost: 0.7659 USD, estimated
+
+### 2026-11-28T00:01:01Z
+
+- Summary: Planned S-0855 (touches, a 4h forecast, cost of delay 2100 USD a week, `### Planning` notes; no earlier plan thread was found) and created tasks T-3643, T-3644, T-3647, T-3649, T-3650, T-3651 in five layers, none revisited; plan on TH-1332.
+- Trigger: asked
+- Items: S-0855, T-3643, T-3644, T-3647, T-3649, T-3650, T-3651
+- Seconds: 45
+- Cost: 0.7748 USD, estimated
+
+### 2026-11-28T00:03:22Z
+
+- Summary: I replanned S-0856 again and created no tasks; I revisited T-3627, T-3632, T-3635 and T-3637, keeping all four tasks and their three layers, and noted the changes on TH-1327.
+- Trigger: edited touches by system-flow
+- Items: S-0856, T-3627, T-3632
+- Seconds: 141
+- Cost: 2.3369 USD, estimated
+
+### 2026-11-28T00:04:49Z
+
+- Summary: Planned S-0851: created tasks T-3652, T-3653, T-3654 in two layers, wrote the story's touches (9 files), a 1h forecast and a 17.50 USD/week cost of delay value, and opened plan thread TH-1333 (no tasks to revisit; proposes also closing I-0402).
+- Trigger: orchestrator
+- Items: S-0851, T-3652, T-3653, T-3654
+- Seconds: 87
+- Cost: 1.3464 USD, estimated
+
+### 2026-11-28T00:06:57Z
+
+- Summary: I planned S-0849 on the fix I recommend, and that fix still needs the operator's yes on TH-1334. The cause is that a story's container does not mount the folder where `--job` writes its request, so I propose writing it in `.flai-cache/agents/S-nnnn/kluster-requests/`, a folder in the story's cache that the container already mounts. flai serve would also pick up requests there and answer in the same place. The other option is for `--job` in a container to refuse at once and point to the MCP tools, which leaves the command itself broken there.
+- Trigger: orchestrator
+- Items: S-0849, T-3655, T-3656, T-3657, T-3658, T-3659
+- Seconds: 128
+- Cost: 1.2287 USD, estimated

@@ -3,11 +3,11 @@ id: T-3596
 type: task
 nature: remediation
 title: flai doc save, and so the dashboard's doc.save, refuses the workflow file on main and takes it only on a story's branch
-status: in-progress
+status: done
 parent: S-0844
 owner: alex
 created: 2026-11-17T12:36:39Z
-updated: 2026-11-27T23:38:19Z
+updated: 2026-11-28T00:21:58Z
 transitions:
   - to: ready
     at: 2026-11-27T23:38:19Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-27T23:38:19Z
     by: agent-S-0844
+  - to: done
+    at: 2026-11-28T00:21:58Z
+    by: agent-S-0844
 stream: S-0844
 tags: [flai, dashboard]
 touches: [flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go]
+usage:
+  source: log
+  seconds: 2594
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 474
+      cache_read: 4474375
+      cache_write: 202957
+      cost: 1.801
 ---
 # T-3596 flai doc save, and so the dashboard's doc.save, refuses the workflow file on main and takes it only on a story's branch
 

@@ -6,7 +6,7 @@ title: A rebase stops on a Go test file where two stories each appended a test a
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:28Z
-updated: 2026-11-28T00:01:28Z
+updated: 2026-11-28T00:01:57Z
 transitions: []
 tags: []
 topics: [git, code]
@@ -16,7 +16,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 13
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 11
+          cache_read: 309097
+          cache_write: 6501
+          cost: 0.1005
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -31,6 +45,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852, S-0853, S-0854, S-0855 and S-0856."
   by: flai
   at: 2026-11-28T00:01:28Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:57Z
 ---
 # S-0857 A rebase stops on a Go test file where two stories each appended a test at the same place, which flai cannot settle, so an acceptance sends the story back
 

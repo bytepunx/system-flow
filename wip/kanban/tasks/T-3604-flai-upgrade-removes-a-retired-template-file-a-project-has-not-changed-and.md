@@ -3,16 +3,37 @@ id: T-3604
 type: task
 nature: feature
 title: flai upgrade removes a retired template file a project has not changed, and reports without removing one with project additions
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:37:56Z
-updated: 2026-11-17T12:38:40Z
-transitions: []
+updated: 2026-11-28T00:22:57Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:57:39Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-27T23:57:39Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:22:57Z
+    by: agent-S-0837
 stream: S-0837
 tags: [flai]
 touches: [flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, flai/cmd/upgrade.go, flai/cmd/upgrade_test.go]
 after: [T-3600]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 0
+      output: 1
+      cache_read: 47972
+      cache_write: 131
+      cost: 0.0185
 ---
 # T-3604 flai upgrade removes a retired template file a project has not changed, and reports without removing one with project additions
 

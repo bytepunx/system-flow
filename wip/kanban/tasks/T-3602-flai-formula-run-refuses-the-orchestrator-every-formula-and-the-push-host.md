@@ -3,16 +3,37 @@ id: T-3602
 type: task
 nature: improvement
 title: flai formula run refuses the orchestrator every formula, and the push host action still gates a served agent's pending publish
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:37:42Z
-updated: 2026-11-17T12:38:36Z
-transitions: []
+updated: 2026-11-28T00:22:26Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:57:38Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-27T23:57:38Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:22:26Z
+    by: agent-S-0837
 stream: S-0837
 tags: [flai]
-touches: [flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md, flai/cmd/formula_test.go]
 after: [T-3600]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 0
+      output: 1
+      cache_read: 47972
+      cache_write: 131
+      cost: 0.0185
 ---
 # T-3602 flai formula run refuses the orchestrator every formula, and the push host action still gates a served agent's pending publish
 

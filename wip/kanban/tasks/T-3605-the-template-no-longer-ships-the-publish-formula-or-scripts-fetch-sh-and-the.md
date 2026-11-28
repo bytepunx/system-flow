@@ -7,11 +7,11 @@ status: backlog
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:38:06Z
-updated: 2026-11-17T12:38:06Z
+updated: 2026-11-27T23:57:23Z
 transitions: []
 stream: S-0837
 tags: [template, flai]
-touches: [template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go]
+touches: [template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, flai/cmd/publish_formula_suites_test.go]
 after: [T-3604]
 ---
 # T-3605 The template no longer ships the publish formula or scripts/fetch.sh, and the formulas' and scripts' READMEs no longer list them

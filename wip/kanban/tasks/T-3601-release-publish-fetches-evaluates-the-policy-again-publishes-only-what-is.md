@@ -3,16 +3,37 @@ id: T-3601
 type: task
 nature: improvement
 title: release_publish fetches, evaluates the policy again, publishes only what is pending, names the release that covers each component, and no longer refuses for a publish formula
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:37:35Z
-updated: 2026-11-17T12:37:35Z
-transitions: []
+updated: 2026-11-28T00:22:37Z
+transitions:
+  - to: ready
+    at: 2026-11-27T23:57:38Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-27T23:57:38Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:22:37Z
+    by: agent-S-0837
 stream: S-0837
 tags: [flai]
 touches: [flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go]
 after: [T-3600]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 0
+      output: 1
+      cache_read: 47972
+      cache_write: 131
+      cost: 0.0185
 ---
 # T-3601 release_publish fetches, evaluates the policy again, publishes only what is pending, names the release that covers each component, and no longer refuses for a publish formula
 
