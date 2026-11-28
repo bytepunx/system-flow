@@ -747,6 +747,44 @@ func TestTheQueuesGitDoesNotGrowWithTheStoriesInReview(t *testing.T) {
 	}
 }
 
+// ADR-0301 §7, I-0380: a story whose branch changes the workflow file, as
+// its last flai verify at the head of its branch lists the files it changed,
+// is listed with the reason workflow_file, naming the file, and never
+// batched, since the operator alone accepts it; the file is the one under the
+// manifest's design folder, and a story that changes other files is eligible.
+func TestAStoryThatChangesTheWorkflowFileIsNeverBatched(t *testing.T) {
+	for _, design := range []string{"design", "spec"} {
+		repo := project(t, "")
+		repo.Manifest.Layout["design"] = design
+		g := scriptedGit{}
+		wf := design + "/workflows/board.md"
+		changes, _ := story(t, repo, "Changes the board", []bool{true}, t0.Add(time.Hour))
+		other, _ := story(t, repo, "Changes the code", []bool{true}, t0.Add(2*time.Hour))
+		for id, paths := range map[string][]string{changes.ID: {"cli/main.go", wf}, other.ID: {"cli/main.go", "elsewhere/workflows/board.md"}} {
+			if err := verify.SaveReport(repo, verify.Report{Story: id, Commit: "c0ffee" + id, Passed: true, Paths: paths}); err != nil {
+				t.Fatal(err)
+			}
+			g.head(id, "c0ffee"+id)
+		}
+		q := compute(t, g, repo)
+		if got := ids(q.Eligible); !slices.Equal(got, []string{other.ID}) {
+			t.Errorf("design %s: eligible %v, want only %s", design, got, other.ID)
+		}
+		if len(q.Ineligible) != 1 {
+			t.Fatalf("design %s: ineligible %+v, want %s alone", design, q.Ineligible, changes.ID)
+		}
+		e := q.Ineligible[0]
+		if e.Story != changes.ID || !slices.Equal(kinds(e), []string{KindWorkflowFile}) || !slices.Equal(e.Reasons[0].Paths, []string{wf}) {
+			t.Errorf("design %s: %+v, want %s with the one reason %s naming %s", design, e, changes.ID, KindWorkflowFile, wf)
+		}
+		for _, says := range []string{"story/" + changes.ID + " changes the workflow file " + wf, "only the operator accepts " + changes.ID, "the queue never batches it", "ADR-0301 §7"} {
+			if !strings.Contains(e.Reasons[0].Text, says) {
+				t.Errorf("design %s: reason %q does not say %q", design, e.Reasons[0].Text, says)
+			}
+		}
+	}
+}
+
 // deployed writes the kluster record of story's namespace in repo's main
 // checkout: its deploy at commit with outcome, failed at failedStep when it
 // failed, and its checks' commit and outcome.

@@ -29,8 +29,9 @@ import (
 // formula's instance, whose steps may change nothing, the done task of the
 // criterion's step (S-0422), or the story's kluster record, when its
 // namespace's deploy and checks passed at the verified head (S-0662); and the
-// branch changes no path Claude Code protects, which the operator alone accepts (ADR-0106). Each failing
-// condition is a blocker of the preview, beside those of any acceptance.
+// branch changes no path Claude Code protects (ADR-0106) and not the workflow
+// file (ADR-0301 §7), which the operator alone accepts. Each failing condition
+// is a blocker of the preview, beside those of any acceptance.
 
 // Codes of the blockers an acceptance by the orchestrator adds.
 const (
@@ -42,6 +43,7 @@ const (
 	BlockOwnThreadOpen        = "own_thread_open"       // a thread the orchestrator opened and alone wrote on is not resolved (ADR-0189)
 	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion, no kluster record that passed at the verified head, or, for a formula's instance, no done task of its step
 	BlockProtectedPaths       = "protected_paths"       // the branch changes a path Claude Code protects, which the operator accepts (ADR-0106)
+	BlockWorkflowFile         = "workflow_file"         // the branch changes the workflow file, which the operator accepts (ADR-0301 §7)
 )
 
 // Blocker is one failing condition of an acceptance by the orchestrator: a
@@ -91,13 +93,18 @@ type AcceptOptions struct {
 	KlusterOn      bool
 	ChecksOn       bool
 	WithoutKluster bool
+	// LandsByHand says the story's branch changes the workflow file, which
+	// the merge queue never lands: the operator's acceptance lands it by hand
+	// even while the queue batches (ADR-0301 §7). The caller sets it with
+	// ChangesWorkflowFile.
+	LandsByHand bool
 }
 
 // Enqueues reports whether the operator's acceptance with o is one the merge
 // queue takes in place of a landing by hand (S-0552, ADR-0225).
 func (o AcceptOptions) Enqueues() bool {
 	return o.QueueBatches && !o.QueueHeld && !o.Orchestrator && o.Batch == "" &&
-		!o.WithoutQueueTiers && !o.WithoutKluster && len(o.Keep) == 0
+		!o.WithoutQueueTiers && !o.WithoutKluster && len(o.Keep) == 0 && !o.LandsByHand
 }
 
 // Evidence is the markdown an orchestrator writes from its verifier's report:
@@ -221,12 +228,13 @@ func cleanPath(p string) string {
 
 // orchestratorBlockers is what stops the orchestrator accepting it under
 // ADR-0093, beside what stops any acceptance, with prot the protected files
-// its branch changes; verified is the commit given, resolved to its full
+// its branch changes and wf the workflow file when it changes it, "" when it
+// does not; verified is the commit given, resolved to its full
 // name, or "" when it names none. As the merge queue's landing, opts.Batch,
 // the batch's verification stands in for the verifier's (ADR-0176): rebased
 // is the story's rebased head in the batch, which verified is, and landing
 // every reason the queue does not let the story land, each a blocker.
-func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions, prot []string, rebased string, landing []string) (blockers []Blocker, verified string) {
+func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions, prot []string, wf, rebased string, landing []string) (blockers []Blocker, verified string) {
 	add := func(code, format string, args ...any) {
 		blockers = append(blockers, Blocker{Code: code, Message: fmt.Sprintf(format, args...)})
 	}
@@ -345,6 +353,10 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	// 6. the branch changes no path Claude Code protects
 	if len(prot) > 0 {
 		add(BlockProtectedPaths, "%s changes paths Claude Code protects, %s, so only the operator (%s) accepts %s, whatever the orchestrator judges (ADR-0106)", branch, strings.Join(prot, ", "), operatorsOf(repo, it), it.ID)
+	}
+	// 7. the branch does not change the workflow file
+	if wf != "" {
+		add(BlockWorkflowFile, "%s changes the workflow file %s, which is code the operator runs, so only the operator (%s) accepts %s, never the orchestrator or the merge queue, whatever the orchestrator judges (ADR-0301 §7)", branch, wf, operatorsOf(repo, it), it.ID)
 	}
 	return blockers, verified
 }

@@ -46,6 +46,7 @@ const (
 	KindUnreadable       = "unreadable"        // its last flai verify result, its record of undone paths, or its kluster namespace's record cannot be read
 	KindDirtyMain        = "dirty_main"        // its change would overwrite files the main checkout has not committed outside the shared set (ADR-0178, ADR-0248)
 	KindKluster          = "kluster"           // the kluster host action is on and its namespace was not deployed, or its checks did not pass, at its head (ADR-0254 §5a)
+	KindWorkflowFile     = "workflow_file"     // its branch changes the workflow file, which the operator alone accepts (ADR-0301 §7)
 )
 
 // Queue is the merge queue as it stands: the stories in review that are
@@ -156,7 +157,7 @@ type Reason struct {
 	Text     string   `json:"text"`
 	Criteria []int    `json:"criteria,omitempty"` // the unticked criteria's numbers
 	Threads  []string `json:"threads,omitempty"`  // the threads not resolved
-	Paths    []string `json:"paths,omitempty"`    // the paths undoing main's change, or the uncommitted files the change would overwrite
+	Paths    []string `json:"paths,omitempty"`    // the paths undoing main's change, the uncommitted files the change would overwrite, or the workflow file
 	// Command is what clears the reason where one command does: for
 	// KindDirtyMain, the git stash push that sets the files aside.
 	Command string `json:"command,omitempty"`
@@ -217,7 +218,8 @@ type Actions struct {
 // its branch, with act.Checks, as flai accept --batch refuses it otherwise.
 // A story's last flai verify is judged by the suites its acceptance needs,
 // the verify of the workflow's transition with the accept effect (ADR-0312
-// §3).
+// §3). A story whose branch changes the workflow file is never eligible: the
+// operator alone accepts it (ADR-0301 §7).
 func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions) (Queue, error) {
 	q := Queue{Mode: repo.Manifest.Acceptance.ModeOrDefault(), Eligible: []Entry{}, Ineligible: []Entry{}, Enqueued: []Enqueued{}, Outcomes: []Outcome{}}
 	if repo.Manifest.Acceptance.PullRequest() {
@@ -299,6 +301,11 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 		}
 		if reason := klusterHolds(r, repo, act, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
+		}
+		if verifyReason == nil {
+			if reason := changesWorkflowFile(repo, it.ID, reports[i]); reason != nil {
+				e.Reasons = append(e.Reasons, *reason)
+			}
 		}
 		entries = append(entries, e)
 	}
@@ -791,6 +798,22 @@ func klusterHolds(r execx.Runner, repo *workitem.Repo, act Actions, story, head 
 		what = "its namespace's deploy and the checks run against it passed"
 	}
 	return &Reason{Kind: KindKluster, Text: fmt.Sprintf("%s: while the kluster host action is on, the queue batches %s only once %s at the head of its branch (ADR-0254 §5a); fix what failed and move it to %s again so that flai serve deploys it there, or deploy it with flai kluster deploy %s in a shell on the host", why, story, what, reviewIn(repo.Flow()), story)}
+}
+
+// changesWorkflowFile is the reason naming the project's workflow file when
+// story's branch changes it, as its last flai verify, last, which passed at
+// the head of its branch, lists the files the branch changed, or nil when it
+// does not: only the operator accepts such a story, by hand, so the queue
+// never batches it (ADR-0301 §7). It reads the verify result rather than
+// git, so that the queue's git does not grow with the stories in review
+// (S-0698); a story whose verify did not pass at its head is ineligible
+// already, and the acceptance itself reads the branch's diff.
+func changesWorkflowFile(repo *workitem.Repo, story string, last lastVerify) *Reason {
+	wf := workflow.Rel(repo.Manifest.Layout["design"])
+	if !slices.Contains(last.rep.Paths, wf) {
+		return nil
+	}
+	return &Reason{Kind: KindWorkflowFile, Paths: []string{wf}, Text: fmt.Sprintf("%s changes the workflow file %s, which is code the operator runs, so only the operator accepts %s, by hand, never the orchestrator or the merge queue, and the queue never batches it (ADR-0301 §7)", storygit.Branch(story), wf, story)}
 }
 
 // plural names ids after one or many, with the verb that agrees.

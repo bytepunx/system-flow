@@ -95,6 +95,11 @@ type Acceptance struct {
 	// operator accepts the story and who that is (ADR-0106).
 	Protected    []string `json:"protected,omitempty"`
 	OperatorOnly string   `json:"operator_only,omitempty"`
+	// WorkflowFile is the project's workflow file, its path under the
+	// design folder, when the story's branch changes it: only the operator
+	// accepts the story then, never the orchestrator or the merge queue, and
+	// OperatorOnly says so too (ADR-0301 §7).
+	WorkflowFile string `json:"workflow_file,omitempty"`
 	// ResolvedThreads are the threads still open or answered on what the
 	// acceptance archives, which it resolves (I-0073), or under DryRun would.
 	ResolvedThreads []string `json:"resolved_threads,omitempty"`
@@ -258,8 +263,8 @@ type KeptRemoval struct {
 // that cannot be accepted at all is an error, and everything that would
 // stop the acceptance midway is a blocker. by is who accepts: the probe's
 // transitions are made by them, and a story whose branch changes a path
-// Claude Code protects is refused unless they are its operator (ADR-0106);
-// log takes a warning about a worktree git cannot open.
+// Claude Code protects (ADR-0106) or the workflow file (ADR-0301 §7) is
+// refused unless they are its operator; log takes a warning about a worktree git cannot open.
 func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger) (*Acceptance, error) {
 	return AcceptWith(r, repo, it, by, now, log, AcceptOptions{})
 }
@@ -432,15 +437,18 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 			}
 		}
 		// a change to a path Claude Code protects takes effect for every
-		// agent once merged, so only the operator accepts it (ADR-0106)
+		// agent once merged, so only the operator accepts it (ADR-0106); so
+		// does a change to the workflow file, which is code the operator runs
+		// (ADR-0301 §7)
 		if diff, err := storygit.StoryDiff(r, repo, it.ID); err != nil {
 			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read what %s changes to check it for paths Claude Code protects: %v", res.Branch, err))
-		} else if res.Protected = protected.Changed(changedPaths(diff)); len(res.Protected) > 0 {
-			who := operatorsOf(repo, it)
-			res.OperatorOnly = fmt.Sprintf("only the operator (%s) accepts %s: its branch changes paths Claude Code protects", who, it.ID)
-			if !opts.Orchestrator && !isOperator(repo, it, by) {
-				res.Blockers = append(res.Blockers, fmt.Sprintf("only the operator (%s) accepts %s, not %s: its branch changes paths Claude Code protects, %s; the operator reads them in the diff and accepts it (ADR-0106)", who, it.ID, by, strings.Join(res.Protected, ", ")))
+		} else {
+			changed := changedPaths(diff)
+			res.Protected = protected.Changed(changed)
+			if wf := workflow.Rel(repo.Manifest.Layout["design"]); slices.Contains(changed, wf) {
+				res.WorkflowFile = wf
 			}
+			operatorOnly(repo, it, by, opts, res)
 		}
 	}
 	// the forge's checks and reviews gate every acceptance, the
@@ -480,7 +488,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		// its acceptance is finished as the operator's resume finishes one
 		// (ADR-0189)
 		if !res.Resumed || it.Type != workitem.Story {
-			res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
+			res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.WorkflowFile, res.Verified, landing)
 		}
 	}
 	// while the kluster host action is on, a change the cluster has not run
@@ -1209,7 +1217,7 @@ func UndoneBlocker(id string, u storygit.Undone) string {
 }
 
 // operators are who accept a story whose branch changes a path Claude Code
-// protects (ADR-0106): its owner and the project's owner, those named, each
+// protects (ADR-0106) or the workflow file (ADR-0301 §7): its owner and the project's owner, those named, each
 // once, as ADR-0097 names who answers a permission thread. None means anyone
 // but the orchestrator.
 func operators(repo *workitem.Repo, it *workitem.Item) []string {
@@ -1235,6 +1243,47 @@ func operatorsOf(repo *workitem.Repo, it *workitem.Item) string {
 		return strings.Join(who, " or ")
 	}
 	return fmt.Sprintf("anyone but the orchestrator, as neither %s nor the project names an owner", it.ID)
+}
+
+// operatorOnly sets res.OperatorOnly when the story's branch changes a path
+// Claude Code protects, res.Protected (ADR-0106), or the workflow file,
+// res.WorkflowFile (ADR-0301 §7), and adds to res.Blockers, for each, the
+// refusal of by when they are not its operator; the orchestrator's
+// acceptance has its own blockers for both instead.
+func operatorOnly(repo *workitem.Repo, it *workitem.Item, by string, opts AcceptOptions, res *Acceptance) {
+	if len(res.Protected) == 0 && res.WorkflowFile == "" {
+		return
+	}
+	who := operatorsOf(repo, it)
+	why := "its branch changes paths Claude Code protects"
+	switch {
+	case res.WorkflowFile != "" && len(res.Protected) > 0:
+		why = fmt.Sprintf("its branch changes the workflow file %s (ADR-0301 §7) and paths Claude Code protects", res.WorkflowFile)
+	case res.WorkflowFile != "":
+		why = fmt.Sprintf("its branch changes the workflow file %s (ADR-0301 §7)", res.WorkflowFile)
+	}
+	res.OperatorOnly = fmt.Sprintf("only the operator (%s) accepts %s: %s", who, it.ID, why)
+	if opts.Orchestrator || isOperator(repo, it, by) {
+		return
+	}
+	if len(res.Protected) > 0 {
+		res.Blockers = append(res.Blockers, fmt.Sprintf("only the operator (%s) accepts %s, not %s: its branch changes paths Claude Code protects, %s; the operator reads them in the diff and accepts it (ADR-0106)", who, it.ID, by, strings.Join(res.Protected, ", ")))
+	}
+	if res.WorkflowFile != "" {
+		res.Blockers = append(res.Blockers, fmt.Sprintf("only the operator (%s) accepts %s, not %s: its branch changes the workflow file %s, which is code the operator runs; the operator reads it in the diff and accepts it, never the orchestrator or the merge queue (ADR-0301 §7)", who, it.ID, by, res.WorkflowFile))
+	}
+}
+
+// ChangesWorkflowFile reports whether story id's branch changes the
+// project's workflow file, which only the operator accepts and the merge
+// queue never lands (ADR-0301 §7). A branch whose diff cannot be read
+// reports false: the acceptance's own read of it blocks then.
+func ChangesWorkflowFile(r execx.Runner, repo *workitem.Repo, id string) bool {
+	diff, err := storygit.StoryDiff(r, repo, id)
+	if err != nil {
+		return false
+	}
+	return slices.Contains(changedPaths(diff), workflow.Rel(repo.Manifest.Layout["design"]))
 }
 
 // changedPaths are the paths a branch's diff changes, a renamed file's old

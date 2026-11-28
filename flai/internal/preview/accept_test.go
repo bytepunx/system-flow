@@ -924,6 +924,7 @@ func TestAcceptOptionsEnqueues(t *testing.T) {
 		"--without-kluster":       {AcceptOptions{QueueBatches: true, WithoutKluster: true}, false},
 		"--keep-removal":          {AcceptOptions{QueueBatches: true, Keep: keep}, false},
 		"the kluster host action": {AcceptOptions{QueueBatches: true, KlusterOn: true, ChecksOn: true}, true},
+		"the workflow file":       {AcceptOptions{QueueBatches: true, LandsByHand: true}, false},
 	} {
 		if got := c.opts.Enqueues(); got != c.want {
 			t.Errorf("%s: Enqueues() = %v, want %v", name, got, c.want)

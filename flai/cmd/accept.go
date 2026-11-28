@@ -1320,6 +1320,9 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		opts := preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers,
 			KlusterOn: klusterOn, ChecksOn: checksOn, WithoutKluster: o.withoutKluster}
 		if batches {
+			// the queue never lands a change to the workflow file, so the
+			// operator lands it by hand (ADR-0301 §7)
+			opts.LandsByHand = preview.ChangesWorkflowFile(a.runner, repo, it.ID)
 			held, err := queueHeld(repo, it, o, opts)
 			if err != nil {
 				return preview.AcceptOptions{}, none, err
@@ -1721,8 +1724,11 @@ func (a *app) printAccept(acc *accepted) error {
 			}
 			fmt.Fprintf(a.out, "uncommitted outside wip, design, and the shared paths: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)
 		}
-		if res.OperatorOnly != "" {
+		switch {
+		case res.OperatorOnly != "" && len(res.Protected) > 0:
 			fmt.Fprintf(a.out, "%s: %s\n", res.OperatorOnly, strings.Join(res.Protected, ", "))
+		case res.OperatorOnly != "":
+			fmt.Fprintln(a.out, res.OperatorOnly)
 		}
 		for _, u := range res.UndoesMain {
 			if u.KeptReason != "" {
