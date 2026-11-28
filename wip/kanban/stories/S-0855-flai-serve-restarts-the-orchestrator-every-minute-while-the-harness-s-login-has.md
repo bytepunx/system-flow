@@ -6,7 +6,7 @@ title: flai serve restarts the orchestrator every minute while the harness's log
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:27Z
-updated: 2026-11-28T00:43:35Z
+updated: 2026-11-28T01:18:17Z
 transitions: []
 tags: [flai, flaiover]
 topics: [serve, budget]
@@ -67,10 +67,10 @@ cost_of_delay:
   at: 2026-11-27T23:59:15Z
 forecast:
   duration: 4h
-  delivery: 2026-11-28T13:04:00Z
-  basis: "Its own forecast of 4h; 13th in the pull order with an in-progress limit of 3, behind S-0814, S-0835, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815, S-0849 and S-0851."
+  delivery: 2026-11-28T13:01:00Z
+  basis: "Its own forecast of 4h; 12th in the pull order with an in-progress limit of 3, behind S-0814, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815, S-0849 and S-0851."
   by: flai
-  at: 2026-11-28T00:43:35Z
+  at: 2026-11-28T01:18:17Z
 finalized:
   by: alex
   at: 2026-11-28T00:01:55Z

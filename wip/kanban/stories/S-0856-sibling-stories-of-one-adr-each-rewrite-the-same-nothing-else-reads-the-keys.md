@@ -6,7 +6,7 @@ title: Sibling stories of one ADR each rewrite the same 'nothing else reads the 
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:28Z
-updated: 2026-11-28T00:43:35Z
+updated: 2026-11-28T01:18:17Z
 transitions: []
 tags: []
 topics: [documentation, check]
@@ -68,10 +68,10 @@ cost_of_delay:
   at: 2026-11-27T23:57:39Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T10:32:00Z
-  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0814, S-0835, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851 and S-0855."
+  delivery: 2026-11-28T10:34:00Z
+  basis: "Its own forecast of 1h30m; 13th in the pull order with an in-progress limit of 3, behind S-0814, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851 and S-0855."
   by: flai
-  at: 2026-11-28T00:43:35Z
+  at: 2026-11-28T01:18:17Z
 finalized:
   by: alex
   at: 2026-11-28T00:01:56Z

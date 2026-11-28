@@ -6,7 +6,7 @@ title: flai serve still reads three state questions by the baseline workflow dir
 status: backlog
 owner: alex
 created: 2026-11-27T22:34:11Z
-updated: 2026-11-28T00:43:35Z
+updated: 2026-11-28T01:18:17Z
 transitions: []
 tags: [cli]
 topics: [workflow]
@@ -52,10 +52,10 @@ cost_of_delay:
   at: 2026-11-28T00:03:14Z
 forecast:
   duration: 1h
-  delivery: 2026-11-28T08:29:00Z
-  basis: "Its own forecast of 1h; 12th in the pull order with an in-progress limit of 3, behind S-0814, S-0835, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815 and S-0849."
+  delivery: 2026-11-28T08:31:00Z
+  basis: "Its own forecast of 1h; 11th in the pull order with an in-progress limit of 3, behind S-0814, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815 and S-0849."
   by: flai
-  at: 2026-11-28T00:43:35Z
+  at: 2026-11-28T01:18:17Z
 ---
 # S-0851 flai serve still reads three state questions by the baseline workflow directly, not through a wrapper, so a project's own workflow file will not reach them
 
