@@ -6,7 +6,7 @@ title: flai kluster deploy --job, teardown --job, and flai checks run --job from
 status: backlog
 owner: alex
 created: 2026-11-21T18:57:50Z
-updated: 2026-11-28T00:26:08Z
+updated: 2026-11-28T00:43:35Z
 transitions: []
 tags: []
 topics: [kluster, harness]
@@ -52,10 +52,10 @@ cost_of_delay:
   at: 2026-11-28T00:04:06Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T09:07:00Z
-  basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 3, behind S-0835, S-0837, S-0844, S-0814, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241 and S-0815."
+  delivery: 2026-11-28T09:06:00Z
+  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 3, behind S-0814, S-0835, S-0837, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241 and S-0815."
   by: flai
-  at: 2026-11-28T00:26:08Z
+  at: 2026-11-28T00:43:35Z
 ---
 # S-0849 flai kluster deploy --job, teardown --job, and flai checks run --job from a story's container write their request under the main checkout's .flai-cache/kluster/requests, which the container does not mount
 
