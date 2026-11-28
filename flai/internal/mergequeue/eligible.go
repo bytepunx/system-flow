@@ -218,7 +218,8 @@ type Actions struct {
 // its branch, with act.Checks, as flai accept --batch refuses it otherwise.
 // A story's last flai verify is judged by the suites its acceptance needs,
 // the verify of the workflow's transition with the accept effect (ADR-0312
-// §3). A story whose branch changes the workflow file is never eligible: the
+// §3).
+// A story whose branch changes the workflow file is never eligible: the
 // operator alone accepts it (ADR-0301 §7).
 func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions) (Queue, error) {
 	q := Queue{Mode: repo.Manifest.Acceptance.ModeOrDefault(), Eligible: []Entry{}, Ineligible: []Entry{}, Enqueued: []Enqueued{}, Outcomes: []Outcome{}}
