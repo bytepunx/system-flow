@@ -80,7 +80,7 @@ func newInside(t *testing.T, repo *workitem.Repo, before, after *Result, id stri
 }
 
 // graphRules are the rules RunItemWrite runs over every item, as Run does.
-var graphRules = []string{"wip.overlap", "story.component-tag", "story.after", "task.after", "touches.folder", "wip.after-hub", "wip.after-reason", "story.unaccepted", "epic.lags-stories", "board.front-matter", "board.order", "board.wip-limit"}
+var graphRules = []string{"wip.overlap", "story.component-tag", "story.after", "task.after", "touches.folder", "wip.after-hub", "wip.after-reason", "story.unaccepted", "epic.lags-stories", "board.front-matter", "board.order", "board.wip-limit", "board.wip-state"}
 
 func byRules(res *Result, rules []string) []string {
 	var out []Finding

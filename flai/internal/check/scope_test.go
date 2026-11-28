@@ -3,6 +3,7 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -444,6 +445,60 @@ func TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 			}
 			if !scoped.OK(true) {
 				t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+			}
+		})
+	}
+}
+
+// I-0380, ADR-0301 §6: scoped to a story, a board.wip-state on the main
+// checkout's board, a limit on backlog, which takes none, is left out of the
+// result, and its warning is taken back from the counts, as a board.wip-limit
+// is (ADR-0133): no story branch changes the board. On a story that changes
+// the board it is inside the story. On a story that changes the workflow file
+// it is kept as a note, outside the story, so the close-out of a story that
+// takes limit: true off a state shows the limit the board's next write drops
+// without failing on a line the story cannot remove. Unscoped, it is reported
+// at the key's line.
+func TestScopedCheckLeavesOutABoardWIPStateOutsideTheStory(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		changed []string
+		// kept is whether the scoped run keeps the finding, and outside
+		// whether as a note.
+		kept, outside bool
+	}{
+		{"a story that changes neither", nil, false, false},
+		{"a story that changes the board", []string{"wip/kanban/board.md"}, true, false},
+		{"a story that changes the workflow file", []string{"design/workflows/board.md"}, true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := scopeProject(t)
+			edit(t, root, "wip/kanban/board.md", "  review: 3\n", "  review: 3\n  backlog: 10\n")
+			whole, scoped := runScoped(t, root, tc.changed)
+			states := func(res *Result) []Finding {
+				return slices.DeleteFunc(slices.Clone(res.Findings), func(f Finding) bool { return f.Rule != "board.wip-state" })
+			}
+			if got := states(whole); len(got) != 1 || got[0].Level != Warning || got[0].Line != 9 ||
+				!strings.HasSuffix(filepath.ToSlash(got[0].Path), "wip/kanban/board.md") {
+				t.Fatalf("unscoped, the run should warn of backlog's limit at board.md:9: %+v", got)
+			}
+			got := states(scoped)
+			switch {
+			case !tc.kept && len(got) != 0:
+				t.Errorf("scoped to S-004, the board.wip-state should be left out: %+v", got)
+			case tc.kept && (len(got) != 1 || got[0].Outside != tc.outside):
+				t.Errorf("scoped to S-004, want the board.wip-state kept, outside %v: %+v", tc.outside, got)
+			}
+			left := 1
+			if tc.kept {
+				left = 0
+			}
+			if len(scoped.Findings) != len(whole.Findings)-left-unmerged || scoped.Warnings != whole.Warnings-left-unmerged || scoped.Errors != whole.Errors {
+				t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-left-unmerged, whole.Warnings-left-unmerged, whole.Errors)
+			}
+			assertCountsMatch(t, scoped)
+			if want := !tc.kept || tc.outside; scoped.OK(true) != want {
+				t.Errorf("scoped to S-004, --strict passes %v, want %v: %+v", !want, want, scoped.Findings)
 			}
 		})
 	}

@@ -1,8 +1,11 @@
 package check
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -878,6 +881,9 @@ func (c *checker) board() {
 			ordered = append([]string{s.Name}, ordered...)
 		}
 	}
+	if !refused {
+		c.wipStates(b, flow)
+	}
 	for _, id := range b.Order {
 		it, ok := c.byID[id]
 		if !ok && c.unread.names(id) {
@@ -913,4 +919,54 @@ func (c *checker) wipLimit(b *workitem.Board, s workflow.State, count int) {
 	} else {
 		c.add(Warning, "board.wip-limit", b.Path, line, "%d stories in %s, limit %d", count, s.Name, limit)
 	}
+}
+
+// wipStates reports board.wip-state, a warning at its line, for each key of
+// the board's wip_limits that names no state of flow with limit: true, by its
+// name or an alias, as wipLimit reads it: Save writes only the limits of the
+// limited states, so the next write of the board drops it without a word
+// (ADR-0301 §6, I-0380).
+func (c *checker) wipStates(b *workitem.Board, flow workflow.Workflow) {
+	file := c.workflowRel()
+	for _, key := range slices.Sorted(maps.Keys(b.WIPLimits)) {
+		s, ok := flow.State(key)
+		var why, fix string
+		switch {
+		case ok && s.Limit:
+			continue
+		case !ok:
+			why = fmt.Sprintf("the workflow has no state %s and no state lists it as an alias", key)
+			fix = fmt.Sprintf("add the state to %s with limit: true", file)
+		case s.Name != key:
+			why = fmt.Sprintf("%s is an alias of state %s, which has no limit: true", key, s.Name)
+			fix = fmt.Sprintf("give state %s limit: true in %s", s.Name, file)
+		default:
+			why = fmt.Sprintf("state %s has no limit: true", key)
+			fix = fmt.Sprintf("give state %s limit: true in %s", key, file)
+		}
+		c.add(Warning, "board.wip-state", b.Path, wipLimitLine(b.Path, key), "wip_limits gives %s a limit of %d, but %s, so the next write of the board drops the limit; %s, or remove the line (ADR-0301 §6)", key, b.WIPLimits[key], why, fix)
+	}
+}
+
+// wipLimitLine is the 1-based line of key under the front matter's
+// wip_limits, else the line of wip_limits itself.
+func wipLimitLine(path, key string) int {
+	at := keyLine(path, "wip_limits")
+	f, err := os.Open(path)
+	if err != nil {
+		return at
+	}
+	defer func() { _ = f.Close() }()
+	sc := bufio.NewScanner(f)
+	for n := 1; sc.Scan(); n++ {
+		l := sc.Text()
+		switch {
+		case n <= at:
+		case l == "---" || (!strings.HasPrefix(l, " ") && !strings.HasPrefix(l, "\t") && strings.TrimSpace(l) != ""):
+			return at
+		case strings.HasPrefix(strings.TrimSpace(l), key+":"):
+			return n
+		}
+	}
+	return at
 }

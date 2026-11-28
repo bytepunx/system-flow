@@ -39,7 +39,9 @@ story is outside it too, and one between two other stories is left out, as
 is an item.archive outside the story, which only flai archive in the main
 checkout clears, a board.wip-limit outside the story, which counts the main
 checkout's columns and only the operator's acceptances, cancellations, or a
-raised limit clear, an issues.no-story outside the story, which names an
+raised limit clear, a board.wip-state outside a story that does not change the
+workflow file, a limit in the main checkout's board on a state that takes
+none, an issues.no-story outside the story, which names an
 issue the story did not touch and only the operator's choice to make a story
 for it clears, a threads.archived outside the story, an open or answered
 thread on an archived item that only the operator or the thread's opener
@@ -239,8 +241,9 @@ func (r recordedIssue) describe() string {
 // merge report it where it can be acted on, and an issue would only count
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
-// does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), a
-// threads.archived (ADR-0137), a narrative.missing on another story with no
+// does a board.wip-limit (ADR-0133), a board.wip-state (ADR-0301 §6), an
+// issues.no-story (ADR-0136), a threads.archived (ADR-0137), a
+// narrative.missing on another story with no
 // narrative (ADR-0256), an item.blocked-closed on another item (ADR-0296),
 // a story.unaccepted on another story (ADR-0299), the components.examples
 // note for examples left unchecked for want of node or a sub-project's

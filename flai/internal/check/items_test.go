@@ -483,3 +483,72 @@ func TestEpicLagsReadsStoriesUnderTheWorkflow(t *testing.T) {
 		t.Errorf("got %+v, want one epic.lags-stories saying %q", c.res.Findings, want)
 	}
 }
+
+// wipStateFindings are the board.wip-state findings of a run on repo with a
+// board whose wip_limits give ready 5 and key 4, on line 7.
+func wipStateFindings(t *testing.T, repo *workitem.Repo, key string) []Finding {
+	t.Helper()
+	writeFile(t, filepath.Join(repo.KanbanDir(), workitem.BoardFile), "---\ntitle: Board\nupdated: 2026-09-01\nstatus: active\nwip_limits:\n  ready: 5\n  "+key+": 4\norder: []\n---\n\n# Board\n")
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.DeleteFunc(res.Findings, func(f Finding) bool { return f.Rule != "board.wip-state" })
+}
+
+// I-0380, ADR-0301 §6: Board.Save writes only the limits of the states with
+// limit: true, so a wip_limits key on any other name went at the board's next
+// write without a word. flai check reports board.wip-state, a warning at the
+// key's line, for a key that names a state without limit: true, an alias of
+// one, or nothing the workflow has, and nothing for a key that names a
+// limited state or an alias of one, as wipLimit reads it.
+func TestCheckReportsAWIPLimitOnAStateThatTakesNone(t *testing.T) {
+	const drops = ", so the next write of the board drops the limit; "
+	for _, tc := range []struct {
+		name string
+		flow *workflow.Workflow
+		key  string
+		want string
+	}{
+		{"a limited state", nil, workitem.InProgress, ""},
+		{"an alias of a limited state", kindsRenamedFlow(), workitem.Review, ""},
+		{"a state without limit: true", nil, workitem.Backlog,
+			"wip_limits gives backlog a limit of 4, but state backlog has no limit: true" + drops + "give state backlog limit: true in design/workflows/board.md, or remove the line (ADR-0301 §6)"},
+		{"an alias of a state without limit: true", renamedFlow(workitem.Backlog, "icebox"), workitem.Backlog,
+			"wip_limits gives backlog a limit of 4, but backlog is an alias of state icebox, which has no limit: true" + drops + "give state icebox limit: true in design/workflows/board.md, or remove the line (ADR-0301 §6)"},
+		{"a name the workflow lacks", nil, "testing",
+			"wip_limits gives testing a limit of 4, but the workflow has no state testing and no state lists it as an alias" + drops + "add the state to design/workflows/board.md with limit: true, or remove the line (ADR-0301 §6)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := overlapProject(t)
+			repo.Workflow = tc.flow
+			got := wipStateFindings(t, repo, tc.key)
+			if tc.want == "" {
+				if len(got) != 0 {
+					t.Errorf("a limit on %s: %+v", tc.key, got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Level != Warning || got[0].Line != 7 || got[0].Message != tc.want ||
+				!strings.HasSuffix(filepath.ToSlash(got[0].Path), "wip/kanban/board.md") {
+				t.Errorf("want one warning at board.md:7:\n%s\ngot %+v", tc.want, got)
+			}
+		})
+	}
+}
+
+// ADR-0307 §2: while the project's workflow file is refused, the repository
+// runs the baseline, and a limit on a state of the project's own file is not
+// judged against it: no board.wip-state.
+func TestARefusedWorkflowFileGivesNoBoardWIPState(t *testing.T) {
+	base := baselineText(t)
+	repo := writeBoard(t, overlapProject(t), edited(t, base,
+		[2]string{"  - {name: cancelled, kind: cancelled}\n", "  - {name: stuck, kind: waiting, limit: true}\n"},
+		[2]string{"  - {from: ready, to: backlog}\n", "  - {from: review, to: stuck}\n"}))
+	if repo.FlowErr() == nil {
+		t.Fatal("a file with a dead end is not refused")
+	}
+	if got := wipStateFindings(t, repo, "stuck"); len(got) != 0 {
+		t.Errorf("a refused workflow file: %+v", got)
+	}
+}

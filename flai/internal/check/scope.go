@@ -26,7 +26,13 @@ import (
 // clears, and it never names a story in progress (ADR-0122, I-0078). So is a
 // board.wip-limit outside the story, advisory or not: it counts the main
 // checkout's columns, which only the operator's acceptances, cancellations,
-// or a raised limit clear (ADR-0133, I-0123). So is an issues.no-story
+// or a raised limit clear (ADR-0133, I-0123). So is a board.wip-state
+// outside the story, unless the story changes the workflow file, when it is
+// a note: it names a line of the main checkout's board.md, which no story
+// branch changes, so inside it would fail a close-out on a line the story
+// cannot remove; a story that takes limit: true off a state, or removes it,
+// still sees, at its close-out, the limit the board's next write will drop
+// (ADR-0301 §6, I-0380). So is an issues.no-story
 // outside the story: it names an issue the story did not touch, and only the
 // operator's choice to make a story for it clears it (ADR-0136, I-0134). So
 // is a threads.archived outside the story: it names an open or answered
@@ -178,10 +184,14 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 		}
 		return false
 	}
+	// flowFile is the workflow file a board.wip-state judges the board's
+	// wip_limits against (ADR-0301 §6).
+	flowFile := workflow.Rel(repo.Manifest.Layout["design"])
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
 			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing" || f.Rule == "item.blocked-closed" || f.Rule == "story.unaccepted") && !inside(f.Path)) ||
+			(f.Rule == "board.wip-state" && !inside(f.Path) && !under(flowFile)) ||
 			(f.unchecked && !under(f.Path) && !slices.ContainsFunc(f.inside, under)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
