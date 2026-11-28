@@ -1,6 +1,6 @@
 ---
 title: "Runbook: change the board"
-updated: 2026-11-18
+updated: 2026-11-28
 status: active
 ---
 
@@ -58,7 +58,7 @@ The board's states, the moves between them, the rules each move passes, and the 
 
    `by` says who may make the move: `anyone` (the default), `operator`, `agent`, `flai`, `acceptance`, or `cascade`. `effects` says what flai does at the move: `commit`, `pull`, `accept`, `send-back`, `cancel`, or `reopen`. Stories keep exactly one `pull` move and one `accept` move. No two moves share a `from`, a `to`, and a type. The effects are in ADR-0301 §3.
 
-3. For a WIP limit, give the state `limit: true`. The value is not in the workflow file: it stays in `wip/kanban/board.md`, which `flai board limit` and the board's lane menu set. A state with `limit: true` and no value there has no limit. `flai board limit <state> <n>` takes any state with `limit: true`, one you add or rename included, though its help still names only `ready`, `in-progress`, and `review` ([I-0403](../../../design/issues/I-0403-a-refusal-and-a-command-s-help-name-the-baseline-s-states-where-a-project-s.md)).
+3. For a WIP limit, give the state `limit: true`. The value is not in the workflow file: it stays in `wip/kanban/board.md`, which `flai board limit` and the board's lane menu set. A state with `limit: true` and no value there has no limit. `flai board limit <state> <n>` takes any state with `limit: true`, one you add or rename included, and refuses a state without it. A limit in `wip/kanban/board.md` on a state without `limit: true`, an alias of one, or a name the workflow lacks is dropped by the board's next write, so `flai check` reports it as `board.wip-state` at its line: give the state `limit: true` or remove the line.
 
    An added state of the `active` kind runs the story's agent as `in-progress` does, but `flai serve` stops the story's dev server there, since it still reads the baseline's kinds for that ([I-0402](../../../design/issues/I-0402-flai-serve-stops-the-dev-server-of-a-story-in-a-state-a-project-s-workflow-adds.md)).
 
@@ -228,7 +228,7 @@ To recover:
 
    The two suite findings stop nothing either; `flai check` reports them, and `--strict` fails on them. `workflow.suite`, an error, is a suite the file names that no tier in `system-flow.yaml`'s `tests` has: name a suite a tier gives, add `suite: <name>` to the tier it belongs to, or give `all`. `workflow.suite-unnamed`, a warning, is a suite with a tier that is not `manual` which nothing in the file names, so no step runs it: name it in a `verify`, a `runs`, or `verify_at`, give `all` somewhere, or mark its tiers `manual: true`. A file that gives none of `verify`, `runs`, and `verify_at` reads as the baseline's and gets no `workflow.suite-unnamed`.
 3. Look at the board in the worktree: `flai board` there shows the branch's columns. A move made there follows the branch's file, but writes the item in the main checkout, where the old board still runs: an item moved into a new state is a `workflow.item` finding on main until the story is accepted. To try moves freely, copy the file into a scratch project made with `flai new`.
-4. Commit, and move the story to review. Accept it yourself. A story that changes the file is the operator's to accept, never the orchestrator's or the merge queue's (ADR-0301 §7). The dashboard's saves refuse the file on main, and take it only on a story's branch.
+4. Commit, and move the story to review. Accept it yourself. A story that changes the file is the operator's to accept, never the orchestrator's or the merge queue's (ADR-0301 §7), and flai enforces both. `flai accept` refuses anyone but you, the orchestrator's dry run lists the blocker `workflow_file`, and `flai queue` lists the story not eligible with the kind `workflow_file` and never batches it; while the queue batches, your acceptance lands it by hand. `flai doc save` without `--story`, and so the dashboard's save on main, refuses the file, and takes it only on a story's branch.
 5. Once it is accepted, main runs the new board: the main checkout's commands, `flai serve` at its next look, the MCP server at its next call (it reads the file again when it changed), and the dashboard through `flai serve`. A story's worktree runs its own branch's file until it takes main in.
 
 ## If main's file cannot be run

@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-17
+updated: 2026-11-28
 status: active
 ---
 
@@ -590,7 +590,7 @@ When a story in progress or in review says it touches the document, the editor w
 
 **From a link.** A pencil beside a link to a markdown file, or beside a file name in code such as `design/system/overview.md:42`, opens the editor over the page you are on, with the cursor on that line. Following the link itself still shows the rendered document. Pages, threads, the analyzer's reports, and refusals on the board, an item page, and the review page have them. Files the editor cannot edit have none: the archive, threads, issues, and `wip/agents/index.md`. Close the editor to go back to the page. A link of the form `/edit/<path>?line=42` opens the editor in a tab of its own.
 
-**On a story's branch.** On the page of a story in progress or in review, a design or docs file named in its body or its threads opens on the story's branch: the editor says `saves on branch story/S-nnnn`, and the save is committed there, in the story's worktree, not on `main` ([ADR-0145](../../design/adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)). A file under `wip/` always opens on `main`, where it lives.
+**On a story's branch.** On the page of a story in progress or in review, a design or docs file named in its body or its threads opens on the story's branch: the editor says `saves on branch story/S-nnnn`, and the save is committed there, in the story's worktree, not on `main` ([ADR-0145](../../design/adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)). A file under `wip/` always opens on `main`, where it lives. The workflow file, `design/workflows/board.md`, saves only on a story's branch: on `main` the editor shows it read-only, and flai refuses its save there ([ADR-0301 §7](../../design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)).
 
 **Lint as you type.** Under the text the editor lists the markdown lint findings, each with its line, its rule, and the message, when it opens and after each pause in typing. Click one to put the cursor on its line. They are flai's subset of the markdownlint rules with the project's configuration; the project's markdown tier still decides when a story is accepted. With a flai on the host too old to lint, the list is not shown.
 
