@@ -3,16 +3,37 @@ id: T-3605
 type: task
 nature: improvement
 title: The template no longer ships the publish formula or scripts/fetch.sh, and the formulas' and scripts' READMEs no longer list them
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:38:06Z
-updated: 2026-11-27T23:57:23Z
-transitions: []
+updated: 2026-11-28T00:30:54Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:30:23Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-28T00:30:23Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:30:54Z
+    by: agent-S-0837
 stream: S-0837
 tags: [template, flai]
 touches: [template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, flai/cmd/publish_formula_suites_test.go]
 after: [T-3604]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 53
+      cache_read: 1025269
+      cache_write: 7261
+      cost: 0.3973
 ---
 # T-3605 The template no longer ships the publish formula or scripts/fetch.sh, and the formulas' and scripts' READMEs no longer list them
 

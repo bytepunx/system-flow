@@ -3,15 +3,18 @@ id: S-0814
 type: story
 nature: feature
 title: The review page and the board show the suites each step needs and ran, and follow a state's job in the activity stream
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-16T23:42:10Z
-updated: 2026-11-28T00:26:08Z
+updated: 2026-11-28T00:42:08Z
 transitions:
   - to: ready
     at: 2026-11-27T23:54:13Z
     by: claude-concierge
+  - to: in-progress
+    at: 2026-11-28T00:42:08Z
+    by: agent-S-0814
 tags: [flaiover]
 topics: [verify, workflow]
 touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/verify_suites.go, flai/internal/hostapi/verify_suites_test.go, flai/internal/hostapi/resolve_status.go, flai/internal/hostapi/resolve_status_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/VerifySuites.svelte, flaiover/src/lib/components/VerifySuites.svelte.test.ts, design/components/flaiover/src/lib/components/VerifySuites.examples.json, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/lib/components/LogFeed.svelte.test.ts, design/components/flaiover/src/lib/components/LogFeed.examples.json, "flaiover/src/routes/api/items/[id]/resolve/+server.ts", "flaiover/src/routes/api/items/[id]/resolve/resolve.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

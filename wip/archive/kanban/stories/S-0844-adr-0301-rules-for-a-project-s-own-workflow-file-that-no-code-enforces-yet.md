@@ -3,10 +3,10 @@ id: S-0844
 type: story
 nature: remediation
 title: "ADR-0301 rules for a project's own workflow file that no code enforces yet: operator-only acceptance of a change to it, the dashboard's refusal to save it on main, board.wip-state, and WIP limits on a state the project adds"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:32:55Z
-updated: 2026-11-28T00:24:02Z
+updated: 2026-11-28T00:43:34Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:03Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-27T23:37:13Z
     by: agent-S-0844
+  - to: review
+    at: 2026-11-28T00:41:59Z
+    by: agent-S-0844
+  - to: done
+    at: 2026-11-28T00:43:34Z
+    by: orchestrator
 tags: [flai]
 topics: [workflow, acceptance, orchestration, dashboard]
-touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/accept_workflow_file_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go, flai/internal/workitem/boardview_test.go, flai/cmd/board.go, flai/cmd/board_limit_test.go, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md, design/issues/summary.md, flai/cmd/accept.go, flai/internal/preview/accept_test.go, flai/cmd/check.go, flai/internal/check/itemwrite_test.go, design/issues/I-0420-the-dashboard-s-review-page-shows-operator-only-only-beside-protected-paths-so.md]
+touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/accept_workflow_file_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go, flai/internal/workitem/boardview_test.go, flai/cmd/board.go, flai/cmd/board_limit_test.go, docs/users/flai-reference.md, docs/operators/runbooks/change-the-board.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/summary.md, flai/cmd/accept.go, flai/internal/preview/accept_test.go, flai/cmd/check.go, flai/internal/check/itemwrite_test.go, design/issues/I-0420-the-dashboard-s-review-page-shows-operator-only-only-beside-protected-paths-so.md, design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,23 +30,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2663
-  estimated: true
-  priced_by: estimate
+  seconds: 3903
+  priced_by: harness
   turns:
     - day: 2026-11-27
       ceremony: 1
       work: 27
     - day: 2026-11-28
-      ceremony: 2
-      work: 16
+      ceremony: 5
+      test_runs: 1
+      work: 66
   models:
     - model: claude-opus-5-5
-      input: 400
-      output: 2329
-      cache_read: 21611901
-      cache_write: 939181
-      cost: 8.6831
+      input: 618
+      output: 154568
+      cache_read: 46838785
+      cache_write: 1288808
+      cost: 20.108
   strategic:
     - kind: planner
       seconds: 89
@@ -93,8 +99,8 @@ finalized:
 This story remediates [I-0380](../../../design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md), "ADR-0301 rules for a project's own workflow file that no code enforces yet: operator-only acceptance of a change to it, the dashboard's refusal to save it on main, board.wip-state, and WIP limits on a state the project adds". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0380 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0380 is closed with `flai issue close I-0380 --reason` saying what fixed it
+- [x] The cause I-0380 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0380 is closed with `flai issue close I-0380 --reason` saying what fixed it
 
 ## Tasks
 - T-3595 Only the operator accepts a story whose branch changes the workflow file: the acceptance preview, the orchestrator's blockers, and the merge queue's eligibility
@@ -131,3 +137,12 @@ The figures:
 
 - Forecast 1h30m, against flai's 50m. flai's figure is 119 s per unit over 82 done large-band remediation stories, about 55m at the final size of 28. It was raised because there are five tasks across `preview`, `mergequeue`, `docedit`, `check`, and `workitem`, each with its own test. The close-out also runs integration and smoke for a change under `flai/`: S-0828's close-out took 9m43s today. Delivery is flai's 21:47Z plus the 40m added.
 - Cost of delay value 37.50 USD a week, as `flai cod` gives it from flai's input, 15m lost per 168h cycle at 150 USD an hour. It stands: one occurrence, and S-0756, the epic's end-to-end story, will meet instances 1 and 4.
+
+### Accepted by the orchestrator
+
+- Verified: 0beb074eac7ab5c6feee3d9ff326afe2aa5432d1
+- At: 2026-11-28T00:43:34Z
+
+Verdict: pass at 0beb074eac7ab5c6feee3d9ff326afe2aa5432d1
+- 1: flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/cmd/accept.go, flai/internal/docedit/docedit.go, flai/internal/check/check_items.go, flai/internal/check/scope.go, flai/cmd/check.go, flai/internal/workitem/board.go, flai/cmd/board.go, flai/cmd/accept_workflow_file_test.go, flai/internal/preview/accept_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go, flai/internal/check/items_test.go, flai/internal/check/scope_test.go, flai/internal/check/itemwrite_test.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board_update_test.go, flai/cmd/board_limit_test.go
+- 2: design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md, design/issues/summary.md

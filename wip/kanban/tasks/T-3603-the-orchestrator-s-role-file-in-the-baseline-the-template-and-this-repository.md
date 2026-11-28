@@ -24,16 +24,16 @@ touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows
 after: [T-3600]
 usage:
   source: log
-  seconds: 4
+  seconds: 1507
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 0
-      output: 1
-      cache_read: 47972
-      cache_write: 131
-      cost: 0.0185
+      input: 62
+      output: 243
+      cache_read: 2180099
+      cache_write: 343357
+      cost: 0.9709
 ---
 # T-3603 The orchestrator's role file, in the baseline, the template, and this repository, publishes with release_publish only, and its definition is generated again
 

@@ -23,16 +23,16 @@ tags: [flai, dashboard]
 touches: [flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes_test.go]
 usage:
   source: log
-  seconds: 2594
+  seconds: 2619
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 474
-      cache_read: 4474375
-      cache_write: 202957
-      cost: 1.801
+      input: 62
+      output: 15557
+      cache_read: 4714237
+      cache_write: 129716
+      cost: 2.0238
 ---
 # T-3596 flai doc save, and so the dashboard's doc.save, refuses the workflow file on main and takes it only on a story's branch
 

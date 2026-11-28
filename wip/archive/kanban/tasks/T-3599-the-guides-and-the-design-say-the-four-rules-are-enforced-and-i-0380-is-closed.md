@@ -3,11 +3,11 @@ id: T-3599
 type: task
 nature: remediation
 title: The guides and the design say the four rules are enforced, and I-0380 is closed naming what fixed each
-status: in-progress
+status: done
 parent: S-0844
 owner: alex
 created: 2026-11-17T12:37:14Z
-updated: 2026-11-28T00:24:06Z
+updated: 2026-11-28T00:28:28Z
 transitions:
   - to: ready
     at: 2026-11-28T00:24:06Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:24:06Z
     by: agent-S-0844
+  - to: done
+    at: 2026-11-28T00:28:28Z
+    by: agent-S-0844
 stream: S-0844
 tags: [docs, issues]
-touches: [docs/operators/runbooks/change-the-board.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0380-adr-0301-rules-for-a-project-s-own-workflow-file-that-no-code-enforces-yet.md, design/issues/summary.md]
+touches: [docs/operators/runbooks/change-the-board.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/summary.md]
 after: [T-3595, T-3596, T-3597, T-3598]
+usage:
+  source: log
+  seconds: 262
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 21140
+      cache_read: 6406150
+      cache_write: 176271
+      cost: 2.7502
 ---
 # T-3599 The guides and the design say the four rules are enforced, and I-0380 is closed naming what fixed each
 

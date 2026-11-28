@@ -24,16 +24,16 @@ touches: [flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orches
 after: [T-3600]
 usage:
   source: log
-  seconds: 5
+  seconds: 1499
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 0
-      output: 1
-      cache_read: 47972
-      cache_write: 131
-      cost: 0.0185
+      input: 89
+      output: 400
+      cache_read: 4372889
+      cache_write: 282050
+      cost: 1.791
 ---
 # T-3601 release_publish fetches, evaluates the policy again, publishes only what is pending, names the release that covers each component, and no longer refuses for a publish formula
 

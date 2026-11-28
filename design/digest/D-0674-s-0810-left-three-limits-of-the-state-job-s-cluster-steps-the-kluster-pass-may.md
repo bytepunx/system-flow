@@ -9,7 +9,7 @@ date: 2026-11-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0835]
 ---
 
 # D-0674 S-0810 left three limits of the state job's cluster steps: the kluster pass may deploy a story's pre-rebase head once, a checks step the pass never records waits out the job's two hours, and the review page labels a state job a close-out until S-0814

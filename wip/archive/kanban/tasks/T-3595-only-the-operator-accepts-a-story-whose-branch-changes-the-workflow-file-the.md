@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 2594
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 131
-      output: 711
-      cache_read: 6756114
-      cache_write: 151029
-      cost: 2.6595
+      input: 90
+      output: 22435
+      cache_read: 6798626
+      cache_write: 187070
+      cost: 2.9187
 ---
 # T-3595 Only the operator accepts a story whose branch changes the workflow file: the acceptance preview, the orchestrator's blockers, and the merge queue's eligibility
 

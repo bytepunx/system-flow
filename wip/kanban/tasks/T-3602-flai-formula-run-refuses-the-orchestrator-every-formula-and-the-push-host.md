@@ -24,16 +24,16 @@ touches: [flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cm
 after: [T-3600]
 usage:
   source: log
-  seconds: 5
+  seconds: 1488
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 0
-      output: 1
-      cache_read: 47972
-      cache_write: 131
-      cost: 0.0185
+      input: 58
+      output: 226
+      cache_read: 1763897
+      cache_write: 69818
+      cost: 0.7056
 ---
 # T-3602 flai formula run refuses the orchestrator every formula, and the push host action still gates a served agent's pending publish
 

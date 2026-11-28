@@ -9,7 +9,7 @@ date: 2026-11-27
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0851, TH-1333]
 ---
 
 # D-0676 Since S-0843 every caller outside workitem that has a repository calls the workitem -In forms with repo.Flow(); a NewHolds(nil, ...) claim of bare touches reads no task and keeps the baseline form, and serve's direct baselineFlow reads are I-0406

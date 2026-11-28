@@ -3,12 +3,18 @@ id: T-3542
 type: task
 nature: remediation
 title: flai serve runs the checks alone against a story in review whose deploy passed at its head and whose checks have not, and tries each head's checks once
-status: backlog
+status: in-progress
 parent: S-0835
 owner: alex
 created: 2026-11-17T08:30:57Z
-updated: 2026-11-17T08:30:57Z
-transitions: []
+updated: 2026-11-28T00:35:36Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:35:36Z
+    by: agent-S-0835
+  - to: in-progress
+    at: 2026-11-28T00:35:36Z
+    by: agent-S-0835
 stream: S-0835
 tags: [flai]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go]

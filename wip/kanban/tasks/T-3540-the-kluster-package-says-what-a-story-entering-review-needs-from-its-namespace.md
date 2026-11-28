@@ -3,11 +3,11 @@ id: T-3540
 type: task
 nature: remediation
 title: "The kluster package says what a story entering review needs from its namespace's record: nothing, the checks alone, or a deploy"
-status: in-progress
+status: done
 parent: S-0835
 owner: alex
 created: 2026-11-17T08:30:46Z
-updated: 2026-11-28T00:26:25Z
+updated: 2026-11-28T00:35:12Z
 transitions:
   - to: ready
     at: 2026-11-28T00:26:25Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:26:25Z
     by: agent-S-0835
+  - to: done
+    at: 2026-11-28T00:35:12Z
+    by: agent-S-0835
 stream: S-0835
 tags: [flai]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+usage:
+  source: log
+  seconds: 526
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 95
+      cache_read: 1281064
+      cache_write: 12563
+      cost: 0.4978
 ---
 # T-3540 The kluster package says what a story entering review needs from its namespace's record: nothing, the checks alone, or a deploy
 

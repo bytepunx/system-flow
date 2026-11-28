@@ -24,16 +24,16 @@ touches: [flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.g
 after: [T-3600]
 usage:
   source: log
-  seconds: 4
+  seconds: 1518
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 0
-      output: 1
-      cache_read: 47972
-      cache_write: 131
-      cost: 0.0185
+      input: 58
+      output: 295
+      cache_read: 2343611
+      cache_write: 101463
+      cost: 0.9408
 ---
 # T-3604 flai upgrade removes a retired template file a project has not changed, and reports without removing one with project additions
 

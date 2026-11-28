@@ -23,16 +23,16 @@ tags: [flai, board]
 touches: [flai/internal/workitem/board.go, flai/internal/workitem/board_update_test.go, flai/internal/workitem/boardview_test.go, flai/cmd/board.go, flai/cmd/board_limit_test.go, docs/users/flai-reference.md]
 usage:
   source: log
-  seconds: 2592
+  seconds: 2680
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 85
-      output: 365
-      cache_read: 3658177
-      cache_write: 154197
-      cost: 1.4679
+      input: 81
+      output: 20241
+      cache_read: 6133630
+      cache_write: 168772
+      cost: 2.6332
 ---
 # T-3598 A state the project adds with limit true takes a WIP limit through flai board limit, whose help names no baseline states, and the baseline-only LimitedColumns and DefaultWIPLimits are retired
 

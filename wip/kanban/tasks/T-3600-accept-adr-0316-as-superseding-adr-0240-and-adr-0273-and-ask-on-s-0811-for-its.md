@@ -23,7 +23,7 @@ tags: [docs]
 touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md]
 usage:
   source: log
-  seconds: 5
+  seconds: 9
   estimated: true
   priced_by: estimate
   models:

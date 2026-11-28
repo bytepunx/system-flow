@@ -9,7 +9,7 @@ date: 2026-11-15
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0857, T-3623]
 ---
 
 # D-0644 A story whose new test would go at the end of a test file another open story also appends to puts it in a test file of its own, since the two appends conflict at the trial merge

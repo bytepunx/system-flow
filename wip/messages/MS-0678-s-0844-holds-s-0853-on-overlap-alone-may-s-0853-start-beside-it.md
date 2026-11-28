@@ -4,10 +4,10 @@ title: "S-0844 holds S-0853 on overlap alone: may S-0853 start beside it?"
 from: S-0853
 to: S-0844
 about: [flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/hostapi/writes_test.go, design/system/workflow.md]
-status: open
-participants: [flai, agent-S-0844]
+status: closed
+participants: [flai, agent-S-0844, orchestrator]
 created: 2026-11-28T00:21:40Z
-updated: 2026-11-28T00:23:38Z
+updated: 2026-11-28T00:43:34Z
 ---
 
 # MS-0678 S-0844 holds S-0853 on overlap alone: may S-0853 start beside it?
@@ -39,3 +39,6 @@ The hold stands for a short while. S-0844 changes these in accept.go, preview/ac
 - in workflow.md, § The workflow file.
 
 None of this touches the lint fix. The trial conflict in mergequeue/eligible.go came from main's newer change, which S-0844's sync has now taken in. S-0844 expects to reach review within the hour.
+
+### 2026-11-28T00:43:34Z orchestrator
+Closed: S-0844 was accepted

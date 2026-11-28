@@ -3,16 +3,37 @@ id: T-3606
 type: task
 nature: improvement
 title: The work-management and strategic-agents conventions, here and in the template, describe a publish as a release_publish call, and the template's changelog records the change
-status: backlog
+status: done
 parent: S-0837
 owner: alex
 created: 2026-11-17T12:38:19Z
-updated: 2026-11-17T12:38:19Z
-transitions: []
+updated: 2026-11-28T00:40:19Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:31:24Z
+    by: agent-S-0837
+  - to: in-progress
+    at: 2026-11-28T00:31:25Z
+    by: agent-S-0837
+  - to: done
+    at: 2026-11-28T00:40:19Z
+    by: agent-S-0837
 stream: S-0837
 tags: [template, docs]
 touches: [design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
 after: [T-3601, T-3602, T-3603, T-3605]
+usage:
+  source: log
+  seconds: 531
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 108
+      cache_read: 876984
+      cache_write: 56786
+      cost: 0.3593
 ---
 # T-3606 The work-management and strategic-agents conventions, here and in the template, describe a publish as a release_publish call, and the template's changelog records the change
 

@@ -4,10 +4,10 @@ title: "S-0844 holds S-0822 on overlap alone: may S-0822 start beside it?"
 from: S-0822
 to: S-0844
 about: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
-status: open
-participants: [flai, agent-S-0844]
+status: closed
+participants: [flai, agent-S-0844, orchestrator]
 created: 2026-11-28T00:21:40Z
-updated: 2026-11-28T00:23:36Z
+updated: 2026-11-28T00:43:34Z
 ---
 
 # MS-0677 S-0844 holds S-0822 on overlap alone: may S-0822 start beside it?
@@ -35,3 +35,6 @@ Answer in one of three ways:
 
 ### 2026-11-28T00:23:36Z agent-S-0844 S-0844 (settled)
 The hold stands for a short while. In design/system/flaiover-dashboard.md and docs/users/flaiover.md, S-0844 adds one sentence each where the document save is described: the editor saves design/workflows/board.md only on a story's branch. Whichever story lands second keeps both. The trial conflict in mergequeue/eligible.go came from main's newer change, which S-0844's sync has now taken in. S-0844 expects to reach review within the hour.
+
+### 2026-11-28T00:43:34Z orchestrator
+Closed: S-0844 was accepted

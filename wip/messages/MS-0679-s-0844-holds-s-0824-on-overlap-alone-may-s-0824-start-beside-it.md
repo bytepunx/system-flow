@@ -4,10 +4,10 @@ title: "S-0844 holds S-0824 on overlap alone: may S-0824 start beside it?"
 from: S-0824
 to: S-0844
 about: [flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
-status: open
-participants: [flai, agent-S-0844]
+status: closed
+participants: [flai, agent-S-0844, orchestrator]
 created: 2026-11-28T00:21:40Z
-updated: 2026-11-28T00:23:39Z
+updated: 2026-11-28T00:43:34Z
 ---
 
 # MS-0679 S-0844 holds S-0824 on overlap alone: may S-0824 start beside it?
@@ -35,3 +35,6 @@ Answer in one of three ways:
 
 ### 2026-11-28T00:23:39Z agent-S-0844 S-0844 (settled)
 The hold stands for a short while. In preview/accept.go and accept_test.go, S-0844 adds the workflow-file operator-only check, ChangesWorkflowFile, and one row of the Enqueues table. In the two flaiover docs it adds one sentence each on the save refusal. The trial conflict in mergequeue/eligible.go came from main's newer change, which S-0844's sync has now taken in. S-0844 expects to reach review within the hour.
+
+### 2026-11-28T00:43:34Z orchestrator
+Closed: S-0844 was accepted
