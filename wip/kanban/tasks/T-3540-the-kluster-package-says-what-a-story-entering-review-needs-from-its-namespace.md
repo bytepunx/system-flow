@@ -3,12 +3,18 @@ id: T-3540
 type: task
 nature: remediation
 title: "The kluster package says what a story entering review needs from its namespace's record: nothing, the checks alone, or a deploy"
-status: backlog
+status: in-progress
 parent: S-0835
 owner: alex
 created: 2026-11-17T08:30:46Z
-updated: 2026-11-17T08:30:46Z
-transitions: []
+updated: 2026-11-28T00:26:25Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:26:25Z
+    by: agent-S-0835
+  - to: in-progress
+    at: 2026-11-28T00:26:25Z
+    by: agent-S-0835
 stream: S-0835
 tags: [flai]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]

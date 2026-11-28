@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2560
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 757
-      cache_read: 10227304
-      cache_write: 353665
-      cost: 4.0666
+      input: 67
+      output: 11278
+      cache_read: 10497739
+      cache_write: 110969
+      cost: 3.0105
 ---
 # T-3584 Hold the auto-upgrade while a close-out or rebase and resolve job runs, take no new job meanwhile, and upgrade once the bound passes
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 74
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 74
-      cache_read: 1816091
-      cache_write: 18983
-      cost: 0.7052
+      input: 12
+      output: 1956
+      cache_read: 1820631
+      cache_write: 19245
+      cost: 0.5221
 ---
 # T-3583 Decide in an ADR that the auto-upgrade drains the close-out jobs before it restarts and that serve asks again once a job a restart interrupted
 

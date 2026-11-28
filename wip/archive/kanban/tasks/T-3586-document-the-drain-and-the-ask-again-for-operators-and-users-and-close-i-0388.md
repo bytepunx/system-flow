@@ -24,16 +24,16 @@ touches: [docs/operators/index.md, docs/users/flai.md, design/issues/I-0388-flai
 after: [T-3585]
 usage:
   source: log
-  seconds: 28
+  seconds: 34
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 91
-      cache_read: 1403679
-      cache_write: 9019
-      cost: 0.5429
+      input: 9
+      output: 1506
+      cache_read: 1401576
+      cache_write: 14816
+      cost: 0.4019
 ---
 # T-3586 Document the drain and the ask again for operators and users, and close I-0388
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 711
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 279
-      cache_read: 2731979
-      cache_write: 221363
-      cost: 1.1351
+      input: 19
+      output: 3148
+      cache_read: 2930127
+      cache_write: 30974
+      cost: 0.8403
 ---
 # T-3585 Ask again once, at serve's start, a close-out or rebase and resolve job a restart left interrupted
 
