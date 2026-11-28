@@ -378,47 +378,81 @@ func StoryHead(git execx.Runner, root, story string) (string, error) {
 // why. Only a record that cannot be read, or a diff git cannot take, is an
 // error.
 func AcceptGate(git execx.Runner, root string, m manifest.Manifest, story, head string, checksOn bool) (ok bool, reason string, err error) {
+	need, reason, err := ReviewNeeds(git, root, m, story, head, checksOn)
+	return err == nil && need == NeedNothing, reason, err
+}
+
+// ReviewNeed is what a story's namespace needs before its record stands as
+// the review's evidence at the story's head (ADR-0292 §3).
+type ReviewNeed string
+
+// What a story's namespace needs at its head.
+const (
+	// NeedNothing: the deploy passed at the head, its checks too while the
+	// checks host action is on.
+	NeedNothing ReviewNeed = "nothing"
+	// NeedChecks: the deploy passed at the head and the checks host action is
+	// on, but no checks run passed there, so the checks run alone.
+	NeedChecks ReviewNeed = "checks"
+	// NeedDeploy: no deploy passed at the head, so the story is deployed,
+	// then checked.
+	NeedDeploy ReviewNeed = "deploy"
+)
+
+// ReviewNeeds says what story's namespace needs at head, the story branch's
+// head, for its record to stand as the review's while the kluster host action
+// is on for the project run from root: nothing, the checks alone, or a deploy
+// (ADR-0292 §3), and, but for nothing, why, in the words AcceptGate gives
+// (ADR-0254 §5a). checksOn says the checks host action is on. A record's
+// commit is at head as AtHead judges it with git in root and m's layout: head
+// itself, or a commit followed only by changes under the design, docs, and
+// wip folders. A story with no head, no record, a deploy not at the head, or
+// one that did not pass needs a deploy; one whose deploy passed at the head
+// and whose checks failed, never ran, or ran at a commit not at the head
+// needs the checks alone, while checksOn. Only a record that cannot be read,
+// or a diff git cannot take, is an error, which answers a deploy.
+func ReviewNeeds(git execx.Runner, root string, m manifest.Manifest, story, head string, checksOn bool) (need ReviewNeed, reason string, err error) {
 	ns, err := StoryNamespace(story)
 	if err != nil {
-		return false, "", err
+		return NeedDeploy, "", err
 	}
 	story = strings.ToUpper(story)
 	if head == "" {
-		return false, fmt.Sprintf("%s has no branch story/%s, so its namespace %s cannot be deployed at its head", story, story, ns), nil
+		return NeedDeploy, fmt.Sprintf("%s has no branch story/%s, so its namespace %s cannot be deployed at its head", story, story, ns), nil
 	}
 	r, found, err := ReadRecord(root, ns)
 	if err != nil {
-		return false, "", err
+		return NeedDeploy, "", err
 	}
 	if !found {
-		return false, fmt.Sprintf("%s's namespace %s was never deployed: no deploy of it is recorded", story, ns), nil
+		return NeedDeploy, fmt.Sprintf("%s's namespace %s was never deployed: no deploy of it is recorded", story, ns), nil
 	}
 	deployed, err := AtHead(git, root, m, r.Commit, head)
 	if err != nil {
-		return false, "", err
+		return NeedDeploy, "", err
 	}
 	checked := deployed
 	if checksOn && r.ChecksCommit != r.Commit {
 		if checked, err = AtHead(git, root, m, r.ChecksCommit, head); err != nil {
-			return false, "", err
+			return NeedDeploy, "", err
 		}
 	}
 	job, outcome := lastJob(root, r)
 	switch {
 	case !deployed.AtHead:
-		return false, fmt.Sprintf("the last %s of %s's namespace %s was at %s, not at the story's head %s, and it %s: %s", job, story, ns, shortCommit(r.Commit), shortCommit(head), outcome, deployed.Why), nil
+		return NeedDeploy, fmt.Sprintf("the last %s of %s's namespace %s was at %s, not at the story's head %s, and it %s: %s", job, story, ns, shortCommit(r.Commit), shortCommit(head), outcome, deployed.Why), nil
 	case r.Outcome != OutcomePassed:
-		return false, fmt.Sprintf("the %s of %s's namespace %s at %s %s", job, story, ns, shortCommit(head), outcome), nil
+		return NeedDeploy, fmt.Sprintf("the %s of %s's namespace %s at %s %s", job, story, ns, shortCommit(head), outcome), nil
 	case !checksOn:
-		return true, "", nil
+		return NeedNothing, "", nil
 	case r.ChecksCommit == "":
-		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet", story, ns, shortCommit(head)), nil
+		return NeedChecks, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet", story, ns, shortCommit(head)), nil
 	case !checked.AtHead:
-		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet: its last, at %s, ended %s, and %s", story, ns, shortCommit(head), shortCommit(r.ChecksCommit), r.ChecksOutcome, checked.Why), nil
+		return NeedChecks, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet: its last, at %s, ended %s, and %s", story, ns, shortCommit(head), shortCommit(r.ChecksCommit), r.ChecksOutcome, checked.Why), nil
 	case r.ChecksOutcome != OutcomePassed:
-		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and the checks run against it there ended %s", story, ns, shortCommit(head), r.ChecksOutcome), nil
+		return NeedChecks, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and the checks run against it there ended %s", story, ns, shortCommit(head), r.ChecksOutcome), nil
 	}
-	return true, "", nil
+	return NeedNothing, "", nil
 }
 
 // lastJob names the last job r records, a deploy or a teardown, and its

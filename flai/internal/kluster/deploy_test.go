@@ -714,6 +714,76 @@ func TestAcceptGateTakesARecordFollowedOnlyByDesignDocsAndWipAsAtTheHead(t *test
 	}
 }
 
+// I-0362, ADR-0292 §3: a story entering review needs nothing when its deploy
+// passed at the head, with its checks while they are on; the checks alone
+// when its deploy passed at the head and its checks did not, never ran, or
+// ran at a commit not at the head; and a deploy otherwise. A record followed
+// only by design, docs, and wip changes is at the head.
+func TestReviewNeeds(t *testing.T) {
+	cases := []struct {
+		name            string
+		record          bool
+		commit, outcome string
+		checksAt        string
+		checksOutcome   string
+		head            string
+		checksOn        bool
+		want            ReviewNeed
+		reason          string // the reason holds it; empty for nothing
+	}{
+		{"deploy and checks passed at the head", true, evC3, OutcomePassed, evC3, OutcomePassed, evC3, true, NeedNothing, ""},
+		{"checks failed at the head", true, evC3, OutcomePassed, evC3, OutcomeFailed, evC3, true, NeedChecks, "checks run against it there ended failed"},
+		{"checks failed, checks off", true, evC3, OutcomePassed, evC3, OutcomeFailed, evC3, false, NeedNothing, ""},
+		{"checks never ran", true, evC3, OutcomePassed, "", "", evC3, true, NeedChecks, "no checks run against it has ended there yet"},
+		{"checks never ran, checks off", true, evC3, OutcomePassed, "", "", evC3, false, NeedNothing, ""},
+		{"checks at an older commit followed by code", true, evC3, OutcomePassed, evC1, OutcomePassed, evC3, true, NeedChecks, "its last, at 111111111111, ended passed"},
+		{"deploy followed only by design/issues, checks failed", true, evC2, OutcomePassed, evC2, OutcomeFailed, evC3, true, NeedChecks, "ended failed"},
+		{"deploy followed only by design/issues, checks never ran", true, evC2, OutcomePassed, "", "", evC3, true, NeedChecks, "no checks run"},
+		{"deploy followed only by design/issues, checks passed", true, evC2, OutcomePassed, evC2, OutcomePassed, evC3, true, NeedNothing, ""},
+		{"deploy followed by a code commit", true, evC2, OutcomePassed, evC2, OutcomePassed, evC4, true, NeedDeploy, "not at the story's head 444444444444"},
+		{"deploy failed at the head", true, evC3, OutcomeFailed, "", "", evC3, true, NeedDeploy, "failed"},
+		{"deploy failed at the head, checks off", true, evC3, OutcomeFailed, "", "", evC3, false, NeedDeploy, "failed"},
+		{"no record", false, "", "", "", "", evC3, true, NeedDeploy, "was never deployed"},
+		{"no record, checks off", false, "", "", "", "", evC3, false, NeedDeploy, "was never deployed"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			if c.record {
+				evRecord(t, root, c.commit, c.outcome, c.checksAt, c.checksOutcome)
+			}
+			need, reason, err := ReviewNeeds(newGraphGit(c.head), root, evManifest(), "S-0662", c.head, c.checksOn)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if need != c.want {
+				t.Fatalf("need = %s, want %s; reason %q", need, c.want, reason)
+			}
+			if c.reason == "" && reason != "" {
+				t.Errorf("nothing needed gives the reason %q", reason)
+			}
+			if !strings.Contains(reason, c.reason) {
+				t.Errorf("reason %q does not say %q", reason, c.reason)
+			}
+			ok, _, _ := AcceptGate(newGraphGit(c.head), root, evManifest(), "S-0662", c.head, c.checksOn)
+			if ok != (need == NeedNothing) {
+				t.Errorf("AcceptGate ok = %v where ReviewNeeds answers %s", ok, need)
+			}
+		})
+	}
+
+	if need, reason, err := ReviewNeeds(newGraphGit(""), t.TempDir(), evManifest(), "S-0662", "", true); need != NeedDeploy || err != nil || !strings.Contains(reason, "no branch story/S-0662") {
+		t.Errorf("no head: %s %q %v", need, reason, err)
+	}
+	root := t.TempDir()
+	evRecord(t, root, evC2, OutcomePassed, evC2, OutcomeFailed)
+	git := newGraphGit(evC3)
+	git.diffErr = errors.New("exit status 128")
+	if need, _, err := ReviewNeeds(git, root, evManifest(), "S-0662", evC3, true); need != NeedDeploy || err == nil {
+		t.Errorf("a diff git cannot take: need %s, err %v", need, err)
+	}
+}
+
 // headsGit is an execx.Runner whose git rev-parse answers head, or fails
 // when head is empty, and records the arguments it was given.
 type headsGit struct {
