@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -257,5 +258,135 @@ func TestRejectedAdrIsImmutableButForItsTopics(t *testing.T) {
 	}
 	if got := read(t, filepath.Join(root, path)); got != withTopics {
 		t.Errorf("the topics are written and nothing else changes:\n%s", got)
+	}
+}
+
+// workflowFileProject is project with the baseline workflow file at the
+// path the manifest's design folder gives it, on the main checkout and in
+// S-0001's worktree, and that path.
+func workflowFileProject(t *testing.T) (repo *workitem.Repo, root, wt, rel, content string) {
+	t.Helper()
+	repo, root, wt = project(t)
+	data, err := os.ReadFile(filepath.Join("..", "workflow", "baseline", "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel, content = workflow.Rel(repo.Manifest.Layout["design"]), string(data)
+	for _, dir := range []string{root, wt} {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return repo, root, wt, rel, content
+}
+
+// workflowFileEdit is the workflow file with a sentence added to its prose.
+func workflowFileEdit(t *testing.T, content string) string {
+	t.Helper()
+	edited := strings.Replace(content, "flai reads only the front matter.", "flai reads only the front matter. Edited.", 1)
+	if edited == content {
+		t.Fatal("the baseline workflow file no longer has the sentence the edit changes")
+	}
+	return edited
+}
+
+// I-0380, ADR-0301 §7: a save that names no story, as the dashboard's on
+// main, refuses the workflow file, writes nothing, and runs no git; Show
+// gives it read-only with the same reason.
+func TestWorkflowFileSaveOnMainIsRefused(t *testing.T) {
+	repo, root, wt, rel, content := workflowFileProject(t)
+	if rel != "design/workflows/board.md" {
+		t.Fatalf("the fixture's workflow file is %s", rel)
+	}
+	git := &fakeGit{branch: "main"}
+	_, err := Save(repo, git, rel, workflowFileEdit(t, content), SaveOptions{Hash: Hash(content), Now: now})
+	r, ok := IsRefused(err)
+	if !ok {
+		t.Fatalf("a save of the workflow file on main must be refused: %v", err)
+	}
+	for _, want := range []string{rel + " cannot be edited here", "changes only on a story's branch", "ADR-0301 §7", "name a story (--story S-nnnn)"} {
+		if !strings.Contains(r.Reason, want) {
+			t.Errorf("the refusal should say %q: %s", want, r.Reason)
+		}
+	}
+	if r.Path != rel || len(r.Findings) != 0 {
+		t.Errorf("the refusal names the file and carries no findings: %+v", r)
+	}
+	for _, dir := range []string{root, wt} {
+		if got := read(t, filepath.Join(dir, rel)); got != content {
+			t.Errorf("nothing is written in %s:\n%s", dir, got)
+		}
+	}
+	if len(git.calls) != 0 {
+		t.Errorf("a refused save runs no git: %v", git.calls)
+	}
+
+	doc, err := Show(repo, rel, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if doc.Mode != None || !strings.HasSuffix(r.Reason, doc.Reason) || doc.Content != content {
+		t.Errorf("without a story the workflow file is read-only, for the refusal's reason: %q %q", doc.Mode, doc.Reason)
+	}
+	if doc, err := Show(repo, rel, "S-0001"); err != nil || doc.Mode != Full || doc.Reason != "" {
+		t.Errorf("on a story's branch it is edited whole: %+v %v", doc, err)
+	}
+	if doc, err := Show(repo, planPath, ""); err != nil || doc.Mode != Full {
+		t.Errorf("another design document stays editable on main: %+v %v", doc, err)
+	}
+}
+
+// I-0380, ADR-0145: a save of the workflow file that names a story is
+// checked in its worktree and committed on its branch there, and leaves the
+// main checkout's file as it was.
+func TestWorkflowFileSaveNamingAStoryCommitsOnItsBranch(t *testing.T) {
+	repo, root, wt, rel, content := workflowFileProject(t)
+	git := &fakeGit{branch: "story/S-0001"}
+	res, err := Save(repo, git, rel, workflowFileEdit(t, content), SaveOptions{Hash: Hash(content), Story: "S-0001", Message: "reshape the board", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Committed || res.Commit != "abc1234" || res.Path != rel {
+		t.Errorf("result: %+v", res)
+	}
+	if got := read(t, filepath.Join(wt, rel)); !strings.Contains(got, "front matter. Edited.") {
+		t.Errorf("the worktree's workflow file carries the edit:\n%s", got)
+	}
+	if got := read(t, filepath.Join(root, rel)); got != content {
+		t.Errorf("the main checkout's workflow file is left as it was:\n%s", got)
+	}
+	joined := strings.Join(git.calls, "\n")
+	for _, w := range []string{wt + ": git add -- " + rel, wt + ": git commit --quiet -m docs: [S-0001] reshape the board -- " + rel} {
+		if !strings.Contains(joined, w) {
+			t.Errorf("git should have run %q; ran:\n%s", w, joined)
+		}
+	}
+	if strings.Contains(joined, root+": git add") || strings.Contains(joined, root+": git commit") {
+		t.Errorf("nothing is committed in the main checkout:\n%s", joined)
+	}
+}
+
+// I-0380: file save reaches no markdown file, so it never saves the
+// workflow file, with a story or without one, and writes nothing.
+func TestWorkflowFileIsOutOfFileSavesReach(t *testing.T) {
+	repo, root, wt, rel, content := workflowFileProject(t)
+	if _, err := FileReach(repo.Manifest, rel); err == nil || !strings.Contains(err.Error(), rel+" is a markdown file") {
+		t.Errorf("file save does not reach the workflow file: %v", err)
+	}
+	for _, story := range []string{"", "S-0001"} {
+		git := &fakeGit{branch: "story/S-0001"}
+		_, err := FileSave(repo, git, rel, workflowFileEdit(t, content), SaveOptions{Hash: Hash(content), Story: story, Now: now})
+		if err == nil || !strings.Contains(err.Error(), "is a markdown file") {
+			t.Errorf("file save with story %q: %v", story, err)
+		}
+	}
+	for _, dir := range []string{root, wt} {
+		if got := read(t, filepath.Join(dir, rel)); got != content {
+			t.Errorf("nothing is written in %s:\n%s", dir, got)
+		}
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
@@ -2550,6 +2551,52 @@ func TestDocMethodsRunInAStorysWorktree(t *testing.T) {
 	}
 }
 
+// I-0380, ADR-0301 §7: the dashboard's doc.save of the workflow file with no
+// story runs flai doc save on the main checkout without --story, and flai's
+// refusal there, docedit's own, reaches the dashboard as Refused with its
+// reason, which says to name a story.
+func TestWorkflowFileDocSaveOnMainIsRefused(t *testing.T) {
+	p := withDocs(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel := workflow.Rel(repo.Manifest.Layout["design"])
+	const board = "---\ntitle: Board\n---\n\n# Board\n"
+	if err := os.MkdirAll(filepath.Join(p.Root, "design", "workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.Root, filepath.FromSlash(rel)), []byte(board), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, serr := docedit.Save(repo, execx.System{}, rel, "# mine\n", docedit.SaveOptions{Hash: docedit.Hash(board), NoCommit: true})
+	r, ok := docedit.IsRefused(serr)
+	if !ok {
+		t.Fatalf("flai doc save of %s with no story must be refused: %v", rel, serr)
+	}
+	out, err := json.Marshal(map[string]any{"refused": r})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &recorder{ran: Ran{Exit: 4, Stdout: out, Events: []map[string]any{{"level": "FATAL", "err": serr.Error()}}}}
+	params := `{"path":"` + rel + `","content":"# mine\n","hash":"` + docedit.Hash(board) + `",` + rid + `}`
+	_, e := writeMethods(rec.run, time.Now, Host{})["doc.save"](context.Background(), p, json.RawMessage(params))
+	if len(rec.runs) != 1 || rec.runs[0].Dir != p.Root || slices.ContainsFunc(rec.runs[0].Args, func(a string) bool { return strings.HasPrefix(a, "--story") }) {
+		t.Fatalf("doc.save with no story runs flai doc save once on the main checkout, without --story: %+v", rec.runs)
+	}
+	if e == nil || e.Code != Refused || e.Message != r.Reason {
+		t.Fatalf("the refusal reaches the dashboard as Refused with flai's reason %q: %+v", r.Reason, e)
+	}
+	for _, want := range []string{"changes only on a story's branch", "ADR-0301 §7", "name a story"} {
+		if !strings.Contains(e.Message, want) {
+			t.Errorf("the refusal should say %q: %s", want, e.Message)
+		}
+	}
+	if got, err := os.ReadFile(filepath.Join(p.Root, filepath.FromSlash(rel))); err != nil || string(got) != board {
+		t.Errorf("nothing is written: %q %v", got, err)
+	}
+}
+
 // S-0436: file.get and file.save with a story run flai file --story in that
 // story's worktree, as doc.show and doc.save do, and refuse a story without
 // one, or that is not there, before anything runs.
@@ -2651,11 +2698,12 @@ func TestFileMethodsRefuseAPathOutOfReach(t *testing.T) {
 		t.Fatal(err)
 	}
 	for path, says := range map[string]string{
-		"src/main.go":             "is outside the design and docs folders and is not the design token file web/tokens.json or the design stylesheet web/src/theme.css",
-		"wip/kanban/board.json":   "is under the wip folder",
-		"design/system/plan.md":   "is a markdown file; read and save it with doc.show and doc.save",
-		"web/src/other.css":       "is outside the design and docs folders",
-		"design/../../etc/passwd": "is not a path inside the repository",
+		"src/main.go":               "is outside the design and docs folders and is not the design token file web/tokens.json or the design stylesheet web/src/theme.css",
+		"wip/kanban/board.json":     "is under the wip folder",
+		"design/system/plan.md":     "is a markdown file; read and save it with doc.show and doc.save",
+		"design/workflows/board.md": "is a markdown file; read and save it with doc.show and doc.save", // I-0380, ADR-0301 §7: never the workflow file
+		"web/src/other.css":         "is outside the design and docs folders",
+		"design/../../etc/passwd":   "is not a path inside the repository",
 	} {
 		for method, params := range map[string]string{
 			"file.get":  `{"path":"` + path + `"}`,

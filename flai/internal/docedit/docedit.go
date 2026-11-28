@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -196,8 +197,19 @@ func acceptedADR(repo *workitem.Repo, abs string) bool {
 	return m != nil && m[1] != "proposed" && slices.Contains(check.ADRStatuses, m[1])
 }
 
+// workflowOnMain is why an edit that names no story may not change the file
+// at clean, or empty when it may: the project's workflow file is code the
+// operator runs, which changes only through a story, so an editor saves it on
+// a story's branch in its worktree and never on main (ADR-0301 §7, ADR-0145).
+func workflowOnMain(repo *workitem.Repo, clean, story string) string {
+	if story != "" || clean != workflow.Rel(repo.Manifest.Layout["design"]) {
+		return ""
+	}
+	return "the workflow file changes only on a story's branch (ADR-0301 §7); name a story (--story S-nnnn) to save it on that story's branch in its worktree"
+}
+
 // Show loads a document for editing, from story's worktree when story is
-// not empty.
+// not empty. Without a story the workflow file is read-only.
 func Show(repo *workitem.Repo, rel, story string) (*Doc, error) {
 	at, err := locate(repo, rel, story)
 	if err != nil {
@@ -208,6 +220,9 @@ func Show(repo *workitem.Repo, rel, story string) (*Doc, error) {
 		return nil, err
 	}
 	mode, reason := ModeOf(at.repo, at.abs)
+	if why := workflowOnMain(at.repo, at.clean, at.story); why != "" {
+		mode, reason = None, why
+	}
 	return &Doc{Path: at.clean, Content: string(data), Hash: Hash(string(data)), Mode: mode, Reason: reason}, nil
 }
 
@@ -216,8 +231,8 @@ var itemID = regexp.MustCompile(`^([EST]-\d+)`)
 
 // Save writes content to the document when the rules of ADR-0023 allow it;
 // with opt.Story, in that story's worktree, checked there and committed on
-// its branch. The error is a *ConflictError or a *RefusedError when that is
-// why.
+// its branch. Without a story it refuses the workflow file. The error is a
+// *ConflictError or a *RefusedError when that is why.
 func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOptions) (*Result, error) {
 	at, err := locate(repo, rel, opt.Story)
 	if err != nil {
@@ -225,6 +240,9 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 	}
 	abs, clean := at.abs, at.clean
 	repo, opt.Story = at.repo, at.story
+	if why := workflowOnMain(repo, clean, opt.Story); why != "" {
+		return nil, &RefusedError{Path: clean, Reason: clean + " cannot be edited here: " + why}
+	}
 	if opt.Story != "" {
 		if err := onStoryBranch(r, repo.Root, opt.Story, clean); err != nil {
 			return nil, err
