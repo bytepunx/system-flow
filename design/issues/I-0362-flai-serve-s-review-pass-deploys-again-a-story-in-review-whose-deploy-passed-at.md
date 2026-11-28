@@ -2,12 +2,12 @@
 id: I-0362
 title: "flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-13T13:28:22Z
 last_reported: 2026-11-13T13:28:22Z
-updated: 2026-11-17T08:17:30Z
+updated: 2026-11-28T00:50:15Z
 ---
 
 # I-0362 flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone
@@ -24,3 +24,4 @@ S-0661 built the checks run a story's agent asks for alone (kluster_checks, flai
 ## Remediation
 
 Story S-0835 remediates this issue, created from it at 2026-11-17T08:17:30Z.
+Closed 2026-11-28T00:50:15Z: S-0835: flai serve's kluster pass judges a story in review with kluster.ReviewNeeds (nothing, the checks alone, or a deploy) and, when its deploy passed at the head and only its checks have not, queues the checks alone against the namespace as deployed, tried once per head, taking the record at the head as kluster.AtHead judges it. TestAStoryInReviewWhoseDeployPassedAtTheHeadGetsTheChecksAlone, TestAStoryEnteringReviewWhoseChecksNeverRanGetsTheChecksAlone, and TestAnAskedDeploysFailingChecksOpenNoThreadAndReviewRunsTheChecksAlone in flai/internal/serve reproduce it.
