@@ -6,7 +6,7 @@ title: A publish the orchestrator starts is a release_publish call and makes no 
 status: in-progress
 owner: alex
 created: 2026-11-17T08:21:17Z
-updated: 2026-11-28T00:41:16Z
+updated: 2026-11-28T01:06:42Z
 transitions:
   - to: ready
     at: 2026-11-18T09:20:04Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-27T23:55:10Z
     by: agent-S-0837
+blocked:
+  - from: 2026-11-28T01:06:42Z
+    reason: awaiting the operator on TH-1325
 tags: [flai, template]
 topics: [release, orchestration, upgrade]
 touches: [design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md, design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/writes_test.go, flai/cmd/formula.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/release.go, flai/cmd/release_push_action_test.go, docs/users/flai-reference.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, flai/internal/roles/roles_test.go, flai/internal/guard/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, flai/cmd/upgrade.go, flai/cmd/upgrade_test.go, template/root/design/workflows/formulas/publish.md, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, scripts/fetch.sh, template/root/scripts/fetch.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/publish_judgement_test.go, design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/workflow.md, design/system/pushing-from-the-board.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, docs/contributors/template.md, flai/cmd/formula_test.go, flai/cmd/publish_formula_suites_test.go, design/system/template.md]
@@ -24,23 +27,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2710
-  estimated: true
-  priced_by: estimate
+  seconds: 4241
+  priced_by: harness
   turns:
     - day: 2026-11-27
       ceremony: 2
       work: 26
     - day: 2026-11-28
       ceremony: 1
-      work: 19
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 464
-      output: 2490
-      cache_read: 24854727
-      cache_write: 1295473
-      cost: 10.0617
+      input: 574
+      output: 173572
+      cache_read: 44911557
+      cache_write: 1364559
+      cost: 20.5766
   strategic:
     - kind: planner
       seconds: 119
@@ -53,15 +55,15 @@ usage:
           cache_write: 27783
           cost: 0.7023
     - kind: orchestrator
-      seconds: 142
+      seconds: 176
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 445
-          cache_read: 1799793
-          cache_write: 230074
-          cost: 0.6375
+          input: 52
+          output: 518
+          cache_read: 2165595
+          cache_write: 288818
+          cost: 0.773
         - model: claude-sonnet-5-5
           input: 1
           output: 7

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1488
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 226
-      cache_read: 1763897
-      cache_write: 69818
-      cost: 0.7056
+      input: 23
+      output: 6966
+      cache_read: 1802562
+      cache_write: 54768
+      cost: 0.8259
 ---
 # T-3602 flai formula run refuses the orchestrator every formula, and the push host action still gates a served agent's pending publish
 

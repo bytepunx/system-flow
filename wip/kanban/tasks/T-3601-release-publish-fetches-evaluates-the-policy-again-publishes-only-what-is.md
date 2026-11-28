@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1499
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 89
-      output: 400
-      cache_read: 4372889
-      cache_write: 282050
-      cost: 1.791
+      input: 58
+      output: 17684
+      cache_read: 4575809
+      cache_write: 139028
+      cost: 2.0964
 ---
 # T-3601 release_publish fetches, evaluates the policy again, publishes only what is pending, names the release that covers each component, and no longer refuses for a publish formula
 

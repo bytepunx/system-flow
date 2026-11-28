@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 0
-      output: 1
-      cache_read: 47972
-      cache_write: 131
-      cost: 0.0185
+      input: 1
+      output: 183
+      cache_read: 47285
+      cache_write: 1437
+      cost: 0.0217
 ---
 # T-3600 Accept ADR-0316 as superseding ADR-0240 and ADR-0273, and ask on S-0811 for its publish formula criterion to name release_publish
 

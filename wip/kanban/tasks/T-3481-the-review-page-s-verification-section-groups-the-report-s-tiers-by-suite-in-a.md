@@ -3,12 +3,18 @@ id: T-3481
 type: task
 nature: feature
 title: The review page's verification section groups the report's tiers by suite in a VerifySuites component and names the suites the next transitions need that have not passed at the head
-status: backlog
+status: in-progress
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:51:13Z
-updated: 2026-11-16T23:51:13Z
-transitions: []
+updated: 2026-11-28T01:13:48Z
+transitions:
+  - to: ready
+    at: 2026-11-28T01:13:48Z
+    by: agent-S-0814
+  - to: in-progress
+    at: 2026-11-28T01:13:48Z
+    by: agent-S-0814
 stream: S-0814
 tags: [flaiover]
 touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/VerifySuites.svelte, flaiover/src/lib/components/VerifySuites.svelte.test.ts, design/components/flaiover/src/lib/components/VerifySuites.examples.json]

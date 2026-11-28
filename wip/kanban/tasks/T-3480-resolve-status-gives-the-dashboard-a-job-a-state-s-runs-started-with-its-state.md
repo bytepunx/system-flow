@@ -3,11 +3,11 @@ id: T-3480
 type: task
 nature: feature
 title: resolve.status gives the dashboard a job a state's runs started, with its state, its current step, its skipped cluster steps and why, and how it ended
-status: in-progress
+status: done
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:51:03Z
-updated: 2026-11-28T00:43:59Z
+updated: 2026-11-28T01:13:22Z
 transitions:
   - to: ready
     at: 2026-11-28T00:43:59Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:43:59Z
     by: system-flow
+  - to: done
+    at: 2026-11-28T01:13:22Z
+    by: agent-S-0814
 stream: S-0814
 tags: [flai]
 touches: [flai/internal/hostapi/resolve_status.go, flai/internal/hostapi/resolve_status_test.go]
+usage:
+  source: log
+  seconds: 1753
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 344
+      cache_read: 3250429
+      cache_write: 235277
+      cost: 1.3415
 ---
 # T-3480 resolve.status gives the dashboard a job a state's runs started, with its state, its current step, its skipped cluster steps and why, and how it ended
 

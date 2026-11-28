@@ -23,16 +23,16 @@ tags: [flai]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 usage:
   source: log
-  seconds: 526
+  seconds: 527
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 95
-      cache_read: 1281064
-      cache_write: 12563
-      cost: 0.4978
+      input: 9
+      output: 2207
+      cache_read: 1274114
+      cache_write: 19514
+      cost: 0.4551
 ---
 # T-3540 The kluster package says what a story entering review needs from its namespace's record: nothing, the checks alone, or a deploy
 

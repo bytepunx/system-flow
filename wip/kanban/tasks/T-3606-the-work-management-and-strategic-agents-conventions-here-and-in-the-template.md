@@ -24,16 +24,16 @@ touches: [design/conventions/work-management.md, design/conventions/strategic-ag
 after: [T-3601, T-3602, T-3603, T-3605]
 usage:
   source: log
-  seconds: 531
+  seconds: 534
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 108
-      cache_read: 876984
-      cache_write: 56786
-      cost: 0.3593
+      input: 12
+      output: 3547
+      cache_read: 917903
+      cache_write: 27889
+      cost: 0.4205
 ---
 # T-3606 The work-management and strategic-agents conventions, here and in the template, describe a publish as a release_publish call, and the template's changelog records the change
 

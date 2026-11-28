@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 31
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 53
-      cache_read: 1025269
-      cache_write: 7261
-      cost: 0.3973
+      input: 13
+      output: 3923
+      cache_read: 1014966
+      cache_write: 30838
+      cost: 0.465
 ---
 # T-3605 The template no longer ships the publish formula or scripts/fetch.sh, and the formulas' and scripts' READMEs no longer list them
 

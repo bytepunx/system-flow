@@ -3,12 +3,18 @@ id: T-3483
 type: task
 nature: feature
 title: The board's column for a state with runs says what it runs, the suites and the cluster steps, from what board.get gives
-status: backlog
+status: in-progress
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:51:19Z
-updated: 2026-11-16T23:51:19Z
-transitions: []
+updated: 2026-11-28T01:13:49Z
+transitions:
+  - to: ready
+    at: 2026-11-28T01:13:49Z
+    by: agent-S-0814
+  - to: in-progress
+    at: 2026-11-28T01:13:49Z
+    by: agent-S-0814
 stream: S-0814
 tags: [flaiover]
 touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts]

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1507
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 243
-      cache_read: 2180099
-      cache_write: 343357
-      cost: 0.9709
+      input: 32
+      output: 9587
+      cache_read: 2480570
+      cache_write: 75368
+      cost: 1.1365
 ---
 # T-3603 The orchestrator's role file, in the baseline, the template, and this repository, publishes with release_publish only, and its definition is generated again
 

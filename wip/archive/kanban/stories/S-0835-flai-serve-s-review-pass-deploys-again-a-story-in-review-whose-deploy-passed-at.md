@@ -3,10 +3,10 @@ id: S-0835
 type: story
 nature: remediation
 title: "flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-17T08:17:30Z
-updated: 2026-11-28T00:24:45Z
+updated: 2026-11-28T01:18:16Z
 transitions:
   - to: ready
     at: 2026-11-27T23:54:12Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:24:45Z
     by: agent-S-0835
+  - to: review
+    at: 2026-11-28T01:17:02Z
+    by: agent-S-0835
+  - to: done
+    at: 2026-11-28T01:18:16Z
+    by: orchestrator
 tags: [flai]
 topics: [kluster, deployment]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, design/system/kluster.md, docs/users/flai.md, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/statejob.go, flai/internal/serve/statejob_test.go, design/system/kluster.md, docs/users/flai.md, flai/internal/serve/kluster_requests.go, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md, design/issues/summary.md]
 after: [S-0810]
 agent:
   harness: claude-code
@@ -25,20 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 629
-  estimated: true
-  priced_by: estimate
+  seconds: 3150
+  priced_by: harness
   turns:
     - day: 2026-11-28
-      test_runs: 1
-      work: 21
+      ceremony: 1
+      test_runs: 2
+      work: 78
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 353
-      cache_read: 3958091
-      cache_write: 246620
-      cost: 1.618
+      input: 170
+      output: 41906
+      cache_read: 24197501
+      cache_write: 370612
+      cost: 8.6432
   strategic:
     - kind: planner
       seconds: 58
@@ -81,8 +87,8 @@ finalized:
 This story remediates [I-0362](../../../design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md), "flai serve's review pass deploys again a story in review whose deploy passed at its head and only its checks have not, where ADR-0292 §3 runs the checks alone". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0362 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0362 is closed with `flai issue close I-0362 --reason` saying what fixed it
+- [x] The cause I-0362 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0362 is closed with `flai issue close I-0362 --reason` saying what fixed it
 
 ## Tasks
 - T-3540 The kluster package says what a story entering review needs from its namespace's record: nothing, the checks alone, or a deploy
@@ -121,3 +127,12 @@ Task layers:
 1. T-3540 (the three-answer judgement in the kluster package): no `after`.
 2. T-3542 (the pass runs the checks alone, the review's checks gate at the head, tried once, and the tests that reproduce I-0362), after T-3540, whose judgement it reads.
 3. T-3544 (`kluster.md`, the user guide, and the issue's close), after T-3542, whose behaviour it describes.
+
+### Accepted by the orchestrator
+
+- Verified: 0986ac849de154e245e8fdb576f3a142ffe97923
+- At: 2026-11-28T01:18:16Z
+
+Verdict: pass, close-out passed at 0986ac8 and the diff meets both criteria
+- 1: flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/statejob.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/kluster_test.go, flai/internal/serve/statejob_test.go, design/system/kluster.md, docs/users/flai.md
+- 2: design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md, design/issues/summary.md

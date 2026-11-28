@@ -2,7 +2,7 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807, S-0844]
 topics: [planning, go, code, flai]
 paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview, flai/internal/mcpserver, flai/internal/mergequeue, flai/internal/verify]
 date: 2026-11-03
@@ -126,4 +126,12 @@ T-3457 runs in its own worktree on task/T-3457, because verify imports workitem 
 
 So a task that changes `workitem` beside one that changes `verify` runs before it or in its own task worktree. The two packages read the verify record through `flai/internal/verifyrecord` (D-0672).
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807.
+S-0844 ran a layer in the story's own worktree instead. Its four layer-1 tasks, T-3595 (`preview`, `mergequeue`, and a new `flai/cmd` test file), T-3596 (`docedit`), T-3597 (`check`), and T-3598 (`workitem` and `cmd/board.go`), shared no path, and its agent ran them at once in one worktree (`wip/archive/agents/S-0844.md`):
+
+```text
+Layer 1 shares the story's worktree rather than one worktree per task: the four change different packages. T-3595 and T-3598 both add test files in flai/cmd, so each sub-agent prefixes its test helpers with its own task's subject to avoid the name collisions D-style parallel tasks met before.
+```
+
+The story's close-out passed. So tasks of one layer that change different packages may share the story's worktree, and two of them that each add a new test file to one package, such as `flai/cmd`, give their test helpers a prefix of their own task's subject. Where one task changes a package another's tests import, the seams above still apply.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662, S-0746, S-0743, S-0741, S-0799, S-0742, S-0807, S-0844.

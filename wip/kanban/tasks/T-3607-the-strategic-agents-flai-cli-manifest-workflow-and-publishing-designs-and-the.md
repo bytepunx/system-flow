@@ -24,16 +24,16 @@ touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/s
 after: [T-3601, T-3602, T-3603, T-3605]
 usage:
   source: log
-  seconds: 531
+  seconds: 566
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 115
-      output: 673
-      cache_read: 6479201
-      cache_write: 177798
-      cost: 2.5614
+      input: 89
+      output: 26789
+      cache_read: 6931663
+      cache_write: 210606
+      cost: 3.1758
 ---
 # T-3607 The strategic agents, flai CLI, manifest, workflow, and publishing designs, and the user, operator, and contributor guides, describe a publish as a release_publish call
 

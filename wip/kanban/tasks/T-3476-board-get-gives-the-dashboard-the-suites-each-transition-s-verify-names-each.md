@@ -3,11 +3,11 @@ id: T-3476
 type: task
 nature: feature
 title: board.get gives the dashboard the suites each transition's verify names, each state's runs, and verify_at's batch, publish, and ci
-status: in-progress
+status: done
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:50:53Z
-updated: 2026-11-28T00:43:58Z
+updated: 2026-11-28T01:13:13Z
 transitions:
   - to: ready
     at: 2026-11-28T00:43:58Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:43:58Z
     by: system-flow
+  - to: done
+    at: 2026-11-28T01:13:13Z
+    by: agent-S-0814
 stream: S-0814
 tags: [flai]
-touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go]
+touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.fixture.ts]
+usage:
+  source: log
+  seconds: 1754
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 460
+      cache_read: 5425614
+      cache_write: 428523
+      cost: 2.2529
 ---
 # T-3476 board.get gives the dashboard the suites each transition's verify names, each state's runs, and verify_at's batch, publish, and ci
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1518
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 295
-      cache_read: 2343611
-      cache_write: 101463
-      cost: 0.9408
+      input: 31
+      output: 9289
+      cache_read: 2403517
+      cache_write: 73027
+      cost: 1.1012
 ---
 # T-3604 flai upgrade removes a retired template file a project has not changed, and reports without removing one with project additions
 

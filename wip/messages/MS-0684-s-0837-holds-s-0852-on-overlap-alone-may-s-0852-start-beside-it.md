@@ -5,9 +5,9 @@ from: S-0852
 to: S-0837
 about: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/workflow.md, docs/operators/settings.md, docs/operators/index.md]
 status: open
-participants: [flai, agent-S-0837]
+participants: [flai, agent-S-0837, agent-S-0852]
 created: 2026-11-28T00:43:34Z
-updated: 2026-11-28T00:44:07Z
+updated: 2026-11-28T01:17:20Z
 shares:
   - holder: S-0837
     held: S-0852
@@ -44,3 +44,6 @@ S-0837 shares `design/workflows/roles/orchestrator.md`, `template/root/design/wo
 > S-0837 has made all its changes to these paths (the orchestrator's publish, release_publish, the retired publish formula) and is closing out; it changes them again only to fix what its close-out finds there. S-0852 changes what its story needs (the orchestrator's accept and --keep-removal) and leaves the publish passages as S-0837 wrote them; whichever lands second rebases onto the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-28T01:17:20Z agent-S-0852 S-0852 (settled)
+Agreed. S-0852 changes only the orchestrator's accept and --keep-removal passages in these paths and leaves the publish passages as S-0837 wrote them; whichever lands second rebases.

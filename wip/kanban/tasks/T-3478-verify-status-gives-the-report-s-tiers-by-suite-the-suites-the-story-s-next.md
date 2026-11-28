@@ -3,11 +3,11 @@ id: T-3478
 type: task
 nature: feature
 title: verify.status gives the report's tiers by suite, the suites the story's next transitions need, and which of them have not passed at its head
-status: in-progress
+status: done
 parent: S-0814
 owner: alex
 created: 2026-11-16T23:50:58Z
-updated: 2026-11-28T00:43:59Z
+updated: 2026-11-28T01:13:28Z
 transitions:
   - to: ready
     at: 2026-11-28T00:43:59Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-28T00:43:59Z
     by: system-flow
+  - to: done
+    at: 2026-11-28T01:13:28Z
+    by: agent-S-0814
 stream: S-0814
 tags: [flai]
 touches: [flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/verify_suites.go, flai/internal/hostapi/verify_suites_test.go]
+usage:
+  source: log
+  seconds: 1753
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 119
+      output: 626
+      cache_read: 6619083
+      cache_write: 313820
+      cost: 2.6681
 ---
 # T-3478 verify.status gives the report's tiers by suite, the suites the story's next transitions need, and which of them have not passed at its head
 

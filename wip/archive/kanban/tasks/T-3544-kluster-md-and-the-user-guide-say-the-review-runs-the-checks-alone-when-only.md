@@ -3,16 +3,37 @@ id: T-3544
 type: task
 nature: remediation
 title: kluster.md and the user guide say the review runs the checks alone when only they have not passed at the head, and I-0362 is closed
-status: backlog
+status: done
 parent: S-0835
 owner: alex
 created: 2026-11-17T08:31:05Z
-updated: 2026-11-17T08:31:05Z
-transitions: []
+updated: 2026-11-28T00:50:08Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:49:30Z
+    by: agent-S-0835
+  - to: in-progress
+    at: 2026-11-28T00:49:30Z
+    by: agent-S-0835
+  - to: done
+    at: 2026-11-28T00:50:08Z
+    by: agent-S-0835
 stream: S-0835
 tags: [flai, docs]
-touches: [design/system/kluster.md, docs/users/flai.md, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md]
+touches: [design/system/kluster.md, docs/users/flai.md]
 after: [T-3542]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 2412
+      cache_read: 1392964
+      cache_write: 21335
+      cost: 0.4976
 ---
 # T-3544 kluster.md and the user guide say the review runs the checks alone when only they have not passed at the head, and I-0362 is closed
 

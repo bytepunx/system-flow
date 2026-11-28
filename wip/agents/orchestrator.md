@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2281.7646
-accrued_seconds: 1582413
-tasks_completed: 4143
-last_run: 2026-11-28T00:43:53Z
+accrued_cost: 2282.7146
+accrued_seconds: 1582562
+tasks_completed: 4150
+last_run: 2026-11-28T01:07:16Z
 ---
 
 # Orchestrator activity
@@ -29040,6 +29040,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0844
 - Seconds: 66
 - Cost: 0.2232 USD, estimated
+
+### 2026-11-28T00:44:20Z
+
+- Summary: Published release under threshold policy (count 1 >= 1; value 37.5 USD/week vs 1000): flai 1.113.1 -> 1.113.2, tag flai/v1.113.2, pushed; bundled S-0844.
+- Items: S-0844
+- Seconds: 27
+- Cost: 0.0690 USD, estimated
+
+### 2026-11-28T00:44:46Z
+
+- Summary: I accepted S-0844 and published it as flai 1.113.2.
+- Items: none
+- Seconds: 26
+- Cost: 0.2083 USD, estimated
+
+### 2026-11-28T00:45:23Z
+
+- Summary: Release-due S-0844: did not publish. S-0844 already went out in flai/v1.113.2 (commit 10b47cd22). release_evaluate under threshold now gives count 0 of 1 and value 0 of 1000 USD, so it is not met.
+- Items: S-0844
+- Seconds: 9
+- Cost: 0.0766 USD, estimated
+
+### 2026-11-28T00:45:41Z
+
+- Summary: I didn't publish anything for S-0844, because it has already been released.
+- Items: none
+- Seconds: 18
+- Cost: 0.2515 USD, estimated
+
+### 2026-11-28T01:06:41Z
+
+- Summary: Recommended an answer on TH-1325, citing design/adrs/0316-a-publish-the-orchestrator-starts-is-a-release-publish-call-and-makes-no-story.md § Consequences
+- Items: S-0837
+- Seconds: 34
+- Cost: 0.1355 USD, estimated
+
+### 2026-11-28T01:06:57Z
+
+- Summary: TH-1325 (S-0837 criterion 8): posted an updated recommendation (option 1, leave archived S-0811 as history) replacing mine of 00:00:08Z, since ADR-0316 is already accepted on story/S-0837 at d99e197; escalated to the operator as a change to how an operator criterion is met (answer_threads autonomous; confirm_after 48h applies)
+- Items: S-0837, TH-1325
+- Seconds: 16
+- Cost: 0.0000 USD
+
+### 2026-11-28T01:07:16Z
+
+- Summary: TH-1325 now waits on you for one decision on S-0837's criterion 8. That criterion asks for the archived S-0811 to be rewritten, which no agent may do.
+- Items: none
+- Seconds: 19
+- Cost: 0.2091 USD, estimated
 
 ## Refusals
 
