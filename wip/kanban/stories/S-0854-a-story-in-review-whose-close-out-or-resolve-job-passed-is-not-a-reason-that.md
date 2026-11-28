@@ -3,11 +3,14 @@ id: S-0854
 type: story
 nature: improvement
 title: A story in review whose close-out or resolve job passed is not a reason that starts the orchestrator, so an eligible story waits for the operator or for an unrelated event
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-27T22:55:26Z
-updated: 2026-11-28T00:01:28Z
-transitions: []
+updated: 2026-11-28T00:02:10Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:02:05Z
+    by: claude-concierge
 tags: [flai, template, serve]
 topics: [orchestration, review]
 touches: [design/adrs/README.md, design/adrs/0322-a-close-out-or-resolve-job-that-passed-on-a-story-in-review-starts-the.md, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0413-a-story-in-review-whose-close-out-or-resolve-job-passed-is-not-a-reason-that.md, design/issues/summary.md]
@@ -47,7 +50,6 @@ usage:
           cache_read: 1264948
           cache_write: 28114
           cost: 0.487
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 48h
@@ -58,10 +60,13 @@ cost_of_delay:
   at: 2026-11-27T23:59:03Z
 forecast:
   duration: 2h
-  delivery: 2026-11-28T09:08:00Z
-  basis: "Its own forecast of 2h; 14th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852 and S-0853."
+  delivery: 2026-11-28T04:22:00Z
+  basis: "Its own forecast of 2h; 3rd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852 and S-0853."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:54Z
 ---
 # S-0854 A story in review whose close-out or resolve job passed is not a reason that starts the orchestrator, so an eligible story waits for the operator or for an unrelated event
 

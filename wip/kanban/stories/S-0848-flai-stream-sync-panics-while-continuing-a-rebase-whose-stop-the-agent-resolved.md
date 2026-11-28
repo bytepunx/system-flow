@@ -6,7 +6,7 @@ title: flai stream sync panics while continuing a rebase whose stop the agent re
 status: ready
 owner: alex
 created: 2026-11-21T17:20:23Z
-updated: 2026-11-28T00:01:28Z
+updated: 2026-11-28T00:02:10Z
 transitions:
   - to: ready
     at: 2026-11-28T00:01:13Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 60380
           cost: 1.0516
     - kind: orchestrator
-      seconds: 10
+      seconds: 26
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 2
-          cache_read: 83340
-          cache_write: 1445
-          cost: 0.027
+          input: 4
+          output: 56
+          cache_read: 370415
+          cache_write: 2843
+          cost: 0.1188
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-27T23:57:18Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T03:55:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813 and S-0822."
+  delivery: 2026-11-28T07:27:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813, S-0814, S-0824, S-0822 and S-0835."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
 finalized:
   by: orchestrator
   at: 2026-11-28T00:00:02Z

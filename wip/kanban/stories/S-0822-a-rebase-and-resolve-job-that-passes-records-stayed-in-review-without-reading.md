@@ -6,7 +6,7 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: ready
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-28T00:01:28Z
+updated: 2026-11-28T00:02:10Z
 transitions:
   - to: ready
     at: 2026-11-28T00:01:12Z
@@ -40,15 +40,15 @@ usage:
           cache_write: 634376
           cost: 6.36
     - kind: orchestrator
-      seconds: 314
+      seconds: 331
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 86
-          output: 560
-          cache_read: 3896773
-          cache_write: 508759
-          cost: 1.3819
+          input: 89
+          output: 614
+          cache_read: 4183848
+          cache_write: 510157
+          cost: 1.4737
         - model: claude-sonnet-5-5
           input: 20
           output: 1495
@@ -65,10 +65,10 @@ cost_of_delay:
   at: 2026-11-17T08:23:00Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T03:27:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814 and S-0813."
+  delivery: 2026-11-28T06:27:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813, S-0814 and S-0824."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
 finalized:
   by: orchestrator
   at: 2026-11-28T00:00:01Z

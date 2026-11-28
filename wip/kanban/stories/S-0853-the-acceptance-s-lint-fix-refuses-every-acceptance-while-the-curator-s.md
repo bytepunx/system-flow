@@ -3,11 +3,14 @@ id: S-0853
 type: story
 nature: improvement
 title: The acceptance's lint fix refuses every acceptance while the curator's uncommitted digest entries in the main checkout fail markdownlint, so stories that passed review wait for the operator
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-27T22:55:25Z
-updated: 2026-11-28T00:01:28Z
-transitions: []
+updated: 2026-11-28T00:02:10Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:02:04Z
+    by: claude-concierge
 tags: [flai]
 touches: [design/adrs, design/adrs/README.md, flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_dirty_test.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/hostapi/writes_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/digest/write.go, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, design/issues/I-0411-the-acceptance-s-lint-fix-refuses-every-acceptance-while-the-curator-s.md, design/issues/summary.md]
 agent:
@@ -46,7 +49,6 @@ usage:
           cache_read: 1264948
           cache_write: 28114
           cost: 0.487
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 76h
@@ -57,10 +59,13 @@ cost_of_delay:
   at: 2026-11-27T23:58:18Z
 forecast:
   duration: 2h
-  delivery: 2026-11-28T08:57:00Z
-  basis: "Its own forecast of 2h; 13th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851 and S-0852."
+  delivery: 2026-11-28T04:12:00Z
+  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846 and S-0852."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:53Z
 ---
 # S-0853 The acceptance's lint fix refuses every acceptance while the curator's uncommitted digest entries in the main checkout fail markdownlint, so stories that passed review wait for the operator
 

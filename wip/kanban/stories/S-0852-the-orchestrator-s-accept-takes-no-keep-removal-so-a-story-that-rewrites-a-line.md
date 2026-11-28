@@ -3,11 +3,14 @@ id: S-0852
 type: story
 nature: improvement
 title: The orchestrator's accept takes no --keep-removal, so a story that rewrites a line main added waits in review for the operator even after the story's agent and the orchestrator agree the removal is right
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-27T22:55:19Z
-updated: 2026-11-28T00:01:28Z
-transitions: []
+updated: 2026-11-28T00:02:10Z
+transitions:
+  - to: ready
+    at: 2026-11-28T00:02:04Z
+    by: claude-concierge
 tags: [flai, template]
 topics: [orchestration, review, git]
 touches: [design/adrs, design/adrs/README.md, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/cmd/accept_queue_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/orchestrate_test.go, flai/internal/mcpserver/queue.go, flai/internal/mcpserver/queue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/CHANGELOG.md, design/issues/I-0415-the-orchestrator-s-accept-takes-no-keep-removal-so-a-story-that-rewrites-a-line.md, design/issues/summary.md]
@@ -47,7 +50,6 @@ usage:
           cache_read: 1264948
           cache_write: 28114
           cost: 0.487
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 148h
@@ -58,10 +60,13 @@ cost_of_delay:
   at: 2026-11-27T23:57:00Z
 forecast:
   duration: 1h13m
-  delivery: 2026-11-28T07:25:00Z
-  basis: "Its own forecast of 1h13m; 12th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849 and S-0851."
+  delivery: 2026-11-28T01:57:00Z
+  basis: "Its own forecast of 1h13m; 1st in the pull order with an in-progress limit of 3, behind S-0837, S-0844 and S-0846."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:52Z
 ---
 # S-0852 The orchestrator's accept takes no --keep-removal, so a story that rewrites a line main added waits in review for the operator even after the story's agent and the orchestrator agree the removal is right
 

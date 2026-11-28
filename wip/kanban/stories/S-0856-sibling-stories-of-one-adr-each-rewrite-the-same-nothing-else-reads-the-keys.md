@@ -6,7 +6,7 @@ title: Sibling stories of one ADR each rewrite the same 'nothing else reads the 
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:28Z
-updated: 2026-11-28T00:01:28Z
+updated: 2026-11-28T00:02:10Z
 transitions: []
 tags: []
 topics: [documentation, check]
@@ -48,7 +48,6 @@ usage:
           cache_read: 1264948
           cache_write: 28114
           cost: 0.487
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -59,10 +58,13 @@ cost_of_delay:
   at: 2026-11-27T23:57:39Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T10:11:00Z
-  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852, S-0853, S-0854 and S-0855."
+  delivery: 2026-11-28T09:52:00Z
+  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813, S-0814, S-0824, S-0822, S-0835, S-0848, S-0241, S-0815, S-0849, S-0851 and S-0855."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:56Z
 ---
 # S-0856 Sibling stories of one ADR each rewrite the same 'nothing else reads the keys yet' sentence in a hub design doc and runbook, so each acceptance stops the next on a rebase conflict
 

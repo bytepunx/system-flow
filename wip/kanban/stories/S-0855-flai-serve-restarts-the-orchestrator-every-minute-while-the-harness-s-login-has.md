@@ -6,7 +6,7 @@ title: flai serve restarts the orchestrator every minute while the harness's log
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:27Z
-updated: 2026-11-28T00:01:28Z
+updated: 2026-11-28T00:02:10Z
 transitions: []
 tags: [flai, flaiover]
 topics: [serve, budget]
@@ -47,7 +47,6 @@ usage:
           cache_read: 1264948
           cache_write: 28114
           cost: 0.487
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 14h
@@ -58,10 +57,13 @@ cost_of_delay:
   at: 2026-11-27T23:59:15Z
 forecast:
   duration: 4h
-  delivery: 2026-11-28T11:49:00Z
-  basis: "Its own forecast of 4h; 15th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852, S-0853 and S-0854."
+  delivery: 2026-11-28T12:08:00Z
+  basis: "Its own forecast of 4h; 15th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813, S-0814, S-0824, S-0822, S-0835, S-0848, S-0241, S-0815, S-0849 and S-0851."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:02:10Z
+finalized:
+  by: alex
+  at: 2026-11-28T00:01:55Z
 ---
 # S-0855 flai serve restarts the orchestrator every minute while the harness's login has expired, 666 runs in 14 hours, with no hold and no thread to the operator
 
