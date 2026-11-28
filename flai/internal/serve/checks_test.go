@@ -5,6 +5,7 @@ package serve
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -600,5 +601,87 @@ func TestAContainerStorysCheckFailsWithTheImageJobsCause(t *testing.T) {
 	}
 	if strings.Contains(string(log), "make agent-images") {
 		t.Errorf("the log names make agent-images:\n%s", log)
+	}
+}
+
+// I-0362, ADR-0292 §3: a story in review whose agent's deploy passed at a
+// commit followed only by wip and design commits, and whose agent's checks
+// failed there, gets the checks alone against the namespace as deployed, not
+// a deploy, once at that head. Passing, they stand at the deployed commit and
+// the gate passes; failing, they send the story back with the checks
+// failure thread, as a failed checks run after a review deploy does.
+func TestAStoryInReviewWhoseDeployPassedAtTheHeadGetsTheChecksAlone(t *testing.T) {
+	const deployed, closeOut = klHeadA, klHeadB
+	files := map[string][]string{closeOut: {"wip/agents/S-0001-x.md", "design/issues/I-0001-x.md"}}
+	for _, exit := range []int{0, 2} {
+		t.Run(fmt.Sprintf("checks exit %d", exit), func(t *testing.T) {
+			lab := newKlusterLab(t, klusterBlock)
+			cfg, out := nsCheck(t, exit)
+			lab.withChecks(cfg)
+			lab.git.history(files, deployed, closeOut)
+			story := lab.inReview("Checked alone", closeOut)
+			writeFakeRecord(lab.root, kluster.Record{Story: story, Commit: deployed, Outcome: kluster.OutcomePassed, AskedBy: klAgent,
+				ChecksCommit: deployed, ChecksOutcome: kluster.OutcomeFailed, ChecksAskedBy: klAgent})
+
+			lab.round()
+			if got := lab.kluster.deploys(); len(got) != 0 {
+				t.Fatalf("a story whose deploy passed at its head was deployed again: %v", got)
+			}
+			if data, _ := os.ReadFile(out); string(data) != strings.ToLower(story) {
+				t.Fatalf("the checks saw the namespace %q, want %q: they did not run alone", data, strings.ToLower(story))
+			}
+			ns, _ := kluster.StoryNamespace(story)
+			r, _, _ := kluster.ReadRecord(lab.root, ns)
+			want := kluster.OutcomePassed
+			if exit != 0 {
+				want = kluster.OutcomeFailed
+			}
+			if r.Commit != deployed || r.ChecksCommit != deployed || r.ChecksOutcome != want || r.ChecksAskedBy != forgeAuthor {
+				t.Fatalf("the record = %+v, want the review's checks %s at the deployed commit %s", r, want, short(deployed))
+			}
+			ok, reason, err := kluster.AcceptGate(lab.git, lab.root, lab.repo.Manifest, story, closeOut, true)
+			if err != nil || ok != (exit == 0) {
+				t.Fatalf("the gate after the checks run alone: %v %q %v", ok, reason, err)
+			}
+			ths := lab.titled(story, checksFailureTitle(story))
+			if exit == 0 {
+				if len(ths) != 0 || lab.status(story) != workitem.Review {
+					t.Fatalf("passing checks alone: %d threads, the story %s; want none, in review", len(ths), lab.status(story))
+				}
+				return
+			}
+			if len(ths) != 1 || lab.status(story) != workitem.InProgress {
+				t.Fatalf("failing checks alone: %d threads, the story %s; want one, sent back to in-progress", len(ths), lab.status(story))
+			}
+			_ = os.Remove(out)
+			lab.round()
+			if data, err := os.ReadFile(out); err == nil || len(lab.kluster.deploys()) != 0 {
+				t.Fatalf("a look after the send back ran the checks again (%q) or deployed %v", data, lab.kluster.deploys())
+			}
+		})
+	}
+}
+
+// I-0362: a checks run alone that the review pass tried at a head is not
+// queued again at that head in that state, whatever it ended, and a new head
+// is tried again.
+func TestTheReviewTriesEachHeadsChecksAloneOnce(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, out := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.inReview("Tried once", klHeadA)
+	writeFakeRecord(lab.root, kluster.Record{Story: story, Commit: klHeadA, Outcome: kluster.OutcomePassed, AskedBy: klAgent})
+	ns, _ := kluster.StoryNamespace(story)
+	if err := writeKlusterTried(lab.root, ns, klusterTried{Story: story, Head: klHeadA, State: workitem.Review, Outcome: kluster.OutcomePassed, At: lab.opts.Now().UTC()}); err != nil {
+		t.Fatal(err)
+	}
+	lab.round()
+	if _, err := os.ReadFile(out); err == nil || len(lab.kluster.deploys()) != 0 {
+		t.Fatalf("a head whose checks alone were tried in review ran again: checks ran %v, deploys %v", err == nil, lab.kluster.deploys())
+	}
+	lab.git.set(story, klHeadB)
+	lab.round()
+	if got := strings.Join(lab.kluster.deploys(), ";"); got != "deploy "+story+" "+klHeadB {
+		t.Fatalf("a new head with code in it: deploys %q, want one at %s", got, short(klHeadB))
 	}
 }

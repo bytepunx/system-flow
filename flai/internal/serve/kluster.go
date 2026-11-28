@@ -627,10 +627,11 @@ func passedAt(r kluster.Record, head string, checksOn bool) bool {
 // pass at its branch's head, its checks too while checksOn and the state's
 // runs name them, and that the pass did not try at that head in that state,
 // or that is back in it after a send back, at whatever head; and names them.
-// In a state whose runs name the checks and no deploy, it queues a checks run
-// in place of the deploy, only against a namespace whose deploy passed at the
-// head. A deploy the agent asked for that passed at the head stands as the
-// state's. At the head is as the acceptance gate judges it with m's layout
+// When the namespace's deploy passed at the head and only its checks have
+// not, and in a state whose runs name the checks and no deploy, it queues a
+// checks run alone in place of the deploy, only against a namespace whose
+// deploy passed at the head (kluster.ReviewNeeds). A deploy the agent asked
+// for that passed at the head stands as the state's. At the head is as the acceptance gate judges it with m's layout
 // (ADR-0292 §3): the head, or a commit followed only by changes under the
 // design, docs, and wip folders, so the issues a close-out commits do not
 // deploy the story again. A record or a diff that cannot be read is not at
@@ -667,11 +668,11 @@ func (p *klusterPass) lookReview(ctx context.Context, flow workflow.Workflow, it
 			p.o.Logger.Debug("story has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID, "state", it.Status)
 			continue
 		}
-		passed, _, err := kluster.AcceptGate(git, root, m, it.ID, head, checksOn && checks)
+		need, _, err := kluster.ReviewNeeds(git, root, m, it.ID, head, checksOn && checks)
 		if err != nil {
 			p.o.Logger.Warn("kluster record not judged at the story's head, so it is deployed again", "component", "serve", "root", p.e.Root, "story", it.ID, "head", head, "err", err.Error())
 		}
-		if passed {
+		if need == kluster.NeedNothing {
 			continue
 		}
 		// back from a send back, it is deployed again in place, at a new head or
@@ -680,11 +681,13 @@ func (p *klusterPass) lookReview(ctx context.Context, flow workflow.Workflow, it
 			continue
 		}
 		kind := klusterDeploy
-		if !deploys {
-			if deployed, _, _ := kluster.AcceptGate(git, root, m, it.ID, head, false); !checksOn || !deployed {
-				continue // nothing deployed at the head to run the checks against
-			}
+		switch {
+		case need == kluster.NeedChecks:
+			// the deploy passed at the head and only its checks have not: they
+			// run alone against the namespace as deployed (ADR-0292 §3, I-0362)
 			kind = klusterChecks
+		case !deploys:
+			continue // nothing deployed at the head to run the checks against
 		}
 		if p.enqueue(klusterJob{kind: kind, story: it.ID, head: head}) {
 			queued = append(queued, kind+" "+it.ID)
@@ -1023,7 +1026,7 @@ func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j kluster
 // check it stopped at, with that check's exit code, and opens no thread.
 func (p *klusterPass) checksJob(ctx context.Context, repo *workitem.Repo, j klusterJob) klusterEnd {
 	ns, _ := kluster.StoryNamespace(j.story)
-	cfg, env, why := p.checksReady(repo, j.story)
+	cfg, env, why := p.checksReady(repo, j.story, !j.asked())
 	if why != "" {
 		return refusedEnd(why + ", so flai serve ran no checks for " + j.story + ": " + deployFirst(j.story))
 	}
@@ -1090,7 +1093,7 @@ func checksResult(run ChecksRun, commit string) *kluster.ChecksResult {
 // branch, which git reads in the main checkout. Otherwise it is nil, and so
 // is ns, the namespace. Only what cannot be read is an error.
 func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled func(action, root string) bool) (ns string, env []string, err error) {
-	ns, env, _, err = klusterEnvWhy(repo, story, git, enabled)
+	ns, env, _, err = klusterEnvWhy(repo, story, git, enabled, false)
 	return ns, env, err
 }
 
@@ -1098,8 +1101,13 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 // refusal's words: the action off, no block, no record, a record that did
 // not pass, no branch, or a record at another commit. The review's checks
 // run passes over a story with none silently; a checks run its agent asks
-// for is refused with why.
-func klusterEnvWhy(repo *workitem.Repo, story string, git execx.Runner, enabled func(action, root string) bool) (ns string, env []string, why string, err error) {
+// for is refused with why. With atHead, a record is at the head as the
+// acceptance gate judges it (kluster.AtHead, ADR-0292 §3), the head or a
+// commit followed only by changes under the design, docs, and wip folders,
+// as for the checks the review pass runs alone; without it, only at the head
+// itself, as for a checks run a story's agent asks for, flai kluster env and
+// exec, and flai checks.
+func klusterEnvWhy(repo *workitem.Repo, story string, git execx.Runner, enabled func(action, root string) bool, atHead bool) (ns string, env []string, why string, err error) {
 	root, m := mainCheckout(repo), repo.Manifest
 	switch {
 	case m.Kluster == nil:
@@ -1124,8 +1132,16 @@ func klusterEnvWhy(repo *workitem.Repo, story string, git execx.Runner, enabled 
 		return "", nil, fmt.Sprintf("the last deploy of %s's namespace %s, at %s, ended %s, not passed", story, ns, orUnresolved(short(r.Commit)), cmp.Or(r.Outcome, "with no outcome")), nil
 	case head == "":
 		return "", nil, fmt.Sprintf("%s has no branch story/%s whose head its namespace %s could be deployed at", story, story, ns), nil
-	case head != r.Commit:
+	case head != r.Commit && !atHead:
 		return "", nil, fmt.Sprintf("%s's namespace %s was deployed at %s, not at the story branch's head %s", story, ns, short(r.Commit), short(head)), nil
+	case head != r.Commit:
+		judged, err := kluster.AtHead(git, root, m, r.Commit, head)
+		if err != nil {
+			return "", nil, "", fmt.Errorf("judge the kluster record of %s's namespace %s at the story branch's head %s, to give its checks the namespace: %w", story, ns, short(head), err)
+		}
+		if !judged.AtHead {
+			return "", nil, fmt.Sprintf("%s's namespace %s was deployed at %s, not at the story branch's head %s: %s", story, ns, short(r.Commit), short(head), judged.Why), nil
+		}
 	}
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
@@ -1147,7 +1163,7 @@ func klusterEnvWhy(repo *workitem.Repo, story string, git execx.Runner, enabled 
 // (ADR-0292 §5), and one that passes resolves it. It answers the run, or nil
 // when none ended.
 func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) *ChecksRun {
-	cfg, env, why := p.checksReady(repo, j.story)
+	cfg, env, why := p.checksReady(repo, j.story, false)
 	if why != "" {
 		// the checks off or none named, or the head moved since the deploy:
 		// the next look deploys it again
@@ -1162,12 +1178,13 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 // checks run for story gets, or why it gets none, in a refusal's words that
 // say what to do: the checks host action off, no checks named, a
 // configuration or a record that cannot be read, or the namespace not
-// deployed at the story branch's head with a deploy that passed.
-func (p *klusterPass) checksReady(repo *workitem.Repo, story string) (cfg ChecksConfig, env []string, why string) {
+// deployed at the story branch's head with a deploy that passed: at the
+// head itself, or, with atHead, as kluster.AtHead judges it (klusterEnvWhy).
+func (p *klusterPass) checksReady(repo *workitem.Repo, story string, atHead bool) (cfg ChecksConfig, env []string, why string) {
 	if cfg, why = checksConfigOf(p.o, repo); why != "" {
 		return ChecksConfig{}, nil, why
 	}
-	_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled)
+	_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled, atHead)
 	switch {
 	case err != nil:
 		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", story, "err", err.Error())

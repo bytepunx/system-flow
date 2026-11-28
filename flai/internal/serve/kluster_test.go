@@ -1281,8 +1281,9 @@ func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testi
 
 // ADR-0254 §5a, §8: a checks run against the namespace that fails sends the
 // story back as a failed deploy does, and keeps its namespace; back in review
-// at the same head, it is deployed and checked again in place, and a passing
-// run resolves the checks' thread.
+// at the same head, whose deploy passed, its checks run again alone against
+// the namespace as deployed (ADR-0292 §3, I-0362), and a passing run
+// resolves the checks' thread.
 func TestFailingChecksAgainstTheNamespaceSendTheStoryBack(t *testing.T) {
 	lab := newKlusterLab(t, klusterBlock)
 	failing, _ := nsCheck(t, 3)
@@ -1310,13 +1311,14 @@ func TestFailingChecksAgainstTheNamespaceSendTheStoryBack(t *testing.T) {
 		t.Fatalf("a look at the story the checks sent back ran %v, want its namespace kept", got)
 	}
 
-	passing, _ := nsCheck(t, 0)
+	passing, out := nsCheck(t, 0)
 	lab.withChecks(passing)
 	lab.move(story, workitem.Review)
 	lab.round()
-	if got := lab.kluster.since(n); strings.Join(got, ";") != "absent;deploy "+story+" "+klHeadA {
-		t.Fatalf("calls once the story was back in review at the same head = %v, want one deploy in place", got)
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("calls once the story was back in review at the same head = %v, want none: the checks run alone", got)
 	}
+	reviewChecked(t, lab, story, klHeadA, out)
 	if ths := lab.titled(story, checksFailureTitle(story)); len(ths) != 1 || ths[0].Open() {
 		t.Fatalf("the passing checks run should resolve the checks failure thread")
 	}

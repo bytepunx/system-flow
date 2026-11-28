@@ -767,6 +767,9 @@ func TestAStateJobsDeployPassesOnceThePassDeployedTheRebasedHead(t *testing.T) {
 // transition once, with the kluster pass's one thread, and the state job
 // records its cluster step failed and sends nothing back itself. Before
 // S-0810 the pass deployed only on the state the acceptance leaves from.
+// I-0362: a story whose agent's deploy passed at the rebased head and whose
+// agent's checks failed there gets the checks alone, no deploy, and their
+// failure fails the checks step and sends it back the same way.
 func TestAStateJobsFailedClusterStepSendsTheStoryBackOnce(t *testing.T) {
 	t.Parallel()
 	failing, _ := nsCheck(t, 3)
@@ -774,9 +777,12 @@ func TestAStateJobsFailedClusterStepSendsTheStoryBackOnce(t *testing.T) {
 		name   string
 		checks *ChecksConfig
 		fail   func(story, head string) error
+		alone  bool // the agent's deploy passed at the rebased head, its checks failed there
 		steps  []string
 		title  func(story string) string
 	}{
+		{name: "checks alone", checks: &failing, alone: true,
+			steps: []string{"rebase:passed", "kluster deploy:passed", "kluster checks:failed"}, title: checksFailureTitle},
 		{name: "deploy", fail: func(string, string) error {
 			return &kluster.StepError{Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
 		}, steps: []string{"rebase:passed", "kluster deploy:failed", "kluster checks:skipped"}, title: klusterFailureTitle},
@@ -789,11 +795,18 @@ func TestAStateJobsFailedClusterStepSendsTheStoryBackOnce(t *testing.T) {
 			fake.answer = passing(lab)
 			kp, fk := lab.klusterOn(git, klusterBlock, true, c.checks)
 			fk.fail = c.fail
+			if c.alone {
+				writeFakeRecord(lab.pass.e.Root, kluster.Record{Story: lab.story, Commit: "head-r", Outcome: kluster.OutcomePassed, AskedBy: "agent-" + lab.story,
+					ChecksCommit: "head-r", ChecksOutcome: kluster.OutcomeFailed, ChecksAskedBy: "agent-" + lab.story})
+			}
 			lab.moveStory(integration)
 			lab.pass.lookStates(context.Background())
 			lab.awaitStep("kluster deploy")
 			klusterRound(kp)
 			lab.wg.Wait()
+			if got := fk.deploys(); c.alone && len(got) != 0 {
+				t.Errorf("a story whose deploy passed at the head was deployed again: %v", got)
+			}
 			job, _ := lab.stateJob()
 			if !slices.Equal(outcomes(job), c.steps) || job.Outcome != closeout.OutcomeNotSentBack || job.Thread != "" ||
 				!strings.Contains(job.Reason, "kluster pass's to send "+lab.story+" back") {

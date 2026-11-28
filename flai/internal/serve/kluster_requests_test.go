@@ -455,7 +455,7 @@ func TestAFailedAskedDeployOpensNoThreadAndTellsItsEvent(t *testing.T) {
 // ADR-0292 §5, §3: with checks on, an asked-for deploy runs its checks; a
 // run that fails ends the job failed at checks with no thread, and the story
 // entering review at that head is deployed and checked again.
-func TestAnAskedDeploysFailingChecksOpenNoThreadAndReviewDeploysAgain(t *testing.T) {
+func TestAnAskedDeploysFailingChecksOpenNoThreadAndReviewRunsTheChecksAlone(t *testing.T) {
 	lab := newKlusterLab(t, klusterBlock)
 	failing, _ := nsCheck(t, 2)
 	lab.withChecks(failing)
@@ -471,18 +471,64 @@ func TestAnAskedDeploysFailingChecksOpenNoThreadAndReviewDeploysAgain(t *testing
 	if got := lab.status(story); got != workitem.InProgress {
 		t.Fatalf("the story is %s, want it left in progress", got)
 	}
-	passing, _ := nsCheck(t, 0)
+	passing, out := nsCheck(t, 0)
 	lab.withChecks(passing)
 	lab.move(story, workitem.Review)
 	n := len(lab.kluster.all())
 	lab.round()
-	if got := strings.Join(lab.kluster.since(n), ";"); got != "absent;deploy "+story+" "+klHeadA {
-		t.Fatalf("calls once in review at a head whose checks failed = %s, want one deploy", got)
+	// I-0362: the deploy passed at the head, so the review runs the checks
+	// alone against the namespace as deployed, and deploys nothing
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("calls once in review at a head whose deploy passed and checks failed = %v, want none: the checks run alone", got)
 	}
+	reviewChecked(t, lab, story, klHeadA, out)
 	n = len(lab.kluster.all())
 	lab.round()
 	if got := lab.kluster.since(n); len(got) != 0 {
 		t.Fatalf("a look once deploy and checks passed at the head ran %v", got)
+	}
+}
+
+// reviewChecked fails the test unless the review pass's checks run, not the
+// agent's, passed against story's namespace at commit, the check seeing the
+// namespace in out.
+func reviewChecked(t *testing.T, lab *klusterLab, story, commit, out string) {
+	t.Helper()
+	if data, _ := os.ReadFile(out); string(data) != strings.ToLower(story) {
+		t.Fatalf("the checks saw the namespace %q, want %q: they did not run", data, strings.ToLower(story))
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	r, _, _ := kluster.ReadRecord(lab.root, ns)
+	if r.Commit != commit || r.ChecksCommit != commit || r.ChecksOutcome != kluster.OutcomePassed || r.ChecksAskedBy != forgeAuthor {
+		t.Fatalf("the record = %+v, want the deploy at %s kept and the review's checks passed there", r, short(commit))
+	}
+}
+
+// I-0362, ADR-0292 §3: a story whose agent's deploy passed at its head with
+// the checks off enters review once they are on and gets the checks alone,
+// once, and no deploy.
+func TestAStoryEnteringReviewWhoseChecksNeverRanGetsTheChecksAlone(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	lab.withConfig()
+	story := lab.inProgress("Unchecked", klHeadA)
+	lab.ask(story, kluster.KindDeploy, klAgent)
+	lab.drain()
+	if j := lab.asked(story); j.Outcome != kluster.OutcomePassed {
+		t.Fatalf("the asked deploy = %+v, want it passed", j)
+	}
+	passing, out := nsCheck(t, 0)
+	lab.withChecks(passing)
+	lab.move(story, workitem.Review)
+	deploys := len(lab.kluster.deploys())
+	lab.round()
+	if got := lab.kluster.deploys(); len(got) != deploys {
+		t.Fatalf("a story whose deploy passed at its head and whose checks never ran was deployed again: %v", got[deploys:])
+	}
+	reviewChecked(t, lab, story, klHeadA, out)
+	_ = os.Remove(out)
+	lab.round()
+	if data, err := os.ReadFile(out); err == nil {
+		t.Fatalf("a look once the checks passed at the head ran them again, seeing %q", data)
 	}
 }
 

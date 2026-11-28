@@ -462,8 +462,10 @@ func (j *stateJob) awaitKluster(ctx context.Context, out io.Writer, step string,
 // acceptance gate judges it (kluster.AtHead), and for the checks step when
 // a checks run passed there too. It failed when the pass tried the head in
 // the job's state, in this entry or in an earlier one it sent nothing back
-// for, which it does not try again, and the deploy failed, or the checks run
-// at the head did not pass; or when the story left the entry. It is skipped
+// for, which it does not try again, and the deploy failed, or the pass's own
+// checks run at the head, after a deploy or alone, did not pass, a run the
+// agent asked for before the entry being what the pass runs the checks again
+// for; or when the story left the entry. It is skipped
 // when the pass no longer runs the step (klusterSkip), or, for the checks of
 // a state whose runs name no deploy, when no deploy that passed is at the
 // head for them to run against. A project or a record that cannot be read
@@ -504,7 +506,7 @@ func (j *stateJob) klusterSaid(step, head string, deploys bool) (outcome, reason
 		return closeout.StepFailed, fmt.Sprintf("flai serve's kluster deploy of %s into its namespace %s at %s failed: flai kluster deployments shows its record", story, ns, short(head))
 	case checks && deployed && r.ChecksOutcome == kluster.OutcomePassed && at(r.ChecksCommit):
 		return closeout.StepPassed, fmt.Sprintf("flai serve's checks of %s against its namespace %s passed at %s, at the head %s", story, ns, short(r.ChecksCommit), short(head))
-	case checks && triedHere && r.ChecksCommit == head && r.ChecksOutcome != "" && r.ChecksOutcome != kluster.OutcomePassed:
+	case checks && triedHere && r.ChecksAskedBy == forgeAuthor && r.ChecksOutcome != "" && r.ChecksOutcome != kluster.OutcomePassed && at(r.ChecksCommit):
 		return closeout.StepFailed, fmt.Sprintf("flai serve's checks of %s against its namespace %s at %s ended %s: flai checks status %s shows the run", story, ns, short(head), r.ChecksOutcome, story)
 	case checks && !deploys && !deployed:
 		return closeout.StepSkipped, fmt.Sprintf("%s's runs name no deploy, and %s's namespace %s is not deployed at its head %s with a deploy that passed, so its checks have nothing to run against", j.state, story, ns, short(head))

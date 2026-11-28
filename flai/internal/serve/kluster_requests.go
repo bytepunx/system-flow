@@ -173,7 +173,7 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 	if kind == kluster.KindChecks {
 		// not counted against kluster.agent_namespaces: it needs a record
 		// that passed, which a namespace held already has
-		_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled)
+		_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled, false)
 		switch {
 		case err != nil:
 			return refuse("flai serve could not read whether %s's namespace is deployed at its head (%v), so nothing is queued: ask again, and say so on a thread on %s if it goes on", story, err, story)
