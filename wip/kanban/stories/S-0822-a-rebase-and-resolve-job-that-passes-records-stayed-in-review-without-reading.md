@@ -6,7 +6,7 @@ title: A rebase and resolve job that passes records stayed in review without rea
 status: ready
 owner: alex
 created: 2026-11-17T07:13:18Z
-updated: 2026-11-28T00:03:04Z
+updated: 2026-11-28T00:26:08Z
 transitions:
   - to: ready
     at: 2026-11-28T00:01:12Z
@@ -65,10 +65,10 @@ cost_of_delay:
   at: 2026-11-17T08:23:00Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T03:49:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0852 and S-0813."
+  delivery: 2026-11-28T04:02:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0835, S-0837, S-0844, S-0814, S-0852 and S-0813."
   by: flai
-  at: 2026-11-28T00:03:04Z
+  at: 2026-11-28T00:26:08Z
 finalized:
   by: orchestrator
   at: 2026-11-28T00:00:01Z

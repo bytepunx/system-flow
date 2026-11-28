@@ -6,7 +6,7 @@ title: A story in review whose close-out or resolve job passed is not a reason t
 status: ready
 owner: alex
 created: 2026-11-27T22:55:26Z
-updated: 2026-11-28T00:03:04Z
+updated: 2026-11-28T00:26:08Z
 transitions:
   - to: ready
     at: 2026-11-28T00:02:05Z
@@ -70,10 +70,10 @@ cost_of_delay:
   at: 2026-11-27T23:59:03Z
 forecast:
   duration: 2h
-  delivery: 2026-11-28T06:30:00Z
-  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0852, S-0813, S-0822, S-0848 and S-0853."
+  delivery: 2026-11-28T06:43:00Z
+  basis: "Its own forecast of 2h; 7th in the pull order with an in-progress limit of 3, behind S-0835, S-0837, S-0844, S-0814, S-0852, S-0813, S-0822, S-0848 and S-0853."
   by: flai
-  at: 2026-11-28T00:03:04Z
+  at: 2026-11-28T00:26:08Z
 finalized:
   by: alex
   at: 2026-11-28T00:01:54Z

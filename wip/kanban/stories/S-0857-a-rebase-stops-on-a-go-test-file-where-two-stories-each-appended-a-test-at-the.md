@@ -6,7 +6,7 @@ title: A rebase stops on a Go test file where two stories each appended a test a
 status: backlog
 owner: alex
 created: 2026-11-27T22:55:28Z
-updated: 2026-11-28T00:01:57Z
+updated: 2026-11-28T00:26:08Z
 transitions: []
 tags: []
 topics: [git, code]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-27T23:58:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T10:22:00Z
-  basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0813, S-0822, S-0848, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0852, S-0853, S-0854, S-0855 and S-0856."
+  delivery: 2026-11-28T11:01:00Z
+  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0835, S-0837, S-0844, S-0814, S-0852, S-0813, S-0822, S-0848, S-0853, S-0854, S-0824, S-0845, S-0241, S-0815, S-0849, S-0851, S-0855 and S-0856."
   by: flai
-  at: 2026-11-28T00:01:28Z
+  at: 2026-11-28T00:26:08Z
 finalized:
   by: alex
   at: 2026-11-28T00:01:57Z
