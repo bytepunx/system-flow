@@ -6,7 +6,7 @@ title: flai stream sync panics while continuing a rebase whose stop the agent re
 status: ready
 owner: alex
 created: 2026-11-21T17:20:23Z
-updated: 2026-11-28T00:02:10Z
+updated: 2026-11-28T00:03:04Z
 transitions:
   - to: ready
     at: 2026-11-28T00:01:13Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-27T23:57:18Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-28T07:27:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813, S-0814, S-0824, S-0822 and S-0835."
+  delivery: 2026-11-28T04:20:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0852, S-0813 and S-0822."
   by: flai
-  at: 2026-11-28T00:02:10Z
+  at: 2026-11-28T00:03:04Z
 finalized:
   by: orchestrator
   at: 2026-11-28T00:00:02Z

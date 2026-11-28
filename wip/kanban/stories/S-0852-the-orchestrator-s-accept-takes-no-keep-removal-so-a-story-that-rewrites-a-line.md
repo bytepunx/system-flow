@@ -6,7 +6,7 @@ title: The orchestrator's accept takes no --keep-removal, so a story that rewrit
 status: ready
 owner: alex
 created: 2026-11-27T22:55:19Z
-updated: 2026-11-28T00:02:10Z
+updated: 2026-11-28T00:03:04Z
 transitions:
   - to: ready
     at: 2026-11-28T00:02:04Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-27T23:57:00Z
 forecast:
   duration: 1h13m
-  delivery: 2026-11-28T01:57:00Z
-  basis: "Its own forecast of 1h13m; 1st in the pull order with an in-progress limit of 3, behind S-0837, S-0844 and S-0846."
+  delivery: 2026-11-28T03:00:00Z
+  basis: "Its own forecast of 1h13m; 3rd in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835 and S-0814."
   by: flai
-  at: 2026-11-28T00:02:10Z
+  at: 2026-11-28T00:03:04Z
 finalized:
   by: alex
   at: 2026-11-28T00:01:52Z

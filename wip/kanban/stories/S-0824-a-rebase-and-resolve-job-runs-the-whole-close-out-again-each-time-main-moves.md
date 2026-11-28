@@ -6,7 +6,7 @@ title: A rebase and resolve job runs the whole close-out again each time main mo
 status: ready
 owner: alex
 created: 2026-11-17T07:13:20Z
-updated: 2026-11-28T00:02:10Z
+updated: 2026-11-28T00:03:04Z
 transitions:
   - to: ready
     at: 2026-11-27T23:54:13Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-17T08:32:55Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-28T08:09:00Z
-  basis: "Its own forecast of 2h30m; 7th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0852, S-0853, S-0854, S-0845, S-0813 and S-0814."
+  delivery: 2026-11-28T07:41:00Z
+  basis: "Its own forecast of 2h30m; 9th in the pull order with an in-progress limit of 3, behind S-0837, S-0844, S-0846, S-0835, S-0814, S-0852, S-0813, S-0822, S-0848, S-0853 and S-0854."
   by: flai
-  at: 2026-11-28T00:02:10Z
+  at: 2026-11-28T00:03:04Z
 finalized:
   by: orchestrator
   at: 2026-11-19T08:39:43Z
